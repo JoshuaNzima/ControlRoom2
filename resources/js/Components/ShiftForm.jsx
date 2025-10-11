@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useForm } from '@inertiajs/react';
-import Input from '@/Components/Input';
+import { Input } from '@/Components/ui/input';
 import Select from '@/Components/Select';
-import TextArea from '@/Components/TextArea';
+import { Textarea } from '@/Components/ui/textarea';
 import InputError from '@/Components/InputError';
 import PrimaryButton from '@/Components/PrimaryButton';
 import DatePicker from '@/Components/DatePicker';

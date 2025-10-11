@@ -4,7 +4,7 @@ import AdminLayout from '@/Layouts/AdminLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import { Label } from '@/Components/ui/label';
-import { Select } from '@/Components/ui/select';
+import Select from '@/Components/Select';
 import { Textarea } from '@/Components/ui/textarea';
 import { Badge } from '@/Components/ui/badge';
 
@@ -110,11 +110,10 @@ export default function Review({ infraction }: ReviewProps) {
             <form onSubmit={handleSubmit} className="space-y-6 pt-6 border-t">
               <div>
                 <Label htmlFor="status">Update Status</Label>
-                <Select
-                  id="status"
-                  value={data.status}
-                  onChange={e => setData('status', e.target.value)}
-                >
+                  <Select 
+                    value={data.status}
+                    onChange={(e: any) => setData('status', e.target.value)}
+                  >
                   <option value="pending">Pending</option>
                   <option value="reviewed">Reviewed</option>
                   <option value="resolved">Resolved</option>

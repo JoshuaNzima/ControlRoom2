@@ -26,6 +26,7 @@ class DatabaseSeeder extends Seeder
             GuardsModuleSeeder::class,
             ModuleSeeder::class,
             SuperAdminSeeder::class,
+            ControlRoomOperatorSeeder::class,
             CheckpointSeeder::class,
             ModularPermissionsSeeder::class,
             DefaultModulesSeeder::class,            

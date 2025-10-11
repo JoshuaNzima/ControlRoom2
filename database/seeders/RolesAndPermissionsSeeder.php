@@ -57,10 +57,24 @@ class RolesAndPermissionsSeeder extends Seeder
             
             // Control Room module
             'control.dashboard.view',
+            'control.dashboard.manage',
             'control.incidents.view',
+            'control.incidents.create',
             'control.incidents.dispatch',
+            'control.incidents.resolve',
             'control.alerts.view',
             'control.alerts.manage',
+            'control.alerts.escalate',
+            'control.messaging.view',
+            'control.messaging.send',
+            'control.cameras.view',
+            'control.cameras.manage',
+            'control.zones.view',
+            'control.zones.manage',
+            'control.reports.view',
+            'control.reports.generate',
+            'control.qr_codes.view',
+            'control.qr_codes.generate',
             
             // Reports module
             'reports.view',
@@ -127,6 +141,32 @@ class RolesAndPermissionsSeeder extends Seeder
             'incidents.view',
             'reports.view',
             'clients.view',
+        ]);
+
+        // Control Room Operator role - dedicated control room access
+        $controlRoomRole = Role::create(['name' => 'control_room_operator']);
+        $controlRoomRole->givePermissionTo([
+            'control.dashboard.view',
+            'control.dashboard.manage',
+            'control.incidents.view',
+            'control.incidents.create',
+            'control.incidents.dispatch',
+            'control.incidents.resolve',
+            'control.alerts.view',
+            'control.alerts.manage',
+            'control.alerts.escalate',
+            'control.messaging.view',
+            'control.messaging.send',
+            'control.cameras.view',
+            'control.cameras.manage',
+            'control.zones.view',
+            'control.zones.manage',
+            'control.reports.view',
+            'control.reports.generate',
+            'control.qr_codes.view',
+            'control.qr_codes.generate',
+            'guards.view', // Need to see guards for assignments
+            'clients.view', // Need to see clients for incidents
         ]);
 
         // Client role - very limited access

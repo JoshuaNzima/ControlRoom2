@@ -1,15 +1,34 @@
 import React, { useMemo } from 'react';
 import { Line } from 'react-chartjs-2';
 
-const CoverageTrendChart = ({ zones }) => {
+interface Zone {
+    id: number;
+    name: string;
+    coverage: number;
+    guards: number;
+    required_guards: number;
+    sites: number;
+}
+
+interface CoverageTrendChartProps {
+    zones?: Zone[];
+}
+
+const CoverageTrendChart: React.FC<CoverageTrendChartProps> = ({ zones = [] }) => {
     const chartData = useMemo(() => {
-        const dates = zones[0]?.weeklyStats.map(stat => stat.date) || [];
+        // Generate last 7 days labels
+        const labels = [];
+        for (let i = 6; i >= 0; i--) {
+            const date = new Date();
+            date.setDate(date.getDate() - i);
+            labels.push(date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+        }
         
         return {
-            labels: dates,
+            labels: labels,
             datasets: zones.map(zone => ({
                 label: zone.name,
-                data: zone.weeklyStats.map(stat => stat.coverage_rate),
+                data: Array(7).fill(zone.coverage || 0), // Use current coverage for all days
                 borderColor: getZoneColor(zone.name),
                 backgroundColor: getZoneColor(zone.name, 0.1),
                 tension: 0.4,
@@ -20,6 +39,7 @@ const CoverageTrendChart = ({ zones }) => {
 
     const options = {
         responsive: true,
+        maintainAspectRatio: false,
         plugins: {
             legend: {
                 position: 'top',
@@ -41,7 +61,9 @@ const CoverageTrendChart = ({ zones }) => {
     };
 
     return (
-        <Line data={chartData} options={options} height={80} />
+        <div style={{ height: '300px' }}>
+            <Line data={chartData} options={options} />
+        </div>
     );
 };
 

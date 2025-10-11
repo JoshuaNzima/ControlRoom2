@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Head } from '@inertiajs/react';
-import AppLayout from '@/Layouts/AppLayout';
-import { Card } from '@/Components/ui/card';
+import ControlRoomLayout from '@/Layouts/ControlRoomLayout';
+import { Card, CardContent, CardHeader } from '@/Components/ui/card';
 import { Input } from '@/Components/ui/input';
 import { Button } from '@/Components/ui/button';
 import { Badge } from '@/Components/ui/badge';
@@ -33,11 +33,11 @@ const MessageBubble = ({ message, isOwnMessage }: { message: Message; isOwnMessa
                 className={`${
                     isOwnMessage
                         ? 'bg-blue-500 text-white'
-                        : 'bg-gray-100 text-gray-900'
+                        : 'bg-gray-100 text-gray-900 dark:bg-gray-700 dark:text-gray-100'
                 } rounded-lg px-4 py-2 max-w-[70%] break-words`}
             >
                 {!isOwnMessage && (
-                    <div className="text-sm font-medium mb-1">
+                    <div className="text-sm font-medium mb-1 text-gray-900 dark:text-gray-100">
                         {message.sender.name}
                     </div>
                 )}
@@ -47,7 +47,7 @@ const MessageBubble = ({ message, isOwnMessage }: { message: Message; isOwnMessa
                 </div>
                 <div
                     className={`text-xs ${
-                        isOwnMessage ? 'text-blue-100' : 'text-gray-500'
+                        isOwnMessage ? 'text-blue-100' : 'text-gray-500 dark:text-gray-400'
                     } mt-1`}
                 >
                     {new Date(message.created_at).toLocaleTimeString()}
@@ -57,7 +57,12 @@ const MessageBubble = ({ message, isOwnMessage }: { message: Message; isOwnMessa
     );
 };
 
-const Show = ({ conversation }: { conversation: Conversation }) => {
+interface ShowProps {
+  auth?: { user?: { name?: string } };
+  conversation: Conversation;
+}
+
+const Show = ({ auth, conversation }: ShowProps) => {
     const [messages, setMessages] = useState<Message[]>(conversation.messages);
     const [newMessage, setNewMessage] = useState('');
     const [isEmergency, setIsEmergency] = useState(false);
@@ -97,7 +102,7 @@ const Show = ({ conversation }: { conversation: Conversation }) => {
 
         try {
             const { data } = await axios.post(
-                route('messaging.messages.send', conversation.id),
+                route('control-room.messaging.messages.send', conversation.id),
                 {
                     content: newMessage,
                     is_emergency: isEmergency,
@@ -114,37 +119,43 @@ const Show = ({ conversation }: { conversation: Conversation }) => {
     };
 
     return (
-        <AppLayout>
+        <ControlRoomLayout 
+            title={`Chat - ${
+                conversation.type === 'direct'
+                    ? conversation.participants.find(p => p.id !== userId)?.name
+                    : conversation.name
+            }`} 
+            user={auth?.user as any}
+        >
             <Head title={`Chat - ${
                 conversation.type === 'direct'
                     ? conversation.participants.find(p => p.id !== userId)?.name
                     : conversation.name
             }`} />
 
-            <div className="py-6">
-                <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <Card className="p-4">
-                        {/* Header */}
-                        <div className="flex items-center justify-between border-b pb-4 mb-4">
-                            <div>
-                                <h2 className="text-xl font-semibold">
-                                    {conversation.type === 'direct'
-                                        ? conversation.participants.find(p => p.id !== userId)?.name
-                                        : conversation.name}
-                                </h2>
-                                <div className="text-sm text-gray-500">
-                                    {conversation.participants.length} participants
-                                </div>
+            <div className="max-w-4xl mx-auto">
+                <Card className="dark:bg-gray-800 dark:border-gray-700">
+                    <CardHeader className="flex flex-row items-center justify-between border-b border-gray-200 dark:border-gray-600">
+                        <div>
+                            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
+                                {conversation.type === 'direct'
+                                    ? conversation.participants.find(p => p.id !== userId)?.name
+                                    : conversation.name}
+                            </h2>
+                            <div className="text-sm text-gray-500 dark:text-gray-400">
+                                {conversation.participants.length} participants
                             </div>
-                            {conversation.type === 'group' && (
-                                <Badge variant="secondary">
-                                    Group Chat
-                                </Badge>
-                            )}
                         </div>
+                        {conversation.type === 'group' && (
+                            <Badge variant="secondary" className="dark:bg-gray-600 dark:text-gray-100">
+                                Group Chat
+                            </Badge>
+                        )}
+                    </CardHeader>
 
+                    <CardContent className="p-0">
                         {/* Messages */}
-                        <ScrollArea className="h-[500px] pr-4">
+                        <ScrollArea className="h-[500px] p-4">
                             <div className="space-y-4">
                                 {messages.map((message) => (
                                     <MessageBubble
@@ -158,13 +169,14 @@ const Show = ({ conversation }: { conversation: Conversation }) => {
                         </ScrollArea>
 
                         {/* Message Input */}
-                        <form onSubmit={sendMessage} className="mt-4">
+                        <form onSubmit={sendMessage} className="p-4 border-t border-gray-200 dark:border-gray-600">
                             <div className="flex items-center space-x-2">
                                 <Button
                                     type="button"
                                     variant={isEmergency ? 'destructive' : 'outline'}
                                     size="icon"
                                     onClick={() => setIsEmergency(!isEmergency)}
+                                    className={isEmergency ? '' : 'dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700'}
                                 >
                                     🚨
                                 </Button>
@@ -173,18 +185,21 @@ const Show = ({ conversation }: { conversation: Conversation }) => {
                                         value={newMessage}
                                         onChange={e => setNewMessage(e.target.value)}
                                         placeholder="Type your message..."
-                                        className="w-full"
+                                        className="w-full dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
                                     />
                                 </div>
-                                <Button type="submit">
+                                <Button 
+                                    type="submit"
+                                    className="dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600"
+                                >
                                     Send
                                 </Button>
                             </div>
                         </form>
-                    </Card>
-                </div>
+                    </CardContent>
+                </Card>
             </div>
-        </AppLayout>
+        </ControlRoomLayout>
     );
 };
 

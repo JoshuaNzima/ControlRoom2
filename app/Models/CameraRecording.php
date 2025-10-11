@@ -2,57 +2,33 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class CameraRecording extends Model
 {
-    use SoftDeletes;
+    use HasFactory;
 
     protected $fillable = [
         'camera_id',
+        'filename',
+        'file_path',
+        'file_size',
+        'duration',
         'start_time',
         'end_time',
-        'file_path',
-        'size',
         'type',
-        'trigger_type',
-        'trigger_metadata',
-        'status'
+        'quality',
     ];
 
     protected $casts = [
         'start_time' => 'datetime',
         'end_time' => 'datetime',
-        'trigger_metadata' => 'json'
     ];
 
-    const TYPES = ['continuous', 'motion', 'alert', 'manual'];
-    const STATUSES = ['recording', 'completed', 'failed', 'archived'];
-    const TRIGGER_TYPES = ['scheduled', 'motion', 'alert', 'manual'];
-
-    public function camera()
+    public function camera(): BelongsTo
     {
         return $this->belongsTo(Camera::class);
-    }
-
-    public function getDurationAttribute()
-    {
-        if (!$this->end_time) {
-            return $this->start_time->diffInSeconds(now());
-        }
-        return $this->start_time->diffInSeconds($this->end_time);
-    }
-
-    public function getSizeFormatted()
-    {
-        $bytes = $this->size;
-        $units = ['B', 'KB', 'MB', 'GB'];
-        $i = 0;
-        while ($bytes >= 1024 && $i < count($units) - 1) {
-            $bytes /= 1024;
-            $i++;
-        }
-        return round($bytes, 2) . ' ' . $units[$i];
     }
 }

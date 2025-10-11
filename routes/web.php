@@ -99,6 +99,8 @@ Route::middleware(['auth'])->group(function () {
                 return redirect()->route('superadmin.dashboard');
             case in_array('admin', $roles):
                 return redirect()->route('admin.dashboard');
+            case in_array('control_room_operator', $roles):
+                return redirect()->route('control-room.dashboard');
             case in_array('zone_commander', $roles):
                 return redirect()->route('zone.dashboard');
             case in_array('manager', $roles):
@@ -133,9 +135,9 @@ Route::middleware(['auth'])->group(function () {
 
     // Zone Commander routes
     Route::middleware(['auth', 'role:zone_commander'])->prefix('zone')->name('zone.')->group(function () {
-        Route::get('/dashboard', [\App\Http\Controllers\ZoneCommander\DashboardController::class, 'index'])->name('dashboard');
-        Route::get('/sites', [\App\Http\Controllers\ZoneCommander\SiteController::class, 'index'])->name('sites.index');
-        Route::get('/guards', [\App\Http\Controllers\ZoneCommander\GuardController::class, 'index'])->name('guards.index');
+        // Route::get('/dashboard', [\App\Http\Controllers\ZoneCommander\DashboardController::class, 'index'])->name('dashboard');
+        // Route::get('/sites', [\App\Http\Controllers\ZoneCommander\SiteController::class, 'index'])->name('sites.index');
+        // Route::get('/guards', [\App\Http\Controllers\ZoneCommander\GuardController::class, 'index'])->name('guards.index');
     });
 
     // Supervisor Routes

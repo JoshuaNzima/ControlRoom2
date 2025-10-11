@@ -4,7 +4,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Inertia } from '@inertiajs/inertia';
 import { format } from 'date-fns';
 import { CalendarIcon, PlusIcon } from '@heroicons/react/24/outline';
-import Badge from '@/Components/Badge';
+import { Badge } from '@/Components/ui/badge';
 import Pagination from '@/Components/Pagination';
 import DatePicker from '@/Components/DatePicker';
 

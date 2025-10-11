@@ -101,10 +101,10 @@ const AgentStatusMap = ({ agents, onAgentClick }) => {
     };
 
     return (
-        <Card className="p-4">
-            <h3 className="text-lg font-medium mb-4">Agent Locations</h3>
-            <div id="agent-map" className="h-[500px] rounded-lg" />
-        </Card>
+        <div>
+            <h3 className="text-lg font-medium mb-4 text-gray-900 dark:text-gray-100">Agent Locations</h3>
+            <div id="agent-map" className="h-[500px] rounded-lg border border-gray-200 dark:border-gray-600" />
+        </div>
     );
 };
 

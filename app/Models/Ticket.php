@@ -2,79 +2,61 @@
 
 namespace App\Models;
 
-use App\Models\User;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Ticket extends Model
 {
-    use SoftDeletes;
+    use HasFactory;
 
     protected $fillable = [
+        'ticket_number',
         'title',
+        'type',
+        'priority',
         'description',
         'status',
-        'priority',
-        'category',
-        'reported_by',
+        'reporter_id',
         'assigned_to',
-        'due_date',
-        'resolution',
-        'escalation_level',
-        'parent_ticket_id'
+        'client_id',
+        'client_site_id',
+        'closed_at',
+        'closed_by',
     ];
 
     protected $casts = [
-        'due_date' => 'datetime',
-        'meta' => 'array'
+        'closed_at' => 'datetime',
     ];
 
-    const STATUSES = ['open', 'in_progress', 'pending', 'resolved', 'closed', 'escalated'];
-    const PRIORITIES = ['low', 'medium', 'high', 'critical'];
-    const CATEGORIES = ['complaint', 'incident', 'request', 'maintenance', 'emergency'];
-
-    public function reporter()
+    public function reporter(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'reported_by');
+        return $this->belongsTo(User::class, 'reporter_id');
     }
 
-    public function assignee()
+    public function assignedTo(): BelongsTo
     {
         return $this->belongsTo(User::class, 'assigned_to');
     }
 
-    public function comments()
+    public function client(): BelongsTo
+    {
+        return $this->belongsTo(Client::class);
+    }
+
+    public function clientSite(): BelongsTo
+    {
+        return $this->belongsTo(ClientSite::class);
+    }
+
+    public function comments(): HasMany
     {
         return $this->hasMany(TicketComment::class);
     }
 
-    public function attachments()
+    public function closedBy(): BelongsTo
     {
-        return $this->hasMany(TicketAttachment::class);
-    }
-
-    public function parentTicket()
-    {
-        return $this->belongsTo(Ticket::class, 'parent_ticket_id');
-    }
-
-    public function childTickets()
-    {
-        return $this->hasMany(Ticket::class, 'parent_ticket_id');
-    }
-
-    public function scopePriority($query, $priority)
-    {
-        return $query->where('priority', $priority);
-    }
-
-    public function scopeStatus($query, $status)
-    {
-        return $query->where('status', $status);
-    }
-
-    public function scopeCategory($query, $category)
-    {
-        return $query->where('category', $category);
+        return $this->belongsTo(User::class, 'closed_by');
     }
 }

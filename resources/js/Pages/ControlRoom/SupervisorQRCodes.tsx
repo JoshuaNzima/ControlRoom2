@@ -6,7 +6,7 @@ import { Card } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import { Download } from 'lucide-react';
 
-export default function SupervisorQRCodes({ zones }) {
+export default function SupervisorQRCodes({ zones }: { zones: any }) {
     const handleBulkDownload = () => {
         // TODO: Implement bulk download of QR codes for all zones
         // This would generate a zip file with QR codes for each zone

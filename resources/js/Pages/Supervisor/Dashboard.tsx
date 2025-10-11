@@ -445,6 +445,23 @@ export default function Dashboard({
    Reusable subcomponents
    ------------------------- */
 
+interface Stat {
+  label: string;
+  count: number;
+  description: string;
+  color: string;
+  badge: string;
+  icon: React.ReactNode | null;
+}
+
+interface QuickNavItem {
+  name: string;
+  description: string;
+  route: string;
+  icon: React.ReactNode | null;
+  color: string;
+}
+
 function StatCard({ label = '', count = 0, description = '', color = 'gray', badge = '', icon = null }: Stat) {
   const colorClasses: Record<string, string> = {
     green: 'border-green-500 bg-gradient-to-br from-green-50 to-green-100',

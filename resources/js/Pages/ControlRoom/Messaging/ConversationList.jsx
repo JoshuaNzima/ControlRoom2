@@ -31,12 +31,12 @@ const ConversationList = ({ conversations }) => {
             {conversations.map((conversation) => (
                 <Link
                     key={conversation.id}
-                    href={route('messaging.show', conversation.id)}
+                    href={route('control-room.messaging.show', conversation.id)}
                     className="block"
                 >
-                    <div className="p-3 hover:bg-gray-50 rounded-lg cursor-pointer">
+                    <div className="p-3 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg cursor-pointer">
                         <div className="flex items-center justify-between mb-1">
-                            <span className="font-medium">
+                            <span className="font-medium text-gray-900 dark:text-gray-100">
                                 {getConversationName(conversation)}
                             </span>
                             {conversation.unread_count > 0 && (
@@ -45,11 +45,11 @@ const ConversationList = ({ conversations }) => {
                                 </Badge>
                             )}
                         </div>
-                        <div className="text-sm text-gray-500 truncate">
+                        <div className="text-sm text-gray-500 dark:text-gray-400 truncate">
                             {getLastMessagePreview(conversation)}
                         </div>
                         {conversation.last_message && (
-                            <div className="text-xs text-gray-400 mt-1">
+                            <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">
                                 {formatDateMW('en-MW', conversation.last_message.created_at)}
                             </div>
                         )}
@@ -58,7 +58,7 @@ const ConversationList = ({ conversations }) => {
             ))}
             
             {conversations.length === 0 && (
-                <div className="text-center text-gray-500 py-4">
+                <div className="text-center text-gray-500 dark:text-gray-400 py-4">
                     No conversations yet
                 </div>
             )}

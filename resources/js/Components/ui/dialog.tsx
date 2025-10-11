@@ -24,7 +24,7 @@ export function DialogTrigger({ asChild, children }: { asChild?: boolean; childr
     ctx.setOpen(true);
   };
   if (asChild) {
-    return React.cloneElement(children, { onClick: handleClick });
+    return React.cloneElement(children, { onClick: handleClick } as any);
   }
   return (
     <button onClick={handleClick} type="button">

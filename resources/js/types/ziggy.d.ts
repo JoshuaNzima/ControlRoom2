@@ -1,5 +1,5 @@
 declare module 'ziggy-js' {
-    type RouteParams = Record<string, any>;
+    type RouteParams = Record<string, any> | number | string;
     
     interface RouteConfig {
         uri: string;
@@ -18,4 +18,5 @@ declare module 'ziggy-js' {
     }
 
     export function route(name: string, params?: RouteParams, absolute?: boolean): string;
+    export function route(): { has: (name: string) => boolean };
 }

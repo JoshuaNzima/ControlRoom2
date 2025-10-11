@@ -40,7 +40,7 @@ export default function CreateGuard({ supervisors }: CreateGuardProps) {
       if (v !== undefined && v !== null) formData.append(k, String(v));
     });
     if (photoFile) formData.append('photo', photoFile);
-    post(route('admin.guards.store'), { forceFormData: true, data: formData as any });
+    post(route('admin.guards.store'), formData as any);
   };
 
   return (
@@ -60,7 +60,7 @@ export default function CreateGuard({ supervisors }: CreateGuardProps) {
                 onChange={(e) => setPhotoFile(e.target.files?.[0] || null)}
                 className="w-full"
               />
-              {errors.photo && <p className="text-sm text-red-600 mt-1">{errors.photo}</p>}
+              {(errors as any).photo && <p className="text-sm text-red-600 mt-1">{(errors as any).photo}</p>}
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Employee ID */}

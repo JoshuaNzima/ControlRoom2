@@ -2,37 +2,42 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class CameraAlert extends Model
 {
+    use HasFactory;
+
     protected $fillable = [
         'camera_id',
         'type',
-        'description',
-        'severity',
+        'message',
         'status',
-        'metadata',
         'acknowledged_by',
-        'acknowledged_at'
+        'acknowledged_at',
+        'resolved_by',
+        'resolved_at',
     ];
 
     protected $casts = [
-        'metadata' => 'json',
-        'acknowledged_at' => 'datetime'
+        'acknowledged_at' => 'datetime',
+        'resolved_at' => 'datetime',
     ];
 
-    const TYPES = ['motion', 'tampering', 'offline', 'object_detected'];
-    const SEVERITIES = ['low', 'medium', 'high', 'critical'];
-    const STATUSES = ['active', 'acknowledged', 'resolved', 'false_alarm'];
-
-    public function camera()
+    public function camera(): BelongsTo
     {
         return $this->belongsTo(Camera::class);
     }
 
-    public function acknowledgedBy()
+    public function acknowledgedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'acknowledged_by');
+    }
+
+    public function resolvedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'resolved_by');
     }
 }

@@ -1,5 +1,5 @@
 import React from 'react';
-import AdminLayout from '@/Layouts/AdminLayout';
+import ControlRoomLayout from '@/Layouts/ControlRoomLayout';
 import { Head, Link, router, usePage, useForm } from '@inertiajs/react';
 
 type Down = {
@@ -20,7 +20,7 @@ type PageProps = {
 };
 
 export default function DownsIndex() {
-  const { auth, downs } = usePage<PageProps>().props;
+  const { auth, downs } = usePage().props as any;
   const { data, setData, post, processing, reset, errors } = useForm({
     title: '',
     type: 'site_unmanned' as 'guard_absent' | 'site_unmanned' | 'other',
@@ -45,8 +45,8 @@ export default function DownsIndex() {
   }
 
   return (
-    <AdminLayout title="Downs" user={auth?.user as any}>
-      <Head title="Downs" />
+    <ControlRoomLayout title="Downs Management" user={auth?.user as any}>
+      <Head title="Downs Management" />
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <section className="lg:col-span-1 bg-white dark:bg-gray-800 rounded-xl shadow p-6">
           <h2 className="text-lg font-semibold mb-4">Report a Down</h2>
@@ -76,7 +76,7 @@ export default function DownsIndex() {
         <section className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-xl shadow p-6">
           <h2 className="text-lg font-semibold mb-4">Open Downs</h2>
           <div className="divide-y dark:divide-gray-700">
-            {downs.data.map((d) => (
+            {downs.data.map((d: any) => (
               <div key={d.id} className="py-3 flex items-center justify-between">
                 <div>
                   <div className="font-medium">{d.title} <span className="ml-2 text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-800 dark:bg-gray-700 dark:text-gray-100">{d.type.replace('_', ' ')}</span></div>
@@ -95,7 +95,7 @@ export default function DownsIndex() {
           </div>
         </section>
       </div>
-    </AdminLayout>
+    </ControlRoomLayout>
   );
 }
 

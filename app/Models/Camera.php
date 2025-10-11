@@ -2,63 +2,59 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\SoftDeletes;
-use App\Models\Guards\ClientSite;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Camera extends Model
 {
-    use SoftDeletes;
+    use HasFactory;
 
     protected $fillable = [
         'name',
-        'client_site_id',
-        'stream_url',
-        'type',
         'location',
+        'ip_address',
+        'port',
+        'username',
+        'password',
+        'model',
         'status',
-        'last_online',
         'recording_enabled',
-        'retention_days',
-        'credentials',
-        'settings'
+        'motion_detection',
+        'night_vision',
+        'description',
+        'connection_status',
+        'last_connection_test',
+        'last_restart',
+        'created_by',
     ];
 
     protected $casts = [
-        'last_online' => 'datetime',
-        'settings' => 'json',
-        'credentials' => 'encrypted',
-        'recording_enabled' => 'boolean'
+        'recording_enabled' => 'boolean',
+        'motion_detection' => 'boolean',
+        'night_vision' => 'boolean',
+        'last_connection_test' => 'datetime',
+        'last_restart' => 'datetime',
     ];
 
-    const TYPES = ['ptz', 'fixed', 'dome', 'thermal'];
-    const STATUSES = ['online', 'offline', 'maintenance', 'disabled'];
-
-    public function site()
+    public function site(): BelongsTo
     {
-        return $this->belongsTo(ClientSite::class, 'client_site_id');
+        return $this->belongsTo(ClientSite::class, 'site_id');
     }
 
-    public function recordings()
+    public function recordings(): HasMany
     {
         return $this->hasMany(CameraRecording::class);
     }
 
-    public function alerts()
+    public function alerts(): HasMany
     {
         return $this->hasMany(CameraAlert::class);
     }
 
-    public function getStreamUrlAttribute($value)
+    public function createdBy(): BelongsTo
     {
-        // Add any necessary authentication tokens or parameters
-        return $value;
-    }
-
-    public function isOnline(): bool
-    {
-        return $this->status === 'online' && 
-               $this->last_online && 
-               $this->last_online->diffInMinutes(now()) < 5;
+        return $this->belongsTo(User::class, 'created_by');
     }
 }

@@ -37,7 +37,7 @@ const NewConversationForm = ({ onClose, agents }) => {
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        post(route('messaging.store'), {
+        post(route('control-room.messaging.store'), {
             onSuccess: () => {
                 onClose();
             },

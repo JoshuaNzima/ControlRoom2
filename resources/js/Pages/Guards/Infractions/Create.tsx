@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card';
 import { Input } from '@/Components/ui/input';
 import { Button } from '@/Components/ui/button';
 import { Label } from '@/Components/ui/label';
-import { Select } from '@/Components/ui/select';
+import Select from '@/Components/Select';
 import { Textarea } from '@/Components/ui/textarea';
 
 interface Guard {
@@ -46,9 +46,8 @@ export default function Create({ guards }: CreateProps) {
               <div>
                 <Label htmlFor="guard_id">Select Guard</Label>
                 <Select 
-                  id="guard_id"
                   value={data.guard_id}
-                  onChange={e => setData('guard_id', e.target.value)}
+                  onChange={(e: any) => setData('guard_id', e.target.value)}
                 >
                   <option value="">Select a guard...</option>
                   {guards.map(guard => (
@@ -78,10 +77,9 @@ export default function Create({ guards }: CreateProps) {
 
               <div>
                 <Label htmlFor="severity">Severity</Label>
-                <Select
-                  id="severity"
+                <Select 
                   value={data.severity}
-                  onChange={e => setData('severity', e.target.value)}
+                  onChange={(e: any) => setData('severity', e.target.value)}
                 >
                   <option value="minor">Minor</option>
                   <option value="moderate">Moderate</option>

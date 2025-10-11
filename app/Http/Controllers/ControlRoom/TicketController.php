@@ -6,64 +6,43 @@ use App\Http\Controllers\Controller;
 use App\Models\Ticket;
 use App\Models\TicketComment;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 
 class TicketController extends Controller
 {
-    public function index(Request $request)
+    public function index()
     {
-        $tickets = Ticket::with(['reporter', 'assignee'])
-            ->when($request->status, function ($query, $status) {
-                return $query->where('status', $status);
-            })
-            ->when($request->priority, function ($query, $priority) {
-                return $query->where('priority', $priority);
-            })
-            ->when($request->category, function ($query, $category) {
-                return $query->where('category', $category);
-            })
+        $tickets = Ticket::with(['reporter', 'assignedTo', 'client', 'clientSite'])
             ->latest()
-            ->paginate(10);
+            ->paginate(20);
 
         return Inertia::render('ControlRoom/Tickets/Index', [
             'tickets' => $tickets,
-            'filters' => [
-                'statuses' => Ticket::STATUSES,
-                'priorities' => Ticket::PRIORITIES,
-                'categories' => Ticket::CATEGORIES,
-            ]
         ]);
+    }
+
+    public function create()
+    {
+        return Inertia::render('ControlRoom/Tickets/Create');
     }
 
     public function store(Request $request)
     {
         $validated = $request->validate([
             'title' => 'required|string|max:255',
+            'type' => 'required|in:technical_support,service_request,complaint,incident_report,other',
+            'priority' => 'required|in:low,medium,high,critical',
             'description' => 'required|string',
-            'priority' => 'required|in:' . implode(',', Ticket::PRIORITIES),
-            'category' => 'required|in:' . implode(',', Ticket::CATEGORIES),
-            'assigned_to' => 'nullable|exists:users,id',
-            'due_date' => 'nullable|date|after:today',
+            'client_id' => 'nullable|exists:clients,id',
+            'client_site_id' => 'nullable|exists:client_sites,id',
         ]);
 
         $ticket = Ticket::create([
             ...$validated,
-            'reported_by' => Auth::id(),
+            'reporter_id' => auth()->id(),
             'status' => 'open',
+            'ticket_number' => $this->generateTicketNumber(),
         ]);
-
-        if ($request->hasFile('attachments')) {
-            foreach ($request->file('attachments') as $file) {
-                $path = $file->store('ticket-attachments');
-                $ticket->attachments()->create([
-                    'filename' => $file->getClientOriginalName(),
-                    'path' => $path,
-                    'mime_type' => $file->getMimeType(),
-                    'size' => $file->getSize(),
-                ]);
-            }
-        }
 
         return redirect()->route('control-room.tickets.show', $ticket)
             ->with('success', 'Ticket created successfully.');
@@ -71,32 +50,44 @@ class TicketController extends Controller
 
     public function show(Ticket $ticket)
     {
-        $ticket->load(['reporter', 'assignee', 'comments.user', 'attachments']);
+        $ticket->load(['reporter', 'assignedTo', 'client', 'clientSite', 'comments.user']);
 
         return Inertia::render('ControlRoom/Tickets/Show', [
             'ticket' => $ticket,
-            'comments' => $ticket->comments()->with('user')->latest()->get(),
-            'canManageTicket' => Auth::user()->can('manage', $ticket),
+        ]);
+    }
+
+    public function edit(Ticket $ticket)
+    {
+        return Inertia::render('ControlRoom/Tickets/Edit', [
+            'ticket' => $ticket,
         ]);
     }
 
     public function update(Request $request, Ticket $ticket)
     {
         $validated = $request->validate([
-            'status' => 'sometimes|required|in:' . implode(',', Ticket::STATUSES),
-            'priority' => 'sometimes|required|in:' . implode(',', Ticket::PRIORITIES),
-            'assigned_to' => 'nullable|exists:users,id',
-            'due_date' => 'nullable|date',
-            'resolution' => 'required_if:status,resolved',
+            'title' => 'required|string|max:255',
+            'type' => 'required|in:technical_support,service_request,complaint,incident_report,other',
+            'priority' => 'required|in:low,medium,high,critical',
+            'description' => 'required|string',
+            'status' => 'required|in:open,in_progress,resolved,closed',
+            'client_id' => 'nullable|exists:clients,id',
+            'client_site_id' => 'nullable|exists:client_sites,id',
         ]);
 
         $ticket->update($validated);
 
-        if ($request->has('status') && $request->status === 'escalated') {
-            $this->escalateTicket($ticket);
-        }
+        return redirect()->route('control-room.tickets.show', $ticket)
+            ->with('success', 'Ticket updated successfully.');
+    }
 
-        return back()->with('success', 'Ticket updated successfully.');
+    public function destroy(Ticket $ticket)
+    {
+        $ticket->delete();
+
+        return redirect()->route('control-room.tickets.index')
+            ->with('success', 'Ticket deleted successfully.');
     }
 
     public function addComment(Request $request, Ticket $ticket)
@@ -106,29 +97,69 @@ class TicketController extends Controller
             'is_internal' => 'boolean',
         ]);
 
-        $comment = $ticket->comments()->create([
-            ...$validated,
-            'user_id' => Auth::id(),
+        TicketComment::create([
+            'ticket_id' => $ticket->id,
+            'user_id' => auth()->id(),
+            'comment' => $validated['comment'],
+            'is_internal' => $validated['is_internal'] ?? false,
         ]);
 
         return back()->with('success', 'Comment added successfully.');
     }
 
-    protected function escalateTicket(Ticket $ticket)
+    public function assign(Request $request, Ticket $ticket)
     {
-        // Create a child ticket for escalation
-        $escalatedTicket = Ticket::create([
-            'title' => "Escalated: {$ticket->title}",
-            'description' => "Escalated from Ticket #{$ticket->id}\n\n{$ticket->description}",
-            'status' => 'open',
-            'priority' => 'high',
-            'category' => $ticket->category,
-            'reported_by' => Auth::id(),
-            'parent_ticket_id' => $ticket->id,
-            'escalation_level' => $ticket->escalation_level + 1,
+        $validated = $request->validate([
+            'assigned_to' => 'required|exists:users,id',
         ]);
 
-        // Notify relevant personnel
-        // TODO: Implement notification system
+        $ticket->update([
+            'assigned_to' => $validated['assigned_to'],
+            'status' => 'in_progress',
+        ]);
+
+        return back()->with('success', 'Ticket assigned successfully.');
+    }
+
+    public function close(Request $request, Ticket $ticket)
+    {
+        $ticket->update([
+            'status' => 'closed',
+            'closed_at' => now(),
+            'closed_by' => auth()->id(),
+        ]);
+
+        return back()->with('success', 'Ticket closed successfully.');
+    }
+
+    public function reopen(Request $request, Ticket $ticket)
+    {
+        $ticket->update([
+            'status' => 'open',
+            'closed_at' => null,
+            'closed_by' => null,
+        ]);
+
+        return back()->with('success', 'Ticket reopened successfully.');
+    }
+
+    private function generateTicketNumber()
+    {
+        $prefix = 'TKT';
+        $year = date('Y');
+        $month = date('m');
+        
+        $lastTicket = Ticket::where('ticket_number', 'like', "{$prefix}-{$year}{$month}%")
+            ->orderBy('ticket_number', 'desc')
+            ->first();
+
+        if ($lastTicket) {
+            $lastNumber = (int) substr($lastTicket->ticket_number, -4);
+            $newNumber = $lastNumber + 1;
+        } else {
+            $newNumber = 1;
+        }
+
+        return sprintf('%s-%s%s-%04d', $prefix, $year, $month, $newNumber);
     }
 }

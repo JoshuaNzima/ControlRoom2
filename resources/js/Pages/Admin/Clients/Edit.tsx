@@ -1,5 +1,5 @@
 import React from 'react';
-import { Inertia } from '@inertiajs/inertia';
+import { router } from '@inertiajs/react';
 import { useForm } from '@inertiajs/react';
 import AdminLayout from '@/Layouts/AdminLayout';
 
@@ -33,7 +33,7 @@ export default function Edit({ client }: { client: ClientData }) {
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
-    Inertia.put(route('clients.update', { client: client.id }), data as any);
+    router.put(route('clients.update', { client: client.id }), data as any);
   }
 
   return (

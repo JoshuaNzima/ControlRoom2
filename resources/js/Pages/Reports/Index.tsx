@@ -23,8 +23,8 @@ export default function ReportsIndex() {
   const sites = (props.sites as Site[]) ?? [];
 
   const [selectedReport, setSelectedReport] = useState('');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  const [startDate, setStartDate] = useState<Date | null>(null);
+  const [endDate, setEndDate] = useState<Date | null>(null);
   const [guardId, setGuardId] = useState('');
   const [siteId, setSiteId] = useState('');
   const [reportData, setReportData] = useState<any>(null);

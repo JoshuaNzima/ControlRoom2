@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Head } from '@inertiajs/react';
 import { router } from '@inertiajs/react';
-import AppLayout from '@/Layouts/AppLayout';
-import { Card } from '@/Components/ui/card';
+import ControlRoomLayout from '@/Layouts/ControlRoomLayout';
+import { Card, CardContent, CardHeader } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import { Badge } from '@/Components/ui/badge';
 import {
@@ -28,7 +28,13 @@ type Agent = {
 
 type Conversation = any;
 
-const MessagingIndex = ({ conversations, agents }: { conversations: Conversation[]; agents: Agent[] }) => {
+interface MessagingIndexProps {
+  auth?: { user?: { name?: string } };
+  conversations: Conversation[];
+  agents: Agent[];
+}
+
+const MessagingIndex = ({ auth, conversations, agents }: MessagingIndexProps) => {
     const [showNewDialog, setShowNewDialog] = useState(false);
     const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
     const [onlineAgents, setOnlineAgents] = useState<Agent[]>(agents);
@@ -71,63 +77,72 @@ const MessagingIndex = ({ conversations, agents }: { conversations: Conversation
     }, []);
 
     const handleAgentClick = (agent: Agent) => {
-        router.post(route('messaging.store'), {
+        router.post(route('control-room.messaging.store'), {
             type: 'direct',
             participants: [agent.id]
         });
     };
 
     return (
-        <AppLayout>
+        <ControlRoomLayout title="Messaging & Agent Status" user={auth?.user as any}>
             <Head title="Messaging & Agent Status" />
 
-            <div className="py-6">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex justify-between items-center mb-6">
-                        <h2 className="text-2xl font-semibold text-gray-900">
-                            Messaging & Agent Status
-                        </h2>
-                        <Dialog open={showNewDialog} onOpenChange={setShowNewDialog}>
-                            <DialogTrigger asChild>
-                                <Button>New Conversation</Button>
-                            </DialogTrigger>
-                            <DialogContent>
-                                <DialogHeader>
-                                    <DialogTitle>Start New Conversation</DialogTitle>
-                                </DialogHeader>
-                                <NewConversationForm
-                                    onClose={() => setShowNewDialog(false)}
-                                    agents={agents}
-                                />
-                            </DialogContent>
-                        </Dialog>
-                    </div>
+            <div className="space-y-6">
+                <div className="flex justify-between items-center">
+                    <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                        Messaging & Agent Status
+                    </h1>
+                    <Dialog open={showNewDialog} onOpenChange={setShowNewDialog}>
+                        <DialogTrigger asChild>
+                            <Button className="dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600">
+                                New Conversation
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                            <DialogHeader>
+                                <DialogTitle>Start New Conversation</DialogTitle>
+                            </DialogHeader>
+                            <NewConversationForm
+                                onClose={() => setShowNewDialog(false)}
+                                agents={agents}
+                            />
+                        </DialogContent>
+                    </Dialog>
+                </div>
 
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                        {/* Agent Status Map */}
-                        <div className="lg:col-span-2">
-                            <Card>
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    {/* Agent Status Map */}
+                    <div className="lg:col-span-2">
+                        <Card className="dark:bg-gray-800 dark:border-gray-700">
+                            <CardHeader>
+                                <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Agent Status Map</h3>
+                            </CardHeader>
+                            <CardContent>
                                 <AgentStatusMap
                                     agents={onlineAgents}
                                     onAgentClick={setSelectedAgent}
                                 />
-                            </Card>
-                        </div>
+                            </CardContent>
+                        </Card>
+                    </div>
 
-                        {/* Agent List and Quick Actions */}
-                        <div className="space-y-6">
-                            <Card className="p-4">
-                                <h3 className="text-lg font-medium mb-4">Field Agents</h3>
+                    {/* Agent List and Quick Actions */}
+                    <div className="space-y-6">
+                        <Card className="dark:bg-gray-800 dark:border-gray-700">
+                            <CardHeader>
+                                <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Field Agents</h3>
+                            </CardHeader>
+                            <CardContent>
                                 <div className="space-y-3">
                                     {onlineAgents.map((agent) => (
                                         <div
                                             key={agent.id}
-                                            className="flex items-center justify-between p-2 hover:bg-gray-50 rounded-lg cursor-pointer"
+                                            className="flex items-center justify-between p-2 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg cursor-pointer"
                                             onClick={() => handleAgentClick(agent)}
                                         >
                                             <div>
-                                                <div className="font-medium">{agent.name}</div>
-                                                <div className="text-sm text-gray-500">
+                                                <div className="font-medium text-gray-900 dark:text-gray-100">{agent.name}</div>
+                                                <div className="text-sm text-gray-500 dark:text-gray-400">
                                                     Last seen: {agent.last_seen
                                                         ? new Date(agent.last_seen).toLocaleTimeString()
                                                         : 'Never'}
@@ -136,12 +151,12 @@ const MessagingIndex = ({ conversations, agents }: { conversations: Conversation
                                             <Badge
                                                 className={
                                                     agent.status === 'available'
-                                                        ? 'bg-green-100 text-green-800'
+                                                        ? 'bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100'
                                                         : agent.status === 'on_duty'
-                                                        ? 'bg-blue-100 text-blue-800'
+                                                        ? 'bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-100'
                                                         : agent.status === 'emergency'
-                                                        ? 'bg-red-100 text-red-800'
-                                                        : 'bg-gray-100 text-gray-800'
+                                                        ? 'bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100'
+                                                        : 'bg-gray-100 text-gray-800 dark:bg-gray-600 dark:text-gray-100'
                                                 }
                                             >
                                                 {agent.status.replace('_', ' ')}
@@ -149,18 +164,22 @@ const MessagingIndex = ({ conversations, agents }: { conversations: Conversation
                                         </div>
                                     ))}
                                 </div>
-                            </Card>
+                            </CardContent>
+                        </Card>
 
-                            {/* Conversations List */}
-                            <Card className="p-4">
-                                <h3 className="text-lg font-medium mb-4">Recent Conversations</h3>
+                        {/* Conversations List */}
+                        <Card className="dark:bg-gray-800 dark:border-gray-700">
+                            <CardHeader>
+                                <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Recent Conversations</h3>
+                            </CardHeader>
+                            <CardContent>
                                 <ConversationList conversations={conversations} />
-                            </Card>
-                        </div>
+                            </CardContent>
+                        </Card>
                     </div>
                 </div>
             </div>
-        </AppLayout>
+        </ControlRoomLayout>
     );
 };
 
