@@ -28,10 +28,10 @@ export default function ControlRoomLayout({ title, children, user }: Props) {
   const controlRoomLinks: ModuleNavItem[] = [
   { name: 'Control Room Dashboard', href: route('control-room.dashboard'), icon: <IconMapper name="home" className="h-6 w-6" />, current: isCurrent(route('control-room.dashboard')) },
   { name: 'Live Monitoring', href: route('control-room.monitoring'), icon: <IconMapper name="activity" className="h-6 w-6" />, current: false },
-  { name: 'Incident Management', href: route('control-room.incidents'), icon: <IconMapper name="alert-triangle" className="h-6 w-6" />, current: false },
+  { name: 'Incident Management', href: route('control-room.incidents.index'), icon: <IconMapper name="alert-triangle" className="h-6 w-6" />, current: false },
   { name: 'Camera Systems', href: route('control-room.cameras.index'), icon: <IconMapper name="camera" className="h-6 w-6" />, current: false },
   { name: 'Zone Management', href: route('control-room.zones'), icon: <IconMapper name="map-pin" className="h-6 w-6" />, current: false },
-  { name: 'Shift Management', href: route('control-room.shifts'), icon: <IconMapper name="clock" className="h-6 w-6" />, current: false },
+  { name: 'Shift Management', href: route('control-room.shifts.index'), icon: <IconMapper name="clock" className="h-6 w-6" />, current: false },
   { name: 'Tickets', href: route('control-room.tickets.index'), icon: <IconMapper name="briefcase" className="h-6 w-6" />, current: false },
   { name: 'Flags', href: route('control-room.flags.index'), icon: <IconMapper name="alert-triangle" className="h-6 w-6" />, current: false },
   { name: 'Downs', href: route('control-room.downs.index'), icon: <IconMapper name="activity" className="h-6 w-6" />, current: false },
