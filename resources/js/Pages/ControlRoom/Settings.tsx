@@ -4,6 +4,7 @@ import ControlRoomLayout from '@/Layouts/ControlRoomLayout';
 import { Card, CardContent, CardHeader } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import { Badge } from '@/Components/ui/badge';
+import { User } from '@/types';
 
 interface SettingsProps {
   auth?: { user?: { name?: string } };
@@ -51,7 +52,7 @@ const Settings = ({ auth }: SettingsProps) => {
   };
 
   return (
-    <ControlRoomLayout title="Control Room Settings" user={auth?.user as any}>
+    <ControlRoomLayout title="Control Room Settings" user={auth?.user as User | undefined}>
       <Head title="Control Room Settings" />
 
       <div className="space-y-6">

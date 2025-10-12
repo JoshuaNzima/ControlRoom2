@@ -4,6 +4,7 @@ import ControlRoomLayout from '@/Layouts/ControlRoomLayout';
 import { Card, CardContent, CardHeader } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import { Badge } from '@/Components/ui/badge';
+import { User } from '@/types';
 
 interface ZonesProps {
   auth?: { user?: { name?: string } };
@@ -88,7 +89,7 @@ const Zones = ({ auth }: ZonesProps) => {
   };
 
   return (
-    <ControlRoomLayout title="Zone Management" user={auth?.user as any}>
+    <ControlRoomLayout title="Zone Management" user={auth?.user as User | undefined}>
       <Head title="Zone Management" />
 
       <div className="space-y-6">

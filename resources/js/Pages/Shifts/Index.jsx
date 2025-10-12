@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { Head } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Inertia } from '@inertiajs/inertia';
+// use the router exported from @inertiajs/react (v2)
 import { format } from 'date-fns';
 import { CalendarIcon, PlusIcon } from '@heroicons/react/24/outline';
 import { Badge } from '@/Components/ui/badge';
@@ -14,7 +14,7 @@ export default function Index({ auth, shifts, filters }) {
 
     const handleSearch = (e) => {
         setSearchTerm(e.target.value);
-        Inertia.get(route('shifts.index'), { 
+        router.get(route('shifts.index'), { 
             search: e.target.value,
             date: selectedDate,
         }, { preserveState: true });
@@ -22,7 +22,7 @@ export default function Index({ auth, shifts, filters }) {
 
     const handleDateChange = (date) => {
         setSelectedDate(date);
-        Inertia.get(route('shifts.index'), { 
+        router.get(route('shifts.index'), { 
             search: searchTerm,
             date: date,
         }, { preserveState: true });

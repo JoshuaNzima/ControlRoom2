@@ -1,6 +1,6 @@
 import React from 'react';
 import { Head, Link } from '@inertiajs/react';
-import { Home, Users2, Briefcase, BarChart2, Menu, UserCircle2, Building2, ShieldCheck, Wallet, Settings as SettingsIcon, Shield, MessageSquareText, Megaphone } from 'lucide-react';
+import IconMapper from '@/Components/IconMapper';
 import { User } from '@/types';
 import { useTheme } from '@/Providers/ThemeProvider';
 
@@ -26,22 +26,22 @@ export default function AdminLayout({ title, children, user }: Props) {
   const isCurrent = (href: string) => window.location.pathname === href;
 
   const adminLinks: ModuleNavItem[] = [
-    { name: 'Admin Dashboard', href: route('admin.dashboard'), icon: <Home className="h-6 w-6" />, current: isCurrent(route('admin.dashboard')) },
-    { name: 'Users', href: route('admin.users.index'), icon: <UserCircle2 className="h-6 w-6" />, current: false },
-    { name: 'Messaging', href: route('control-room.messaging.index'), icon: <MessageSquareText className="h-6 w-6" />, current: false },
-    { name: 'Reports', href: route('admin.reports.index'), icon: <BarChart2 className="h-6 w-6" />, current: false },
-    { name: 'Payments Checker', href: route('admin.payments.index'), icon: <Wallet className="h-6 w-6" />, current: false },
-    { name: 'Settings', href: route('admin.settings.index'), icon: <SettingsIcon className="h-6 w-6" />, current: false },
+     { name: 'Admin Dashboard', href: route('admin.dashboard'), icon: <IconMapper name="home" className="h-6 w-6" />, current: isCurrent(route('admin.dashboard')) },
+     { name: 'Users', href: route('admin.users.index'), icon: <IconMapper name="users-2" className="h-6 w-6" />, current: false },
+  { name: 'Messaging', href: route('control-room.messaging.index'), icon: <IconMapper name="message-square-text" className="h-6 w-6" />, current: false },
+    { name: 'Reports', href: route('admin.reports.index'), icon: <IconMapper name="bar-chart-2" className="h-6 w-6" />, current: false },
+    { name: 'Payments Checker', href: route('admin.payments.index'), icon: <IconMapper name="wallet" className="h-6 w-6" />, current: false },
+    { name: 'Settings', href: route('admin.settings.index'), icon: <IconMapper name="settings" className="h-6 w-6" />, current: false },
   ];
 
   const moduleLinks: ModuleNavItem[] = [
-    { name: 'Control Room', href: route('admin.control-room.dashboard'), icon: <Briefcase className="h-6 w-6" />, current: isCurrent(route('admin.control-room.dashboard')) },
-    { name: 'Clients', href: route('admin.clients.dashboard'), icon: <Building2 className="h-6 w-6" />, current: false },
-    { name: 'Guards', href: route('admin.guards.dashboard'), icon: <ShieldCheck className="h-6 w-6" />, current: false },
-    { name: 'HR', href: route('hr.dashboard'), icon: <Users2 className="h-6 w-6" />, current: false },
-    { name: 'K9', href: route('k9.dashboard'), icon: <Shield className="h-6 w-6" />, current: false },
-    { name: 'Finance', href: route('finance.dashboard'), icon: <Wallet className="h-6 w-6" />, current: false },
-    { name: 'Marketing', href: route('admin.marketing'), icon: <Megaphone className="h-6 w-6" />, current: false },
+  { name: 'Control Room', href: route('admin.control-room.dashboard'), icon: <IconMapper name="briefcase" className="h-6 w-6" />, current: isCurrent(route('admin.control-room.dashboard')) },
+  { name: 'Clients', href: route('admin.clients.dashboard'), icon: <IconMapper name="building-2" className="h-6 w-6" />, current: false },
+  { name: 'Guards', href: route('admin.guards.dashboard'), icon: <IconMapper name="shield-check" className="h-6 w-6" />, current: false },
+  { name: 'HR', href: route('hr.dashboard'), icon: <IconMapper name="users-2" className="h-6 w-6" />, current: false },
+  { name: 'K9', href: route('k9.dashboard'), icon: <IconMapper name="shield" className="h-6 w-6" />, current: false },
+  { name: 'Finance', href: route('finance.dashboard'), icon: <IconMapper name="wallet" className="h-6 w-6" />, current: false },
+  { name: 'Marketing', href: route('admin.marketing'), icon: <IconMapper name="megaphone" className="h-6 w-6" />, current: false },
   ];
 
   return (
@@ -105,9 +105,9 @@ export default function AdminLayout({ title, children, user }: Props) {
 
       <div className="md:pl-64">
         <div className="sticky top-0 z-10 pl-1 pt-1 sm:pl-3 sm:pt-3 bg-red-50 dark:bg-gray-900 border-b border-red-100 dark:border-gray-800">
-          <button type="button" className="-ml-0.5 -mt-0.5 h-12 w-12 inline-flex items-center justify-center rounded-md text-red-700 hover:text-red-900 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-red-500 md:hidden" onClick={() => setSidebarOpen(true)}>
+            <button type="button" className="-ml-0.5 -mt-0.5 h-12 w-12 inline-flex items-center justify-center rounded-md text-red-700 hover:text-red-900 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-red-500 md:hidden" onClick={() => setSidebarOpen(true)}>
             <span className="sr-only">Open sidebar</span>
-            <Menu className="h-6 w-6" />
+            <IconMapper name="menu" className="h-6 w-6" />
           </button>
           <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 pb-3">
             <div className="flex items-center justify-between">

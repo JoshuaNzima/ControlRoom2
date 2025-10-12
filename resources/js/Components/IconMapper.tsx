@@ -1,5 +1,8 @@
-import React from 'react';
-import * as Icons from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+
+// Load lucide-react dynamically to avoid runtime issues when chunks are split and
+// the namespace may not be available synchronously in some build outputs.
+type IconsModule = Record<string, any> | null;
 
 interface IconMapperProps {
   name?: string;
@@ -8,9 +11,22 @@ interface IconMapperProps {
 }
 
 export default function IconMapper({ name, size = 22, className = '' }: IconMapperProps) {
+  const [icons, setIcons] = useState<IconsModule>(null);
+
+  useEffect(() => {
+    let mounted = true;
+    import('lucide-react').then((mod) => {
+      if (mounted) setIcons(mod as Record<string, any>);
+    }).catch(() => {
+      if (mounted) setIcons(null);
+    });
+    return () => { mounted = false; };
+  }, []);
+
   if (!name) return null;
+  if (!icons) return null; // not loaded yet
+
   const key = name.charAt(0).toUpperCase() + name.slice(1);
-  // Try common naming variations
   const candidates = [
     key,
     key.replace(/[-_ ]+(.)/g, (m, c) => c.toUpperCase()),
@@ -19,13 +35,14 @@ export default function IconMapper({ name, size = 22, className = '' }: IconMapp
   ];
 
   for (const candidate of candidates) {
-    if ((Icons as any)[candidate]) {
-      const Comp = (Icons as any)[candidate];
+    if ((icons as any)[candidate]) {
+      const Comp = (icons as any)[candidate];
       return <Comp size={size} className={className} />;
     }
   }
 
-  // Fallback icon
-  const Fallback = (Icons as any)['Grid'] || Object.values(Icons)[0];
+  // Fallback icon (Grid or first available)
+  const Fallback = (icons as any)['Grid'] || Object.values(icons)[0];
+  if (!Fallback) return null;
   return <Fallback size={size} className={className} />;
 }

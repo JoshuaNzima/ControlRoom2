@@ -4,6 +4,7 @@ import ControlRoomLayout from '@/Layouts/ControlRoomLayout';
 import { Card, CardContent, CardHeader } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import { Badge } from '@/Components/ui/badge';
+import { User } from '@/types';
 
 interface Incident {
   id: number;
@@ -12,21 +13,30 @@ interface Incident {
   severity: string;
   status: string;
   escalation_level: number;
+  // Optional camelCase aliases used in some UI mocks
+  escalationLevel?: number;
   reporter?: { name: string };
   assigned_to?: { name: string };
-  client?: { name: string };
-  client_site?: { name: string };
+  client?: string | { name?: string };
+  client_site?: string | { name?: string };
   created_at: string;
+  // Optional fields used by the component's mock data
+  guard?: string;
+  site?: string;
+  reportedAt?: string;
+  description?: string;
 }
+
+import normalizeObject from '@/utils/normalize';
 
 interface IncidentsProps {
   auth?: { user?: { name?: string } };
-  incidents?: { data: Incident[] };
+  incidents?: { data: any[] };
 }
 
 const Incidents = ({ auth, incidents: incidentsData }: IncidentsProps) => {
-  // Use real data if available, otherwise fall back to mock data
-  const incidents = incidentsData?.data || [
+  // Normalize API response (snake_case -> camelCase) if provided, otherwise fall back to mock data
+  const incidents = incidentsData?.data ? (incidentsData.data.map((i: any) => normalizeObject(i)) as any[]) : [
     {
       id: 1,
       title: 'Unauthorized Access Attempt',
@@ -100,7 +110,7 @@ const Incidents = ({ auth, incidents: incidentsData }: IncidentsProps) => {
   };
 
   return (
-    <ControlRoomLayout title="Incident Management" user={auth?.user as any}>
+    <ControlRoomLayout title="Incident Management" user={auth?.user as User | undefined}>
       <Head title="Incident Management" />
 
       <div className="space-y-6">
@@ -187,7 +197,7 @@ const Incidents = ({ auth, incidents: incidentsData }: IncidentsProps) => {
                         <Badge className={`text-xs ${getStatusColor(incident.status)}`}>
                           {incident.status.replace('_', ' ')}
                         </Badge>
-                        {incident.escalationLevel > 0 && (
+                        {incident.escalationLevel && incident.escalationLevel > 0 && (
                           <Badge variant="destructive" className="text-xs">
                             Escalation Level {incident.escalationLevel}
                           </Badge>
@@ -198,7 +208,7 @@ const Incidents = ({ auth, incidents: incidentsData }: IncidentsProps) => {
                         <span className="font-medium">Type:</span> {incident.type} • 
                         <span className="font-medium"> Guard:</span> {incident.guard} • 
                         <span className="font-medium"> Site:</span> {incident.site} • 
-                        <span className="font-medium"> Client:</span> {incident.client} • 
+                        <span className="font-medium"> Client:</span> {typeof incident.client === 'string' ? incident.client : incident.client?.name} • 
                         <span className="font-medium"> Reported:</span> {incident.reportedAt}
                       </div>
                     </div>

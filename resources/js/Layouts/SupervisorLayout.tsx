@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { useState, useEffect, useRef } from "react";
 import { Link, usePage, router } from "@inertiajs/react";
+import { PageProps } from '@/types';
 import { motion } from "framer-motion";
 
 const navLinks = [
@@ -37,7 +38,7 @@ interface Notification {
 }
 
 export default function SupervisorLayout({ children, title }: SupervisorLayoutProps) {
-  const { auth, notifications: serverNotifications } = usePage().props as any;
+  const { auth, notifications: serverNotifications } = usePage<PageProps<{ auth: { user: any }, notifications?: Notification[] }>>().props;
   const { url } = usePage();
   
   const [sidebarOpen, setSidebarOpen] = useState(false);
