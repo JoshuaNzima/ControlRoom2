@@ -1,5 +1,5 @@
 import React from 'react';
-import { CheckCircle, XCircle, Settings } from 'lucide-react';
+import IconMapper from '@/Components/IconMapper';
 
 interface ModuleCardProps {
     name: string;
@@ -52,9 +52,9 @@ export default function ModuleCard({
                     </div>
                     <div className="flex items-center space-x-2">
                         {isActive ? (
-                            <CheckCircle className="h-6 w-6 text-green-500" />
+                            <IconMapper name="check-circle" className="h-6 w-6 text-green-500" />
                         ) : (
-                            <XCircle className="h-6 w-6 text-red-500" />
+                            <IconMapper name="x-circle" className="h-6 w-6 text-red-500" />
                         )}
                     </div>
                 </div>
@@ -79,7 +79,7 @@ export default function ModuleCard({
                             onClick={onConfigure}
                             className="inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
                         >
-                            <Settings className="h-4 w-4 mr-1.5" />
+                            <IconMapper name="settings" className="h-4 w-4 mr-1.5" />
                             Configure
                         </button>
                     )}

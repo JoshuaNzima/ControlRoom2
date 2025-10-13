@@ -1,10 +1,10 @@
-import React from 'react';
+ import React from 'react';
 import { Head, Link, usePage } from '@inertiajs/react';
 import AdminLayout from '@/Layouts/AdminLayout';
 import QRCodeGenerator from '@/Components/QRCodeGenerator';
 import { Card } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
-import { Download } from 'lucide-react';
+import IconMapper from '@/Components/IconMapper';
 
 interface ZoneItem {
   id: number;
@@ -31,7 +31,7 @@ export default function QRCodes() {
             <p className="text-gray-600 text-sm">Generate and download QR codes for zones and checkpoints.</p>
           </div>
           <a href={route('admin.qr-codes.download-bulk')} className="inline-flex items-center gap-2 px-4 py-2 border rounded-lg hover:bg-gray-50">
-            <Download size={16} /> Download All QR Codes
+            <IconMapper name="Download" size={16} /> Download All QR Codes
           </a>
         </div>
 

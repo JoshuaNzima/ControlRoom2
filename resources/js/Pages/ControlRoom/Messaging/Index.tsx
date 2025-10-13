@@ -13,7 +13,6 @@ import {
     DialogTrigger,
 } from '@/Components/ui/dialog';
 import NewConversationForm from './NewConversationForm';
-import AgentStatusMap from './AgentStatusMap';
 import ConversationList from './ConversationList';
 import Echo from 'laravel-echo';
 
@@ -47,17 +46,6 @@ const MessagingIndex = ({ auth, conversations, agents }: MessagingIndexProps) =>
             forceTLS: true
         });
 
-        (echo as any).private('agent-statuses')
-            .listen('AgentStatusUpdated', (e: any) => {
-                setOnlineAgents((current) =>
-                    current.map((agent) =>
-                        agent.id === e.agent.id
-                            ? { ...agent, ...e.agent }
-                            : agent
-                    )
-                );
-            });
-
         (echo as any).private('emergencies')
             .listen('EmergencyAlert', (e: any) => {
                 const notification = new Notification('Emergency Alert!', {
@@ -71,8 +59,11 @@ const MessagingIndex = ({ auth, conversations, agents }: MessagingIndexProps) =>
             });
 
         return () => {
-            (echo as any).leave('agent-statuses');
-            (echo as any).leave('emergencies');
+            try {
+                (echo as any).leave('emergencies');
+            } catch (e) {
+                // ignore if channel wasn't joined
+            }
         };
     }, []);
 
@@ -84,14 +75,12 @@ const MessagingIndex = ({ auth, conversations, agents }: MessagingIndexProps) =>
     };
 
     return (
-        <ControlRoomLayout title="Messaging & Agent Status" user={auth?.user as any}>
-            <Head title="Messaging & Agent Status" />
+        <ControlRoomLayout title="Messaging" user={auth?.user as any}>
+            <Head title="Messaging" />
 
             <div className="space-y-6">
                 <div className="flex justify-between items-center">
-                    <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                        Messaging & Agent Status
-                    </h1>
+                        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Messaging</h1>
                     <Dialog open={showNewDialog} onOpenChange={setShowNewDialog}>
                         <DialogTrigger asChild>
                             <Button className="dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600">
@@ -110,24 +99,20 @@ const MessagingIndex = ({ auth, conversations, agents }: MessagingIndexProps) =>
                     </Dialog>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    {/* Agent Status Map */}
-                    <div className="lg:col-span-2">
-                        <Card className="dark:bg-gray-800 dark:border-gray-700">
-                            <CardHeader>
-                                <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Agent Status Map</h3>
-                            </CardHeader>
-                            <CardContent>
-                                <AgentStatusMap
-                                    agents={onlineAgents}
-                                    onAgentClick={setSelectedAgent}
-                                />
-                            </CardContent>
-                        </Card>
-                    </div>
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        {/* Conversations and Agent List */}
+                        <div className="lg:col-span-2">
+                            <Card className="dark:bg-gray-800 dark:border-gray-700">
+                                <CardHeader>
+                                    <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Recent Conversations</h3>
+                                </CardHeader>
+                                <CardContent>
+                                    <ConversationList conversations={conversations} />
+                                </CardContent>
+                            </Card>
+                        </div>
 
-                    {/* Agent List and Quick Actions */}
-                    <div className="space-y-6">
+                        <div className="space-y-6">
                         <Card className="dark:bg-gray-800 dark:border-gray-700">
                             <CardHeader>
                                 <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Field Agents</h3>
@@ -142,40 +127,14 @@ const MessagingIndex = ({ auth, conversations, agents }: MessagingIndexProps) =>
                                         >
                                             <div>
                                                 <div className="font-medium text-gray-900 dark:text-gray-100">{agent.name}</div>
-                                                <div className="text-sm text-gray-500 dark:text-gray-400">
-                                                    Last seen: {agent.last_seen
-                                                        ? new Date(agent.last_seen).toLocaleTimeString()
-                                                        : 'Never'}
-                                                </div>
                                             </div>
-                                            <Badge
-                                                className={
-                                                    agent.status === 'available'
-                                                        ? 'bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100'
-                                                        : agent.status === 'on_duty'
-                                                        ? 'bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-100'
-                                                        : agent.status === 'emergency'
-                                                        ? 'bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100'
-                                                        : 'bg-gray-100 text-gray-800 dark:bg-gray-600 dark:text-gray-100'
-                                                }
-                                            >
-                                                {agent.status.replace('_', ' ')}
-                                            </Badge>
                                         </div>
                                     ))}
                                 </div>
                             </CardContent>
                         </Card>
 
-                        {/* Conversations List */}
-                        <Card className="dark:bg-gray-800 dark:border-gray-700">
-                            <CardHeader>
-                                <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Recent Conversations</h3>
-                            </CardHeader>
-                            <CardContent>
-                                <ConversationList conversations={conversations} />
-                            </CardContent>
-                        </Card>
+                        {/* Quick Actions (agents list preserved) */}
                     </div>
                 </div>
             </div>

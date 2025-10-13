@@ -91,7 +91,7 @@ const FlagShow = ({ flag, canReview }) => {
                                     <div>
                                         <Label>Reported By</Label>
                                         <div className="mt-1 text-gray-900">
-                                            {flag.reporter.name} on{' '}
+                                            {flag.reporter?.name || '-'} on{' '}
                                             {new Date(flag.created_at).toLocaleDateString()}
                                         </div>
                                     </div>

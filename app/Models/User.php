@@ -9,7 +9,6 @@ use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
 use Spatie\Permission\Traits\HasPermissions;
 use Illuminate\Support\Collection;
-use App\Models\Communication\AgentStatus;
 
 class User extends Authenticatable
 {
@@ -84,13 +83,7 @@ class User extends Authenticatable
         return Guard::where('supervisor_id', $this->id);
     }
 
-    /**
-     * Get the user's current status.
-     */
-    public function currentStatus()
-    {
-        return $this->hasOne(AgentStatus::class);
-    }
+    // AgentStatus / presence functionality temporarily disabled
 
     
 

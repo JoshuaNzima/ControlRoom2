@@ -37,8 +37,18 @@ export default function ControlRoomLayout({ title, children, user }: Props) {
   { name: 'Downs', href: route('control-room.downs.index'), icon: <IconMapper name="activity" className="h-6 w-6" />, current: false },
   ];
 
-  const communicationLinks: ModuleNavItem[] = [
-    { name: 'Messaging', href: route('control-room.messaging.index'), icon: <IconMapper name="message-square-text" className="h-6 w-6" />, current: false },
+    const communicationLinks: ModuleNavItem[] = [
+    { name: 'Messaging', href: (() => {
+      try {
+        // User type may not include roles in all contexts; cast to any for safety
+        const role = (user as any)?.roles?.[0]?.name;
+        if (role === 'admin') return route('messaging.admin.index');
+        if (role === 'guard') return route('messaging.guards.index');
+        return route('control-room.messaging.index');
+      } catch (e) {
+        return route('control-room.messaging.index');
+      }
+    })(), icon: <IconMapper name="message-square-text" className="h-6 w-6" />, current: false },
     { name: 'Emergency Alerts', href: route('control-room.alerts'), icon: <IconMapper name="alert-triangle" className="h-6 w-6" />, current: false },
   ];
 

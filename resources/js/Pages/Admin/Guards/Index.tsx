@@ -1,7 +1,7 @@
 import React from 'react';
 import { Head, Link, router } from '@inertiajs/react';
 import AdminLayout from '@/Layouts/AdminLayout';
-import { Search, Plus, Pencil, Trash } from 'lucide-react';
+import IconMapper from '@/Components/IconMapper';
 import useNotification from '@/Providers/useNotifications';
 
 interface Guard {
@@ -54,15 +54,15 @@ export default function GuardsIndex({ guards, filters }: GuardsIndexProps) {
             href={route('guards.create')}
         className="flex items-center gap-2 px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-bold shadow-md transition-all transform hover:scale-105"
           >
-            <Plus size={20} />
+            <IconMapper name="Plus" size={20} />
             Add Guard
           </Link>
         </div>
 
         <div className="bg-white rounded-xl shadow-lg p-6">
           <div className="flex gap-4">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-3 text-gray-400" size={20} />
+              <div className="flex-1 relative">
+              <span className="absolute left-3 top-3 text-gray-400"><IconMapper name="Search" size={20} /></span>
               <input
                 type="text"
                 value={search}
@@ -122,7 +122,7 @@ export default function GuardsIndex({ guards, filters }: GuardsIndexProps) {
                         href={route('guards.edit', { guard: guard.id })}
                         className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition"
                       >
-                        <Pencil size={18} />
+                        <IconMapper name="Pencil" size={18} />
                       </Link>
                       <button
                         onClick={() => {
@@ -132,7 +132,7 @@ export default function GuardsIndex({ guards, filters }: GuardsIndexProps) {
                         }}
                         className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition"
                       >
-                        <Trash size={18} />
+                        <IconMapper name="Trash" size={18} />
                       </button>
                       {/* Suspend / Activate */}
                       <button

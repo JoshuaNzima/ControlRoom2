@@ -104,7 +104,7 @@ export default function Review({ infraction }: ReviewProps) {
             </div>
             <div>
               <h4 className="text-sm font-medium text-gray-500">Reported By</h4>
-              <p className="mt-1">{infraction.reporter.name}</p>
+              <p className="mt-1">{infraction.reporter?.name || '-'}</p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-6 pt-6 border-t">

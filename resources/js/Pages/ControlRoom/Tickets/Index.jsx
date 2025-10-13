@@ -130,7 +130,7 @@ const TicketList = ({ tickets, filters }) => {
                                                     {ticket.priority}
                                                 </Badge>
                                             </TableCell>
-                                            <TableCell>{ticket.reporter.name}</TableCell>
+                                            <TableCell>{ticket.reporter?.name || '-'}</TableCell>
                                             <TableCell>{ticket.assignee?.name || '-'}</TableCell>
                                             <TableCell>{new Date(ticket.created_at).toLocaleDateString()}</TableCell>
                                             <TableCell>

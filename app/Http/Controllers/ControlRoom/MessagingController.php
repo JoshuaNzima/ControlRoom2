@@ -3,9 +3,8 @@
 namespace App\Http\Controllers\ControlRoom;
 
 use App\Http\Controllers\Controller;
-use App\Models\Communication\{Conversation, Message, AgentStatus};
+use App\Models\Communication\{Conversation, Message};
 use App\Events\MessageSent;
-use App\Events\AgentStatusUpdated;
 use App\Events\EmergencyAlert;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -28,15 +27,11 @@ class MessagingController extends Controller
 
         // Return all users instead of filtering by a role
         $agents = User::query()
-            ->with('agentStatus')
             ->get()
             ->map(function ($agent) {
                 return [
                     'id' => $agent->id,
                     'name' => $agent->name,
-                    'status' => $agent->agentStatus?->status ?? 'offline',
-                    'location' => $agent->agentStatus?->location,
-                    'last_seen' => $agent->agentStatus?->updated_at,
                 ];
             });
 
@@ -51,7 +46,7 @@ class MessagingController extends Controller
         $this->authorize('view', $conversation);
 
         $conversation->load([
-            'participants.agentStatus',
+            'participants',
             'messages' => function ($query) {
                 $query->with('sender')->latest()->take(50);
             }
@@ -138,28 +133,8 @@ class MessagingController extends Controller
 
     public function updateAgentStatus(Request $request)
     {
-        $validated = $request->validate([
-            'status' => 'required|in:' . implode(',', AgentStatus::STATUSES),
-            'location' => 'nullable|array',
-            'location.lat' => 'required_with:location|numeric',
-            'location.lng' => 'required_with:location|numeric',
-            'battery_level' => 'nullable|integer|min:0|max:100',
-        ]);
-
-        $status = Auth::user()->agentStatus()->updateOrCreate(
-            ['user_id' => Auth::id()],
-            [
-                'status' => $validated['status'],
-                'location' => $validated['location'] ?? null,
-                'location_updated_at' => $validated['location'] ? now() : null,
-                'battery_level' => $validated['battery_level'] ?? null,
-            ]
-        );
-
-        // Broadcast status update
-        broadcast(new AgentStatusUpdated(Auth::user()))->toOthers();
-
-        return response()->json($status);
+        // Agent status functionality disabled for now.
+        return response()->json(['message' => 'Agent status functionality temporarily disabled.'], 200);
     }
 
     public function broadcastEmergency(Request $request)
@@ -171,17 +146,10 @@ class MessagingController extends Controller
             'details' => 'nullable|string',
         ]);
 
+        // Create and broadcast an emergency alert conversation/message.
+        // Note: agent presence/status features are disabled for now, so we do not
+        // update any AgentStatus records here.
         DB::transaction(function () use ($validated) {
-            // Update agent status to emergency
-            $status = Auth::user()->agentStatus()->updateOrCreate(
-                ['user_id' => Auth::id()],
-                [
-                    'status' => 'emergency',
-                    'location' => $validated['location'],
-                    'location_updated_at' => now(),
-                ]
-            );
-
             // Create emergency broadcast conversation if it doesn't exist
             $conversation = Conversation::firstOrCreate(
                 ['type' => 'broadcast', 'title' => 'Emergency Alerts'],

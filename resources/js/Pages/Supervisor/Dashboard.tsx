@@ -2,8 +2,7 @@ import React, { useState, useEffect,  } from 'react';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
-import {
-} from 'lucide-react';
+import IconMapper from '@/Components/IconMapper';
 import DashboardLayout from '@/Layouts/SupervisorLayout';
 
 interface GuardAttendance {

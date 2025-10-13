@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\ClientSites;
+use App\Models\ClientSite;
 use Illuminate\Http\Request;
 
 class ClientSitesController extends Controller
@@ -34,7 +34,7 @@ class ClientSitesController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(ClientSites $clientSites)
+    public function show(ClientSite $clientSite)
     {
         //
     }
@@ -42,7 +42,7 @@ class ClientSitesController extends Controller
     /**
      * Show the form for editing the specified resource.
      */
-    public function edit(ClientSites $clientSites)
+    public function edit(ClientSite $clientSite)
     {
         //
     }
@@ -50,7 +50,7 @@ class ClientSitesController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, ClientSites $clientSites)
+    public function update(Request $request, ClientSite $clientSite)
     {
         //
     }
@@ -58,7 +58,7 @@ class ClientSitesController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(ClientSites $clientSites)
+    public function destroy(ClientSite $clientSite)
     {
         //
     }

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Head, Link, router } from '@inertiajs/react';
 import AdminLayout from '@/Layouts/AdminLayout';
-import { Search, Plus, Pencil, Trash } from 'lucide-react';
+import IconMapper from '@/Components/IconMapper';
 import useNotification from '@/Providers/useNotifications';
 
 interface User {
@@ -53,11 +53,11 @@ export default function UsersIndex({ users, filters }: UsersIndexProps) {
             <h1 className="text-2xl font-bold text-gray-900">Users Management</h1>
             <p className="text-gray-600">Manage system users and permissions</p>
           </div>
-          <Link
+            <Link
             href={route('admin.users.create')}
             className="flex items-center gap-2 px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-bold shadow-md transition-all transform hover:scale-105"
           >
-            <Plus size={20} />
+            <IconMapper name="Plus" size={20} />
             Add User
           </Link>
         </div>
@@ -65,8 +65,8 @@ export default function UsersIndex({ users, filters }: UsersIndexProps) {
         {/* Search */}
         <div className="bg-white rounded-xl shadow-lg p-6">
           <div className="flex gap-4">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-3 text-gray-400" size={20} />
+              <div className="flex-1 relative">
+              <span className="absolute left-3 top-3 text-gray-400"><IconMapper name="Search" size={20} /></span>
               <input
                 type="text"
                 value={search}
@@ -128,21 +128,21 @@ export default function UsersIndex({ users, filters }: UsersIndexProps) {
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2">
-                      <Link
+                        <Link
                         href={route('admin.users.edit', { id: user.id })}
                         className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition"
                       >
-                        <Pencil size={18} />
+                        <IconMapper name="Pencil" size={18} />
                       </Link>
-                      <button
+                        <button
                         onClick={() => {
                           if (confirm('Are you sure you want to delete this user?')) {
                             router.delete(route('admin.users.destroy', { id: user.id }));
                           }
                         }}
                         className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition"
-                      >
-                        <Trash size={18} />
+                        >
+                        <IconMapper name="Trash" size={18} />
                       </button>
                       <button
                         onClick={async () => {

@@ -1,5 +1,6 @@
 <?php
 
+use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ControlRoom\MessagingController;
 
 Route::middleware(['auth'])->prefix('control-room')->name('control-room.')->group(function () {
@@ -8,7 +9,6 @@ Route::middleware(['auth'])->prefix('control-room')->name('control-room.')->grou
         Route::post('/', [MessagingController::class, 'store'])->name('store');
         Route::get('/{conversation}', [MessagingController::class, 'show'])->name('show');
         Route::post('/{conversation}/messages', [MessagingController::class, 'storeMessage'])->name('messages.send');
-        Route::post('/status', [MessagingController::class, 'updateAgentStatus'])->name('status.update');
     });
 });
 
@@ -18,5 +18,15 @@ Route::middleware(['auth'])->prefix('messaging')->name('messaging.')->group(func
     Route::post('/', [MessagingController::class, 'store'])->name('store');
     Route::get('/{conversation}', [MessagingController::class, 'show'])->name('show');
     Route::post('/{conversation}/messages', [MessagingController::class, 'storeMessage'])->name('messages.send');
-    Route::post('/status', [MessagingController::class, 'updateAgentStatus'])->name('status.update');
+});
+
+// Role-specific messaging routes for easier link targeting (map to same controller)
+Route::middleware(['auth'])->prefix('messaging/admin')->name('messaging.admin.')->group(function () {
+    Route::get('/', [MessagingController::class, 'index'])->name('index');
+    Route::get('/{conversation}', [MessagingController::class, 'show'])->name('show');
+});
+
+Route::middleware(['auth'])->prefix('messaging/guards')->name('messaging.guards.')->group(function () {
+    Route::get('/', [MessagingController::class, 'index'])->name('index');
+    Route::get('/{conversation}', [MessagingController::class, 'show'])->name('show');
 });

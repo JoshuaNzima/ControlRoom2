@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Head, router } from '@inertiajs/react';
 import AdminLayout from '@/Layouts/AdminLayout';
-import { UserCircle, CheckCircle } from 'lucide-react';
+import IconMapper from '@/Components/IconMapper';
 
 interface Supervisor {
   id: number;
@@ -209,7 +209,7 @@ function GuardCard({ guard, selected, onToggle }: GuardCardProps) {
           </div>
         </div>
         {selected && (
-          <CheckCircle size={24} className="text-indigo-600" />
+          <IconMapper name="CheckCircle" size={24} className="text-indigo-600" />
         )}
       </div>
       

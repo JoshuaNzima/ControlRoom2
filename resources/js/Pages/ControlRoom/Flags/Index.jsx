@@ -122,7 +122,7 @@ const FlagList = ({ flags, statuses }) => {
                                                     {flag.status.replace('_', ' ')}
                                                 </Badge>
                                             </TableCell>
-                                            <TableCell>{flag.reporter.name}</TableCell>
+                                            <TableCell>{flag.reporter?.name || '-'}</TableCell>
                                             <TableCell>{new Date(flag.created_at).toLocaleDateString()}</TableCell>
                                             <TableCell>
                                                 <Button
