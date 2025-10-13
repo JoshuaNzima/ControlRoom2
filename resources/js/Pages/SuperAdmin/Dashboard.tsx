@@ -91,6 +91,7 @@ interface SuperAdminDashboardProps {
   auditTrail: AuditTrail[];
   adminActions: AdminAction[];
   isSuperAdmin: boolean;
+  isMaintenance?: boolean;
 }
 
 interface SystemStatCardProps {
@@ -149,6 +150,7 @@ const Dashboard: React.FC<SuperAdminDashboardProps> = ({
   auditTrail,
   adminActions,
   isSuperAdmin,
+  isMaintenance,
 }) => {
   const handleToggleModule = (moduleId: number) => {
     router.post(route('superadmin.modules.toggle', { id: moduleId }));
@@ -377,12 +379,25 @@ const Dashboard: React.FC<SuperAdminDashboardProps> = ({
             >
               Clear All Caches
             </button>
-            <button
-              onClick={() => router.post(route('superadmin.maintenance.enable'))}
-              className="px-6 py-3 bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-bold transition"
-            >
-              Enable Maintenance
-            </button>
+            {!isMaintenance ? (
+              <button
+                onClick={() => router.post(route('superadmin.maintenance.enable'))}
+                className="px-6 py-3 bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-bold transition"
+              >
+                Enable Maintenance
+              </button>
+            ) : (
+              <button
+                onClick={() => {
+                  if (confirm('Disable maintenance mode?')) {
+                    router.post(route('superadmin.maintenance.disable'))
+                  }
+                }}
+                className="px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-bold transition"
+              >
+                Disable Maintenance
+              </button>
+            )}
             <Link
               href={route('superadmin.backup')}
               className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-bold transition text-center"

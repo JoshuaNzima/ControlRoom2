@@ -99,7 +99,7 @@ export default function SuperAdminLayout({ title, children, user }: Props) {
                 <div className="flex-1 flex flex-col pt-5 pb-4 overflow-y-auto">
                     <div className="flex items-center flex-shrink-0 px-4">
                         <img
-                            src="/images/coin-logo.png"
+                    src="/images/Coin-logo.png"
                             alt="Coin Security"
                             className="h-10 w-auto"
                             style={{ display: logoOk ? 'block' : 'none' }}

@@ -52,9 +52,9 @@ export default function AdminLayout({ title, children, user }: Props) {
 
       <div className={`fixed top-0 left-0 bottom-0 flex flex-col w-64 bg-red-900 dark:bg-gray-950 text-white transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 transition-transform duration-300 ease-in-out z-50`}>
         <div className="flex-1 flex flex-col pt-5 pb-4 overflow-y-auto">
-          <div className="flex items-center flex-shrink-0 px-4">
+            <div className="flex items-center flex-shrink-0 px-4">
             <img
-              src="/images/coin-logo.png"
+              src="/images/Coin-logo.png"
               alt="Coin Security"
               className="h-10 w-auto"
               style={{ display: logoOk ? 'block' : 'none' }}

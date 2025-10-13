@@ -1,5 +1,6 @@
 import { PageProps } from '@/types';
 import { Head, Link } from '@inertiajs/react';
+import GuestLayout from '@/Layouts/GuestLayout';
 
 export default function Welcome({
     auth,
@@ -18,7 +19,7 @@ export default function Welcome({
     };
 
     return (
-        <>
+        <GuestLayout>
             <Head title="Welcome" />
             <div className="bg-gray-50 text-black/50 dark:bg-black dark:text-white/50">
                 <img
@@ -361,6 +362,6 @@ export default function Welcome({
                     </div>
                 </div>
             </div>
-        </>
+        </GuestLayout>
     );
 }

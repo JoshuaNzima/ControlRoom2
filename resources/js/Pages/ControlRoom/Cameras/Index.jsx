@@ -26,7 +26,7 @@ import { Grid } from '@/Components/ui/grid';
 import CameraCard from './CameraCard';
 import AddCameraForm from './AddCameraForm';
 
-const CameraList = ({ cameras, sites, filters }) => {
+const CameraList = ({ cameras = { data: [] }, sites = [], filters = { statuses: [] } }) => {
     const [filterSite, setFilterSite] = useState('');
     const [filterStatus, setFilterStatus] = useState('');
     const [viewMode, setViewMode] = useState('grid');
@@ -91,7 +91,7 @@ const CameraList = ({ cameras, sites, filters }) => {
                                     </SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="">All Sites</SelectItem>
-                                        {sites.map((site) => (
+                                        {Array.isArray(sites) && sites.map((site) => (
                                             <SelectItem key={site.id} value={site.id}>
                                                 {site.name}
                                             </SelectItem>
@@ -105,7 +105,7 @@ const CameraList = ({ cameras, sites, filters }) => {
                                     </SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="">All Statuses</SelectItem>
-                                        {filters.statuses.map((status) => (
+                                        {(filters?.statuses || []).map((status) => (
                                             <SelectItem key={status} value={status}>
                                                 {status.charAt(0).toUpperCase() + status.slice(1)}
                                             </SelectItem>
@@ -117,7 +117,7 @@ const CameraList = ({ cameras, sites, filters }) => {
                         <CardContent>
                             {viewMode === 'grid' ? (
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                    {cameras.data.map((camera) => (
+                                    {(cameras?.data || []).map((camera) => (
                                         <CameraCard key={camera.id} camera={camera} />
                                     ))}
                                 </div>
@@ -135,14 +135,14 @@ const CameraList = ({ cameras, sites, filters }) => {
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {cameras.data.map((camera) => (
+                                        {(cameras?.data || []).map((camera) => (
                                             <TableRow key={camera.id}>
                                                 <TableCell>{camera.name}</TableCell>
-                                                <TableCell>{camera.site.name}</TableCell>
+                                                <TableCell>{camera.site?.name || '-'}</TableCell>
                                                 <TableCell>{camera.type}</TableCell>
                                                 <TableCell>
-                                                    <Badge className={statusColors[camera.status]}>
-                                                        {camera.status}
+                                                    <Badge className={statusColors[camera.status] || 'bg-gray-100 text-gray-800'}>
+                                                        {camera.status || '-'}
                                                     </Badge>
                                                 </TableCell>
                                                 <TableCell>{camera.location}</TableCell>

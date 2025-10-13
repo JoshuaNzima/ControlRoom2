@@ -1,5 +1,7 @@
-// Use require to avoid TypeScript circular import alias checks when shimming a JSX file
+// Import the JSX component as an ES module so browsers won't attempt to call `require()` at runtime.
+// Keep a lightweight shim for compatibility with existing imports.
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
-const TicketList: any = require('./Index.jsx').default;
+import TicketList from './Index.jsx';
+
 export default TicketList;
