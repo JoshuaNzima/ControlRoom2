@@ -1,5 +1,5 @@
 import React from 'react';
-import { Head } from '@inertiajs/react';
+import { Head, Link } from '@inertiajs/react';
 import AppLayout from '@/Layouts/AppLayout';
 import QRCodeGenerator from '@/Components/QRCodeGenerator';
 import { Card } from '@/Components/ui/card';
@@ -8,8 +8,11 @@ import IconMapper from '@/Components/IconMapper';
 
 export default function SupervisorQRCodes({ zones }: { zones: any }) {
     const handleBulkDownload = () => {
-        // TODO: Implement bulk download of QR codes for all zones
-        // This would generate a zip file with QR codes for each zone
+        window.location.href = route('supervisor.qr-codes.download-bulk');
+    };
+
+    const handleDownloadSaved = () => {
+        window.location.href = route('supervisor.qr-codes.download-saved');
     };
 
     return (
@@ -28,10 +31,16 @@ export default function SupervisorQRCodes({ zones }: { zones: any }) {
                             </p>
                         </div>
 
-                        <Button variant="outline" onClick={handleBulkDownload}>
-                            <span className="mr-2 h-4 w-4 inline-block"><IconMapper name="Download" size={16} /></span>
-                            Download All QR Codes
-                        </Button>
+                        <div className="flex gap-2">
+                            <Button variant="outline" onClick={handleBulkDownload}>
+                                <span className="mr-2 h-4 w-4 inline-block"><IconMapper name="Download" size={16} /></span>
+                                Generate & Download All
+                            </Button>
+                            <Button variant="outline" onClick={handleDownloadSaved}>
+                                <span className="mr-2 h-4 w-4 inline-block"><IconMapper name="Archive" size={16} /></span>
+                                Download Saved
+                            </Button>
+                        </div>
                     </div>
 
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

@@ -29,11 +29,11 @@ Route::middleware(['auth'])->group(function () {
 		Route::delete('shifts/{shift}/unassign-guard/{guard}', [\App\Http\Controllers\ControlRoom\ShiftController::class, 'unassignGuard'])->name('shifts.unassign-guard');
 		Route::get('shifts/{shift}/schedule', [\App\Http\Controllers\ControlRoom\ShiftController::class, 'schedule'])->name('shifts.schedule');
 		
-		// Control Room specific management routes
-		Route::get('/guards', [\App\Http\Controllers\Guards\SupervisorController::class, 'guards'])->name('guards');
-		Route::get('/assignments', [\App\Http\Controllers\Guards\AssignmentController::class, 'index'])->name('assignments.index');
-		Route::get('/reports', [\App\Http\Controllers\Guards\SupervisorController::class, 'reports'])->name('reports');
-		Route::get('/clients', [\App\Http\Controllers\ClientsController::class, 'index'])->name('clients');
+		// Control Room specific management routes (decoupled from Supervisor controllers)
+		Route::get('/guards', [\App\Http\Controllers\ControlRoom\GuardsController::class, 'index'])->name('guards');
+		Route::get('/assignments', [\App\Http\Controllers\ControlRoom\AssignmentsController::class, 'index'])->name('assignments.index');
+		Route::get('/reports', [\App\Http\Controllers\ControlRoom\ReportsController::class, 'index'])->name('reports');
+		Route::get('/clients', [\App\Http\Controllers\ControlRoom\ClientsController::class, 'index'])->name('clients');
 		
 		// Camera Management
 		Route::resource('cameras', \App\Http\Controllers\ControlRoom\CameraController::class);

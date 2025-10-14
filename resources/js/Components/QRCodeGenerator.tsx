@@ -137,7 +137,20 @@ const QRCodeGenerator: React.FC = () => {
 
         <div className="flex flex-col items-center space-y-4">
           <div className="bg-white p-4 rounded-lg">
-            <QRCode id="qr-code-canvas" value={generateQRValue()} size={qrSize} level="H" includeMargin className="mx-auto" />
+            <QRCode
+              id="qr-code-canvas"
+              value={generateQRValue()}
+              size={qrSize}
+              level="H"
+              includeMargin
+              className="mx-auto"
+              imageSettings={{
+                src: '/images/Coin-logo.png',
+                height: Math.floor(qrSize * 0.2),
+                width: Math.floor(qrSize * 0.2),
+                excavate: true,
+              }}
+            />
           </div>
 
           <Button onClick={downloadQR} disabled={!qrData} className="w-full sm:w-auto">
