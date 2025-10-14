@@ -4,6 +4,11 @@ import { Button } from '@/Components/ui/button';
 import { Input } from '@/Components/ui/input';
 import { Label } from '@/Components/ui/label';
 import Select from '@/Components/Select';
+import {
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/Components/ui/dialog';
 
 interface AddCameraFormProps {
   onClose: () => void;
@@ -32,10 +37,11 @@ export default function AddCameraForm({ onClose, sites }: AddCameraFormProps) {
   };
 
   return (
-    <div className="space-y-6">
-      <h3 className="text-lg font-semibold">Add New Camera</h3>
-      
-      <form onSubmit={handleSubmit} className="space-y-4">
+    <DialogContent className="sm:max-w-[525px]">
+      <DialogHeader>
+        <DialogTitle>Add New Camera</DialogTitle>
+      </DialogHeader>
+      <form onSubmit={handleSubmit} className="space-y-4 p-4">
         <div>
           <Label htmlFor="name">Camera Name</Label>
           <Input
@@ -127,6 +133,6 @@ export default function AddCameraForm({ onClose, sites }: AddCameraFormProps) {
           </Button>
         </div>
       </form>
-    </div>
+    </DialogContent>
   );
 }

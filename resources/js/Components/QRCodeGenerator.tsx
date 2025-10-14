@@ -1,3 +1,4 @@
+// If a .jsx implementation exists, we prefer the TSX source in this file — no shim.
 import React, { useState } from 'react';
 import { QRCodeCanvas as QRCode } from 'qrcode.react';
 import { Card } from '@/Components/ui/card';
