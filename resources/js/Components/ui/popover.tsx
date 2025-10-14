@@ -10,6 +10,8 @@ const PopoverContext = createContext<PopoverContextValue | undefined>(undefined)
 
 interface PopoverProps {
   children: React.ReactNode;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 interface PopoverTriggerProps extends React.HTMLAttributes<HTMLElement> {
@@ -23,12 +25,22 @@ interface PopoverContentProps extends React.HTMLAttributes<HTMLDivElement> {
   align?: 'start' | 'center' | 'end';
 }
 
-export const Popover = ({ children }: PopoverProps) => {
-  const [open, setOpen] = useState(false);
+export const Popover = ({ children, open: controlledOpen, onOpenChange }: PopoverProps) => {
+  const [internalOpen, setInternalOpen] = useState<boolean>(controlledOpen ?? false);
   const triggerRef = useRef<HTMLElement>(null);
 
+  // Sync controlled prop to internal state
+  useEffect(() => {
+    if (typeof controlledOpen === 'boolean') setInternalOpen(controlledOpen);
+  }, [controlledOpen]);
+
+  const setOpen = (o: boolean) => {
+    if (typeof onOpenChange === 'function') onOpenChange(o);
+    setInternalOpen(o);
+  };
+
   return (
-    <PopoverContext.Provider value={{ open, setOpen, triggerRef }}>
+    <PopoverContext.Provider value={{ open: internalOpen, setOpen, triggerRef }}>
       {children}
     </PopoverContext.Provider>
   );

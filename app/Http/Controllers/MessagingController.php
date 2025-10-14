@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Events\EmergencyAlert;
-use App\Events\AgentStatusUpdated;
 use App\Models\Conversation;
 use App\Models\Message;
 use App\Models\User;
@@ -26,20 +25,13 @@ class MessagingController extends Controller
             ->latest()
             ->get();
 
-        // Return all users; use currentStatus for status and location
+        // Return all users (agent status disabled)
         $agents = User::query()
-            ->with(['currentStatus'])
             ->get()
             ->map(function ($agent) {
-                $location = $agent->currentStatus?->location ?? null;
                 return [
                     'id' => $agent->id,
                     'name' => $agent->name,
-                    'status' => $agent->currentStatus?->status ?? 'offline',
-                    'latitude' => is_array($location) ? ($location['lat'] ?? null) : null,
-                    'longitude' => is_array($location) ? ($location['lng'] ?? null) : null,
-                    'last_seen' => $agent->currentStatus?->location_updated_at ?? $agent->currentStatus?->updated_at,
-                    // Assignment field removed as Assignment model is not defined
                     'current_assignment' => null,
                 ];
             });
@@ -147,22 +139,7 @@ class MessagingController extends Controller
 
         $user = Auth::user();
         
-        // Update status and location on AgentStatus
-        $user->currentStatus()->updateOrCreate(
-            ['user_id' => $user->id],
-            [
-                'status' => $validated['status'],
-                'location' => [
-                    'lat' => $validated['latitude'],
-                    'lng' => $validated['longitude'],
-                ],
-                'location_updated_at' => now(),
-            ]
-        );
-
-        // Broadcast status update
-        broadcast(new AgentStatusUpdated($user))->toOthers();
-
-        return response()->json(['message' => 'Status updated successfully']);
+        // Agent status functionality disabled for now.
+        return response()->json(['message' => 'Agent status functionality temporarily disabled.'], 200);
     }
 }

@@ -106,7 +106,7 @@ class NavigationService
             ],
             'control_room' => [
                 ['name' => 'Live Dashboard', 'route' => 'control-room.dashboard', 'permission' => 'control.dashboard.view', 'icon' => 'HiOutlineDesktopComputer'],
-                ['name' => 'Incidents', 'route' => 'control-room.incidents', 'permission' => 'control.incidents.view', 'icon' => 'HiOutlineExclamation'],
+                ['name' => 'Incidents', 'route' => 'control-room.incidents.index', 'permission' => 'control.incidents.view', 'icon' => 'HiOutlineExclamation'],
                 ['name' => 'Alerts', 'route' => 'control-room.alerts', 'permission' => 'control.alerts.view', 'icon' => 'HiOutlineBell'],
             ],
             'reports' => [

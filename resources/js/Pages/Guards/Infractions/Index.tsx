@@ -134,7 +134,7 @@ export default function Index({ infractions }: PageProps) {
                   </div>
                   <div className="flex justify-between items-center text-sm text-gray-500">
                     <div>
-                      <span>Reported by: {infraction.reporter.name}</span>
+                      <span>Reported by: {infraction.reporter?.name || '-'}</span>
                       {infraction.reviewer && (
                         <span className="ml-4">Reviewed by: {infraction.reviewer.name}</span>
                       )}

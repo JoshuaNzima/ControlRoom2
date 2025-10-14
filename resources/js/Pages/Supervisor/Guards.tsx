@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Head, router } from '@inertiajs/react';
 import SupervisorLayout from '@/Layouts/SupervisorLayout';
-import { Search, Phone, CalendarDays, Eye, X } from 'lucide-react';
+import IconMapper from '@/Components/IconMapper';
 
 interface Guard {
   id: number;
@@ -99,7 +99,7 @@ export default function Guards({ guards, filters }: Props) {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Search</label>
               <div className="relative">
-                <Search className="absolute left-3 top-3 text-gray-400" size={20} />
+                <span className="absolute left-3 top-3 text-gray-400"><IconMapper name="Search" size={20} /></span>
                 <input
                   type="text"
                   value={search}
@@ -163,7 +163,7 @@ export default function Guards({ guards, filters }: Props) {
                   onClick={() => setSelectedGuard(guard)}
                   className="flex items-center gap-1 text-indigo-600 hover:text-indigo-800 font-medium text-sm"
                 >
-                  <Eye size={16} /> View Details
+                  <IconMapper name="Eye" size={16} /> View Details
                 </button>
               </div>
             </div>
@@ -207,7 +207,7 @@ export default function Guards({ guards, filters }: Props) {
               className="absolute top-4 right-4 text-gray-500 hover:text-gray-700"
               onClick={() => setSelectedGuard(null)}
             >
-              <X size={24} />
+              <IconMapper name="X" size={24} />
             </button>
 
             <h2 className="text-xl font-bold mb-4">{selectedGuard.name}</h2>

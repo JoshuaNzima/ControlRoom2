@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { formatDateMW } from '@/Components/format';
 import { Head } from '@inertiajs/react';
 import { router } from '@inertiajs/react';
-import AppLayout from '@/Layouts/AppLayout';
+import ControlRoomLayout from '@/Layouts/ControlRoomLayout';
 import { Card, CardContent, CardHeader } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import {
@@ -26,7 +26,7 @@ import { Grid } from '@/Components/ui/grid';
 import CameraCard from './CameraCard';
 import AddCameraForm from './AddCameraForm';
 
-const CameraList = ({ cameras, sites, filters }) => {
+const CameraList = ({ cameras = { data: [] }, sites = [], filters = { statuses: [] } }) => {
     const [filterSite, setFilterSite] = useState('');
     const [filterStatus, setFilterStatus] = useState('');
     const [viewMode, setViewMode] = useState('grid');
@@ -48,8 +48,74 @@ const CameraList = ({ cameras, sites, filters }) => {
         });
     };
 
+    const content = (() => {
+        const cameraList = (cameras?.data || []);
+        if (cameraList.length === 0) {
+            return (
+                <div className="p-6 text-center text-gray-500">
+                    No cameras found. Use the 'Add Camera' button to create a new camera.
+                </div>
+            );
+        }
+
+        if (viewMode === 'grid') {
+            return (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {cameraList.map((camera) => (
+                        <CameraCard key={camera.id} camera={camera} />
+                    ))}
+                </div>
+            );
+        }
+
+        return (
+            <Table>
+                <TableHeader>
+                    <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Site</TableHead>
+                        <TableHead>Type</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Location</TableHead>
+                        <TableHead>Last Online</TableHead>
+                        <TableHead>Actions</TableHead>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                    {cameraList.map((camera) => (
+                        <TableRow key={camera.id}>
+                            <TableCell>{camera.name}</TableCell>
+                            <TableCell>{camera.site?.name || '-'}</TableCell>
+                            <TableCell>{camera.type}</TableCell>
+                            <TableCell>
+                                <Badge className={statusColors[camera.status] || 'bg-gray-100 text-gray-800'}>
+                                    {camera.status || '-'}
+                                </Badge>
+                            </TableCell>
+                            <TableCell>{camera.location}</TableCell>
+                            <TableCell>
+                                {camera.last_online
+                                    ? formatDateMW('en-MW', camera.last_online)
+                                    : 'Never'}
+                            </TableCell>
+                            <TableCell>
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => router.visit(route('control-room.cameras.show', camera.id))}
+                                >
+                                    View
+                                </Button>
+                            </TableCell>
+                        </TableRow>
+                    ))}
+                </TableBody>
+            </Table>
+        );
+    })();
+
     return (
-        <AppLayout>
+        <ControlRoomLayout>
             <Head title="CCTV Management" />
 
             <div className="py-6">
@@ -91,7 +157,7 @@ const CameraList = ({ cameras, sites, filters }) => {
                                     </SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="">All Sites</SelectItem>
-                                        {sites.map((site) => (
+                                        {Array.isArray(sites) && sites.map((site) => (
                                             <SelectItem key={site.id} value={site.id}>
                                                 {site.name}
                                             </SelectItem>
@@ -105,7 +171,7 @@ const CameraList = ({ cameras, sites, filters }) => {
                                     </SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="">All Statuses</SelectItem>
-                                        {filters.statuses.map((status) => (
+                                        {(filters?.statuses || []).map((status) => (
                                             <SelectItem key={status} value={status}>
                                                 {status.charAt(0).toUpperCase() + status.slice(1)}
                                             </SelectItem>
@@ -115,9 +181,13 @@ const CameraList = ({ cameras, sites, filters }) => {
                             </div>
                         </CardHeader>
                         <CardContent>
-                            {viewMode === 'grid' ? (
+                            {((cameras?.data || []).length === 0) ? (
+                                <div className="p-6 text-center text-gray-500">
+                                    No cameras found. Use the 'Add Camera' button to create a new camera.
+                                </div>
+                            ) : viewMode === 'grid' ? (
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                    {cameras.data.map((camera) => (
+                                    {(cameras?.data || []).map((camera) => (
                                         <CameraCard key={camera.id} camera={camera} />
                                     ))}
                                 </div>
@@ -135,14 +205,14 @@ const CameraList = ({ cameras, sites, filters }) => {
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {cameras.data.map((camera) => (
+                                        {(cameras?.data || []).map((camera) => (
                                             <TableRow key={camera.id}>
                                                 <TableCell>{camera.name}</TableCell>
-                                                <TableCell>{camera.site.name}</TableCell>
+                                                <TableCell>{camera.site?.name || '-'}</TableCell>
                                                 <TableCell>{camera.type}</TableCell>
                                                 <TableCell>
-                                                    <Badge className={statusColors[camera.status]}>
-                                                        {camera.status}
+                                                    <Badge className={statusColors[camera.status] || 'bg-gray-100 text-gray-800'}>
+                                                        {camera.status || '-'}
                                                     </Badge>
                                                 </TableCell>
                                                 <TableCell>{camera.location}</TableCell>
@@ -169,7 +239,7 @@ const CameraList = ({ cameras, sites, filters }) => {
                     </Card>
                 </div>
             </div>
-        </AppLayout>
+    </ControlRoomLayout>
     );
 };
 

@@ -3,6 +3,8 @@ export interface User {
     name: string;
     email: string;
     email_verified_at?: string;
+    // optional extra fields that some pages expect
+    permissions?: string[];
 }
 
 export type PageProps<

@@ -5,43 +5,51 @@ namespace App\Http\Controllers\ControlRoom;
 use App\Http\Controllers\Controller;
 use App\Models\Flag;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
 class FlagController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $flags = Flag::with(['reporter', 'assignedTo', 'client', 'clientSite'])
-            ->latest()
-            ->paginate(20);
+        $query = Flag::with(['flaggable', 'reporter', 'reviewer'])->latest();
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->input('status'));
+        }
+
+        $flags = $query->paginate(20)->withQueryString();
 
         return Inertia::render('ControlRoom/Flags/Index', [
             'flags' => $flags,
+            'statuses' => Flag::STATUSES,
         ]);
     }
 
     public function create()
     {
+        // The UI currently provides a modal create form; keep route in case it's needed
         return Inertia::render('ControlRoom/Flags/Create');
     }
 
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'title' => 'required|string|max:255',
-            'type' => 'required|in:security_concern,equipment_issue,personnel_issue,client_complaint,other',
-            'priority' => 'required|in:low,medium,high,critical',
-            'description' => 'required|string',
-            'location' => 'required|string|max:255',
+            'flaggable_type' => 'required|string',
+            'flaggable_id' => 'required|integer',
+            'reason' => 'required|string|max:255',
+            'details' => 'required|string',
             'client_id' => 'nullable|exists:clients,id',
-            'client_site_id' => 'nullable|exists:client_sites,id',
         ]);
 
         $flag = Flag::create([
-            ...$validated,
-            'reporter_id' => auth()->id(),
-            'status' => 'open',
-            'escalation_level' => 0,
+            'flaggable_type' => $validated['flaggable_type'],
+            'flaggable_id' => $validated['flaggable_id'],
+            'reason' => $validated['reason'],
+            'details' => $validated['details'],
+            'reported_by' => auth()->id(),
+            'status' => 'pending_review',
+            'meta' => [],
         ]);
 
         return redirect()->route('control-room.flags.show', $flag)
@@ -50,10 +58,11 @@ class FlagController extends Controller
 
     public function show(Flag $flag)
     {
-        $flag->load(['reporter', 'assignedTo', 'client', 'clientSite', 'comments.user']);
+        $flag->load(['flaggable', 'reporter', 'reviewer']);
 
         return Inertia::render('ControlRoom/Flags/Show', [
             'flag' => $flag,
+            'canReview' => auth()->user() ? auth()->user()->can('review flags') : false,
         ]);
     }
 
@@ -67,17 +76,30 @@ class FlagController extends Controller
     public function update(Request $request, Flag $flag)
     {
         $validated = $request->validate([
-            'title' => 'required|string|max:255',
-            'type' => 'required|in:security_concern,equipment_issue,personnel_issue,client_complaint,other',
-            'priority' => 'required|in:low,medium,high,critical',
-            'description' => 'required|string',
-            'location' => 'required|string|max:255',
-            'status' => 'required|in:open,acknowledged,in_progress,resolved,closed',
-            'client_id' => 'nullable|exists:clients,id',
-            'client_site_id' => 'nullable|exists:client_sites,id',
+            'status' => ['required', Rule::in(Flag::STATUSES)],
+            'review_notes' => 'nullable|string',
+            'details' => 'nullable|string',
         ]);
 
-        $flag->update($validated);
+        $data = [
+            'status' => $validated['status'],
+        ];
+
+        if (isset($validated['review_notes'])) {
+            $data['review_notes'] = $validated['review_notes'];
+        }
+
+        if (isset($validated['details'])) {
+            $data['details'] = $validated['details'];
+        }
+
+        // If being reviewed/resolved, record reviewer and date
+        if (in_array($validated['status'], ['under_review', 'resolved', 'dismissed'])) {
+            $data['reviewed_by'] = auth()->id();
+            $data['review_date'] = now();
+        }
+
+        $flag->update($data);
 
         return redirect()->route('control-room.flags.show', $flag)
             ->with('success', 'Flag updated successfully.');
@@ -94,9 +116,9 @@ class FlagController extends Controller
     public function acknowledge(Request $request, Flag $flag)
     {
         $flag->update([
-            'status' => 'acknowledged',
-            'acknowledged_by' => auth()->id(),
-            'acknowledged_at' => now(),
+            'status' => 'under_review',
+            'reviewed_by' => auth()->id(),
+            'review_date' => now(),
         ]);
 
         return back()->with('success', 'Flag acknowledged successfully.');
@@ -106,8 +128,8 @@ class FlagController extends Controller
     {
         $flag->update([
             'status' => 'resolved',
-            'resolved_at' => now(),
-            'resolved_by' => auth()->id(),
+            'reviewed_by' => auth()->id(),
+            'review_date' => now(),
         ]);
 
         return back()->with('success', 'Flag resolved successfully.');
@@ -115,9 +137,12 @@ class FlagController extends Controller
 
     public function escalate(Request $request, Flag $flag)
     {
+        $meta = $flag->meta ?? [];
+        $meta['escalation_level'] = ($meta['escalation_level'] ?? 0) + 1;
+
         $flag->update([
-            'escalation_level' => $flag->escalation_level + 1,
-            'status' => 'escalated',
+            'meta' => $meta,
+            'status' => 'under_review',
         ]);
 
         return back()->with('success', 'Flag escalated successfully.');

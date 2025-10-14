@@ -4,6 +4,7 @@ import ControlRoomLayout from '@/Layouts/ControlRoomLayout';
 import { Card, CardContent, CardHeader } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import { Badge } from '@/Components/ui/badge';
+import { User } from '@/types';
 
 interface ShiftsProps {
   auth?: { user?: { name?: string } };
@@ -88,7 +89,7 @@ const Shifts = ({ auth }: ShiftsProps) => {
   };
 
   return (
-    <ControlRoomLayout title="Shift Management" user={auth?.user as any}>
+    <ControlRoomLayout title="Shift Management" user={auth?.user as User | undefined}>
       <Head title="Shift Management" />
 
       <div className="space-y-6">

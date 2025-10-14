@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { Line } from 'react-chartjs-2';
+import { ChartOptions } from 'chart.js';
 
 interface Zone {
     id: number;
@@ -37,7 +38,7 @@ const CoverageTrendChart: React.FC<CoverageTrendChartProps> = ({ zones = [] }) =
         };
     }, [zones]);
 
-    const options = {
+    const options: ChartOptions<'line'> = {
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
@@ -54,7 +55,7 @@ const CoverageTrendChart: React.FC<CoverageTrendChartProps> = ({ zones = [] }) =
                 min: 0,
                 max: 100,
                 ticks: {
-                    callback: value => `${value}%`
+                    callback: (value: number | string) => `${value}%`
                 }
             }
         }
@@ -68,7 +69,7 @@ const CoverageTrendChart: React.FC<CoverageTrendChartProps> = ({ zones = [] }) =
 };
 
 // Helper function to generate consistent colors for zones
-const getZoneColor = (zoneName, alpha = 1) => {
+const getZoneColor = (zoneName: string, alpha = 1) => {
     const colors = [
         `rgba(59, 130, 246, ${alpha})`,   // Blue
         `rgba(16, 185, 129, ${alpha})`,   // Green
@@ -79,7 +80,7 @@ const getZoneColor = (zoneName, alpha = 1) => {
     ];
     
     // Generate a consistent index based on zone name
-    const index = zoneName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % colors.length;
+    const index = zoneName.split('').reduce((acc: number, char: string) => acc + char.charCodeAt(0), 0) % colors.length;
     return colors[index];
 };
 

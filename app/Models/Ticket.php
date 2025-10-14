@@ -14,11 +14,11 @@ class Ticket extends Model
     protected $fillable = [
         'ticket_number',
         'title',
-        'type',
+        'category',
         'priority',
         'description',
         'status',
-        'reporter_id',
+        'reported_by',
         'assigned_to',
         'client_id',
         'client_site_id',
@@ -30,9 +30,15 @@ class Ticket extends Model
         'closed_at' => 'datetime',
     ];
 
+    protected $appends = ['assignee'];
+
+    const STATUSES = ['open', 'in_progress', 'pending', 'resolved', 'closed', 'escalated'];
+    const PRIORITIES = ['low', 'medium', 'high', 'critical'];
+    const CATEGORIES = ['complaint', 'incident', 'request', 'maintenance', 'emergency'];
+
     public function reporter(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'reporter_id');
+        return $this->belongsTo(User::class, 'reported_by');
     }
 
     public function assignedTo(): BelongsTo
@@ -58,5 +64,11 @@ class Ticket extends Model
     public function closedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'closed_by');
+    }
+
+    // Helper accessor to match frontend expectations (ticket.assignee)
+    public function getAssigneeAttribute()
+    {
+        return $this->assignedTo;
     }
 }

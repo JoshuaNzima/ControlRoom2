@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from '@inertiajs/react';
-import { ArrowLeft } from 'lucide-react';
+import IconMapper from '@/Components/IconMapper';
 
 interface ComingSoonProps {
   title: string;
@@ -23,7 +23,7 @@ export default function ComingSoon({
           href={route(backRoute)}
           className="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition"
         >
-          <ArrowLeft size={18} />
+          <IconMapper name="ArrowLeft" size={18} />
           Back to Dashboard
         </Link>
       </div>

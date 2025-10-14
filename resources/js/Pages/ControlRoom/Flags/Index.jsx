@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Head } from '@inertiajs/react';
 import { router } from '@inertiajs/react';
-import AppLayout from '@/Layouts/AppLayout';
+import ControlRoomLayout from '@/Layouts/ControlRoomLayout';
 import { Card, CardContent, CardHeader } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import {
@@ -50,7 +50,7 @@ const FlagList = ({ flags, statuses }) => {
     };
 
     return (
-        <AppLayout>
+    <ControlRoomLayout>
             <Head title="Review Flags" />
 
             <div className="py-6">
@@ -122,7 +122,7 @@ const FlagList = ({ flags, statuses }) => {
                                                     {flag.status.replace('_', ' ')}
                                                 </Badge>
                                             </TableCell>
-                                            <TableCell>{flag.reporter.name}</TableCell>
+                                            <TableCell>{flag.reporter?.name || '-'}</TableCell>
                                             <TableCell>{new Date(flag.created_at).toLocaleDateString()}</TableCell>
                                             <TableCell>
                                                 <Button
@@ -141,7 +141,7 @@ const FlagList = ({ flags, statuses }) => {
                     </Card>
                 </div>
             </div>
-        </AppLayout>
+    </ControlRoomLayout>
     );
 };
 

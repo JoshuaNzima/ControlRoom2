@@ -4,7 +4,7 @@ import AppLayout from '@/Layouts/AppLayout';
 import QRCodeGenerator from '@/Components/QRCodeGenerator';
 import { Card } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
-import { Download } from 'lucide-react';
+import IconMapper from '@/Components/IconMapper';
 
 export default function SupervisorQRCodes({ zones }: { zones: any }) {
     const handleBulkDownload = () => {
@@ -29,7 +29,7 @@ export default function SupervisorQRCodes({ zones }: { zones: any }) {
                         </div>
 
                         <Button variant="outline" onClick={handleBulkDownload}>
-                            <Download className="mr-2 h-4 w-4" />
+                            <span className="mr-2 h-4 w-4 inline-block"><IconMapper name="Download" size={16} /></span>
                             Download All QR Codes
                         </Button>
                     </div>

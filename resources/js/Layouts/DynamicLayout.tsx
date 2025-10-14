@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Link, usePage } from "@inertiajs/react";
+import { PageProps } from '@/types';
 import { router } from "@inertiajs/react";
 
 interface Module {
@@ -22,16 +23,15 @@ interface Props {
 }
 
 export default function DynamicLayout({ children, title, modules }: Props) {
-  const { auth } = usePage().props as any;
+  const { auth } = usePage<PageProps<{ auth: { user: { permissions?: string[] } } }>>().props;
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const { url } = usePage();
 
   // Filter modules based on user permissions
   const availableModules = modules.filter(module => {
-    return module.children.some(child => 
-      auth.user.permissions.includes(child.permission)
-    );
+    const perms = auth?.user?.permissions || [];
+    return module.children.some(child => perms.includes(child.permission));
   });
 
   return (
@@ -50,7 +50,7 @@ export default function DynamicLayout({ children, title, modules }: Props) {
                   {module.display_name}
                 </h3>
                 {module.children
-                  .filter(child => auth.user.permissions.includes(child.permission))
+                  .filter(child => (auth?.user?.permissions || []).includes(child.permission))
                   .map((child, cIdx) => (
                     <Link
                       key={`${child.route || child.name}-${cIdx}`}

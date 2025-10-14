@@ -20,7 +20,7 @@ type PageProps = {
 };
 
 export default function DownsIndex() {
-  const { auth, downs } = usePage().props as any;
+  const { auth, downs } = usePage<PageProps>().props;
   const { data, setData, post, processing, reset, errors } = useForm({
     title: '',
     type: 'site_unmanned' as 'guard_absent' | 'site_unmanned' | 'other',
@@ -57,7 +57,7 @@ export default function DownsIndex() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Type</label>
-              <select className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100" value={data.type} onChange={e => setData('type', e.target.value as any)}>
+              <select className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100" value={data.type} onChange={e => setData('type', e.target.value as 'guard_absent' | 'site_unmanned' | 'other')}>
                 <option value="guard_absent">Guard absent</option>
                 <option value="site_unmanned">Site unmanned</option>
                 <option value="other">Other</option>

@@ -1,17 +1,6 @@
 import React from 'react';
 import { Head, Link } from '@inertiajs/react';
-import {
-    Home,
-    Users2,
-    DollarSign,
-    Briefcase,
-    Settings,
-    BarChart2,
-    Megaphone,
-    Shield,
-    Server,
-    Menu,
-} from 'lucide-react';
+import IconMapper from '@/Components/IconMapper';
 import { User } from '@/types';
 
 interface Props {
@@ -33,36 +22,36 @@ export default function SuperAdminLayout({ title, children, user }: Props) {
     const [logoOk, setLogoOk] = React.useState<boolean>(true);
 
     const modules: ModuleNavItem[] = [
-        { name: 'Dashboard', href: route('superadmin.dashboard'), icon: <Home className="h-6 w-6" />, current: window.location.pathname === route('superadmin.dashboard') },
+    { name: 'Dashboard', href: route('superadmin.dashboard'), icon: <IconMapper name="Home" size={24} />, current: window.location.pathname === route('superadmin.dashboard') },
         { 
             name: 'HR Management', 
             href: route('superadmin.modules.category', { category: 'hr' }), 
-            icon: <Users2 className="h-6 w-6" />, 
+            icon: <IconMapper name="Users2" size={24} />, 
             current: false,
             badge: 'New'
         },
         { 
             name: 'Finance', 
             href: route('superadmin.modules.category', { category: 'finance' }), 
-            icon: <DollarSign className="h-6 w-6" />, 
+            icon: <IconMapper name="DollarSign" size={24} />, 
             current: false 
         },
         { 
             name: 'Administration', 
             href: route('superadmin.modules.category', { category: 'admin' }), 
-            icon: <Briefcase className="h-6 w-6" />, 
+            icon: <IconMapper name="Briefcase" size={24} />, 
             current: false 
         },
         { 
             name: 'Marketing', 
             href: route('superadmin.modules.category', { category: 'marketing' }), 
-            icon: <Megaphone className="h-6 w-6" />, 
+            icon: <IconMapper name="Megaphone" size={24} />, 
             current: false 
         },
         { 
             name: 'Analytics', 
             href: route('superadmin.modules.category', { category: 'analytics' }), 
-            icon: <BarChart2 className="h-6 w-6" />, 
+            icon: <IconMapper name="BarChart2" size={24} />, 
             current: false,
             badge: 'Beta'
         },
@@ -72,19 +61,19 @@ export default function SuperAdminLayout({ title, children, user }: Props) {
         { 
             name: 'System Health', 
             href: route('superadmin.maintenance'), 
-            icon: <Server className="h-6 w-6" />, 
+            icon: <IconMapper name="Server" size={24} />, 
             current: window.location.pathname === route('superadmin.maintenance') 
         },
         { 
             name: 'Security', 
             href: route('superadmin.security'), 
-            icon: <Shield className="h-6 w-6" />, 
+            icon: <IconMapper name="Shield" size={24} />, 
             current: window.location.pathname === route('superadmin.security') 
         },
         { 
             name: 'Settings', 
             href: route('superadmin.settings'), 
-            icon: <Settings className="h-6 w-6" />, 
+            icon: <IconMapper name="Settings" size={24} />, 
             current: window.location.pathname === route('superadmin.settings') 
         },
     ];
@@ -110,7 +99,7 @@ export default function SuperAdminLayout({ title, children, user }: Props) {
                 <div className="flex-1 flex flex-col pt-5 pb-4 overflow-y-auto">
                     <div className="flex items-center flex-shrink-0 px-4">
                         <img
-                            src="/images/coin-logo.png"
+                    src="/images/Coin-logo.png"
                             alt="Coin Security"
                             className="h-10 w-auto"
                             style={{ display: logoOk ? 'block' : 'none' }}
@@ -191,7 +180,7 @@ export default function SuperAdminLayout({ title, children, user }: Props) {
                         onClick={() => setSidebarOpen(true)}
                     >
                         <span className="sr-only">Open sidebar</span>
-                        <Menu className="h-6 w-6" />
+                        <IconMapper name="Menu" size={24} />
                     </button>
                 </div>
                 <main className="flex-1">

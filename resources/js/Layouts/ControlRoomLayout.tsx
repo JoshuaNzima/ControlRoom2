@@ -1,25 +1,6 @@
 import React from 'react';
 import { Head, Link } from '@inertiajs/react';
-import { 
-  Home, 
-  Users2, 
-  Briefcase, 
-  BarChart2, 
-  Menu, 
-  UserCircle2, 
-  Building2, 
-  ShieldCheck, 
-  Wallet, 
-  Settings as SettingsIcon, 
-  Shield, 
-  MessageSquareText, 
-  Megaphone,
-  Camera,
-  AlertTriangle,
-  MapPin,
-  Clock,
-  Activity
-} from 'lucide-react';
+import IconMapper from '@/Components/IconMapper';
 import { User } from '@/types';
 import { useTheme } from '@/Providers/ThemeProvider';
 
@@ -45,28 +26,38 @@ export default function ControlRoomLayout({ title, children, user }: Props) {
   const isCurrent = (href: string) => window.location.pathname === href;
 
   const controlRoomLinks: ModuleNavItem[] = [
-    { name: 'Control Room Dashboard', href: route('control-room.dashboard'), icon: <Home className="h-6 w-6" />, current: isCurrent(route('control-room.dashboard')) },
-    { name: 'Live Monitoring', href: route('control-room.monitoring'), icon: <Activity className="h-6 w-6" />, current: false },
-    { name: 'Incident Management', href: route('control-room.incidents'), icon: <AlertTriangle className="h-6 w-6" />, current: false },
-    { name: 'Camera Systems', href: route('control-room.cameras.index'), icon: <Camera className="h-6 w-6" />, current: false },
-    { name: 'Zone Management', href: route('control-room.zones'), icon: <MapPin className="h-6 w-6" />, current: false },
-    { name: 'Shift Management', href: route('control-room.shifts'), icon: <Clock className="h-6 w-6" />, current: false },
-    { name: 'Tickets', href: route('control-room.tickets.index'), icon: <Briefcase className="h-6 w-6" />, current: false },
-    { name: 'Flags', href: route('control-room.flags.index'), icon: <AlertTriangle className="h-6 w-6" />, current: false },
-    { name: 'Downs', href: route('control-room.downs.index'), icon: <Activity className="h-6 w-6" />, current: false },
+  { name: 'Control Room Dashboard', href: route('control-room.dashboard'), icon: <IconMapper name="home" className="h-6 w-6" />, current: isCurrent(route('control-room.dashboard')) },
+  { name: 'Live Monitoring', href: route('control-room.monitoring'), icon: <IconMapper name="activity" className="h-6 w-6" />, current: false },
+  { name: 'Incident Management', href: route('control-room.incidents.index'), icon: <IconMapper name="alert-triangle" className="h-6 w-6" />, current: false },
+  { name: 'Camera Systems', href: route('control-room.cameras.index'), icon: <IconMapper name="camera" className="h-6 w-6" />, current: false },
+  { name: 'Zone Management', href: route('control-room.zones'), icon: <IconMapper name="map-pin" className="h-6 w-6" />, current: false },
+  { name: 'Shift Management', href: route('control-room.shifts.index'), icon: <IconMapper name="clock" className="h-6 w-6" />, current: false },
+  { name: 'Tickets', href: route('control-room.tickets.index'), icon: <IconMapper name="briefcase" className="h-6 w-6" />, current: false },
+  { name: 'Flags', href: route('control-room.flags.index'), icon: <IconMapper name="alert-triangle" className="h-6 w-6" />, current: false },
+  { name: 'Downs', href: route('control-room.downs.index'), icon: <IconMapper name="activity" className="h-6 w-6" />, current: false },
   ];
 
-  const communicationLinks: ModuleNavItem[] = [
-    { name: 'Messaging', href: route('control-room.messaging.index'), icon: <MessageSquareText className="h-6 w-6" />, current: false },
-    { name: 'Emergency Alerts', href: route('control-room.alerts'), icon: <AlertTriangle className="h-6 w-6" />, current: false },
+    const communicationLinks: ModuleNavItem[] = [
+    { name: 'Messaging', href: (() => {
+      try {
+        // User type may not include roles in all contexts; cast to any for safety
+        const role = (user as any)?.roles?.[0]?.name;
+        if (role === 'admin') return route('messaging.admin.index');
+        if (role === 'guard') return route('messaging.guards.index');
+        return route('control-room.messaging.index');
+      } catch (e) {
+        return route('control-room.messaging.index');
+      }
+    })(), icon: <IconMapper name="message-square-text" className="h-6 w-6" />, current: false },
+    { name: 'Emergency Alerts', href: route('control-room.alerts'), icon: <IconMapper name="alert-triangle" className="h-6 w-6" />, current: false },
   ];
 
   const systemLinks: ModuleNavItem[] = [
-    { name: 'Guards', href: route('control-room.guards'), icon: <ShieldCheck className="h-6 w-6" />, current: false },
-    { name: 'Assignments', href: route('control-room.assignments.index'), icon: <Briefcase className="h-6 w-6" />, current: false },
-    { name: 'Clients', href: route('control-room.clients'), icon: <Building2 className="h-6 w-6" />, current: false },
-    { name: 'Reports', href: route('control-room.reports'), icon: <BarChart2 className="h-6 w-6" />, current: false },
-    { name: 'Settings', href: route('control-room.settings'), icon: <SettingsIcon className="h-6 w-6" />, current: false },
+    { name: 'Guards', href: route('control-room.guards'), icon: <IconMapper name="shield-check" className="h-6 w-6" />, current: false },
+    { name: 'Assignments', href: route('control-room.assignments.index'), icon: <IconMapper name="briefcase" className="h-6 w-6" />, current: false },
+    { name: 'Clients', href: route('control-room.clients'), icon: <IconMapper name="building-2" className="h-6 w-6" />, current: false },
+    { name: 'Reports', href: route('control-room.reports'), icon: <IconMapper name="bar-chart-2" className="h-6 w-6" />, current: false },
+    { name: 'Settings', href: route('control-room.settings'), icon: <IconMapper name="settings" className="h-6 w-6" />, current: false },
   ];
 
   return (
@@ -143,9 +134,9 @@ export default function ControlRoomLayout({ title, children, user }: Props) {
 
       <div className="md:pl-64">
         <div className="sticky top-0 z-10 pl-1 pt-1 sm:pl-3 sm:pt-3 bg-red-50 dark:bg-gray-900 border-b border-red-100 dark:border-gray-800">
-          <button type="button" className="-ml-0.5 -mt-0.5 h-12 w-12 inline-flex items-center justify-center rounded-md text-red-700 hover:text-red-900 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-red-500 md:hidden" onClick={() => setSidebarOpen(true)}>
+            <button type="button" className="-ml-0.5 -mt-0.5 h-12 w-12 inline-flex items-center justify-center rounded-md text-red-700 hover:text-red-900 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-red-500 md:hidden" onClick={() => setSidebarOpen(true)}>
             <span className="sr-only">Open sidebar</span>
-            <Menu className="h-6 w-6" />
+            <IconMapper name="menu" className="h-6 w-6" />
           </button>
           <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 pb-3">
             <div className="flex items-center justify-between">

@@ -1,10 +1,9 @@
 import React, { useState, useEffect,  } from 'react';
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import DatePicker from 'react-datepicker';
-import 'react-datepicker/dist/react-datepicker.css';
-import {
-} from 'lucide-react';
+import DatePicker from '@/Components/DatePicker';
+import IconMapper from '@/Components/IconMapper';
 import DashboardLayout from '@/Layouts/SupervisorLayout';
+import CameraCapture from '@/Components/CameraCapture';
 
 interface GuardAttendance {
   id: number;
@@ -66,6 +65,8 @@ export default function Dashboard({
   const [showQuickAttendance, setShowQuickAttendance] = useState<boolean>(false);
   const [time, setTime] = useState<string>(currentTime);
   const [date, setDate] = useState<Date>(new Date());
+  const [showScannerModal, setShowScannerModal] = useState<boolean>(false);
+  const [showCameraModal, setShowCameraModal] = useState<boolean>(false);
   
 
   useEffect(() => {
@@ -155,9 +156,9 @@ export default function Dashboard({
     <DashboardLayout>
       <div className="min-h-screen bg-gray-50">
         <Head title="Dashboard" />
-        <div className="max-w-7x mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+  <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
           {/* Header Section with Date & Time */}
-          <div className="bg-gradient-to-r from-red-600 via-rose-600 to-pink-600 rounded-2xl shadow-xl p-6 text-white">
+          <div className="bg-gradient-to-r from-coin-600 via-coin-500 to-coin-400 rounded-2xl shadow-xl p-6 text-white">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
               <div>
                 <h1 className="text-3xl font-bold mb-1">Supervisor Dashboard</h1>
@@ -181,7 +182,7 @@ export default function Dashboard({
             </div>
           </div>
 {/* Scanner Button */}
-<div className="bg-white rounded-xl shadow-lg overflow-hidden">
+  <div className="bg-white rounded-xl shadow-lg overflow-hidden">
   {activeScan ? (
     <div className="bg-gradient-to-r from-green-500 to-emerald-600 p-6">
       <div className="flex items-center justify-between text-white">
@@ -214,7 +215,7 @@ export default function Dashboard({
       </div>
     </div>
   ) : (
-    <div className="p-6">
+            <div className="p-6">
       <div className="flex items-center justify-between mb-4">
         <div>
           <h3 className="text-lg font-bold text-gray-900">Site Verification Required</h3>
@@ -226,12 +227,12 @@ export default function Dashboard({
           </svg>
         </div>
       </div>
-      <Link
-        href="/supervisor/scanner"
-        className="block w-full py-4 bg-red-600 hover:bg-red-700 text-white text-center rounded-lg font-bold shadow-md transition-all transform hover:scale-[1.02]"
+      <button
+        onClick={() => setShowScannerModal(true)}
+        className="block w-full py-4 bg-coin-600 hover:bg-coin-700 text-white text-center rounded-lg font-bold shadow-md transition-all transform hover:scale-[1.02]"
       >
         Scan Site Checkpoint
-      </Link>
+      </button>
     </div>
   )}
   </div>
@@ -241,7 +242,7 @@ export default function Dashboard({
           <div className="flex items-center justify-end mb-4">
             <button
               onClick={() => setShowQuickAttendance(!showQuickAttendance)}
-              className="flex items-center gap-2 px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium shadow-md transition-all"
+              className="flex items-center gap-2 px-6 py-3 bg-coin-600 hover:bg-coin-700 text-white rounded-lg font-medium shadow-md transition-all"
             >
               {showQuickAttendance ? 'Hide Guards' : 'Quick Attendance'}
             </button>
@@ -286,7 +287,7 @@ export default function Dashboard({
                         </div>
 
                         {guard.attendance && (
-                          <div className="mt-3 ml-13 space-y-1">
+                          <div className="mt-3 ml-3 space-y-1">
                             <p className="text-sm text-gray-700">
                               <span className="font-semibold">Check In:</span> {guard.attendance.check_in_time}
                               {guard.attendance.site && (
@@ -303,7 +304,8 @@ export default function Dashboard({
                         )}
                       </div>
 
-                      <div className="ml-4">
+                      <div className="ml-4 flex flex-col items-end gap-2">
+                        <button onClick={() => setShowScannerModal(true)} className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg font-semibold transition">View Details</button>
                         {!guard.attendance ? (
                           <button
                             onClick={() => handleCheckIn(guard)}
@@ -356,14 +358,19 @@ export default function Dashboard({
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Photo *</label>
-                <input
-                  type="file"
-                  accept="image/*"
-                  capture="environment"
-                  onChange={(e) => setPhotoFile(e.target.files?.[0] || null)}
-                  className="w-full"
-                  required
-                />
+                <div className="space-y-2">
+                  <div>
+                    <button type="button" onClick={() => setShowCameraModal(true)} className="px-4 py-2 bg-coin-600 hover:bg-coin-700 text-white rounded mr-2">Open Camera</button>
+                    <span className="text-sm text-gray-500">or upload a photo</span>
+                  </div>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    onChange={(e) => setPhotoFile(e.target.files?.[0] || null)}
+                    className="w-full"
+                  />
+                </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Notes (Optional)</label>
@@ -406,14 +413,19 @@ export default function Dashboard({
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Photo *</label>
-                <input
-                  type="file"
-                  accept="image/*"
-                  capture="environment"
-                  onChange={(e) => setPhotoFile(e.target.files?.[0] || null)}
-                  className="w-full"
-                  required
-                />
+                <div className="space-y-2">
+                  <div>
+                    <button type="button" onClick={() => setShowCameraModal(true)} className="px-4 py-2 bg-coin-600 hover:bg-coin-700 text-white rounded mr-2">Open Camera</button>
+                    <span className="text-sm text-gray-500">or upload a photo</span>
+                  </div>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    onChange={(e) => setPhotoFile(e.target.files?.[0] || null)}
+                    className="w-full"
+                  />
+                </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Notes (Optional)</label>
@@ -436,6 +448,13 @@ export default function Dashboard({
             </div>
           </Modal>
         )}
+        {/* Scanner & Camera overlays */}
+        <ScannerModal open={showScannerModal} onClose={() => setShowScannerModal(false)} />
+        <CameraModal
+          open={showCameraModal}
+          onClose={() => setShowCameraModal(false)}
+          onCaptured={(file) => setPhotoFile(file)}
+        />
       </div>
     </DashboardLayout>
   );
@@ -490,6 +509,45 @@ function StatCard({ label = '', count = 0, description = '', color = 'gray', bad
       <p className="text-sm font-semibold text-gray-700 mb-1">{label}</p>
       <p className="text-3xl font-black text-gray-900 mb-1">{count}</p>
       <p className="text-xs text-gray-600">{description}</p>
+    </div>
+  );
+}
+
+// Scanner & Camera modals
+function ScannerModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-xl shadow-lg p-6 max-w-lg w-full">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-bold">Scanner</h3>
+          <button onClick={onClose} className="text-gray-500">Close</button>
+        </div>
+        <p className="text-sm text-gray-600">Use the checkpoint scanner here or view details.</p>
+        <div className="mt-4">
+          <Link href="/supervisor/scanner" className="px-4 py-2 bg-coin-600 text-white rounded">Open Full Scanner Page</Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CameraModal({ open, onClose, onCaptured }: { open: boolean; onClose: () => void; onCaptured: (f: File) => void }) {
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-xl shadow-lg p-6 max-w-md w-full">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-bold">Camera</h3>
+          <button onClick={onClose} className="text-gray-500">Close</button>
+        </div>
+        <CameraCapture
+          onCapture={(file) => {
+            onCaptured(file);
+            onClose();
+          }}
+        />
+      </div>
     </div>
   );
 }

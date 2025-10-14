@@ -1,8 +1,11 @@
 import React from 'react';
 import { Head } from '@inertiajs/react';
 import AdminLayout from '@/Layouts/AdminLayout';
+import { PageProps, User } from '@/types';
 
-export default function ManagerDashboard({ auth = {} as any }) {
+type Props = { auth?: { user?: User } };
+
+export default function ManagerDashboard({ auth }: Props) {
   return (
     <AdminLayout title="Manager Dashboard" user={auth?.user}>
       <Head title="Manager Dashboard" />

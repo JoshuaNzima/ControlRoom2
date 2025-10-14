@@ -5,6 +5,8 @@ namespace App\Http\Controllers\ControlRoom;
 use App\Http\Controllers\Controller;
 use App\Models\Ticket;
 use App\Models\TicketComment;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -12,12 +14,24 @@ class TicketController extends Controller
 {
     public function index()
     {
-        $tickets = Ticket::with(['reporter', 'assignedTo', 'client', 'clientSite'])
-            ->latest()
-            ->paginate(20);
+        $query = Ticket::with(['reporter', 'assignedTo', 'client', 'clientSite'])->latest();
+
+        if (request()->filled('status')) {
+            $query->where('status', request('status'));
+        }
+
+        if (request()->filled('priority')) {
+            $query->where('priority', request('priority'));
+        }
+
+        $tickets = $query->paginate(20)->withQueryString();
 
         return Inertia::render('ControlRoom/Tickets/Index', [
             'tickets' => $tickets,
+            'filters' => [
+                'statuses' => Ticket::STATUSES,
+                'priorities' => Ticket::PRIORITIES,
+            ],
         ]);
     }
 
@@ -28,21 +42,44 @@ class TicketController extends Controller
 
     public function store(Request $request)
     {
+
         $validated = $request->validate([
             'title' => 'required|string|max:255',
-            'type' => 'required|in:technical_support,service_request,complaint,incident_report,other',
-            'priority' => 'required|in:low,medium,high,critical',
+            'category' => 'required|in:' . implode(',', Ticket::CATEGORIES),
+            'priority' => ['required', 'in:' . implode(',', Ticket::PRIORITIES)],
             'description' => 'required|string',
             'client_id' => 'nullable|exists:clients,id',
             'client_site_id' => 'nullable|exists:client_sites,id',
+            'due_date' => 'nullable|date',
+            'attachments.*' => 'file|max:5120', // max 5MB per file
         ]);
 
         $ticket = Ticket::create([
-            ...$validated,
-            'reporter_id' => auth()->id(),
+            'title' => $validated['title'],
+            'category' => $validated['category'],
+            'priority' => $validated['priority'],
+            'description' => $validated['description'],
+            'reported_by' => auth()->id(),
             'status' => 'open',
             'ticket_number' => $this->generateTicketNumber(),
+            'due_date' => $validated['due_date'] ?? null,
         ]);
+
+        // Handle attachments (store on public disk and insert attachment rows)
+        if ($request->hasFile('attachments')) {
+            foreach ($request->file('attachments') as $file) {
+                $path = $file->store('ticket-attachments', 'public');
+                DB::table('ticket_attachments')->insert([
+                    'ticket_id' => $ticket->id,
+                    'filename' => $file->getClientOriginalName(),
+                    'path' => $path,
+                    'mime_type' => $file->getClientMimeType(),
+                    'size' => $file->getSize(),
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
+        }
 
         return redirect()->route('control-room.tickets.show', $ticket)
             ->with('success', 'Ticket created successfully.');

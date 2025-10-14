@@ -60,6 +60,10 @@ Route::middleware(['auth'])->group(function () {
 		// Downs
 		Route::get('/downs', [\App\Http\Controllers\ControlRoom\DownController::class, 'index'])->name('downs.index');
 		Route::post('/downs', [\App\Http\Controllers\ControlRoom\DownController::class, 'store'])->name('downs.store');
+		Route::get('/downs/{down}', [\App\Http\Controllers\ControlRoom\DownController::class, 'show'])->name('downs.show');
+		Route::get('/downs/{down}/edit', [\App\Http\Controllers\ControlRoom\DownController::class, 'edit'])->name('downs.edit');
+		Route::put('/downs/{down}', [\App\Http\Controllers\ControlRoom\DownController::class, 'update'])->name('downs.update');
+		Route::delete('/downs/{down}', [\App\Http\Controllers\ControlRoom\DownController::class, 'destroy'])->name('downs.destroy');
 		Route::post('/downs/{down}/escalate', [\App\Http\Controllers\ControlRoom\DownController::class, 'escalate'])->name('downs.escalate');
 		Route::post('/downs/{down}/resolve', [\App\Http\Controllers\ControlRoom\DownController::class, 'resolve'])->name('downs.resolve');
 	});

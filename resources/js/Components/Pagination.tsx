@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button } from '@/Components/ui/button';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import IconMapper from '@/Components/IconMapper';
 
 interface PaginationProps {
   currentPage: number;
@@ -91,14 +91,14 @@ export default function Pagination({
         
         <div>
           <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
-            <Button
+              <Button
               variant="outline"
               size="sm"
               onClick={() => onPageChange(currentPage - 1)}
               disabled={currentPage === 1}
               className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
             >
-              <ChevronLeft className="h-5 w-5" />
+              <IconMapper name="chevron-left" className="h-5 w-5" />
             </Button>
             
             {showPageNumbers && visiblePages.map((page, index) => (
@@ -131,7 +131,7 @@ export default function Pagination({
               disabled={currentPage === totalPages}
               className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
             >
-              <ChevronRight className="h-5 w-5" />
+              <IconMapper name="chevron-right" className="h-5 w-5" />
             </Button>
           </nav>
         </div>

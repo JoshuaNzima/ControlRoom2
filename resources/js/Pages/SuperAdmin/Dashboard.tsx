@@ -5,14 +5,7 @@ import { Head, Link, router } from '@inertiajs/react';
 import SuperAdminLayout from '@/Layouts/SuperAdminLayout';
 import ModuleCard from '@/Components/ModuleCard';
 import { route } from 'ziggy-js';
-import {
-  Server,
-  Database,
-  Cpu,
-  Clock,
-  Shield,
-  RefreshCw,
-} from 'lucide-react';
+import IconMapper from '@/Components/IconMapper';
 import QRCodeGenerator from '@/Components/QRCodeGenerator';
 
 // Type Definitions
@@ -98,6 +91,7 @@ interface SuperAdminDashboardProps {
   auditTrail: AuditTrail[];
   adminActions: AdminAction[];
   isSuperAdmin: boolean;
+  isMaintenance?: boolean;
 }
 
 interface SystemStatCardProps {
@@ -156,6 +150,7 @@ const Dashboard: React.FC<SuperAdminDashboardProps> = ({
   auditTrail,
   adminActions,
   isSuperAdmin,
+  isMaintenance,
 }) => {
   const handleToggleModule = (moduleId: number) => {
     router.post(route('superadmin.modules.toggle', { id: moduleId }));
@@ -187,10 +182,10 @@ const Dashboard: React.FC<SuperAdminDashboardProps> = ({
         <div className="bg-gradient-to-r from-red-700 via-rose-600 to-pink-600 rounded-2xl shadow-2xl p-8 text-white">
           <div className="flex items-center justify-between">
             <div>
-              <div className="flex items-center gap-3 mb-2">
-                <Shield size={40} />
-                <h1 className="text-4xl font-black">Super Admin Control Center</h1>
-              </div>
+                <div className="flex items-center gap-3 mb-2">
+                  <IconMapper name="Shield" size={40} />
+                  <h1 className="text-4xl font-black">Super Admin Control Center</h1>
+                </div>
               <p className="text-red-100">Complete system access and control</p>
             </div>
             <div className="text-right">
@@ -205,28 +200,28 @@ const Dashboard: React.FC<SuperAdminDashboardProps> = ({
           <h2 className="text-xl font-bold text-gray-900 mb-4">System Overview</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <SystemStatCard
-              icon={<Server size={24} />}
+              icon={<IconMapper name="Server" size={24} />}
               title="Total Users"
               value={systemStats.total_users}
               subtitle={`${systemStats.active_users} active`}
               color="blue"
             />
             <SystemStatCard
-              icon={<Shield size={24} />}
+              icon={<IconMapper name="Shield" size={24} />}
               title="Total Guards"
               value={systemStats.total_guards}
               subtitle={`${systemStats.active_guards} active`}
               color="green"
             />
             <SystemStatCard
-              icon={<Database size={24} />}
+              icon={<IconMapper name="Database" size={24} />}
               title="Database Size"
               value={systemStats.database_size}
               subtitle={`${databaseInfo.tables} tables`}
               color="purple"
             />
             <SystemStatCard
-              icon={<Cpu size={24} />}
+              icon={<IconMapper name="Cpu" size={24} />}
               title="Cache Size"
               value={systemStats.cache_size}
               subtitle="Redis memory"
@@ -244,7 +239,7 @@ const Dashboard: React.FC<SuperAdminDashboardProps> = ({
                 onClick={() => router.reload({ only: ['systemHealth'] })}
                 className="p-2 hover:bg-gray-100 rounded-lg transition"
               >
-                <RefreshCw size={20} />
+                <IconMapper name="RefreshCw" size={20} />
               </button>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -384,12 +379,25 @@ const Dashboard: React.FC<SuperAdminDashboardProps> = ({
             >
               Clear All Caches
             </button>
-            <button
-              onClick={() => router.post(route('superadmin.maintenance.enable'))}
-              className="px-6 py-3 bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-bold transition"
-            >
-              Enable Maintenance
-            </button>
+            {!isMaintenance ? (
+              <button
+                onClick={() => router.post(route('superadmin.maintenance.enable'))}
+                className="px-6 py-3 bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-bold transition"
+              >
+                Enable Maintenance
+              </button>
+            ) : (
+              <button
+                onClick={() => {
+                  if (confirm('Disable maintenance mode?')) {
+                    router.post(route('superadmin.maintenance.disable'))
+                  }
+                }}
+                className="px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-bold transition"
+              >
+                Disable Maintenance
+              </button>
+            )}
             <Link
               href={route('superadmin.backup')}
               className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-bold transition text-center"

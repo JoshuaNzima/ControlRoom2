@@ -131,6 +131,8 @@ class DashboardController extends Controller
             'databaseInfo' => $databaseInfo,
             'auditTrail' => $auditTrail,
             'adminActions' => $adminActions,
+            'isMaintenance' => file_exists(storage_path('framework/down')),
+            'maintenanceSecret' => env('APP_MAINTENANCE_SECRET', 'super-secret-token'),
         ]);
     }
 
@@ -304,8 +306,37 @@ class DashboardController extends Controller
 
     public function enableMaintenance()
     {
-        Artisan::call('down', ['--secret' => 'super-secret-token']);
-        
+        // Enable Laravel maintenance with a secret so we can set a bypass cookie or secret route
+    $secret = env('APP_MAINTENANCE_SECRET', 'super-secret-token');
+    Artisan::call('down', ['--secret' => $secret]);
+
+        // After enabling, ensure superadmin routes are excluded so super admins can still access
+        try {
+            $downPath = storage_path('framework/down');
+
+            if (file_exists($downPath)) {
+                $data = json_decode(file_get_contents($downPath), true) ?: [];
+
+                // Ensure except has patterns that allow superadmin access while in maintenance
+                $except = isset($data['except']) && is_array($data['except']) ? $data['except'] : [];
+
+                $allowedPatterns = [
+                    'superadmin',
+                    'superadmin/*',
+                    // allow the maintenance secret route as well
+                    'superadmin/maintenance',
+                ];
+
+                $except = array_values(array_unique(array_merge($except, $allowedPatterns)));
+
+                $data['except'] = $except;
+
+                file_put_contents($downPath, json_encode($data, JSON_PRETTY_PRINT));
+            }
+        } catch (\Exception $e) {
+            // Do not block enabling maintenance if writing the file fails; just continue
+        }
+
         return back()->with('success', 'Maintenance mode enabled.');
     }
 

@@ -1,10 +1,10 @@
-import React from 'react';
+import React, { Suspense } from 'react';
 import { Head } from '@inertiajs/react';
 import ControlRoomLayout from '@/Layouts/ControlRoomLayout';
 import { Card, CardContent, CardHeader } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
-import CoverageTrendChart from '@/Components/ControlRoom/CoverageTrendChart';
-import AttendanceChart from '@/Components/ControlRoom/AttendanceChart';
+const CoverageTrendChart = React.lazy(() => import('@/Components/ControlRoom/CoverageTrendChart'));
+const AttendanceChart = React.lazy(() => import('@/Components/ControlRoom/AttendanceChart'));
 import {
     Chart as ChartJS,
     CategoryScale,
@@ -19,6 +19,7 @@ import {
 } from 'chart.js';
 import { Line, Bar } from 'react-chartjs-2';
 import QRCodeGenerator from '@/Components/QRCodeGenerator';
+import { User } from '@/types';
 
 ChartJS.register(
     CategoryScale,
@@ -202,7 +203,7 @@ const Dashboard = ({ stats, recentIncidents, activeAlerts, coverageData, attenda
     ];
 
     return (
-        <ControlRoomLayout title="Control Room Dashboard" user={auth?.user as any}>
+    <ControlRoomLayout title="Control Room Dashboard" user={auth?.user as User | undefined}>
             <Head title="Control Room Dashboard" />
 
             <div className="space-y-6">
@@ -461,7 +462,9 @@ const Dashboard = ({ stats, recentIncidents, activeAlerts, coverageData, attenda
                             </CardHeader>
                         {showTrends && (
                             <CardContent>
-                                <CoverageTrendChart zones={safeZones} />
+                                <Suspense fallback={<div className="h-48 flex items-center justify-center">Loading chart…</div>}>
+                                    <CoverageTrendChart zones={safeZones} />
+                                </Suspense>
                             </CardContent>
                         )}
                         </Card>
@@ -479,7 +482,9 @@ const Dashboard = ({ stats, recentIncidents, activeAlerts, coverageData, attenda
                             </CardHeader>
                         {showTrends && (
                             <CardContent>
-                                <AttendanceChart zones={safeZones} />
+                                <Suspense fallback={<div className="h-48 flex items-center justify-center">Loading chart…</div>}>
+                                    <AttendanceChart zones={safeZones} />
+                                </Suspense>
                             </CardContent>
                         )}
                         </Card>

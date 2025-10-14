@@ -71,6 +71,43 @@ class DownController extends Controller
 
         return back()->with('success', 'Down marked as resolved.');
     }
+
+    public function show(Down $down)
+    {
+        $down->load(['reporter', 'client', 'clientSite']);
+
+        return Inertia::render('ControlRoom/Downs/Show', [
+            'down' => $down,
+        ]);
+    }
+
+    public function edit(Down $down)
+    {
+        return Inertia::render('ControlRoom/Downs/Edit', [
+            'down' => $down,
+        ]);
+    }
+
+    public function update(Request $request, Down $down)
+    {
+        $validated = $request->validate([
+            'title' => 'required|string|max:255',
+            'type' => 'required|in:guard_absent,site_unmanned,other',
+            'description' => 'nullable|string',
+            'status' => 'required|in:open,escalated,resolved,closed',
+        ]);
+
+        $down->update($validated);
+
+        return redirect()->route('control-room.downs.index')->with('success', 'Down updated successfully.');
+    }
+
+    public function destroy(Down $down)
+    {
+        $down->delete();
+
+        return redirect()->route('control-room.downs.index')->with('success', 'Down deleted successfully.');
+    }
 }
 
 

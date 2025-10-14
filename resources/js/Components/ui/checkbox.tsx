@@ -1,5 +1,5 @@
 import React from 'react';
-import { Check } from 'lucide-react';
+import IconMapper from '@/Components/IconMapper';
 
 interface CheckboxProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'type'> {
   checked?: boolean;
@@ -24,7 +24,7 @@ export const Checkbox = React.forwardRef<HTMLInputElement, CheckboxProps>(
         />
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           {checked && (
-            <Check className="h-3 w-3 text-primary-foreground" />
+                <IconMapper name="check" className="h-3 w-3 text-primary-foreground" />
           )}
         </div>
       </div>

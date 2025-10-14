@@ -1,5 +1,6 @@
 import React from 'react';
 import { Bar } from 'react-chartjs-2';
+import { ChartOptions } from 'chart.js';
 
 interface Zone {
     id: number;
@@ -35,7 +36,7 @@ const AttendanceChart: React.FC<AttendanceChartProps> = ({ zones = [] }) => {
         ]
     };
 
-    const options = {
+    const options: ChartOptions<'bar'> = {
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
