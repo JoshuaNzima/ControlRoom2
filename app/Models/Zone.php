@@ -5,6 +5,7 @@ namespace App\Models;
 use Carbon\Carbon;
 use App\Models\Guards\Guard;
 use App\Models\Guards\ClientSite;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -17,7 +18,8 @@ class Zone extends Model
         'code',
         'description',
         'status',
-        'required_guard_count'  // New field for target guard count
+        'required_guard_count',
+        'target_sites_count'
     ];
 
     protected $appends = ['coverage_rate', 'active_guard_count'];
@@ -34,7 +36,15 @@ class Zone extends Model
 
     public function guards()
     {
-        return $this->hasManyThrough(Guard::class, ClientSite::class);
+        return $this->hasMany(Guard::class);
+    }
+
+    protected function guardsBaseQuery(): Builder
+    {
+        return Guard::query()
+            ->whereHas('assignments.clientSite', function ($q) {
+                $q->where('zone_id', $this->id);
+            });
     }
 
     public function getCoverageRateAttribute()
@@ -47,10 +57,14 @@ class Zone extends Model
 
     public function getActiveGuardCountAttribute()
     {
-        return $this->guards()
-            ->where('status', 'active')
-            ->whereHas('currentAssignment', function($query) {
-                $query->whereNull('end_date');
+        return $this->guardsBaseQuery()
+            ->where('guards.status', 'active')
+            ->whereHas('assignments', function($query) {
+                $query->where('is_active', true)
+                    ->where('start_date', '<=', today())
+                    ->where(function($q) {
+                        $q->whereNull('end_date')->orWhere('end_date', '>=', today());
+                    });
             })
             ->count();
     }
@@ -62,7 +76,7 @@ class Zone extends Model
         $expectedGuards = $this->getActiveGuardCountAttribute();
         if ($expectedGuards === 0) return 0;
 
-        $presentGuards = $this->guards()
+        $presentGuards = $this->guardsBaseQuery()
             ->whereHas('attendance', function($query) use ($date) {
                 $query->whereDate('date', $date)
                     ->whereNotNull('check_in_time');
@@ -83,7 +97,7 @@ class Zone extends Model
                 'attendance_rate' => $this->getDailyAttendanceRate($date),
                 'active_guards' => $this->getActiveGuardCountAttribute(),
                 'required_guards' => $this->required_guard_count,
-                'present_guards' => $this->guards()
+                'present_guards' => $this->guardsBaseQuery()
                     ->whereHas('attendance', function($query) use ($date) {
                         $query->whereDate('date', $date)
                             ->whereNotNull('check_in_time');

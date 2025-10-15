@@ -158,27 +158,34 @@ class ControlRoomDashboardController extends Controller
 
     private function getZonesData()
     {
-        return Zone::withCount(['guards', 'sites'])
+        return Zone::query()
             ->get()
             ->map(function($zone) {
-                $activeGuards = Guard::whereHas('assignments', function($query) {
-                    $query->where('is_active', true)
-                        ->where('start_date', '<=', today())
-                        ->where(function($q) {
-                            $q->whereNull('end_date')->orWhere('end_date', '>=', today());
-                        });
-                })->where('status', 'active')->count();
-                    
+                $activeGuards = Guard::where('status', 'active')
+                    ->whereHas('assignments.clientSite', function($q) use ($zone) {
+                        $q->where('zone_id', $zone->id);
+                    })
+                    ->whereHas('assignments', function($query) {
+                        $query->where('is_active', true)
+                            ->where('start_date', '<=', today())
+                            ->where(function($q) {
+                                $q->whereNull('end_date')->orWhere('end_date', '>=', today());
+                            });
+                    })
+                    ->count();
+
                 $requiredGuards = $zone->required_guard_count ?? 0;
                 $coverage = $requiredGuards > 0 ? round(($activeGuards / $requiredGuards) * 100, 1) : 0;
-                
+
+                $sitesCount = $zone->sites()->count();
+
                 return [
                     'id' => $zone->id,
                     'name' => $zone->name,
                     'coverage' => $coverage,
                     'guards' => $activeGuards,
                     'required_guards' => $requiredGuards,
-                    'sites' => $zone->sites_count,
+                    'sites' => $sitesCount,
                 ];
             });
     }

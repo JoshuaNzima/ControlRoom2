@@ -8,9 +8,21 @@ Route::middleware(['auth'])->group(function () {
     Route::middleware(['role_or_permission:admin|control.dashboard.view'])->prefix('control-room')->name('control-room.')->group(function () {
 		Route::get('/dashboard', [\App\Http\Controllers\ControlRoomDashboardController::class, 'index'])->name('dashboard');
 		Route::get('/monitoring', fn() => Inertia::render('ControlRoom/Monitoring'))->name('monitoring');
-		Route::get('/zones', fn() => Inertia::render('ControlRoom/Zones'))->name('zones');
+		// Zones Management
+        Route::resource('zones', \App\Http\Controllers\ControlRoom\ZoneController::class)->only(['index','store','update','destroy']);
+        Route::get('zones/{zone}/assign', [\App\Http\Controllers\ControlRoom\ZoneController::class, 'assign'])->name('zones.assign');
+        Route::post('zones/{zone}/assignments', [\App\Http\Controllers\ControlRoom\ZoneController::class, 'storeAssignment'])->name('zones.assignments.store');
+        Route::delete('zones/{zone}/assignments/{assignment}', [\App\Http\Controllers\ControlRoom\ZoneController::class, 'unassign'])->name('zones.assignments.destroy');
+        Route::get('zones/{zone}/reports', [\App\Http\Controllers\ControlRoom\ZoneController::class, 'reports'])->name('zones.reports');
+        Route::get('zones/{zone}/map', [\App\Http\Controllers\ControlRoom\ZoneController::class, 'map'])->name('zones.map');
 		Route::get('/settings', fn() => Inertia::render('ControlRoom/Settings'))->name('settings');
 		
+		// Clients Management (view-only, assignments)
+		Route::get('/clients', [\App\Http\Controllers\ControlRoom\ClientsController::class, 'index'])->name('clients');
+		Route::get('/clients/{client}', [\App\Http\Controllers\ControlRoom\ClientsController::class, 'show'])->name('clients.show');
+		Route::post('/clients/{client}/assign-guard', [\App\Http\Controllers\ControlRoom\ClientsController::class, 'assignGuard'])->name('clients.assign-guard');
+		Route::post('/clients/{client}/assign-supervisor', [\App\Http\Controllers\ControlRoom\ClientsController::class, 'assignSupervisor'])->name('clients.assign-supervisor');
+
 		// Incidents Management
 		Route::resource('incidents', \App\Http\Controllers\ControlRoom\IncidentController::class);
 		Route::post('incidents/{incident}/escalate', [\App\Http\Controllers\ControlRoom\IncidentController::class, 'escalate'])->name('incidents.escalate');

@@ -1,71 +1,63 @@
 import React from 'react';
-import { Head } from '@inertiajs/react';
+import { Head, useForm, usePage } from '@inertiajs/react';
 import ControlRoomLayout from '@/Layouts/ControlRoomLayout';
 import { Card, CardContent, CardHeader } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import { Badge } from '@/Components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/Components/ui/dialog';
 import { User } from '@/types';
 
-interface ZonesProps {
-  auth?: { user?: { name?: string } };
-}
+interface ZoneItem { id: number; name: string; code: string; description?: string | null; status: 'active' | 'inactive' | 'understaffed'; required_guard_count?: number; target_sites_count?: number; coverage_rate?: number; active_guard_count?: number; sites_count?: number; }
+interface ZonesProps { auth?: { user?: { name?: string } }; zones?: ZoneItem[]; commanders?: {id:number,name:string}[]; sites?: {id:number,name:string,zone_id?:number|null}[] }
 
-const Zones = ({ auth }: ZonesProps) => {
-  // Mock data for zones
-  const zones = [
-    {
-      id: 1,
-      name: 'Zone A - Central District',
-      coverage: 95.5,
-      guards: 8,
-      requiredGuards: 8,
-      sites: 12,
-      status: 'active',
-      commander: 'John Smith',
-      lastUpdate: '2 min ago',
-      alerts: 0,
-      incidents: 1
-    },
-    {
-      id: 2,
-      name: 'Zone B - Industrial Area',
-      coverage: 78.2,
-      guards: 5,
-      requiredGuards: 7,
-      sites: 8,
-      status: 'active',
-      commander: 'Jane Doe',
-      lastUpdate: '5 min ago',
-      alerts: 2,
-      incidents: 0
-    },
-    {
-      id: 3,
-      name: 'Zone C - Residential',
-      coverage: 100.0,
-      guards: 6,
-      requiredGuards: 6,
-      sites: 15,
-      status: 'active',
-      commander: 'Mike Johnson',
-      lastUpdate: '1 min ago',
-      alerts: 0,
-      incidents: 0
-    },
-    {
-      id: 4,
-      name: 'Zone D - Commercial',
-      coverage: 45.8,
-      guards: 2,
-      requiredGuards: 5,
-      sites: 6,
-      status: 'understaffed',
-      commander: 'Sarah Wilson',
-      lastUpdate: '10 min ago',
-      alerts: 3,
-      incidents: 2
+const Zones = ({ auth, zones: zonesProp = [], commanders = [], sites = [] }: ZonesProps) => {
+  const { props } = usePage();
+  const zones = zonesProp.length ? zonesProp : ((props as any).zones ?? []);
+  const [open, setOpen] = React.useState(false);
+  const [editing, setEditing] = React.useState<ZoneItem | null>(null);
+  const { data, setData, post, put, processing, reset, errors, delete: destroy } = useForm({
+    name: '',
+    code: '',
+    description: '',
+    status: 'active' as 'active' | 'inactive' | 'understaffed',
+    required_guard_count: 0,
+    target_sites_count: 0,
+    commander_id: '' as any,
+    site_ids: [] as number[],
+  });
+
+  const startCreate = () => {
+    setEditing(null);
+    reset();
+    setData('status', 'active');
+    setOpen(true);
+  };
+  const startEdit = (z: ZoneItem) => {
+    setEditing(z);
+    setData({
+      name: z.name,
+      code: z.code,
+      description: z.description ?? '',
+      status: z.status,
+      required_guard_count: z.required_guard_count ?? 0,
+      target_sites_count: z.target_sites_count ?? 0,
+      commander_id: '' as any,
+      site_ids: [] as number[],
+    });
+    setOpen(true);
+  };
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (editing) {
+      put(route('control-room.zones.update', editing.id), { onSuccess: () => setOpen(false) });
+    } else {
+      post(route('control-room.zones.store'), { onSuccess: () => setOpen(false) });
     }
-  ];
+  };
+  const handleDelete = (z: ZoneItem) => {
+    if (!confirm(`Delete zone "${z.name}"?`)) return;
+    destroy(route('control-room.zones.destroy', z.id));
+  };
 
   const getCoverageColor = (coverage: number) => {
     if (coverage >= 90) return 'text-green-600 dark:text-green-400';
@@ -100,7 +92,7 @@ const Zones = ({ auth }: ZonesProps) => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Zones</p>
-                  <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">4</p>
+                  <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{zones.length}</p>
                 </div>
                 <div className="h-8 w-8 bg-blue-100 dark:bg-blue-900/20 rounded-full flex items-center justify-center">
                   <span className="text-blue-600 dark:text-blue-400">🗺️</span>
@@ -114,7 +106,7 @@ const Zones = ({ auth }: ZonesProps) => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Active Zones</p>
-                  <p className="text-2xl font-bold text-green-600 dark:text-green-400">3</p>
+                  <p className="text-2xl font-bold text-green-600 dark:text-green-400">{zones.filter((z) => z.status === 'active').length}</p>
                 </div>
                 <div className="h-8 w-8 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center">
                   <span className="text-green-600 dark:text-green-400">✅</span>
@@ -128,7 +120,7 @@ const Zones = ({ auth }: ZonesProps) => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Guards</p>
-                  <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">21</p>
+                  <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">{zones.reduce((sum, z) => sum + (z.active_guard_count ?? 0), 0)}</p>
                 </div>
                 <div className="h-8 w-8 bg-purple-100 dark:bg-purple-900/20 rounded-full flex items-center justify-center">
                   <span className="text-purple-600 dark:text-purple-400">👮</span>
@@ -142,7 +134,7 @@ const Zones = ({ auth }: ZonesProps) => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Sites</p>
-                  <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">41</p>
+                  <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">{zones.reduce((sum, z) => sum + (z.sites_count ?? 0), 0)}</p>
                 </div>
                 <div className="h-8 w-8 bg-orange-100 dark:bg-orange-900/20 rounded-full flex items-center justify-center">
                   <span className="text-orange-600 dark:text-orange-400">🏢</span>
@@ -156,9 +148,84 @@ const Zones = ({ auth }: ZonesProps) => {
         <Card className="dark:bg-gray-800 dark:border-gray-700">
           <CardHeader className="flex flex-row items-center justify-between">
             <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Zone Overview</h3>
-            <Button className="dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600">
-              Add New Zone
-            </Button>
+            <Dialog open={open} onOpenChange={setOpen}>
+              <DialogTrigger asChild>
+                <Button onClick={startCreate} className="dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600">Add New Zone</Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[600px]">
+                <DialogHeader>
+                  <DialogTitle>{editing ? 'Edit Zone' : 'Add Zone'}</DialogTitle>
+                </DialogHeader>
+                <form className="space-y-6" onSubmit={handleSubmit}>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">Name</label>
+                      <input value={data.name} onChange={(e) => setData('name', e.target.value)} className="mt-1 w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800" />
+                    {errors.name && <p className="text-sm text-red-600 mt-1">{errors.name}</p>}
+                  </div>
+                  <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">Code</label>
+                      <input value={data.code} onChange={(e) => setData('code', e.target.value)} className="mt-1 w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800" />
+                    {errors.code && <p className="text-sm text-red-600 mt-1">{errors.code}</p>}
+                  </div>
+                  <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">Status</label>
+                      <select value={data.status} onChange={(e) => setData('status', e.target.value as any)} className="mt-1 w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800">
+                      <option value="active">Active</option>
+                      <option value="understaffed">Understaffed</option>
+                      <option value="inactive">Inactive</option>
+                    </select>
+                  </div>
+                  <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">Required Guards</label>
+                      <input type="number" value={data.required_guard_count} onChange={(e) => setData('required_guard_count', Number(e.target.value))} className="mt-1 w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">Zone Commander</label>
+                      <select value={data.commander_id as any} onChange={(e) => setData('commander_id', e.target.value)} className="mt-1 w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800">
+                        <option value="">Select commander</option>
+                        {commanders.map((c) => (
+                          <option key={c.id} value={c.id}>{c.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">Target Sites</label>
+                      <input type="number" value={data.target_sites_count} onChange={(e) => setData('target_sites_count', Number(e.target.value))} className="mt-1 w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800" />
+                      {errors.target_sites_count && <p className="text-sm text-red-600 mt-1">{errors.target_sites_count}</p>}
+                    </div>
+                    <div className="sm:col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">Description</label>
+                      <textarea value={data.description as any} onChange={(e) => setData('description', e.target.value)} className="mt-1 w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800" rows={3} />
+                    </div>
+                    <div className="sm:col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">Add Sites to Zone</label>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-auto border rounded p-2">
+                        {sites.map((s) => (
+                          <label key={s.id} className="flex items-center gap-2 text-sm">
+                            <input
+                              type="checkbox"
+                              checked={(data.site_ids as number[]).includes(s.id)}
+                              onChange={() => {
+                                const set = new Set<number>(data.site_ids as number[]);
+                                if (set.has(s.id)) set.delete(s.id); else set.add(s.id);
+                                setData('site_ids', Array.from(set));
+                              }}
+                            />
+                            <span>{s.name}</span>
+                            {s.zone_id && <span className="text-xs text-gray-500">(Already in zone)</span>}
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex justify-end gap-2 pt-2">
+                    <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
+                    <Button type="submit" disabled={processing}>{editing ? 'Save Changes' : 'Create Zone'}</Button>
+                  </div>
+                </form>
+              </DialogContent>
+            </Dialog>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
@@ -171,27 +238,16 @@ const Zones = ({ auth }: ZonesProps) => {
                         <Badge className={`text-xs ${getStatusColor(zone.status)}`}>
                           {zone.status}
                         </Badge>
-                        {zone.alerts > 0 && (
-                          <Badge variant="destructive" className="text-xs">
-                            {zone.alerts} Alert{zone.alerts > 1 ? 's' : ''}
-                          </Badge>
-                        )}
-                        {zone.incidents > 0 && (
-                          <Badge variant="secondary" className="text-xs">
-                            {zone.incidents} Incident{zone.incidents > 1 ? 's' : ''}
-                          </Badge>
-                        )}
                       </div>
                       <div className="text-sm text-gray-600 dark:text-gray-400">
-                        <span className="font-medium">Commander:</span> {zone.commander} • 
-                        <span className="font-medium"> Guards:</span> {zone.guards}/{zone.requiredGuards} • 
-                        <span className="font-medium"> Sites:</span> {zone.sites} • 
-                        <span className="font-medium"> Last Update:</span> {zone.lastUpdate}
+                        <span className="font-medium">Code:</span> {zone.code} • 
+                        <span className="font-medium">Guards:</span> {(zone.active_guard_count ?? 0)}/{zone.required_guard_count ?? 0} • 
+                        <span className="font-medium">Sites:</span> {zone.sites_count ?? 0}
                       </div>
                     </div>
                     <div className="text-right ml-4">
-                      <div className={`text-2xl font-bold ${getCoverageColor(zone.coverage)}`}>
-                        {zone.coverage.toFixed(1)}%
+                      <div className={`text-2xl font-bold ${getCoverageColor((zone as any).coverage ?? (zone as any).coverage_rate ?? 0)}`}>
+                        {((zone as any).coverage ?? (zone as any).coverage_rate ?? 0).toFixed(1)}%
                       </div>
                       <div className="text-xs text-gray-500 dark:text-gray-400">
                         Coverage
@@ -202,24 +258,23 @@ const Zones = ({ auth }: ZonesProps) => {
                   {/* Coverage Progress Bar */}
                   <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2 mb-4">
                     <div 
-                      className={`h-2 rounded-full ${getCoverageBgColor(zone.coverage)}`}
-                      style={{ width: `${Math.min(zone.coverage, 100)}%` }}
+                      className={`h-2 rounded-full ${getCoverageBgColor((zone as any).coverage ?? (zone as any).coverage_rate ?? 0)}`}
+                      style={{ width: `${Math.min(((zone as any).coverage ?? (zone as any).coverage_rate ?? 0), 100)}%` }}
                     ></div>
                   </div>
 
                   {/* Action Buttons */}
-                  <div className="flex space-x-2">
-                    <Button size="sm" variant="outline" className="dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-600">
-                      View Details
+                  <div className="flex flex-wrap gap-2">
+                    <Button size="sm" variant="outline" className="dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-600" asChild>
+                      <a href={route('control-room.zones.reports', zone.id)}>Zone Reports</a>
                     </Button>
-                    <Button size="sm" variant="outline" className="dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-600">
-                      Manage Guards
+                    <Button size="sm" variant="outline" className="dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-600" onClick={() => startEdit(zone as any)}>Edit</Button>
+                    <Button size="sm" variant="destructive" onClick={() => handleDelete(zone as any)}>Delete</Button>
+                    <Button size="sm" variant="secondary" asChild>
+                      <a href={route('control-room.zones.assign', zone.id)}>Assign Guards</a>
                     </Button>
-                    <Button size="sm" variant="outline" className="dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-600">
-                      View Sites
-                    </Button>
-                    <Button size="sm" variant="outline" className="dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-600">
-                      Reports
+                    <Button size="sm" variant="secondary" asChild>
+                      <a href={route('control-room.zones.map', zone.id)}>Zone Map</a>
                     </Button>
                   </div>
                 </div>

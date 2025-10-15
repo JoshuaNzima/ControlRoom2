@@ -103,11 +103,11 @@ class RolesAndPermissionsSeeder extends Seeder
         // Create roles and assign permissions
         
         // Admin role - has all permissions
-        $adminRole = Role::create(['name' => 'admin']);
+        $adminRole = Role::firstOrCreate(['name' => 'admin']);
         $adminRole->givePermissionTo(Permission::all());
 
         // Manager role - most permissions except system settings
-        $managerRole = Role::create(['name' => 'manager']);
+        $managerRole = Role::firstOrCreate(['name' => 'manager']);
         $managerRole->givePermissionTo([
             'guards.view', 'guards.edit', 'guards.assign',
             'attendance.view', 'attendance.manage', 'attendance.export',
@@ -133,7 +133,7 @@ class RolesAndPermissionsSeeder extends Seeder
         ]);
 
         // Supervisor role - limited to attendance and viewing
-        $supervisorRole = Role::create(['name' => 'supervisor']);
+        $supervisorRole = Role::firstOrCreate(['name' => 'supervisor']);
         $supervisorRole->givePermissionTo([
             'guards.view',
             'attendance.view', 'attendance.manage',
@@ -143,8 +143,21 @@ class RolesAndPermissionsSeeder extends Seeder
             'clients.view',
         ]);
 
+        // Zone Commander role - manages a specific zone
+        $zoneCommanderRole = Role::firstOrCreate(['name' => 'zone_commander']);
+        $zoneCommanderRole->givePermissionTo([
+            'guards.view',
+            'attendance.view',
+            'shifts.view',
+            'incidents.view',
+            'reports.view',
+            'clients.view',
+            'control.zones.view',
+            'control.reports.view',
+        ]);
+
         // Control Room Operator role - dedicated control room access
-        $controlRoomRole = Role::create(['name' => 'control_room_operator']);
+        $controlRoomRole = Role::firstOrCreate(['name' => 'control_room_operator']);
         $controlRoomRole->givePermissionTo([
             'control.dashboard.view',
             'control.dashboard.manage',
@@ -170,7 +183,7 @@ class RolesAndPermissionsSeeder extends Seeder
         ]);
 
         // Client role - very limited access
-        $clientRole = Role::create(['name' => 'client']);
+        $clientRole = Role::firstOrCreate(['name' => 'client']);
         $clientRole->givePermissionTo([
             'guards.view', // Only assigned guards
             'attendance.view', // Only their sites

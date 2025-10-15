@@ -5,6 +5,8 @@ namespace App\Http\Controllers\ControlRoom;
 use App\Http\Controllers\Controller;
 use App\Models\Shift;
 use App\Models\User;
+use App\Models\Guards\Guard;
+use App\Models\Guards\ClientSite;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -23,12 +25,14 @@ class ShiftController extends Controller
 
     public function create()
     {
-        $guards = User::where('role', 'guard')->get();
-        $supervisors = User::where('role', 'supervisor')->get();
+        $guards = Guard::select(['id','name'])->orderBy('name')->get();
+        $supervisors = User::role('supervisor')->select(['id','name'])->orderBy('name')->get();
+        $sites = ClientSite::select(['id','name'])->orderBy('name')->get();
 
         return Inertia::render('ControlRoom/Shifts/Create', [
             'guards' => $guards,
             'supervisors' => $supervisors,
+            'sites' => $sites,
         ]);
     }
 
@@ -42,7 +46,7 @@ class ShiftController extends Controller
             'supervisor_id' => 'required|exists:users,id',
             'required_guards' => 'required|integer|min:1',
             'sites' => 'required|array|min:1',
-            'sites.*' => 'string|max:255',
+            'sites.*' => 'integer|exists:client_sites,id',
         ]);
 
         $shift = Shift::create([
@@ -58,27 +62,31 @@ class ShiftController extends Controller
     public function show(Shift $shift)
     {
         $shift->load(['guards', 'supervisor', 'createdBy']);
-        $availableGuards = User::where('role', 'guard')
-            ->whereDoesntHave('shifts', function ($query) use ($shift) {
-                $query->where('shift_id', $shift->id);
-            })
+        $availableGuards = Guard::select(['id','name'])
+            ->whereNotIn('id', $shift->guards->pluck('id'))
+            ->orderBy('name')
             ->get();
+        $sitesMap = ClientSite::whereIn('id', (array) $shift->sites)
+            ->pluck('name','id');
 
         return Inertia::render('ControlRoom/Shifts/Show', [
             'shift' => $shift,
             'availableGuards' => $availableGuards,
+            'sitesMap' => $sitesMap,
         ]);
     }
 
     public function edit(Shift $shift)
     {
-        $guards = User::where('role', 'guard')->get();
-        $supervisors = User::where('role', 'supervisor')->get();
+        $guards = Guard::select(['id','name'])->orderBy('name')->get();
+        $supervisors = User::role('supervisor')->select(['id','name'])->orderBy('name')->get();
+        $sites = ClientSite::select(['id','name'])->orderBy('name')->get();
 
         return Inertia::render('ControlRoom/Shifts/Edit', [
             'shift' => $shift,
             'guards' => $guards,
             'supervisors' => $supervisors,
+            'sites' => $sites,
         ]);
     }
 
