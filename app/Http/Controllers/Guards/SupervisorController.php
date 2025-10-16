@@ -273,7 +273,7 @@ class SupervisorController extends Controller
         $supervisorId = Auth::id();
         $date = $request->input('date', Carbon::today()->format('Y-m-d'));
 
-        $shifts = Shift::whereHas('guard', function($query) use ($supervisorId) {
+    $shifts = Shift::whereHas('guardRelation', function($query) use ($supervisorId) {
                 $query->where('supervisor_id', $supervisorId);
             })
             ->with(['guard', 'clientSite'])

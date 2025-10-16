@@ -1,6 +1,6 @@
 import React from 'react';
 import { Head } from '@inertiajs/react';
-import AdminLayout from '@/Layouts/AdminLayout';
+import ZoneCommanderLayout from '@/Layouts/ZoneCommanderLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import IconMapper from '@/Components/IconMapper';
@@ -74,7 +74,7 @@ const getRiskLevelColor = (level: string) => {
 
 export default function ZoneDashboard({ zone, sites, at_risk_guards, recent_alerts }: ZoneDashboardProps) {
   return (
-    <AdminLayout title="Zone Dashboard">
+    <ZoneCommanderLayout title="Zone Dashboard">
       <Head title={`${zone.name} Zone Dashboard`} />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
@@ -191,6 +191,6 @@ export default function ZoneDashboard({ zone, sites, at_risk_guards, recent_aler
           </CardContent>
         </Card>
       </div>
-    </AdminLayout>
+    </ZoneCommanderLayout>
   );
 }

@@ -18,6 +18,15 @@ class ZoneCommanderSeeder extends Seeder
             ]
         );
 
+        // Ensure there's at least one Zone and assign the user to it to avoid missing zone_id issues
+        $zone = \App\Models\Zone::first();
+        if (!$zone) {
+            $zone = \App\Models\Zone::create(['name' => 'Default Zone', 'code' => 'ZN-DEFAULT']);
+        }
+
+        $user->zone_id = $zone->id;
+        $user->save();
+
         $user->assignRole('zone_commander');
     }
 }

@@ -46,6 +46,9 @@ Route::middleware(['auth'])->group(function () {
 		Route::get('/assignments', [\App\Http\Controllers\ControlRoom\AssignmentsController::class, 'index'])->name('assignments.index');
 		Route::get('/reports', [\App\Http\Controllers\ControlRoom\ReportsController::class, 'index'])->name('reports');
 		Route::get('/clients', [\App\Http\Controllers\ControlRoom\ClientsController::class, 'index'])->name('clients');
+
+		// Assistive component to append to Zone Commander activities
+		Route::get('/assist/zone-commander', [\App\Http\Controllers\ControlRoom\AssistZoneCommanderController::class, 'index'])->name('assist.zone-commander');
 		
 		// Camera Management
 		Route::resource('cameras', \App\Http\Controllers\ControlRoom\CameraController::class);

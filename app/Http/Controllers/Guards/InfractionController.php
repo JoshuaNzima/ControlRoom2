@@ -22,8 +22,8 @@ class InfractionController extends Controller
 
         // If zone commander, only show infractions from their zone
         if (Auth::user()->hasRole('zone_commander')) {
-            $query->whereHas('guardRelation.site.zone', function($q) {
-                $q->where('id', Auth::user()->zone_id);
+            $query->whereHas('guardRelation.assignments.clientSite', function($q) {
+                $q->where('zone_id', Auth::user()->zone_id);
             });
         }
         // If supervisor, only show their guards' infractions

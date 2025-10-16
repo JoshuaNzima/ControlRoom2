@@ -34,6 +34,8 @@ class GuardInfraction extends Model
         return $this->belongsTo(Guard::class, 'guard_id');
     }
 
+    // legacy alias intentionally removed — use guardRelation() to avoid colliding with Eloquent internals
+
     public function reporter()
     {
         return $this->belongsTo(User::class, 'reported_by');

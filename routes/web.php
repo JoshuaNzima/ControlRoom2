@@ -135,9 +135,63 @@ Route::middleware(['auth'])->group(function () {
 
     // Zone Commander routes
     Route::middleware(['auth', 'role:zone_commander'])->prefix('zone')->name('zone.')->group(function () {
-        // Route::get('/dashboard', [\App\Http\Controllers\ZoneCommander\DashboardController::class, 'index'])->name('dashboard');
-        // Route::get('/sites', [\App\Http\Controllers\ZoneCommander\SiteController::class, 'index'])->name('sites.index');
-        // Route::get('/guards', [\App\Http\Controllers\ZoneCommander\GuardController::class, 'index'])->name('guards.index');
+        Route::get('/dashboard', [\App\Http\Controllers\ZoneCommander\DashboardController::class, 'index'])
+            ->middleware('permission:zone.view.dashboard')
+            ->name('dashboard');
+
+        // Clients & Sites management
+        Route::get('/clients', [\App\Http\Controllers\ZoneCommander\ClientsController::class, 'index'])
+            ->middleware('permission:zone.view.clients')
+            ->name('clients.index');
+        Route::get('/sites', [\App\Http\Controllers\ZoneCommander\SiteController::class, 'index'])
+            ->middleware('permission:zone.view.sites')
+            ->name('sites.index');
+
+        // Guards & Supervisors
+        Route::get('/guards', [\App\Http\Controllers\ZoneCommander\GuardController::class, 'index'])
+            ->middleware('permission:zone.view.guards')
+            ->name('guards.index');
+        Route::get('/supervisors', [\App\Http\Controllers\ZoneCommander\SupervisorController::class, 'index'])
+            ->middleware('permission:zone.view.supervisors')
+            ->name('supervisors.index');
+
+        // Patrols (checkpoint scans)
+        Route::get('/patrols', [\App\Http\Controllers\ZoneCommander\PatrolController::class, 'index'])
+            ->middleware('permission:zone.patrols.scan')
+            ->name('patrols.index');
+        Route::post('/patrols/scan', [\App\Http\Controllers\ZoneCommander\PatrolController::class, 'scan'])
+            ->middleware('permission:zone.patrols.scan')
+            ->name('patrols.scan');
+
+        // Attendance fallback
+        Route::get('/attendance', [\App\Http\Controllers\ZoneCommander\AttendanceController::class, 'index'])
+            ->middleware('permission:zone.attendance.manage')
+            ->name('attendance.index');
+        Route::post('/attendance/check-in', [\App\Http\Controllers\ZoneCommander\AttendanceController::class, 'checkIn'])
+            ->middleware('permission:zone.attendance.manage')
+            ->name('attendance.check-in');
+        Route::post('/attendance/check-out', [\App\Http\Controllers\ZoneCommander\AttendanceController::class, 'checkOut'])
+            ->middleware('permission:zone.attendance.manage')
+            ->name('attendance.check-out');
+
+        // Downs lifecycle
+        Route::get('/downs', [\App\Http\Controllers\ZoneCommander\DownController::class, 'index'])
+            ->middleware('permission:zone.downs.manage')
+            ->name('downs.index');
+        Route::post('/downs', [\App\Http\Controllers\ZoneCommander\DownController::class, 'store'])
+            ->middleware('permission:zone.downs.manage')
+            ->name('downs.store');
+        Route::post('/downs/{down}/escalate', [\App\Http\Controllers\ZoneCommander\DownController::class, 'escalate'])
+            ->middleware('permission:zone.downs.manage')
+            ->name('downs.escalate');
+        Route::post('/downs/{down}/resolve', [\App\Http\Controllers\ZoneCommander\DownController::class, 'resolve'])
+            ->middleware('permission:zone.downs.manage')
+            ->name('downs.resolve');
+
+        // Reports
+        Route::get('/reports', [\App\Http\Controllers\ZoneCommander\ReportController::class, 'index'])
+            ->middleware('permission:zone.reports.view')
+            ->name('reports.index');
     });
 
     // Supervisor Routes

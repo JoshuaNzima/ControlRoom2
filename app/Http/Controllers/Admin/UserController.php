@@ -8,6 +8,9 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Inertia\Inertia;
 use Spatie\Permission\Models\Role;
+use App\Models\Zone;
+use App\Notifications\ZoneCommanderUnassigned;
+use Illuminate\Support\Facades\Notification as NotificationFacade;
 
 class UserController extends Controller
 {
@@ -33,6 +36,18 @@ class UserController extends Controller
         
         return Inertia::render('Admin/Users/Create', [
             'roles' => $roles,
+        ]);
+    }
+
+    public function edit(User $user)
+    {
+        $roles = Role::all();
+        $zones = Zone::orderBy('name')->get();
+
+        return Inertia::render('Admin/Users/Edit', [
+            'user' => $user->load('roles'),
+            'roles' => $roles,
+            'zones' => $zones,
         ]);
     }
 
@@ -71,6 +86,7 @@ class UserController extends Controller
             'employee_id' => 'nullable|string|unique:users,employee_id,' . $user->id,
             'role' => 'nullable|exists:roles,name',
             'status' => 'nullable|in:active,inactive',
+            'zone_id' => 'nullable|exists:zones,id',
         ]);
 
         if (isset($validated['name'])) $user->name = $validated['name'];
@@ -79,11 +95,24 @@ class UserController extends Controller
         if (isset($validated['phone'])) $user->phone = $validated['phone'];
         if (isset($validated['employee_id'])) $user->employee_id = $validated['employee_id'];
         if (isset($validated['status'])) $user->status = $validated['status'];
+        if (array_key_exists('zone_id', $validated)) {
+            $user->zone_id = $validated['zone_id'];
+        }
 
         $user->save();
 
         if (!empty($validated['role'])) {
             $user->syncRoles([$validated['role']]);
+            // If the user is a zone_commander but has no zone assigned, notify admins
+            if ($validated['role'] === 'zone_commander' && !$user->zone_id) {
+                if (\Illuminate\Support\Facades\Schema::hasTable('notifications')) {
+                    $admins = \App\Models\User::role('admin')->get();
+                    NotificationFacade::send($admins, new ZoneCommanderUnassigned($user));
+                } else {
+                    // Fallback: log so admins can be informed via logs until notifications table exists
+                    \Illuminate\Support\Facades\Log::warning('ZoneCommander without zone assigned: ' . $user->email);
+                }
+            }
         }
 
         return redirect()->route('admin.users.index')

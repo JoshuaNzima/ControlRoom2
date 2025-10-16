@@ -16,12 +16,17 @@ class DashboardController extends Controller
     public function index()
     {
         $user = Auth::user();
+        if (!$user->zone_id) {
+            // Prevent 404 when a zone commander has no zone assigned.
+            return redirect()->route('dashboard')->with('error', 'No zone assigned to your account. Please contact an administrator.');
+        }
+
         $zone = Zone::with(['sites.guards', 'sites.client'])->findOrFail($user->zone_id);
 
         // Calculate zone statistics
         $totalGuards = $zone->sites->sum(fn($site) => $site->guards->count());
         $totalPresent = Attendance::whereDate('date', today())
-            ->whereHas('guard.site.zone', fn($q) => $q->where('id', $zone->id))
+            ->whereHas('guardRelation.assignments.clientSite', fn($q) => $q->where('zone_id', $zone->id))
             ->count();
 
         $attendanceRate = $totalGuards > 0 
@@ -42,7 +47,7 @@ class DashboardController extends Controller
         });
 
         // Get at-risk guards
-        $atRiskGuards = Guard::whereHas('site.zone', fn($q) => $q->where('id', $zone->id))
+    $atRiskGuards = Guard::whereHas('assignments.clientSite', fn($q) => $q->where('zone_id', $zone->id))
             ->where(function($query) {
                 $query->where('risk_level', 'high')
                     ->orWhere('risk_level', 'warning');

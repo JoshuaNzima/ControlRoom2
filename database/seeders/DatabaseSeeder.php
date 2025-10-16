@@ -34,6 +34,7 @@ class DatabaseSeeder extends Seeder
             CheckpointSeeder::class,
             ModularPermissionsSeeder::class,
             DefaultModulesSeeder::class,            
+            ZoneCommanderDemoSeeder::class,
         ]);
     }
 }

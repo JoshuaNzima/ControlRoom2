@@ -33,10 +33,10 @@ Route::middleware(['auth', 'role:admin,super_admin'])
         Route::get('/guards/dashboard', [\App\Http\Controllers\Admin\GuardController::class, 'dashboard'])->name('guards.dashboard');
         Route::resource('guards', \App\Http\Controllers\Admin\GuardController::class);
         // Admin Finance landing (module-level admin page)
-        Route::get('/finance', fn () => Inertia\Inertia::render('Admin/Finance'))->name('finance');
+        Route::get('/finance', fn () => Inertia::render('Admin/Finance'))->name('finance');
 
         // Marketing landing (placeholder)
-        Route::get('/marketing', fn () => Inertia\Inertia::render('ComingSoon', [
+        Route::get('/marketing', fn () => Inertia::render('ComingSoon', [
             'title' => 'Marketing',
             'description' => 'Marketing module is coming soon.'
         ]))->name('marketing');
@@ -53,5 +53,8 @@ Route::middleware(['auth', 'role:admin,super_admin'])
 
         // Admin Control Room dashboard
         Route::get('/control-room', [\App\Http\Controllers\Admin\ControlRoomController::class, 'dashboard'])->name('control-room.dashboard');
+
+        // Zone Commander mini dashboard (admin window)
+        Route::get('/zone-commander/window', [\App\Http\Controllers\Admin\ZoneCommanderWindowController::class, 'index'])->name('zone-commander.window');
     });
 

@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class ClientSite extends Model
 {
@@ -39,6 +40,14 @@ class ClientSite extends Model
     public function shifts(): HasMany
     {
         return $this->hasMany(Shift::class);
+    }
+
+    /**
+     * Guards assigned to this site through GuardAssignment (many-to-many via assignments)
+     */
+    public function guards(): BelongsToMany
+    {
+        return $this->belongsToMany(Guard::class, 'guard_assignments', 'client_site_id', 'guard_id');
     }
 
     public function attendance(): HasMany
