@@ -7,22 +7,36 @@ import { Badge } from '@/Components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/Components/ui/dialog';
 import { User } from '@/types';
 
-interface ZoneItem { id: number; name: string; code: string; description?: string | null; status: 'active' | 'inactive' | 'understaffed'; required_guard_count?: number; target_sites_count?: number; coverage_rate?: number; active_guard_count?: number; sites_count?: number; }
-interface ZonesProps { auth?: { user?: { name?: string } }; zones?: ZoneItem[]; commanders?: {id:number,name:string}[]; sites?: {id:number,name:string,zone_id?:number|null}[] }
+interface ZoneItem { id: number; name: string; code: string; description?: string | null; status: 'active' | 'inactive' | 'understaffed'; required_guard_count?: number; target_sites_count?: number; coverage_rate?: number; coverage?: number; active_guard_count?: number; sites_count?: number; }
+interface Commander { id: number; name: string }
+interface SiteItem { id: number; name: string; zone_id?: number | null }
+interface ZonesProps { auth?: { user?: { name?: string } }; zones?: ZoneItem[]; commanders?: Commander[]; sites?: SiteItem[] }
 
 const Zones = ({ auth, zones: zonesProp = [], commanders = [], sites = [] }: ZonesProps) => {
   const { props } = usePage();
   const zones = zonesProp.length ? zonesProp : ((props as any).zones ?? []);
-  const [open, setOpen] = React.useState(false);
+  const [open, setOpen] = React.useState<boolean>(false);
   const [editing, setEditing] = React.useState<ZoneItem | null>(null);
-  const { data, setData, post, put, processing, reset, errors, delete: destroy } = useForm({
+
+  type ZoneForm = {
+    name: string;
+    code: string;
+    description: string;
+    status: 'active' | 'inactive' | 'understaffed';
+    required_guard_count: number;
+    target_sites_count: number;
+    commander_id: number | '';
+    site_ids: number[];
+  };
+
+  const { data, setData, post, put, processing, reset, errors, delete: destroy } = useForm<ZoneForm>({
     name: '',
     code: '',
     description: '',
-    status: 'active' as 'active' | 'inactive' | 'understaffed',
+    status: 'active',
     required_guard_count: 0,
     target_sites_count: 0,
-    commander_id: '' as any,
+    commander_id: '' ,
     site_ids: [] as number[],
   });
 
@@ -41,7 +55,7 @@ const Zones = ({ auth, zones: zonesProp = [], commanders = [], sites = [] }: Zon
       status: z.status,
       required_guard_count: z.required_guard_count ?? 0,
       target_sites_count: z.target_sites_count ?? 0,
-      commander_id: '' as any,
+      commander_id: '' ,
       site_ids: [] as number[],
     });
     setOpen(true);
@@ -103,10 +117,10 @@ const Zones = ({ auth, zones: zonesProp = [], commanders = [], sites = [] }: Zon
 
           <Card className="dark:bg-gray-800 dark:border-gray-700">
             <CardContent className="p-4">
-              <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Active Zones</p>
-                  <p className="text-2xl font-bold text-green-600 dark:text-green-400">{zones.filter((z) => z.status === 'active').length}</p>
+                  <p className="text-2xl font-bold text-green-600 dark:text-green-400">{zones.filter((z: ZoneItem) => z.status === 'active').length}</p>
                 </div>
                 <div className="h-8 w-8 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center">
                   <span className="text-green-600 dark:text-green-400">✅</span>
@@ -120,7 +134,7 @@ const Zones = ({ auth, zones: zonesProp = [], commanders = [], sites = [] }: Zon
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Guards</p>
-                  <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">{zones.reduce((sum, z) => sum + (z.active_guard_count ?? 0), 0)}</p>
+                  <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">{zones.reduce((sum: number, z: ZoneItem) => sum + (z.active_guard_count ?? 0), 0)}</p>
                 </div>
                 <div className="h-8 w-8 bg-purple-100 dark:bg-purple-900/20 rounded-full flex items-center justify-center">
                   <span className="text-purple-600 dark:text-purple-400">👮</span>
@@ -134,7 +148,7 @@ const Zones = ({ auth, zones: zonesProp = [], commanders = [], sites = [] }: Zon
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Sites</p>
-                  <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">{zones.reduce((sum, z) => sum + (z.sites_count ?? 0), 0)}</p>
+                  <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">{zones.reduce((sum: number, z: ZoneItem) => sum + (z.sites_count ?? 0), 0)}</p>
                 </div>
                 <div className="h-8 w-8 bg-orange-100 dark:bg-orange-900/20 rounded-full flex items-center justify-center">
                   <span className="text-orange-600 dark:text-orange-400">🏢</span>
@@ -182,7 +196,7 @@ const Zones = ({ auth, zones: zonesProp = [], commanders = [], sites = [] }: Zon
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">Zone Commander</label>
-                      <select value={data.commander_id as any} onChange={(e) => setData('commander_id', e.target.value)} className="mt-1 w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800">
+                      <select value={data.commander_id as any} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setData('commander_id', e.target.value ? Number(e.target.value) : '')} className="mt-1 w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800">
                         <option value="">Select commander</option>
                         {commanders.map((c) => (
                           <option key={c.id} value={c.id}>{c.name}</option>
@@ -229,7 +243,7 @@ const Zones = ({ auth, zones: zonesProp = [], commanders = [], sites = [] }: Zon
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {zones.map((zone) => (
+              {zones.map((zone: ZoneItem) => (
                 <div key={zone.id} className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex-1">
@@ -246,8 +260,8 @@ const Zones = ({ auth, zones: zonesProp = [], commanders = [], sites = [] }: Zon
                       </div>
                     </div>
                     <div className="text-right ml-4">
-                      <div className={`text-2xl font-bold ${getCoverageColor((zone as any).coverage ?? (zone as any).coverage_rate ?? 0)}`}>
-                        {((zone as any).coverage ?? (zone as any).coverage_rate ?? 0).toFixed(1)}%
+                      <div className={`text-2xl font-bold ${getCoverageColor((zone.coverage ?? zone.coverage_rate ?? 0) as number)}`}>
+                        {(Number(zone.coverage ?? zone.coverage_rate ?? 0)).toFixed(1)}%
                       </div>
                       <div className="text-xs text-gray-500 dark:text-gray-400">
                         Coverage

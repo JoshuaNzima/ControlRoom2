@@ -6,14 +6,25 @@ import { Button } from '@/Components/ui/button';
 
 export default function ShiftsCreate() {
   const { guards = [], supervisors = [], sites = [] } = usePage().props as any;
-  const { data, setData, post, processing, errors } = useForm({
+
+  type ShiftForm = {
+    name: string;
+    start_time: string;
+    end_time: string;
+    description: string;
+    supervisor_id: number | '';
+    required_guards: number;
+    sites: number[];
+  };
+
+  const { data, setData, post, processing, errors } = useForm<ShiftForm>({
     name: '',
     start_time: '',
     end_time: '',
     description: '',
     supervisor_id: '',
     required_guards: 1,
-    sites: [] as any[],
+    sites: [] as number[],
   });
 
   const toggleSite = (siteId: number) => {
@@ -47,7 +58,7 @@ export default function ShiftsCreate() {
               </div>
               <div>
                 <label className="block text-sm font-medium">Supervisor</label>
-                <select className="w-full border rounded-md p-2" value={data.supervisor_id} onChange={(e) => setData('supervisor_id', e.target.value)}>
+                <select className="w-full border rounded-md p-2" value={data.supervisor_id as any} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setData('supervisor_id', e.target.value ? Number(e.target.value) : '')}>
                   <option value="">Select supervisor</option>
                   {supervisors.map((s: any) => <option key={s.id} value={s.id}>{s.name}</option>)}
                 </select>
@@ -65,7 +76,7 @@ export default function ShiftsCreate() {
               </div>
               <div>
                 <label className="block text-sm font-medium">Required Guards</label>
-                <input type="number" min={1} className="w-full border rounded-md p-2" value={data.required_guards as any} onChange={(e) => setData('required_guards', Number(e.target.value))} />
+                <input type="number" min={1} className="w-full border rounded-md p-2" value={data.required_guards as any} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setData('required_guards', Number(e.target.value))} />
                 {errors.required_guards && <p className="text-sm text-red-600">{errors.required_guards}</p>}
               </div>
               <div className="sm:col-span-2">
