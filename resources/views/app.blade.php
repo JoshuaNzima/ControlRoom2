@@ -12,8 +12,13 @@
 
         <!-- Scripts -->
         @routes
-        @viteReactRefresh
-        @vite(['resources/js/app.tsx', "resources/js/Pages/{$page['component']}.tsx"])
+        {{-- Only include Vite dev client and page HMR when running locally. In production we must use the built assets. --}}
+        @if(app()->isLocal())
+            @viteReactRefresh
+            @vite(['resources/js/app.tsx', "resources/js/Pages/{$page['component']}.tsx"])
+        @else
+            @vite(['resources/js/app.tsx'])
+        @endif
         @inertiaHead
     </head>
     <body class="font-sans antialiased">

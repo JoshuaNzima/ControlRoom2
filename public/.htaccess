@@ -1,4 +1,74 @@
 <IfModule mod_rewrite.c>
+    Options -MultiViews -Indexes
+
+    RewriteEngine On
+
+    # If your Hostinger account points the document root to the project root
+    # and not to the `public/` directory, use the rule below at the project root
+    # to redirect all requests into the `public/` folder. Commented out by default.
+    #
+    # RewriteCond %{REQUEST_URI} !^/public/
+    # RewriteRule ^(.*)$ /public/$1 [L]
+
+    # Redirect Trailing Slashes If Not A Folder...
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^(.+)/$ /$1 [L,R=301]
+
+    # Serve existing files directly
+    RewriteCond %{REQUEST_FILENAME} -f [OR]
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
+
+    # Send everything else to index.php
+    RewriteRule ^ index.php [L]
+</IfModule>
+
+<IfModule mod_headers.c>
+    # Prevent clickjacking
+    Header always append X-Frame-Options SAMEORIGIN
+    # Prevent MIME sniffing
+    Header set X-Content-Type-Options nosniff
+    # Enable XSS protection in older browsers
+    Header set X-XSS-Protection "1; mode=block"
+</IfModule>
+
+# Protect sensitive files
+<FilesMatch "^\.(env|htaccess)$">
+    Require all denied
+</FilesMatch>
+
+# Deny access to application files outside public
+<IfModule mod_authz_core.c>
+    <FilesMatch "(composer\.json|composer\.lock|artisan|server\.php|phpunit\.xml)">
+        Require all denied
+    </FilesMatch>
+</IfModule>
+
+# Protect storage and other sensitive directories if accidentally exposed
+RedirectMatch 403 /storage/app/.*
+RedirectMatch 403 /storage/framework/.*
+RedirectMatch 403 /storage/logs/.*
+
+# Optional: enable compression if supported
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/plain text/html text/xml text/css application/xml application/xhtml+xml application/rss+xml application/javascript application/x-javascript
+</IfModule>
+
+# Optional: caching for assets
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType image/jpg "access plus 1 year"
+    ExpiresByType image/jpeg "access plus 1 year"
+    ExpiresByType image/gif "access plus 1 year"
+    ExpiresByType image/png "access plus 1 year"
+    ExpiresByType text/css "access plus 1 month"
+    ExpiresByType text/javascript "access plus 1 month"
+    ExpiresByType application/javascript "access plus 1 month"
+    ExpiresByType application/x-javascript "access plus 1 month"
+    ExpiresByType application/font-woff2 "access plus 1 year"
+</IfModule>
+
+# End of file<IfModule mod_rewrite.c>
     <IfModule mod_negotiation.c>
         Options -MultiViews -Indexes
     </IfModule>
