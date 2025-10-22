@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('guard_id')->constrained('guards')->onDelete('cascade');
             $table->foreignId('client_site_id')->constrained('client_sites')->onDelete('cascade');
-            $table->foreignId('assigned_by')->constrained('users')->onDelete('set null');
+            $table->foreignId('assigned_by')->nullable()->constrained('users')->nullOnDelete();
             $table->date('start_date');
             $table->date('end_date')->nullable();
             $table->enum('assignment_type', ['permanent', 'temporary'])->default('permanent');
@@ -23,8 +23,9 @@ return new class extends Migration
             $table->boolean('active')->default(true);
             $table->timestamps();
 
-            $table->index(['guard_id', 'is_active']);
-            $table->index(['client_site_id', 'is_active']);
+            // index on active flag
+            $table->index(['guard_id', 'active']);
+            $table->index(['client_site_id', 'active']);
 
         });
     }
