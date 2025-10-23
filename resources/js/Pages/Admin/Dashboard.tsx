@@ -54,8 +54,16 @@ interface Props {
     sites_total?: number;
     guards_coverage_pct?: number;
     sites_coverage_pct?: number;
+    clients_with_outstanding?: number;
+    outstanding_value?: number;
+    clients_total?: number;
   };
   auth?: AuthShape;
+  paymentsSummary?: {
+    clients_with_outstanding?: number;
+    outstanding_value?: number;
+    total_clients?: number;
+  };
 }
 
 export default function Dashboard({
@@ -68,6 +76,7 @@ export default function Dashboard({
   kpis = {},
   coverageSummary = {},
   auth = {},
+  paymentsSummary = undefined,
 }: Props) {
   const [showZoneHero, setShowZoneHero] = React.useState(true);
   const [showCoverageCards, setShowCoverageCards] = React.useState(true);
@@ -95,6 +104,23 @@ export default function Dashboard({
                 <Button variant="outline" size="sm" onClick={() => window.location.reload()}>Refresh</Button>
                 <Button size="sm" onClick={() => window.location.href = route('reports.index')}>View Reports</Button>
                 <Button size="sm" onClick={() => window.location.href = route('admin.payments.index')}>Payments Checker</Button>
+              </div>
+            </div>
+            {/* Payments Summary */}
+            <div className="mb-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="p-3 rounded-lg border bg-white">
+                  <div className="text-xs text-gray-500">Clients With Outstanding</div>
+                  <div className="text-2xl font-bold text-gray-900">{(paymentsSummary?.clients_with_outstanding ?? kpis.finance?.clients_with_outstanding ?? coverageSummary.clients_with_outstanding) || 0}</div>
+                </div>
+                <div className="p-3 rounded-lg border bg-white">
+                  <div className="text-xs text-gray-500">Outstanding Value</div>
+                  <div className="text-2xl font-bold text-gray-900">{formatCurrencyMWK(paymentsSummary?.outstanding_value ?? kpis.finance?.outstanding_value ?? coverageSummary.outstanding_value ?? 0)}</div>
+                </div>
+                <div className="p-3 rounded-lg border bg-white">
+                  <div className="text-xs text-gray-500">Total Clients</div>
+                  <div className="text-2xl font-bold text-gray-900">{paymentsSummary?.total_clients ?? kpis.finance?.total_clients ?? coverageSummary.clients_total ?? 0}</div>
+                </div>
               </div>
             </div>
             {showZoneHero && (

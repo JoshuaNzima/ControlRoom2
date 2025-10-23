@@ -82,6 +82,29 @@ class DashboardController extends Controller
             'sites_coverage_pct' => $totalSites > 0 ? round(($sitesCoveredToday / $totalSites) * 100, 1) : 0,
         ];
 
+        // Payments summary (top-level): total_clients_due, total_clients_outstanding_value
+        $paymentsSummary = [
+            'total_clients' => \App\Models\Guards\Client::count(),
+            'clients_with_outstanding' => 0,
+            'outstanding_value' => 0.0,
+        ];
+        try {
+            $year = now()->year;
+            $clientPayments = \App\Models\ClientPayment::where('year', $year)->get();
+            $grouped = $clientPayments->groupBy('client_id');
+            foreach ($grouped as $clientId => $rows) {
+                $due = $rows->sum('amount_due');
+                $paid = $rows->sum('amount_paid');
+                if ($due > $paid) {
+                    $paymentsSummary['clients_with_outstanding']++;
+                    $paymentsSummary['outstanding_value'] += ($due - $paid);
+                }
+            }
+            $paymentsSummary['outstanding_value'] = round($paymentsSummary['outstanding_value'], 2);
+        } catch (\Throwable $e) {
+            // ignore if table missing during early dev
+        }
+
         // High-level KPIs grouped by module (safe defaults where specific models are not present)
         $kpis = [
             'hr_users' => [
@@ -172,6 +195,7 @@ class DashboardController extends Controller
             'zoneCoverage' => $zoneCoverage,
             'coverageSummary' => $coverageSummary,
             'kpis' => $kpis,
+            'paymentsSummary' => $paymentsSummary,
             'auth' => [
             'user' => [
                 'name' => auth()->user()->name,

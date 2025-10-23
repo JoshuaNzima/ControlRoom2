@@ -2,7 +2,7 @@ import React from 'react';
 import { Head, useForm } from '@inertiajs/react';
 import AdminLayout from '@/Layouts/AdminLayout';
 
-export default function CreateClient() {
+export default function CreateClient(props: { services?: Array<{ id: number; name: string; monthly_price: number }> }) {
   const { data, setData, post, processing, errors } = useForm({
     name: '',
     contact_person: '',
@@ -12,6 +12,7 @@ export default function CreateClient() {
     contract_start_date: '',
     contract_end_date: '',
     monthly_rate: 0,
+  billing_start_date: '',
     notes: '',
     status: 'active',
     site: {
@@ -26,6 +27,7 @@ export default function CreateClient() {
       latitude: '',
       longitude: '',
     },
+    services: [] as number[],
   } as any);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -63,6 +65,11 @@ export default function CreateClient() {
               <input type="number" step="0.01" value={data.monthly_rate as any} onChange={(e: any) => (setData as any)('monthly_rate', Number(e.target.value) || 0)} className="w-full px-4 py-2 border border-gray-300 rounded-lg" required />
               {errors.monthly_rate && <p className="text-red-600 text-sm mt-1">{errors.monthly_rate}</p>}
             </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Billing Start Date</label>
+              <input type="date" value={data.billing_start_date} onChange={(e: any) => (setData as any)('billing_start_date', e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg" />
+              {errors.billing_start_date && <p className="text-red-600 text-sm mt-1">{errors.billing_start_date}</p>}
+            </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Contact Person</label>
                 <input type="text" value={data.contact_person} onChange={(e: any) => (setData as any)('contact_person', e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg" />
@@ -76,6 +83,38 @@ export default function CreateClient() {
             <div className="flex gap-4">
               <button type="submit" disabled={processing} className="flex-1 px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-bold">{processing ? 'Saving...' : 'Create Client'}</button>
               <button type="button" onClick={() => window.history.back()} className="px-6 py-3 bg-red-50 text-red-800 rounded-lg font-bold border border-red-200">Cancel</button>
+            </div>
+
+            <div className="pt-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Assign Services (optional)</label>
+              <div className="grid grid-cols-1 gap-2">
+                {props.services?.map((s) => {
+                  const selected = (data.services || []).some((ds: any) => ds.id === s.id);
+                  return (
+                    <div key={s.id} className="p-2 border rounded flex items-center gap-4">
+                      <input type="checkbox" checked={selected} onChange={(e:any) => {
+                        let list = Array.isArray(data.services) ? [...data.services] : [];
+                        if (e.target.checked) {
+                          list.push({ id: s.id, custom_price: null });
+                        } else {
+                          list = list.filter((it: any) => it.id !== s.id);
+                        }
+                        (setData as any)('services', list);
+                      }} />
+                      <div className="flex-1">
+                        <div className="font-semibold">{s.name}</div>
+                        <div className="text-sm text-gray-500">Default: {s.monthly_price}</div>
+                      </div>
+                      {selected && (
+                        <input type="number" step="0.01" placeholder="Custom price (optional)" value={(data.services.find((it:any) => it.id === s.id)?.custom_price ?? '') as any} onChange={(e:any) => {
+                          const list = (data.services || []).map((it:any) => it.id === s.id ? ({ ...it, custom_price: e.target.value === '' ? null : Number(e.target.value) }) : it);
+                          (setData as any)('services', list);
+                        }} className="w-32 px-2 py-1 border rounded" />
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
 
           <div className="pt-6 border-t mt-6">

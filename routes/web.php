@@ -122,6 +122,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/reports', [\App\Http\Controllers\Admin\ReportController::class, 'index'])->name('reports.index');
         Route::get('/modules', [\App\Http\Controllers\Admin\ModuleController::class, 'index'])->name('modules.index');
         Route::get('/settings', [\App\Http\Controllers\Admin\SettingController::class, 'index'])->name('settings.index');
+    Route::resource('services', \App\Http\Controllers\Admin\ServiceController::class)->except(['show', 'create', 'edit']);
         Route::get('/qr-codes', [\App\Http\Controllers\SupervisorQRCodesController::class, 'index'])->name('qr-codes');
         Route::get('/qr-codes/download-bulk', [\App\Http\Controllers\SupervisorQRCodesController::class, 'downloadBulk'])->name('qr-codes.download-bulk');
     });
@@ -211,6 +212,8 @@ Route::middleware(['auth'])->group(function () {
     
     // Admin Client Management
     Route::resource('clients', App\Http\Controllers\Admin\ClientController::class);
+    // Update client services (custom prices on pivot)
+    Route::post('clients/{client}/services', [App\Http\Controllers\Admin\ClientController::class, 'updateServices'])->name('clients.services.update');
     Route::get('clients/{client}/sites/create', [App\Http\Controllers\Admin\ClientController::class, 'createSite'])->name('clients.sites.create');
     Route::post('clients/{client}/sites', [App\Http\Controllers\Admin\ClientController::class, 'storeSite'])->name('clients.sites.store');
     

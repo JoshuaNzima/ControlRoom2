@@ -55,7 +55,10 @@ class ClientController extends Controller
 
     public function create()
     {
-        return Inertia::render('Admin/Clients/Create');
+        $services = \App\Models\Service::where('active', true)->orderBy('name')->get(['id','name','monthly_price']);
+        return Inertia::render('Admin/Clients/Create', [
+            'services' => $services,
+        ]);
     }
 
     public function store(Request $request)
@@ -71,6 +74,10 @@ class ClientController extends Controller
             'monthly_rate' => 'required|numeric|min:0',
             'notes' => 'nullable|string',
             'status' => 'required|in:active,inactive',
+            'billing_start_date' => 'nullable|date',
+            'services' => 'nullable|array',
+            'services.*.id' => 'required_with:services|integer|exists:services,id',
+            'services.*.custom_price' => 'nullable|numeric|min:0',
             // Optional initial site
             'site.name' => 'nullable|string|max:255',
             'site.address' => 'nullable|string',
@@ -84,7 +91,16 @@ class ClientController extends Controller
             'site.longitude' => 'nullable|numeric',
         ]);
 
-        $client = Client::create(collect($validated)->except(['site'])->toArray());
+        $client = Client::create(collect($validated)->except(['site', 'services'])->toArray());
+
+        // Attach services if provided (array of {id, custom_price})
+        if (!empty($validated['services'])) {
+            $attach = [];
+            foreach ($validated['services'] as $svc) {
+                $attach[(int) $svc['id']] = ['custom_price' => isset($svc['custom_price']) ? $svc['custom_price'] : null];
+            }
+            $client->services()->attach($attach);
+        }
 
         if (!empty($validated['site']) && !empty($validated['site']['name'])) {
             $siteData = $validated['site'];
@@ -109,8 +125,11 @@ class ClientController extends Controller
 
     public function edit(Client $client)
     {
+        $client->load('services', 'sites');
+        $services = \App\Models\Service::where('active', true)->orderBy('name')->get(['id','name','monthly_price']);
         return Inertia::render('Admin/Clients/Edit', [
             'client' => $client,
+            'services' => $services,
         ]);
     }
 
@@ -127,12 +146,43 @@ class ClientController extends Controller
             'monthly_rate' => 'required|numeric|min:0',
             'notes' => 'nullable|string',
             'status' => 'required|in:active,inactive',
+            'services' => 'nullable|array',
+            'services.*.id' => 'required_with:services|integer|exists:services,id',
+            'services.*.custom_price' => 'nullable|numeric|min:0',
         ]);
 
         $client->update($validated);
 
+        // Sync services if provided
+        if (array_key_exists('services', $validated)) {
+            $sync = [];
+            foreach ($validated['services'] as $svc) {
+                $sync[(int) $svc['id']] = ['custom_price' => $svc['custom_price'] ?? null];
+            }
+            $client->services()->sync($sync);
+        }
+
         return redirect()->route('clients.index')
             ->with('success', 'Client updated successfully.');
+    }
+
+    // Update just the services/pivot for a client (custom prices)
+    public function updateServices(Request $request, Client $client)
+    {
+        $validated = $request->validate([
+            'services' => 'nullable|array',
+            'services.*.id' => 'required_with:services|integer|exists:services,id',
+            'services.*.custom_price' => 'nullable|numeric|min:0',
+        ]);
+
+        $sync = [];
+        foreach (($validated['services'] ?? []) as $svc) {
+            $sync[(int) $svc['id']] = ['custom_price' => $svc['custom_price'] ?? null];
+        }
+
+        $client->services()->sync($sync);
+
+        return redirect()->back()->with('success', 'Client services updated');
     }
 
     public function destroy(Client $client)

@@ -22,6 +22,7 @@ class Guard extends Model
     protected $fillable = [
         'employee_id',
         'name',
+        'zone_id',
         'phone',
         'email',
         'address',
@@ -47,6 +48,11 @@ class Guard extends Model
     public function supervisor(): BelongsTo
     {
         return $this->belongsTo(User::class, 'supervisor_id');
+    }
+
+    public function zone(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\Zone::class, 'zone_id');
     }
 
     public function scopeForSupervisor($query, $supervisorId)
