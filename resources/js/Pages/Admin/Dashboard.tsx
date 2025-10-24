@@ -2,6 +2,7 @@ import React from 'react';
 import { Head } from '@inertiajs/react';
 import AdminLayout from '@/Layouts/AdminLayout';
 import { Card } from '@/Components/ui/card';
+import IconMapper from '@/Components/IconMapper';
 import { formatCurrencyMWK } from '@/Components/format';
 import { Button } from '@/Components/ui/button';
 import { ResponsiveContainer, LineChart, Line, CartesianGrid, XAxis, YAxis, Tooltip, AreaChart, Area, BarChart, Bar } from 'recharts';
@@ -78,6 +79,7 @@ export default function Dashboard({
   auth = {},
   paymentsSummary = undefined,
 }: Props) {
+  const [showClientManagement, setShowClientManagement] = React.useState(true);
   const [showZoneHero, setShowZoneHero] = React.useState(true);
   const [showCoverageCards, setShowCoverageCards] = React.useState(true);
   const [showRecent, setShowRecent] = React.useState(true);
@@ -87,6 +89,118 @@ export default function Dashboard({
 
       <div className="py-6">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+          {/* Client Management Overview */}
+          <Card className="p-6">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">Client Management</h1>
+                <p className="text-gray-600">Overview of client services and performance</p>
+              </div>
+              <div className="flex items-center gap-3">
+                <Button variant="outline" asChild>
+                  <a href={route('admin.payments.index')}>
+                    <IconMapper name="DollarSign" className="w-5 h-5 mr-2" />
+                    View Payments
+                  </a>
+                </Button>
+                <Button asChild>
+                  <a href={route('clients.create')} className="flex items-center">
+                    <IconMapper name="Plus" className="w-5 h-5 mr-2" />
+                    Add Client
+                  </a>
+                </Button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+              <Card className="p-4 bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-sm font-medium text-blue-900">Total Clients</h3>
+                  <IconMapper name="Users" className="w-5 h-5 text-blue-500" />
+                </div>
+                <p className="text-2xl font-bold text-blue-900">{kpis.finance?.total_clients || 0}</p>
+                <p className="text-sm text-blue-700 mt-1">Active accounts</p>
+              </Card>
+
+              <Card className="p-4 bg-gradient-to-br from-green-50 to-green-100 border-green-200">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-sm font-medium text-green-900">Active Sites</h3>
+                  <IconMapper name="MapPin" className="w-5 h-5 text-green-500" />
+                </div>
+                <p className="text-2xl font-bold text-green-900">{coverageSummary.sites_total || 0}</p>
+                <p className="text-sm text-green-700 mt-1">Managed locations</p>
+              </Card>
+
+              <Card className="p-4 bg-gradient-to-br from-yellow-50 to-yellow-100 border-yellow-200">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-sm font-medium text-yellow-900">Monthly Revenue</h3>
+                  <IconMapper name="DollarSign" className="w-5 h-5 text-yellow-500" />
+                </div>
+                <p className="text-2xl font-bold text-yellow-900">
+                  {formatCurrencyMWK(kpis.finance?.mtd_revenue || 0)}
+                </p>
+                <p className="text-sm text-yellow-700 mt-1">Month to date</p>
+              </Card>
+
+              <Card className="p-4 bg-gradient-to-br from-red-50 to-red-100 border-red-200">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-sm font-medium text-red-900">Overdue Payments</h3>
+                  <IconMapper name="AlertCircle" className="w-5 h-5 text-red-500" />
+                </div>
+                <p className="text-2xl font-bold text-red-900">
+                  {kpis.finance?.clients_with_outstanding || 0}
+                </p>
+                <p className="text-sm text-red-700 mt-1">Require attention</p>
+              </Card>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <h3 className="text-sm font-semibold text-gray-700 mb-3">Quick Actions</h3>
+                <div className="grid grid-cols-2 gap-3">
+                  <Button variant="outline" asChild className="h-auto py-3 flex flex-col items-center justify-center gap-2">
+                    <a href={route('clients.index')}>
+                      <IconMapper name="Users" className="w-5 h-5" />
+                      <span>View Clients</span>
+                    </a>
+                  </Button>
+                  <Button variant="outline" asChild className="h-auto py-3 flex flex-col items-center justify-center gap-2">
+                    <a href={route('admin.services.index')}>
+                      <IconMapper name="Package" className="w-5 h-5" />
+                      <span>Manage Services</span>
+                    </a>
+                  </Button>
+                  <Button variant="outline" asChild className="h-auto py-3 flex flex-col items-center justify-center gap-2">
+                    <a href={route('admin.reports.index')}>
+                      <IconMapper name="FileText" className="w-5 h-5" />
+                      <span>View Reports</span>
+                    </a>
+                  </Button>
+                  <Button variant="outline" asChild className="h-auto py-3 flex flex-col items-center justify-center gap-2">
+                    <a href={route('admin.settings.index')}>
+                      <IconMapper name="Settings" className="w-5 h-5" />
+                      <span>Settings</span>
+                    </a>
+                  </Button>
+                </div>
+              </div>
+
+              <div>
+                <h3 className="text-sm font-semibold text-gray-700 mb-3">Client Activity</h3>
+                <div className="space-y-3">
+                  {recentActivity.filter(a => a.type === 'client').slice(0, 3).map((activity) => (
+                    <div key={activity.id} className="flex items-center justify-between p-3 rounded-lg border bg-white">
+                      <div>
+                        <div className="text-sm font-medium text-gray-900">{activity.message}</div>
+                        <div className="text-xs text-gray-500">{activity.time}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </Card>
+
           {/* Zone Coverage - Hero (collapsible) */}
           <Card className="p-6">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">

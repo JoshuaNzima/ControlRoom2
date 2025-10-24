@@ -3,17 +3,27 @@
 use App\Http\Controllers\InstallController;
 
 use Illuminate\Support\Facades\Route;
+use Inertia\Inertia;
+use Illuminate\Support\Facades\Auth;
+use App\Http\Controllers\Guards\SupervisorController;
+use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\{DashboardController as AdminDashboard, UserController};
+use App\Models\Role;
 // Installer routes
 Route::middleware('web')->group(function () {
     Route::get('/install', [InstallController::class, 'welcome'])->name('install.welcome');
     Route::post('/install/check', [InstallController::class, 'check'])->name('install.check');
     Route::post('/install/config', [InstallController::class, 'configure'])->name('install.configure');
 });
-use App\Http\Controllers\Guards\SupervisorController;
-use App\Http\Controllers\Admin\DashboardController;
-use App\Http\Controllers\Admin\{DashboardController as AdminDashboard, UserController};
-use App\Models\Role;
-use Inertia\Inertia;
+
+// Public landing page for guests (redirects authenticated users to dashboard)
+Route::get('/', function () {
+    if (Auth::check()) {
+        return redirect()->route('dashboard');
+    }
+
+    return Inertia::render('Public/Home');
+})->name('public.home');
 
 // Guest routes
 Route::middleware('guest')->group(function () {
@@ -84,7 +94,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     });
 
-     Route::get('/', function() {
+     Route::get('/dashboard', function() {
         $user = \Illuminate\Support\Facades\Auth::user();
         if (!$user) {
             return redirect()->route('login');
@@ -122,7 +132,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/reports', [\App\Http\Controllers\Admin\ReportController::class, 'index'])->name('reports.index');
         Route::get('/modules', [\App\Http\Controllers\Admin\ModuleController::class, 'index'])->name('modules.index');
         Route::get('/settings', [\App\Http\Controllers\Admin\SettingController::class, 'index'])->name('settings.index');
-    Route::resource('services', \App\Http\Controllers\Admin\ServiceController::class)->except(['show', 'create', 'edit']);
+    Route::resource('services', \App\Http\Controllers\ServicesController::class)->except(['show', 'create', 'edit']);
         Route::get('/qr-codes', [\App\Http\Controllers\SupervisorQRCodesController::class, 'index'])->name('qr-codes');
         Route::get('/qr-codes/download-bulk', [\App\Http\Controllers\SupervisorQRCodesController::class, 'downloadBulk'])->name('qr-codes.download-bulk');
     });
