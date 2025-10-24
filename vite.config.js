@@ -10,6 +10,22 @@ export default defineConfig({
         }),
         react(),
     ],
+    server: {
+        cors: {
+            origin: [
+                'https://saddlebrown-bear-961667.hostingersite.com',
+                'https://controlroom2.test:5173',
+                'http://localhost:5173',
+                'http://127.0.0.1:5173'
+            ],
+            credentials: true
+        },
+        host: '0.0.0.0',
+        port: 5173,
+        hmr: {
+            host: 'controlroom2.test'
+        }
+    },
   
     build: {
         rollupOptions: {
@@ -51,5 +67,9 @@ export default defineConfig({
             },
         },
         chunkSizeWarningLimit: 1200, // increase warning limit slightly
+        outDir: 'public/build',
+        assetsDir: 'assets',
+        sourcemap: false,
+        minify: 'terser',
     },
 });
