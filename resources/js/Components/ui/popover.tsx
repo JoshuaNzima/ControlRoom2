@@ -3,7 +3,7 @@ import React, { createContext, useContext, useState, useRef, useEffect } from 'r
 interface PopoverContextValue {
   open: boolean;
   setOpen: (open: boolean) => void;
-  triggerRef: React.RefObject<HTMLElement | null>;
+  triggerRef: React.MutableRefObject<HTMLElement | null>;
 }
 
 const PopoverContext = createContext<PopoverContextValue | undefined>(undefined);
@@ -27,7 +27,7 @@ interface PopoverContentProps extends React.HTMLAttributes<HTMLDivElement> {
 
 export const Popover = ({ children, open: controlledOpen, onOpenChange }: PopoverProps) => {
   const [internalOpen, setInternalOpen] = useState<boolean>(controlledOpen ?? false);
-  const triggerRef = useRef<HTMLElement>(null);
+  const triggerRef = useRef<HTMLElement | null>(null);
 
   // Sync controlled prop to internal state
   useEffect(() => {

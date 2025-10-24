@@ -8,23 +8,39 @@ export default defineConfig({
             input: 'resources/js/app.tsx',
             refresh: true,
         }),
-        react(),
+        react({
+            include: "**/*.{jsx,tsx}",
+        }),
     ],
+    resolve: {
+        alias: {
+            'react': 'react',
+            'react-dom': 'react-dom',
+        },
+        dedupe: ['react', 'react-dom'],
+    },
+    optimizeDeps: {
+        include: ['react', 'react-dom', 'react/jsx-runtime', 'react-is', 'recharts'],
+        exclude: ['@inertiajs/react'],
+        force: true,
+    },
+    define: {
+        'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'development'),
+    },
     server: {
         cors: {
-            origin: [
-                'https://saddlebrown-bear-961667.hostingersite.com',
-                'https://controlroom2.test:5173',
-                'http://localhost:5173',
-                'http://127.0.0.1:5173'
-            ],
-            credentials: true
+            origin: true, // Allow all origins during development
+            credentials: true,
+            methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+            allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
         },
         host: '0.0.0.0',
-        port: 5173,
+        port: 5174,
         hmr: {
-            host: 'controlroom2.test'
-        }
+            host: 'controlroom2.test',
+            port: 5174
+        },
+        strictPort: false
     },
   
     build: {
