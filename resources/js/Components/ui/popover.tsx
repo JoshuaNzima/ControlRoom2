@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 
 interface PopoverContextValue {
   open: boolean;
@@ -6,7 +6,7 @@ interface PopoverContextValue {
   triggerRef: React.MutableRefObject<HTMLElement | null>;
 }
 
-const PopoverContext = createContext<PopoverContextValue | undefined>(undefined);
+const PopoverContext = React.createContext<PopoverContextValue | undefined>(undefined);
 
 interface PopoverProps {
   children: React.ReactNode;
@@ -48,7 +48,7 @@ export const Popover = ({ children, open: controlledOpen, onOpenChange }: Popove
 
 export const PopoverTrigger = React.forwardRef<HTMLElement, PopoverTriggerProps>(
   ({ asChild = false, children, ...props }, ref) => {
-    const context = useContext(PopoverContext);
+    const context = React.useContext(PopoverContext);
     if (!context) {
       throw new Error('PopoverTrigger must be used within a Popover component');
     }
@@ -87,7 +87,7 @@ PopoverTrigger.displayName = 'PopoverTrigger';
 
 export const PopoverContent = React.forwardRef<HTMLDivElement, PopoverContentProps>(
   ({ children, side = 'bottom', align = 'center', className = '', ...props }, ref) => {
-    const context = useContext(PopoverContext);
+    const context = React.useContext(PopoverContext);
     if (!context) {
       throw new Error('PopoverContent must be used within a Popover component');
     }

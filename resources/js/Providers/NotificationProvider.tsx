@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { useState, ReactNode } from 'react';
 
 type Notification = { id: number; message: string; type?: 'info' | 'success' | 'error' };
 
@@ -8,7 +8,7 @@ interface NotificationContextValue {
   remove: (id: number) => void;
 }
 
-const NotificationContext = createContext<NotificationContextValue | undefined>(undefined);
+const NotificationContext = React.createContext<NotificationContextValue | undefined>(undefined);
 let idCounter = 1;
 
 export function NotificationProvider({ children }: { children: ReactNode }) {
@@ -42,7 +42,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 }
 
 export function useNotification() {
-  const ctx = useContext(NotificationContext);
+  const ctx = React.useContext(NotificationContext);
   if (!ctx) throw new Error('useNotification must be used within NotificationProvider');
   return ctx;
 }

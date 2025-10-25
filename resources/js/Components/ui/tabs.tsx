@@ -1,11 +1,11 @@
-import React, { createContext, useContext } from 'react';
+import React from 'react';
 
 interface TabsContextValue {
   value: string;
   onValueChange: (value: string) => void;
 }
 
-const TabsContext = createContext<TabsContextValue | undefined>(undefined);
+const TabsContext = React.createContext<TabsContextValue | undefined>(undefined);
 
 interface TabsProps {
   value: string;
@@ -53,7 +53,7 @@ TabsList.displayName = 'TabsList';
 
 export const TabsTrigger = React.forwardRef<HTMLButtonElement, TabsTriggerProps>(
   ({ value, children, className = '', ...props }, ref) => {
-    const context = useContext(TabsContext);
+    const context = React.useContext(TabsContext);
     if (!context) {
       throw new Error('TabsTrigger must be used within a Tabs component');
     }
@@ -80,7 +80,7 @@ TabsTrigger.displayName = 'TabsTrigger';
 
 export const TabsContent = React.forwardRef<HTMLDivElement, TabsContentProps>(
   ({ value, children, className = '', ...props }, ref) => {
-    const context = useContext(TabsContext);
+    const context = React.useContext(TabsContext);
     if (!context) {
       throw new Error('TabsContent must be used within a Tabs component');
     }
