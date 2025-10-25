@@ -8,6 +8,19 @@ import { Button } from '@/Components/ui/button';
 import { ResponsiveContainer, LineChart, Line, CartesianGrid, XAxis, YAxis, Tooltip, AreaChart, Area, BarChart, Bar } from 'recharts';
 import QRCodeGenerator from '@/Components/QRCodeGenerator';
 
+// Type assertions for Recharts components to fix React 18 compatibility
+const ResponsiveContainerFixed = ResponsiveContainer as React.ComponentType<any>;
+const LineChartFixed = LineChart as React.ComponentType<any>;
+const AreaChartFixed = AreaChart as React.ComponentType<any>;
+const BarChartFixed = BarChart as React.ComponentType<any>;
+const CartesianGridFixed = CartesianGrid as React.ComponentType<any>;
+const XAxisFixed = XAxis as React.ComponentType<any>;
+const YAxisFixed = YAxis as React.ComponentType<any>;
+const TooltipFixed = Tooltip as React.ComponentType<any>;
+const LineFixed = Line as React.ComponentType<any>;
+const AreaFixed = Area as React.ComponentType<any>;
+const BarFixed = Bar as React.ComponentType<any>;
+
 type Stats = {
   total_guards?: number;
   active_guards?: number;
@@ -248,34 +261,34 @@ export default function Dashboard({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
                   <div>
                     <h3 className="text-sm font-semibold text-gray-700 mb-2">Attendance (7 days)</h3>
-                    <ResponsiveContainer width="100%" height={260}>
-                      <LineChart data={attendanceTrend}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="date" />
-                        <YAxis allowDecimals={false} />
-                        <Tooltip />
-                        <Line type="monotone" dataKey="present" stroke="#10b981" name="Present" strokeWidth={2} />
-                        <Line type="monotone" dataKey="absent" stroke="#ef4444" name="Absent" strokeWidth={2} />
-                      </LineChart>
-                    </ResponsiveContainer>
+                    <ResponsiveContainerFixed width="100%" height={260}>
+                      <LineChartFixed data={attendanceTrend}>
+                        <CartesianGridFixed strokeDasharray="3 3" />
+                        <XAxisFixed dataKey="date" />
+                        <YAxisFixed allowDecimals={false} />
+                        <TooltipFixed />
+                        <LineFixed type="monotone" dataKey="present" stroke="#10b981" name="Present" strokeWidth={2} />
+                        <LineFixed type="monotone" dataKey="absent" stroke="#ef4444" name="Absent" strokeWidth={2} />
+                      </LineChartFixed>
+                    </ResponsiveContainerFixed>
                   </div>
                   <div>
                     <h3 className="text-sm font-semibold text-gray-700 mb-2">Coverage (7 days)</h3>
-                    <ResponsiveContainer width="100%" height={260}>
-                      <AreaChart data={zoneCoverage}>
+                    <ResponsiveContainerFixed width="100%" height={260}>
+                      <AreaChartFixed data={zoneCoverage}>
                         <defs>
                           <linearGradient id="coverage" x1="0" y1="0" x2="0" y2="1">
                             <stop offset="5%" stopColor="#6366f1" stopOpacity={0.8} />
                             <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
                           </linearGradient>
                         </defs>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="date" />
-                        <YAxis domain={[0, 100]} tickFormatter={(v) => `${v}%`} />
-                        <Tooltip formatter={(v) => `${v}%`} />
-                        <Area type="monotone" dataKey="coverage" stroke="#6366f1" fillOpacity={1} fill="url(#coverage)" />
-                      </AreaChart>
-                    </ResponsiveContainer>
+                        <CartesianGridFixed strokeDasharray="3 3" />
+                        <XAxisFixed dataKey="date" />
+                        <YAxisFixed domain={[0, 100]} tickFormatter={(v: any) => `${v}%`} />
+                        <TooltipFixed formatter={(v: any) => `${v}%`} />
+                        <AreaFixed type="monotone" dataKey="coverage" stroke="#6366f1" fillOpacity={1} fill="url(#coverage)" />
+                      </AreaChartFixed>
+                    </ResponsiveContainerFixed>
                   </div>
                 </div>
               </>
@@ -306,15 +319,15 @@ export default function Dashboard({
                 <ClickableStat label="Deployed Today" value={coverageSummary.guards_deployed_today ?? 0} routeName="guards.index" />
                 <ClickableStat label="Required (Total)" value={coverageSummary.guards_required_total ?? 0} routeName="zone.dashboard" />
                 <div className="col-span-2">
-                  <ResponsiveContainer width="100%" height={200}>
-                    <BarChart data={[{ name: 'Coverage', value: coverageSummary.guards_coverage_pct ?? 0 }] }>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="name" />
-                      <YAxis domain={[0, 100]} tickFormatter={(v) => `${v}%`} />
-                      <Tooltip formatter={(v: any) => `${v}%`} />
-                      <Bar dataKey="value" fill="#10b981" radius={[8, 8, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
+                  <ResponsiveContainerFixed width="100%" height={200}>
+                    <BarChartFixed data={[{ name: 'Coverage', value: coverageSummary.guards_coverage_pct ?? 0 }] }>
+                      <CartesianGridFixed strokeDasharray="3 3" />
+                      <XAxisFixed dataKey="name" />
+                      <YAxisFixed domain={[0, 100]} tickFormatter={(v: any) => `${v}%`} />
+                      <TooltipFixed formatter={(v: any) => `${v}%`} />
+                      <BarFixed dataKey="value" fill="#10b981" radius={[8, 8, 0, 0]} />
+                    </BarChartFixed>
+                  </ResponsiveContainerFixed>
                 </div>
               </div>
             </Card>
@@ -325,15 +338,15 @@ export default function Dashboard({
                 <ClickableStat label="Sites Covered Today" value={coverageSummary.sites_covered_today ?? 0} routeName="clients.index" />
                 <ClickableStat label="Total Sites" value={coverageSummary.sites_total ?? 0} routeName="clients.index" />
                 <div className="col-span-2">
-                  <ResponsiveContainer width="100%" height={200}>
-                    <BarChart data={[{ name: 'Coverage', value: coverageSummary.sites_coverage_pct ?? 0 }] }>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="name" />
-                      <YAxis domain={[0, 100]} tickFormatter={(v) => `${v}%`} />
-                      <Tooltip formatter={(v: any) => `${v}%`} />
-                      <Bar dataKey="value" fill="#6366f1" radius={[8, 8, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
+                  <ResponsiveContainerFixed width="100%" height={200}>
+                    <BarChartFixed data={[{ name: 'Coverage', value: coverageSummary.sites_coverage_pct ?? 0 }] }>
+                      <CartesianGridFixed strokeDasharray="3 3" />
+                      <XAxisFixed dataKey="name" />
+                      <YAxisFixed domain={[0, 100]} tickFormatter={(v: any) => `${v}%`} />
+                      <TooltipFixed formatter={(v: any) => `${v}%`} />
+                      <BarFixed dataKey="value" fill="#6366f1" radius={[8, 8, 0, 0]} />
+                    </BarChartFixed>
+                  </ResponsiveContainerFixed>
                 </div>
               </div>
             </Card>
