@@ -46,7 +46,7 @@
         "react-datepicker": "^8.7.0",
         "react-dom": "^18.2.0",
         "react-hook-form": "^7.63.0",
-        "react-is": "^19.2.0",
+        "react-is": "^18.2.0",
         "react-leaflet": "^4.2.1",
         "recharts": "^3.2.1",
         "terser": "^5.44.0",
