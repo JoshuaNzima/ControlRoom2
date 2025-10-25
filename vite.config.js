@@ -13,10 +13,6 @@ export default defineConfig({
         }),
     ],
     resolve: {
-        alias: {
-            'react': 'react',
-            'react-dom': 'react-dom',
-        },
         dedupe: ['react', 'react-dom'],
     },
     optimizeDeps: {
@@ -53,7 +49,8 @@ export default defineConfig({
                     // Extract module path after node_modules/ for simple matching
                     const nm = id.includes('node_modules/') ? id.split('node_modules/').pop() : id;
 
-                    if (nm.startsWith('react') || nm.startsWith('react-dom')) {
+                    // Ensure React and React-DOM are in the same chunk to prevent conflicts
+                    if (nm.startsWith('react') || nm.startsWith('react-dom') || nm.startsWith('react-is')) {
                         return 'vendor-react';
                     }
 
