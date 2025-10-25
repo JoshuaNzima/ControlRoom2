@@ -16,9 +16,19 @@ export default defineConfig({
         dedupe: ['react', 'react-dom'],
     },
     optimizeDeps: {
-        include: ['react', 'react-dom', 'react/jsx-runtime', 'react-is', 'recharts'],
-        exclude: ['@inertiajs/react'],
+        include: [
+            'react', 'react-dom', 'react/jsx-runtime', 'react-is', 'recharts',
+            '@headlessui/react', '@heroicons/react', '@inertiajs/react',
+            'react-hook-form', 'react-datepicker', 'react-chartjs-2',
+            'qrcode.react', 'react-leaflet', '@react-leaflet/core',
+            '@floating-ui/react', '@react-aria/focus', '@react-aria/utils',
+            '@react-stately/utils', '@react-types/shared', '@tanstack/react-virtual'
+        ],
+        exclude: [],
         force: true,
+    },
+    esbuild: {
+        jsx: 'automatic',
     },
     define: {
         'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'development'),
@@ -49,8 +59,15 @@ export default defineConfig({
                     // Extract module path after node_modules/ for simple matching
                     const nm = id.includes('node_modules/') ? id.split('node_modules/').pop() : id;
 
-                    // Ensure React and React-DOM are in the same chunk to prevent conflicts
-                    if (nm.startsWith('react') || nm.startsWith('react-dom') || nm.startsWith('react-is')) {
+                    // Ensure ALL React-related packages are in the same chunk to prevent conflicts
+                    if (nm.startsWith('react') || nm.startsWith('react-dom') || nm.startsWith('react-is') || 
+                        nm.startsWith('react-hook-form') || nm.startsWith('react-datepicker') || 
+                        nm.startsWith('react-chartjs-2') || nm.startsWith('qrcode.react') ||
+                        nm.startsWith('@headlessui/react') || nm.startsWith('@heroicons/react') ||
+                        nm.startsWith('@inertiajs/react') || nm.startsWith('react-leaflet') ||
+                        nm.startsWith('@react-leaflet') || nm.startsWith('@floating-ui/react') ||
+                        nm.startsWith('@react-aria') || nm.startsWith('@react-stately') ||
+                        nm.startsWith('@react-types') || nm.startsWith('@tanstack/react')) {
                         return 'vendor-react';
                     }
 
