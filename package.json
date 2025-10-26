@@ -25,6 +25,7 @@
         "@inertiajs/core": "^2.0.10",
         "@inertiajs/progress": "^0.1.2",
         "@inertiajs/react": "^2.2.8",
+        "@react-types/shared": "^3.32.1",
         "@tailwindcss/forms": "^0.5.10",
         "@types/react": "^18.2.0",
         "@types/react-dom": "^18.2.0",
