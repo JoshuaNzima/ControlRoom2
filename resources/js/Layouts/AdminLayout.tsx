@@ -37,7 +37,7 @@ export default function AdminLayout({ title, children, user }: Props) {
 
   const moduleLinks: ModuleNavItem[] = [
   { name: 'Control Room', href: route('admin.control-room.dashboard'), icon: <IconMapper name="briefcase" className="h-6 w-6" />, current: isCurrent(route('admin.control-room.dashboard')) },
-  { name: 'Clients', href: route('admin.clients.dashboard'), icon: <IconMapper name="building-2" className="h-6 w-6" />, current: false },
+  { name: 'Clients', href: route('admin.clients.index'), icon: <IconMapper name="building-2" className="h-6 w-6" />, current: false },
   { name: 'Guards', href: route('admin.guards.dashboard'), icon: <IconMapper name="shield-check" className="h-6 w-6" />, current: false },
   { name: 'HR', href: route('hr.dashboard'), icon: <IconMapper name="users-2" className="h-6 w-6" />, current: false },
   { name: 'K9', href: route('k9.dashboard'), icon: <IconMapper name="shield" className="h-6 w-6" />, current: false },

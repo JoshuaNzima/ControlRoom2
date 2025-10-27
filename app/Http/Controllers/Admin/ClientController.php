@@ -15,32 +15,8 @@ class ClientController extends Controller
 {
     public function dashboard()
     {
-        $totalClients = Client::count();
-        $activeClients = Client::where('status', 'active')->count();
-        $inactiveClients = Client::where('status', 'inactive')->count();
-        $totalSites = ClientSite::count();
-        $activeSites = ClientSite::where('status', 'active')->count();
-
-        // Top clients by site count
-        $topClients = Client::withCount('sites')
-            ->orderByDesc('sites_count')
-            ->limit(5)
-            ->get(['id', 'name']);
-
-        // Recent clients
-        $recentClients = Client::latest()->limit(5)->get(['id', 'name', 'status']);
-
-        return Inertia::render('Admin/Clients/Dashboard', [
-            'kpis' => [
-                'total_clients' => $totalClients,
-                'active_clients' => $activeClients,
-                'inactive_clients' => $inactiveClients,
-                'total_sites' => $totalSites,
-                'active_sites' => $activeSites,
-            ],
-            'topClients' => $topClients,
-            'recentClients' => $recentClients,
-        ]);
+        // Simply redirect to clients index - the dashboard page is now just a redirect component
+        return redirect()->route('admin.clients.index');
     }
     public function index()
     {
@@ -61,9 +37,15 @@ class ClientController extends Controller
             return $client;
         });
 
+        // Get all active services for the Add Client modal
+        $services = \App\Models\Service::where('active', true)
+            ->orderBy('name')
+            ->get(['id', 'name', 'monthly_price']);
+
         return Inertia::render('Admin/Clients/Index', [
             'clients' => $clients,
             'filters' => request()->only(['search']),
+            'services' => $services,
         ]);
     }
 
@@ -314,25 +296,37 @@ class ClientController extends Controller
                         continue;
                     }
 
-                    Client::create($validator->validated());
+                    $validatedData = $validator->validated();
+                    $client = Client::create($validatedData);
+                    
+                    // Create a default site for the client
+                    $client->sites()->create([
+                        'name' => 'Home/Residence',
+                        'address' => '',
+                        'status' => 'active',
+                        'contact_person' => $validatedData['contact_person'] ?? '',
+                        'phone' => $validatedData['phone'] ?? '',
+                        'special_instructions' => '',
+                        'required_guards' => 1,
+                    ]);
+                    
                     $results['success']++;
                 }
 
                 DB::commit();
 
-                return response()->json([
-                    'message' => "Successfully imported {$results['success']} clients. Failed: {$results['failed']}",
-                    'details' => $results,
+                return back()->with([
+                    'success' => "Successfully imported {$results['success']} clients. Failed: {$results['failed']}",
+                    'import_results' => $results,
                 ]);
             } catch (\Exception $e) {
                 DB::rollBack();
                 throw $e;
             }
         } catch (\Exception $e) {
-            return response()->json([
-                'message' => 'Failed to process import file',
-                'error' => $e->getMessage(),
-            ], 500);
+            return back()->withErrors([
+                'file' => 'Failed to process import file: ' . $e->getMessage(),
+            ]);
         }
     }
 
@@ -344,15 +338,19 @@ class ClientController extends Controller
         $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
 
-        // Set headers
-        foreach ($headers as $idx => $header) {
-            $sheet->setCellValueByColumnAndRow($idx + 1, 1, $header);
-        }
+        // Set headers using cell references
+        $sheet->setCellValue('A1', 'Name');
+        $sheet->setCellValue('B1', 'Contact Person');
+        $sheet->setCellValue('C1', 'Phone');
+        $sheet->setCellValue('D1', 'Email');
+        $sheet->setCellValue('E1', 'Billing Start Date');
 
         // Set example row
-        foreach ($example as $idx => $value) {
-            $sheet->setCellValueByColumnAndRow($idx + 1, 2, $value);
-        }
+        $sheet->setCellValue('A2', 'Example Company');
+        $sheet->setCellValue('B2', 'John Doe');
+        $sheet->setCellValue('C2', '+123456789');
+        $sheet->setCellValue('D2', 'john@example.com');
+        $sheet->setCellValue('E2', '2024-01-01');
 
         // Auto-size columns
         foreach (range('A', 'E') as $column) {

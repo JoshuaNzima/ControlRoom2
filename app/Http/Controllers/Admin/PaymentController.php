@@ -37,34 +37,20 @@ class PaymentController extends Controller
             });
         }
 
-        // Apply status filter if provided
-        if ($status && $status !== 'all') {
-            $query->whereHas('payments', function ($query) use ($status, $year) {
-                $query->where('year', $year);
-                if ($status === 'late') {
-                    $query->where('paid', false);
-                } else if ($status === 'paid') {
-                    $query->where('paid', true);
-                }
-            });
+        // Note: Status filtering will be done after computing payment summaries
+        // This is because we need to determine if a client is late based on their
+        // billing window and payment records, which is computed later
+        // We'll store the requested status and apply it during summary computation
+
+        // Apply server-side sorting for name field only
+        if ($sortField === 'name') {
+            $query->orderBy('name', $sortDirection);
+        } else {
+            $query->orderBy('name', 'asc'); // Default sort
         }
 
-        // Apply server-side sorting
-        switch ($sortField) {
-            case 'name':
-                $query->orderBy('name', $sortDirection);
-                break;
-            case 'expected_amount':
-            case 'outstanding_amount':
-                // These will be handled in memory since they're computed
-                break;
-            default:
-                $query->orderBy('name', 'asc');
-        }
-
-    // Get paginator from the query
-    $paginator = $query->paginate($perPage);
-    $clients = $paginator;
+        // Get ALL clients first (before pagination) to compute summaries correctly
+        $allClients = $query->get();
 
         $rawPayments = ClientPayment::where('year', $year)
             ->get(['client_id', 'month', 'paid', 'amount_due', 'amount_paid'])
@@ -72,7 +58,7 @@ class PaymentController extends Controller
 
         // Build derived payments per client with arrears carry-over and contract window
         $payments = collect();
-        foreach ($clients as $client) {
+        foreach ($allClients as $client) {
             $map = [];
             for ($m = 1; $m <= 12; $m++) {
                 $map[$m] = [
@@ -130,15 +116,13 @@ class PaymentController extends Controller
         $currentMonth = now()->month;
         $flags = [];
         $summaries = [];
-    // Use paginator total if available, otherwise fall back to collection count
-    $totalClients = method_exists($clients, 'total') ? $clients->total() : $clients->count();
         $totalDueAllClients = 0.0;
         $totalPaidAllClients = 0.0;
         $clientsWithOutstanding = 0;
         $maxOutstandingMonths = 0;
         $overdueClients = collect();
 
-        foreach ($clients as $client) {
+        foreach ($allClients as $client) {
             $clientPayments = $payments->get($client->id) ?? [];
             // Determine billing start month for this year
             $billingStartMonth = 1;
@@ -221,6 +205,25 @@ class PaymentController extends Controller
         // Sort overdue clients by outstanding amount
         $overdueClients = $overdueClients->sortByDesc('outstanding_amount')->take(5);
 
+        // Filter clients by status if needed
+        $filteredClients = $allClients;
+        if ($status && $status !== 'all') {
+            $filteredClients = $allClients->filter(function ($client) use ($status, $summaries, $flags) {
+                if ($status === 'late') {
+                    // Client is late if they have outstanding amount > 0
+                    $summary = $summaries[$client->id] ?? null;
+                    return $summary && $summary['outstanding_amount'] > 0;
+                } elseif ($status === 'paid') {
+                    // Client is fully paid if outstanding amount is 0 or less
+                    $summary = $summaries[$client->id] ?? null;
+                    return $summary && $summary['outstanding_amount'] <= 0;
+                }
+                return true;
+            });
+        }
+
+        $totalClients = $allClients->count();
+
         $overallSummary = [
             'total_clients' => $totalClients,
             'clients_with_outstanding' => $clientsWithOutstanding,
@@ -245,25 +248,26 @@ class PaymentController extends Controller
                 ];
             });
 
-        // If sorting by computed fields, sort the collection and re-paginate while preserving paginator metadata
+        // Apply sorting if sorting by computed fields
+        $sortedClients = $filteredClients;
         if (in_array($sortField, ['expected_amount', 'outstanding_amount'])) {
-            $collection = $paginator->getCollection()->sortBy(function ($client) use ($sortField, $summaries) {
+            $sortedClients = $filteredClients->sortBy(function ($client) use ($sortField, $summaries) {
                 return $summaries[$client->id][$sortField] ?? 0;
             }, SORT_REGULAR, $sortDirection === 'desc');
-
-            $currentPage = $paginator->currentPage();
-            $total = $collection->count();
-
-            $paged = $collection->forPage($currentPage, $perPage)->values();
-
-            $clients = new \Illuminate\Pagination\LengthAwarePaginator(
-                $paged,
-                $total,
-                $perPage,
-                $currentPage,
-                ['path' => request()->url(), 'query' => request()->query()]
-            );
         }
+
+        // Paginate the filtered and sorted clients
+        $currentPage = (int) ($request->input('page', 1));
+        $total = $sortedClients->count();
+        $paged = $sortedClients->forPage($currentPage, $perPage)->values();
+
+        $clients = new \Illuminate\Pagination\LengthAwarePaginator(
+            $paged,
+            $total,
+            $perPage,
+            $currentPage,
+            ['path' => request()->url(), 'query' => request()->query()]
+        );
 
         return Inertia::render('Admin/Payments/Index', [
             'year' => $year,

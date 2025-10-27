@@ -43,6 +43,11 @@ class Client extends Model
         return $this->hasMany(ClientSite::class);
     }
 
+    public function payments(): HasMany
+    {
+        return $this->hasMany(\App\Models\ClientPayment::class);
+    }
+
     public function scopeActive($query)
     {
         return $query->where('status', 'active');

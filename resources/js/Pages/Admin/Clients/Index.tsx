@@ -7,6 +7,7 @@ import { Button } from '@/Components/ui/button';
 import EditClientModal from '@/Components/Clients/EditClientModal';
 import ClientDetailsModal from '@/Components/Clients/ClientDetailsModal';
 import BulkImportClientsModal from '@/Components/Clients/BulkImportClientsModal';
+import AddClientModal from '@/Components/Clients/AddClientModal';
 
 interface Client {
   id: number;
@@ -33,13 +34,15 @@ interface ClientsIndexProps {
     meta?: any;
   };
   filters: Filters;
+  services?: Array<{ id: number; name: string; monthly_price: number; required_guards?: number }>;
 }
 
-export default function ClientsIndex({ clients, filters }: ClientsIndexProps) {
+export default function ClientsIndex({ clients, filters, services = [] }: ClientsIndexProps) {
   const [search, setSearch] = React.useState(filters.search || '');
   const [editingClient, setEditingClient] = React.useState<Client | null>(null);
   const [viewingClient, setViewingClient] = React.useState<Client | null>(null);
   const [showBulkImport, setShowBulkImport] = React.useState(false);
+  const [showAddClient, setShowAddClient] = React.useState(false);
 
   const handleSearch = () => {
     router.get(route('admin.clients.index'), { search }, { preserveState: true });
@@ -62,11 +65,9 @@ export default function ClientsIndex({ clients, filters }: ClientsIndexProps) {
                 View Payments
               </Link>
             </Button>
-            <Button asChild>
-              <Link href={route('admin.clients.create')} className="flex items-center gap-2">
-                <IconMapper name="Plus" size={18} />
-                Add Client
-              </Link>
+            <Button onClick={() => setShowAddClient(true)} className="flex items-center gap-2">
+              <IconMapper name="Plus" size={18} />
+              Add Client
             </Button>
             <Button onClick={() => setShowBulkImport(true)} variant="outline">
               <IconMapper name="FileUp" size={18} className="mr-2" />
@@ -284,6 +285,11 @@ export default function ClientsIndex({ clients, filters }: ClientsIndexProps) {
         <BulkImportClientsModal
           open={showBulkImport}
           onClose={() => setShowBulkImport(false)}
+        />
+        <AddClientModal
+          open={showAddClient}
+          onClose={() => setShowAddClient(false)}
+          services={services}
         />
       </div>
     </AdminLayout>

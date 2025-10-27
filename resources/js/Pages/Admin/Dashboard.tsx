@@ -117,9 +117,9 @@ export default function Dashboard({
                   </a>
                 </Button>
                 <Button asChild>
-                  <a href={route('admin.clients.create')} className="flex items-center">
+                  <a href={route('admin.clients.index')} className="flex items-center">
                     <IconMapper name="Plus" className="w-5 h-5 mr-2" />
-                    Add Client
+                    Manage Clients
                   </a>
                 </Button>
               </div>
@@ -131,7 +131,7 @@ export default function Dashboard({
                   <h3 className="text-sm font-medium text-blue-900">Total Clients</h3>
                   <IconMapper name="Users" className="w-5 h-5 text-blue-500" />
                 </div>
-                <p className="text-2xl font-bold text-blue-900">{kpis.finance?.total_clients || 0}</p>
+                <p className="text-2xl font-bold text-blue-900">{paymentsSummary?.total_clients ?? 0}</p>
                 <p className="text-sm text-blue-700 mt-1">Active accounts</p>
               </Card>
 
@@ -140,19 +140,17 @@ export default function Dashboard({
                   <h3 className="text-sm font-medium text-green-900">Active Sites</h3>
                   <IconMapper name="MapPin" className="w-5 h-5 text-green-500" />
                 </div>
-                <p className="text-2xl font-bold text-green-900">{coverageSummary.sites_total || 0}</p>
+                <p className="text-2xl font-bold text-green-900">{stats.total_sites || 0}</p>
                 <p className="text-sm text-green-700 mt-1">Managed locations</p>
               </Card>
 
               <Card className="p-4 bg-gradient-to-br from-yellow-50 to-yellow-100 border-yellow-200">
                 <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-sm font-medium text-yellow-900">Monthly Revenue</h3>
-                  <IconMapper name="DollarSign" className="w-5 h-5 text-yellow-500" />
+                  <h3 className="text-sm font-medium text-yellow-900">Active Clients</h3>
+                  <IconMapper name="UserCheck" className="w-5 h-5 text-yellow-500" />
                 </div>
-                <p className="text-2xl font-bold text-yellow-900">
-                  {formatCurrencyMWK(kpis.finance?.mtd_revenue || 0)}
-                </p>
-                <p className="text-sm text-yellow-700 mt-1">Month to date</p>
+                <p className="text-2xl font-bold text-yellow-900">{stats.active_clients || 0}</p>
+                <p className="text-sm text-yellow-700 mt-1">Currently active</p>
               </Card>
 
               <Card className="p-4 bg-gradient-to-br from-red-50 to-red-100 border-red-200">
@@ -161,7 +159,7 @@ export default function Dashboard({
                   <IconMapper name="AlertCircle" className="w-5 h-5 text-red-500" />
                 </div>
                 <p className="text-2xl font-bold text-red-900">
-                  {kpis.finance?.clients_with_outstanding || 0}
+                  {paymentsSummary?.clients_with_outstanding || 0}
                 </p>
                 <p className="text-sm text-red-700 mt-1">Require attention</p>
               </Card>
@@ -201,14 +199,18 @@ export default function Dashboard({
               <div>
                 <h3 className="text-sm font-semibold text-gray-700 mb-3">Client Activity</h3>
                 <div className="space-y-3">
-                  {recentActivity.filter(a => a.type === 'client').slice(0, 3).map((activity) => (
-                    <div key={activity.id} className="flex items-center justify-between p-3 rounded-lg border bg-white">
-                      <div>
-                        <div className="text-sm font-medium text-gray-900">{activity.message}</div>
-                        <div className="text-xs text-gray-500">{activity.time}</div>
+                  {recentActivity.filter(a => a.type === 'client').slice(0, 3).length > 0 ? (
+                    recentActivity.filter(a => a.type === 'client').slice(0, 3).map((activity) => (
+                      <div key={activity.id} className="flex items-center justify-between p-3 rounded-lg border bg-white">
+                        <div>
+                          <div className="text-sm font-medium text-gray-900">{activity.message}</div>
+                          <div className="text-xs text-gray-500">{activity.time}</div>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ))
+                  ) : (
+                    <p className="text-sm text-gray-500 p-3">No recent client activity</p>
+                  )}
                 </div>
               </div>
             </div>
@@ -231,23 +233,6 @@ export default function Dashboard({
                 <Button variant="outline" size="sm" onClick={() => window.location.reload()}>Refresh</Button>
                 <Button size="sm" onClick={() => window.location.href = route('reports.index')}>View Reports</Button>
                 <Button size="sm" onClick={() => window.location.href = route('admin.payments.index')}>Payments Checker</Button>
-              </div>
-            </div>
-            {/* Payments Summary */}
-            <div className="mb-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="p-3 rounded-lg border bg-white">
-                  <div className="text-xs text-gray-500">Clients With Outstanding</div>
-                  <div className="text-2xl font-bold text-gray-900">{(paymentsSummary?.clients_with_outstanding ?? kpis.finance?.clients_with_outstanding ?? coverageSummary.clients_with_outstanding) || 0}</div>
-                </div>
-                <div className="p-3 rounded-lg border bg-white">
-                  <div className="text-xs text-gray-500">Outstanding Value</div>
-                  <div className="text-2xl font-bold text-gray-900">{formatCurrencyMWK(paymentsSummary?.outstanding_value ?? kpis.finance?.outstanding_value ?? coverageSummary.outstanding_value ?? 0)}</div>
-                </div>
-                <div className="p-3 rounded-lg border bg-white">
-                  <div className="text-xs text-gray-500">Total Clients</div>
-                  <div className="text-2xl font-bold text-gray-900">{paymentsSummary?.total_clients ?? kpis.finance?.total_clients ?? coverageSummary.clients_total ?? 0}</div>
-                </div>
               </div>
             </div>
             {showZoneHero && (

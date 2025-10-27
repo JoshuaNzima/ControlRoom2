@@ -31,15 +31,17 @@ Route::middleware(['auth', 'role:admin,super_admin'])
             Route::get('/', [\App\Http\Controllers\Admin\ClientController::class, 'index'])->name('index');
             Route::get('/create', [\App\Http\Controllers\Admin\ClientController::class, 'create'])->name('create');
             Route::post('/', [\App\Http\Controllers\Admin\ClientController::class, 'store'])->name('store');
+            
+            // Bulk Import (must come before /{client} route)
+            Route::get('/bulk-import-template', [\App\Http\Controllers\Admin\ClientController::class, 'bulkImportTemplate'])->name('bulk-import-template');
+            Route::post('/bulk-import', [\App\Http\Controllers\Admin\ClientController::class, 'bulkImport'])->name('bulk-import');
+            
+            // Client-specific routes (parameter routes must come after specific routes)
             Route::get('/{client}', [\App\Http\Controllers\Admin\ClientController::class, 'show'])->name('show');
             Route::get('/{client}/edit', [\App\Http\Controllers\Admin\ClientController::class, 'edit'])->name('edit');
             Route::put('/{client}', [\App\Http\Controllers\Admin\ClientController::class, 'update'])->name('update');
             Route::delete('/{client}', [\App\Http\Controllers\Admin\ClientController::class, 'destroy'])->name('destroy');
             Route::post('/{client}/services', [\App\Http\Controllers\Admin\ClientController::class, 'updateServices'])->name('services.update');
-            
-            // Bulk Import
-            Route::get('/bulk-import-template', [\App\Http\Controllers\Admin\ClientController::class, 'bulkImportTemplate'])->name('bulk-import-template');
-            Route::post('/bulk-import', [\App\Http\Controllers\Admin\ClientController::class, 'bulkImport'])->name('bulk-import');
             
             // Sites Management
             Route::get('/{client}/sites/create', [\App\Http\Controllers\Admin\ClientController::class, 'createSite'])->name('sites.create');
