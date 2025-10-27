@@ -17,5 +17,5 @@
         }
     },
     "include": ["resources/js/**/*.ts", "resources/js/**/*.tsx", "resources/js/**/*.d.ts"],
-    "typeRoots": ["./resources/js/types"]
+    "types": ["vite/client"]
 }
