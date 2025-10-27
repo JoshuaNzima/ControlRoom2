@@ -26,10 +26,35 @@ Route::middleware(['auth', 'role:admin,super_admin'])
         Route::get('/reports', [\App\Http\Controllers\Admin\ReportController::class, 'index'])->name('reports.index');
         Route::resource('users', \App\Http\Controllers\Admin\UserController::class);
         Route::get('/clients/dashboard', [\App\Http\Controllers\Admin\ClientController::class, 'dashboard'])->name('clients.dashboard');
-        Route::resource('clients', \App\Http\Controllers\Admin\ClientController::class);
+        // Clients Management
+        Route::prefix('clients')->name('clients.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Admin\ClientController::class, 'index'])->name('index');
+            Route::get('/create', [\App\Http\Controllers\Admin\ClientController::class, 'create'])->name('create');
+            Route::post('/', [\App\Http\Controllers\Admin\ClientController::class, 'store'])->name('store');
+            Route::get('/{client}', [\App\Http\Controllers\Admin\ClientController::class, 'show'])->name('show');
+            Route::get('/{client}/edit', [\App\Http\Controllers\Admin\ClientController::class, 'edit'])->name('edit');
+            Route::put('/{client}', [\App\Http\Controllers\Admin\ClientController::class, 'update'])->name('update');
+            Route::delete('/{client}', [\App\Http\Controllers\Admin\ClientController::class, 'destroy'])->name('destroy');
+            Route::post('/{client}/services', [\App\Http\Controllers\Admin\ClientController::class, 'updateServices'])->name('services.update');
+            
+            // Bulk Import
+            Route::get('/bulk-import-template', [\App\Http\Controllers\Admin\ClientController::class, 'bulkImportTemplate'])->name('bulk-import-template');
+            Route::post('/bulk-import', [\App\Http\Controllers\Admin\ClientController::class, 'bulkImport'])->name('bulk-import');
+            
+            // Sites Management
+            Route::get('/{client}/sites/create', [\App\Http\Controllers\Admin\ClientController::class, 'createSite'])->name('sites.create');
+            Route::post('/{client}/sites', [\App\Http\Controllers\Admin\ClientController::class, 'storeSite'])->name('sites.store');
+        });
+
+        // Services Management
+        Route::prefix('services')->name('services.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Admin\ServicesController::class, 'index'])->name('index');
+            Route::post('/', [\App\Http\Controllers\Admin\ServicesController::class, 'store'])->name('store');
+            Route::put('/{service}', [\App\Http\Controllers\Admin\ServicesController::class, 'update'])->name('update');
+            Route::delete('/{service}', [\App\Http\Controllers\Admin\ServicesController::class, 'destroy'])->name('destroy');
+        });
         // Client Sites nested routes
-        Route::get('/clients/{client}/sites/create', [\App\Http\Controllers\Admin\ClientController::class, 'createSite'])->name('clients.sites.create');
-        Route::post('/clients/{client}/sites', [\App\Http\Controllers\Admin\ClientController::class, 'storeSite'])->name('clients.sites.store');
+        // Client site routes moved into clients group above
         Route::get('/guards/dashboard', [\App\Http\Controllers\Admin\GuardController::class, 'dashboard'])->name('guards.dashboard');
         Route::resource('guards', \App\Http\Controllers\Admin\GuardController::class);
         // Admin Finance landing (module-level admin page)

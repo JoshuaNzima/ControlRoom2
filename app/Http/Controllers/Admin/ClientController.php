@@ -3,9 +3,13 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\Guards\{Client, ClientSite};
+use App\Models\Client;
+use App\Models\Guards\ClientSite;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use PhpOffice\PhpSpreadsheet\IOFactory;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
 
 class ClientController extends Controller
 {
@@ -220,5 +224,118 @@ class ClientController extends Controller
 
         return redirect()->route('admin.clients.show', $client)
             ->with('success', 'Site added successfully.');
+    }
+
+    public function bulkImport(Request $request)
+    {
+        $request->validate([
+            'file' => 'required|file|mimes:xlsx,xls,csv',
+        ]);
+
+        try {
+            $file = $request->file('file');
+            $spreadsheet = IOFactory::load($file->getPathname());
+            $worksheet = $spreadsheet->getActiveSheet();
+            $rows = $worksheet->toArray();
+
+            // Remove header row
+            array_shift($rows);
+
+            $results = [
+                'success' => 0,
+                'failed' => 0,
+                'errors' => []
+            ];
+
+            DB::beginTransaction();
+
+            try {
+                foreach ($rows as $index => $row) {
+                    $validator = Validator::make([
+                        'name' => $row[0],
+                        'contact_person' => $row[1],
+                        'phone' => $row[2],
+                        'email' => $row[3],
+                        'billing_start_date' => $row[4],
+                        'status' => 'active',
+                        'monthly_rate' => 0,
+                    ], [
+                        'name' => 'required|string|max:255',
+                        'contact_person' => 'nullable|string|max:255',
+                        'phone' => 'nullable|string|max:20',
+                        'email' => 'nullable|email|max:255',
+                        'billing_start_date' => 'nullable|date',
+                        'status' => 'required|in:active,inactive',
+                        'monthly_rate' => 'required|numeric|min:0',
+                    ]);
+
+                    if ($validator->fails()) {
+                        $results['failed']++;
+                        $results['errors'][] = "Row " . ($index + 2) . ": " . implode(', ', $validator->errors()->all());
+                        continue;
+                    }
+
+                    Client::create($validator->validated());
+                    $results['success']++;
+                }
+
+                DB::commit();
+
+                return response()->json([
+                    'message' => "Successfully imported {$results['success']} clients. Failed: {$results['failed']}",
+                    'details' => $results,
+                ]);
+            } catch (\Exception $e) {
+                DB::rollBack();
+                throw $e;
+            }
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Failed to process import file',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    public function bulkImportTemplate()
+    {
+        $headers = ['Name', 'Contact Person', 'Phone', 'Email', 'Billing Start Date'];
+        $example = ['Example Company', 'John Doe', '+123456789', 'john@example.com', '2024-01-01'];
+
+        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+
+        // Set headers
+        foreach ($headers as $idx => $header) {
+            $sheet->setCellValueByColumnAndRow($idx + 1, 1, $header);
+        }
+
+        // Set example row
+        foreach ($example as $idx => $value) {
+            $sheet->setCellValueByColumnAndRow($idx + 1, 2, $value);
+        }
+
+        // Auto-size columns
+        foreach (range('A', 'E') as $column) {
+            $sheet->getColumnDimension($column)->setAutoSize(true);
+        }
+
+        // Style headers
+        $headerRange = 'A1:E1';
+        $sheet->getStyle($headerRange)->getFont()->setBold(true);
+        $sheet->getStyle($headerRange)->getFill()
+            ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+            ->getStartColor()->setRGB('EEEEEE');
+
+        // Create response
+        $writer = IOFactory::createWriter($spreadsheet, 'Xlsx');
+        $tempFile = tempnam(sys_get_temp_dir(), 'client_template_');
+        $writer->save($tempFile);
+
+        return response()->download(
+            $tempFile,
+            'client_import_template.xlsx',
+            ['Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet']
+        )->deleteFileAfterSend(true);
     }
 }

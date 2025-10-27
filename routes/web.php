@@ -37,7 +37,7 @@ Route::middleware('auth')->group(function () {
     
     // Control Room routes (allow admins and users with permission)
     Route::middleware(['role_or_permission:admin|control_room_operator|supervisor|manager|control.dashboard.view'])->prefix('control-room')->name('control-room.')->group(function () {
-        Route::get('/', [\App\Http\Controllers\ControlRoom\DashboardController::class, 'index'])->name('dashboard');
+        Route::get('/', [\App\Http\Controllers\ControlRoom\DashboardController::class, 'index'])->name('home');
         
         // Ticket routes
         Route::resource('tickets', \App\Http\Controllers\ControlRoom\TicketController::class);
@@ -132,7 +132,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/reports', [\App\Http\Controllers\Admin\ReportController::class, 'index'])->name('reports.index');
         Route::get('/modules', [\App\Http\Controllers\Admin\ModuleController::class, 'index'])->name('modules.index');
         Route::get('/settings', [\App\Http\Controllers\Admin\SettingController::class, 'index'])->name('settings.index');
-    Route::resource('services', \App\Http\Controllers\ServicesController::class)->except(['show', 'create', 'edit']);
+        // Client and Service routes moved to routes/modules/admin.php
         Route::get('/qr-codes', [\App\Http\Controllers\SupervisorQRCodesController::class, 'index'])->name('qr-codes');
         Route::get('/qr-codes/download-bulk', [\App\Http\Controllers\SupervisorQRCodesController::class, 'downloadBulk'])->name('qr-codes.download-bulk');
     });
@@ -218,14 +218,9 @@ Route::middleware(['auth'])->group(function () {
     });
 
     // Admin Guard Management
-    Route::resource('guards', App\Http\Controllers\Admin\GuardController::class);
+    Route::resource('guards', \App\Http\Controllers\Admin\GuardController::class);
     
-    // Admin Client Management
-    Route::resource('clients', App\Http\Controllers\Admin\ClientController::class);
-    // Update client services (custom prices on pivot)
-    Route::post('clients/{client}/services', [App\Http\Controllers\Admin\ClientController::class, 'updateServices'])->name('clients.services.update');
-    Route::get('clients/{client}/sites/create', [App\Http\Controllers\Admin\ClientController::class, 'createSite'])->name('clients.sites.create');
-    Route::post('clients/{client}/sites', [App\Http\Controllers\Admin\ClientController::class, 'storeSite'])->name('clients.sites.store');
+    // Client routes are now moved to the admin group
     
     // Admin Guard Assignments
     Route::get('/guard-assignments', [App\Http\Controllers\Admin\GuardAssignmentController::class, 'index'])->name('guard-assignments');

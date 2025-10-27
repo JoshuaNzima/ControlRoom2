@@ -22,7 +22,7 @@ export default function Edit({ client, services }: { client: any; services?: Ser
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
-    put(route('clients.update', client.id));
+    put(route('admin.clients.update', client.id));
   }
 
   return (

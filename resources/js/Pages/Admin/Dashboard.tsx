@@ -117,7 +117,7 @@ export default function Dashboard({
                   </a>
                 </Button>
                 <Button asChild>
-                  <a href={route('clients.create')} className="flex items-center">
+                  <a href={route('admin.clients.create')} className="flex items-center">
                     <IconMapper name="Plus" className="w-5 h-5 mr-2" />
                     Add Client
                   </a>
@@ -172,7 +172,7 @@ export default function Dashboard({
                 <h3 className="text-sm font-semibold text-gray-700 mb-3">Quick Actions</h3>
                 <div className="grid grid-cols-2 gap-3">
                   <Button variant="outline" asChild className="h-auto py-3 flex flex-col items-center justify-center gap-2">
-                    <a href={route('clients.index')}>
+                    <a href={route('admin.clients.index')}>
                       <IconMapper name="Users" className="w-5 h-5" />
                       <span>View Clients</span>
                     </a>

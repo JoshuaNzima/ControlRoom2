@@ -36,7 +36,7 @@ export default function EditClientModal({ client, open, onClose }: EditClientMod
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    put(route('clients.update', client.id), {
+    put(route('admin.clients.update', client.id), {
       onSuccess: () => onClose(),
     });
   };

@@ -1,6 +1,6 @@
 <?php
 
-use App\Http\Controllers\ClientController;
+use App\Http\Controllers\Admin\ClientController;
 use App\Http\Controllers\Guards\AssignmentController;
 use App\Http\Controllers\Guards\CalendarController;
 use App\Http\Controllers\Guards\CheckpointScanController;

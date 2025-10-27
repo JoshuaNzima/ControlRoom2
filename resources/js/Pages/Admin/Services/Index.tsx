@@ -4,6 +4,7 @@ import { Head, useForm, router } from '@inertiajs/react';
 import { Card } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import IconMapper from '@/Components/IconMapper';
+import { formatCurrencyMWK } from '@/Components/format';
 
 interface Service {
   id: number;
@@ -35,26 +36,21 @@ export default function ServicesIndex({ services, stats }: {
 
   const saveEdit = (id: number) => {
     // send put request via router
-    router.put(route('services.update', id), editData);
+    router.put(route('admin.services.update', id), editData);
     setEditingId(null);
   };
 
   const remove = (id: number) => {
     if (!confirm('Delete this service?')) return;
-    router.delete(route('services.destroy', id));
+    router.delete(route('admin.services.destroy', id));
   };
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
-    post(route('services.store'));
+    post(route('admin.services.store'));
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(amount);
-  };
+
 
   return (
     <AdminLayout title="Services">
@@ -95,7 +91,7 @@ export default function ServicesIndex({ services, stats }: {
                 </div>
                 <div className="ml-4">
                   <h3 className="font-medium text-gray-900">Monthly Revenue</h3>
-                  <p className="text-3xl font-bold text-gray-900">{formatCurrency(stats.total_monthly_revenue)}</p>
+                  <p className="text-3xl font-bold text-gray-900">{formatCurrencyMWK(stats.total_monthly_revenue)}</p>
                 </div>
               </div>
             </div>
@@ -135,7 +131,7 @@ export default function ServicesIndex({ services, stats }: {
                 <label className="block text-sm font-medium text-gray-700">Monthly Price</label>
                 <div className="mt-1 relative rounded-md shadow-sm">
                   <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                    <span className="text-gray-500 sm:text-sm">$</span>
+                    <span className="text-gray-500 sm:text-sm">MWK</span>
                   </div>
                   <input
                     type="number"
@@ -204,7 +200,7 @@ export default function ServicesIndex({ services, stats }: {
                       />
                       <div className="relative rounded-md shadow-sm">
                         <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                          <span className="text-gray-500 sm:text-sm">$</span>
+                          <span className="text-gray-500 sm:text-sm">MWK</span>
                         </div>
                         <input
                           type="number"
@@ -253,7 +249,7 @@ export default function ServicesIndex({ services, stats }: {
                       <p className="mt-1 text-sm text-gray-500">{service.description}</p>
                       <div className="mt-2 flex items-center text-sm text-gray-500">
                         <IconMapper name="DollarSign" className="mr-1.5 h-5 w-5 flex-shrink-0 text-gray-400" />
-                        {formatCurrency(service.monthly_price)}
+                        {formatCurrencyMWK(service.monthly_price)}
                         {service.client_count !== undefined && (
                           <>
                             <IconMapper name="Users" className="ml-4 mr-1.5 h-5 w-5 flex-shrink-0 text-gray-400" />

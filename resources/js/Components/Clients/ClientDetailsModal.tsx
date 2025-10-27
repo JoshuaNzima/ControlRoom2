@@ -4,6 +4,7 @@ import { Button } from '@/Components/ui/button';
 import { Card } from '@/Components/ui/card';
 import { useForm } from '@inertiajs/react';
 import IconMapper from '@/Components/IconMapper';
+import { formatCurrencyMWK } from '@/Components/format';
 
 interface Site {
   id: number;
@@ -46,26 +47,33 @@ export default function ClientDetailsModal({ client, open, onClose }: ClientDeta
   const { data, setData, post, processing } = useForm({
     name: '',
     address: '',
-    notes: '',
+    contact_person: '',
+    phone: '',
+    required_guards: 1,
+    services_requested: '',
+    special_instructions: '',
+    status: 'active',
   });
 
   const handleAddSite = (e: React.FormEvent) => {
     e.preventDefault();
-    post(route('clients.sites.store', { client: client.id }), {
+    post(route('admin.clients.sites.store', { client: client.id }), {
       onSuccess: () => {
-        setData('name', '');
-        setData('address', '');
-        setData('notes', '');
+        setData({
+          name: '',
+          address: '',
+          contact_person: '',
+          phone: '',
+          required_guards: 1,
+          services_requested: '',
+          special_instructions: '',
+          status: 'active'
+        });
       },
     });
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(amount);
-  };
+  // Using formatCurrencyMWK from Components/format.ts
 
   const formatDate = (date: string) => {
     return new Date(date).toLocaleDateString('en-US', {
@@ -139,7 +147,7 @@ export default function ClientDetailsModal({ client, open, onClose }: ClientDeta
                   <Card className="p-4">
                     <h3 className="text-sm font-medium text-gray-500">Monthly Value</h3>
                     <p className="mt-1 text-2xl font-semibold text-gray-900">
-                      {formatCurrency(client.services?.reduce((sum, service) => 
+                      {formatCurrencyMWK(client.services?.reduce((sum, service) => 
                         sum + (service.custom_price || service.monthly_price), 0) || 0)}
                     </p>
                   </Card>
@@ -184,6 +192,7 @@ export default function ClientDetailsModal({ client, open, onClose }: ClientDeta
                         onChange={e => setData('name', e.target.value)}
                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                         placeholder="Enter site name"
+                        required
                       />
                     </div>
                     <div>
@@ -194,16 +203,70 @@ export default function ClientDetailsModal({ client, open, onClose }: ClientDeta
                         onChange={e => setData('address', e.target.value)}
                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                         placeholder="Enter site address"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Contact Person</label>
+                      <input
+                        type="text"
+                        value={data.contact_person}
+                        onChange={e => setData('contact_person', e.target.value)}
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                        placeholder="Enter contact person name"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Phone</label>
+                      <input
+                        type="text"
+                        value={data.phone}
+                        onChange={e => setData('phone', e.target.value)}
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                        placeholder="Enter contact phone"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Required Guards</label>
+                      <input
+                        type="number"
+                        value={data.required_guards}
+                        onChange={e => setData('required_guards', parseInt(e.target.value))}
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                        min="1"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Site Status</label>
+                      <select
+                        value={data.status}
+                        onChange={e => setData('status', e.target.value)}
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                        required
+                      >
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                      </select>
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-gray-700">Services Requested</label>
+                      <textarea
+                        value={data.services_requested}
+                        onChange={e => setData('services_requested', e.target.value)}
+                        rows={2}
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                        placeholder="Enter requested services"
                       />
                     </div>
                     <div className="md:col-span-2">
-                      <label className="block text-sm font-medium text-gray-700">Notes</label>
+                      <label className="block text-sm font-medium text-gray-700">Special Instructions</label>
                       <textarea
-                        value={data.notes}
-                        onChange={e => setData('notes', e.target.value)}
+                        value={data.special_instructions}
+                        onChange={e => setData('special_instructions', e.target.value)}
                         rows={2}
                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                        placeholder="Enter any additional notes"
+                        placeholder="Enter any special instructions or notes"
                       />
                     </div>
                     <div className="md:col-span-2">
@@ -230,7 +293,7 @@ export default function ClientDetailsModal({ client, open, onClose }: ClientDeta
                             {site.guard_count || 0} guards
                           </span>
                           <Button variant="outline" size="sm" asChild>
-                            <a href={route('clients.sites.show', { client: client.id, site: site.id })}>
+                            <a href={route('admin.clients.sites.show', { client: client.id, site: site.id })}>
                               <IconMapper name="ExternalLink" className="w-4 h-4" />
                             </a>
                           </Button>
@@ -250,12 +313,12 @@ export default function ClientDetailsModal({ client, open, onClose }: ClientDeta
                       <div>
                         <h4 className="text-sm font-medium text-gray-900">{service.name}</h4>
                         <p className="text-sm text-gray-500">
-                          Base price: {formatCurrency(service.monthly_price)}
+                          Base price: {formatCurrencyMWK(service.monthly_price)}
                         </p>
                       </div>
                       <div>
                         <p className="text-sm font-medium text-gray-900">
-                          Custom price: {formatCurrency(service.custom_price || service.monthly_price)}
+                          Custom price: {formatCurrencyMWK(service.custom_price || service.monthly_price)}
                         </p>
                       </div>
                     </div>

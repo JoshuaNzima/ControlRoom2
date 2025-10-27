@@ -6,6 +6,7 @@ import { Card } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import EditClientModal from '@/Components/Clients/EditClientModal';
 import ClientDetailsModal from '@/Components/Clients/ClientDetailsModal';
+import BulkImportClientsModal from '@/Components/Clients/BulkImportClientsModal';
 
 interface Client {
   id: number;
@@ -38,9 +39,10 @@ export default function ClientsIndex({ clients, filters }: ClientsIndexProps) {
   const [search, setSearch] = React.useState(filters.search || '');
   const [editingClient, setEditingClient] = React.useState<Client | null>(null);
   const [viewingClient, setViewingClient] = React.useState<Client | null>(null);
+  const [showBulkImport, setShowBulkImport] = React.useState(false);
 
   const handleSearch = () => {
-    router.get(route('clients.index'), { search }, { preserveState: true });
+    router.get(route('admin.clients.index'), { search }, { preserveState: true });
   };
 
   return (
@@ -61,10 +63,14 @@ export default function ClientsIndex({ clients, filters }: ClientsIndexProps) {
               </Link>
             </Button>
             <Button asChild>
-              <Link href={route('clients.create')} className="flex items-center gap-2">
+              <Link href={route('admin.clients.create')} className="flex items-center gap-2">
                 <IconMapper name="Plus" size={18} />
                 Add Client
               </Link>
+            </Button>
+            <Button onClick={() => setShowBulkImport(true)} variant="outline">
+              <IconMapper name="FileUp" size={18} className="mr-2" />
+              Bulk Import
             </Button>
           </div>
         </div>
@@ -125,9 +131,9 @@ export default function ClientsIndex({ clients, filters }: ClientsIndexProps) {
 
           <div className="flex gap-2 flex-wrap">
             <Button variant="outline" size="sm" onClick={() => handleSearch()}>All</Button>
-            <Button variant="outline" size="sm" onClick={() => router.get(route('clients.index'), { status: 'active' })}>Active</Button>
-            <Button variant="outline" size="sm" onClick={() => router.get(route('clients.index'), { status: 'overdue' })}>Overdue</Button>
-            <Button variant="outline" size="sm" onClick={() => router.get(route('clients.index'), { status: 'inactive' })}>Inactive</Button>
+            <Button variant="outline" size="sm" onClick={() => router.get(route('admin.clients.index'), { status: 'active' })}>Active</Button>
+            <Button variant="outline" size="sm" onClick={() => router.get(route('admin.clients.index'), { status: 'overdue' })}>Overdue</Button>
+            <Button variant="outline" size="sm" onClick={() => router.get(route('admin.clients.index'), { status: 'inactive' })}>Inactive</Button>
           </div>
         </Card>
 
@@ -154,7 +160,7 @@ export default function ClientsIndex({ clients, filters }: ClientsIndexProps) {
                         </div>
                         <div>
                           <Link
-                            href={route('clients.show', { client: client.id })}
+                            href={route('admin.clients.show', { client: client.id })}
                             className="font-medium text-gray-900 hover:text-blue-600 block"
                           >
                             {client.name}
@@ -174,7 +180,7 @@ export default function ClientsIndex({ clients, filters }: ClientsIndexProps) {
                     </td>
                     <td className="px-6 py-4 text-center">
                       <Link
-                        href={route('clients.show', { client: client.id })}
+                        href={route('admin.clients.show', { client: client.id })}
                         className="inline-flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-800"
                       >
                         <span>{client.sites_count || 0}</span>
@@ -183,7 +189,7 @@ export default function ClientsIndex({ clients, filters }: ClientsIndexProps) {
                     </td>
                     <td className="px-6 py-4 text-center">
                       <Link
-                        href={route('clients.show', { client: client.id })}
+                        href={route('admin.clients.show', { client: client.id })}
                         className="inline-flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-800"
                       >
                         <span>{client.service_count || 0}</span>
@@ -227,7 +233,7 @@ export default function ClientsIndex({ clients, filters }: ClientsIndexProps) {
                           size="sm"
                           onClick={() => {
                             if (confirm('Are you sure you want to delete this client?')) {
-                              router.delete(route('clients.destroy', { client: client.id }));
+                              router.delete(route('admin.clients.destroy', { client: client.id }));
                             }
                           }}
                         >
@@ -275,6 +281,10 @@ export default function ClientsIndex({ clients, filters }: ClientsIndexProps) {
             onClose={() => setViewingClient(null)}
           />
         )}
+        <BulkImportClientsModal
+          open={showBulkImport}
+          onClose={() => setShowBulkImport(false)}
+        />
       </div>
     </AdminLayout>
   );
