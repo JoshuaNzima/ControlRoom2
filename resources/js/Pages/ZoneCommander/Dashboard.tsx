@@ -100,6 +100,8 @@ const getRiskLevelColor = (level: string) => {
 export default function ZoneDashboard({ zone, sites, at_risk_guards, recent_alerts }: ZoneDashboardProps) {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [isOnline, setIsOnline] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
+  const [hasError, setHasError] = useState(false);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -108,42 +110,39 @@ export default function ZoneDashboard({ zone, sites, at_risk_guards, recent_aler
     return () => clearInterval(timer);
   }, []);
 
+  // Network status check
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
   // Mock data for charts
-  const attendanceData = {
-    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+  const [attendanceData, setAttendanceData] = useState({
+    labels: [],
     datasets: [
       {
         label: 'Attendance Rate',
-        data: [95, 92, 88, 94, 96, 89, 91],
+        data: [],
         borderColor: 'rgb(34, 197, 94)',
         backgroundColor: 'rgba(34, 197, 94, 0.1)',
         tension: 0.4,
       },
     ],
-  };
+  });
 
-  const sitePerformanceData = {
-    labels: sites.map(site => site.name),
-    datasets: [
-      {
-        label: 'Guards Present',
-        data: sites.map(site => site.attendance_today),
-        backgroundColor: 'rgba(59, 130, 246, 0.8)',
-        borderColor: 'rgb(59, 130, 246)',
-        borderWidth: 1,
-      },
-    ],
-  };
-
-  const riskDistributionData = {
+  const [riskDistributionData, setRiskDistributionData] = useState({
     labels: ['Normal', 'Warning', 'High Risk'],
     datasets: [
       {
-        data: [
-          at_risk_guards.filter(g => g.risk_level === 'normal').length,
-          at_risk_guards.filter(g => g.risk_level === 'warning').length,
-          at_risk_guards.filter(g => g.risk_level === 'high').length,
-        ],
+        data: [],
         backgroundColor: [
           'rgba(34, 197, 94, 0.8)',
           'rgba(251, 191, 36, 0.8)',
@@ -157,7 +156,55 @@ export default function ZoneDashboard({ zone, sites, at_risk_guards, recent_aler
         borderWidth: 2,
       },
     ],
-  };
+  });
+
+  useEffect(() => {
+    const fetchData = async () => {
+      setIsLoading(true);
+      setHasError(false);
+      
+      try {
+        // Fetch both datasets in parallel
+        const [attendanceResponse, riskResponse] = await Promise.all([
+          fetch(route('zone.dashboard.data.weekly-attendance')),
+          fetch(route('zone.dashboard.data.risk-distribution'))
+        ]);
+
+        if (!attendanceResponse.ok || !riskResponse.ok) {
+          throw new Error('One or more requests failed');
+        }
+
+        const [attendanceData, riskData] = await Promise.all([
+          attendanceResponse.json(),
+          riskResponse.json()
+        ]);
+
+        setAttendanceData(prev => ({
+          ...prev,
+          labels: attendanceData.labels,
+          datasets: [{
+            ...prev.datasets[0],
+            data: attendanceData.data,
+          }],
+        }));
+
+        setRiskDistributionData(prev => ({
+          ...prev,
+          datasets: [{
+            ...prev.datasets[0],
+            data: riskData.data,
+          }],
+        }));
+      } catch (error) {
+        console.error('Error fetching dashboard data:', error);
+        setHasError(true);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
 
   const chartOptions = {
     responsive: true,
@@ -252,8 +299,32 @@ export default function ZoneDashboard({ zone, sites, at_risk_guards, recent_aler
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="h-64">
+            <div className="h-64 relative">
+              {isLoading ? (
+                <div className="absolute inset-0 flex items-center justify-center bg-gray-50/50">
+                  <div className="flex flex-col items-center gap-2">
+                    <IconMapper name="Loader2" className="w-8 h-8 animate-spin text-red-600" />
+                    <span className="text-sm text-gray-600">Loading data...</span>
+                  </div>
+                </div>
+              ) : hasError ? (
+                <div className="absolute inset-0 flex items-center justify-center bg-red-50/50">
+                  <div className="flex flex-col items-center gap-2">
+                    <IconMapper name="AlertTriangle" className="w-8 h-8 text-red-600" />
+                    <span className="text-sm text-red-600">Failed to load attendance data</span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => window.location.reload()}
+                      className="mt-2"
+                    >
+                      Retry
+                    </Button>
+                  </div>
+                </div>
+              ) : (
                 <Line data={attendanceData} options={chartOptions} />
+              )}
               </div>
             </CardContent>
           </Card>
@@ -267,16 +338,43 @@ export default function ZoneDashboard({ zone, sites, at_risk_guards, recent_aler
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="h-64">
-                <Doughnut data={riskDistributionData} options={{
-                  responsive: true,
-                  maintainAspectRatio: false,
-                  plugins: {
-                    legend: {
-                      position: 'bottom' as const,
-                    },
-                  },
-                }} />
+              <div className="h-64 relative">
+                {isLoading ? (
+                  <div className="absolute inset-0 flex items-center justify-center bg-gray-50/50">
+                    <div className="flex flex-col items-center gap-2">
+                      <IconMapper name="Loader2" className="w-8 h-8 animate-spin text-red-600" />
+                      <span className="text-sm text-gray-600">Loading data...</span>
+                    </div>
+                  </div>
+                ) : hasError ? (
+                  <div className="absolute inset-0 flex items-center justify-center bg-red-50/50">
+                    <div className="flex flex-col items-center gap-2">
+                      <IconMapper name="AlertTriangle" className="w-8 h-8 text-red-600" />
+                      <span className="text-sm text-red-600">Failed to load risk data</span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => window.location.reload()}
+                        className="mt-2"
+                      >
+                        Retry
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <Doughnut 
+                    data={riskDistributionData} 
+                    options={{
+                      responsive: true,
+                      maintainAspectRatio: false,
+                      plugins: {
+                        legend: {
+                          position: 'bottom' as const,
+                        },
+                      },
+                    }}
+                  />
+                )}
               </div>
             </CardContent>
           </Card>
@@ -429,19 +527,31 @@ export default function ZoneDashboard({ zone, sites, at_risk_guards, recent_aler
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <Button className="h-20 flex flex-col gap-2 bg-white hover:bg-blue-50 border border-blue-200 text-blue-700 hover:text-blue-800 transition-all duration-300 hover:scale-105">
+              <Button 
+                onClick={() => window.location.href = route('zone.patrols.start')}
+                className="h-20 flex flex-col gap-2 bg-white hover:bg-blue-50 border border-blue-200 text-blue-700 hover:text-blue-800 transition-all duration-300 hover:scale-105"
+              >
                 <IconMapper name="ScanLine" className="w-6 h-6" />
                 <span className="text-sm font-medium">Start Patrol</span>
               </Button>
-              <Button className="h-20 flex flex-col gap-2 bg-white hover:bg-green-50 border border-green-200 text-green-700 hover:text-green-800 transition-all duration-300 hover:scale-105">
+              <Button 
+                onClick={() => window.location.href = route('zone.attendance.check-in')}
+                className="h-20 flex flex-col gap-2 bg-white hover:bg-green-50 border border-green-200 text-green-700 hover:text-green-800 transition-all duration-300 hover:scale-105"
+              >
                 <IconMapper name="UserCheck" className="w-6 h-6" />
                 <span className="text-sm font-medium">Check In</span>
               </Button>
-              <Button className="h-20 flex flex-col gap-2 bg-white hover:bg-orange-50 border border-orange-200 text-orange-700 hover:text-orange-800 transition-all duration-300 hover:scale-105">
+              <Button 
+                onClick={() => window.location.href = route('zone.reports.generate')}
+                className="h-20 flex flex-col gap-2 bg-white hover:bg-orange-50 border border-orange-200 text-orange-700 hover:text-orange-800 transition-all duration-300 hover:scale-105"
+              >
                 <IconMapper name="FileText" className="w-6 h-6" />
                 <span className="text-sm font-medium">Generate Report</span>
               </Button>
-              <Button className="h-20 flex flex-col gap-2 bg-white hover:bg-purple-50 border border-purple-200 text-purple-700 hover:text-purple-800 transition-all duration-300 hover:scale-105">
+              <Button 
+                onClick={() => window.location.href = route('profile.edit')}
+                className="h-20 flex flex-col gap-2 bg-white hover:bg-purple-50 border border-purple-200 text-purple-700 hover:text-purple-800 transition-all duration-300 hover:scale-105"
+              >
                 <IconMapper name="Settings" className="w-6 h-6" />
                 <span className="text-sm font-medium">Settings</span>
               </Button>

@@ -150,6 +150,22 @@ Route::middleware(['auth'])->group(function () {
             ->middleware('permission:zone.view.dashboard')
             ->name('dashboard');
 
+        // Dashboard Data Routes
+        Route::get('/data/weekly-attendance', [\App\Http\Controllers\ZoneCommander\AttendanceDataController::class, 'weeklyAttendance'])
+            ->middleware('permission:zone.view.dashboard')
+            ->name('data.weekly-attendance');
+        Route::get('/data/risk-distribution', [\App\Http\Controllers\ZoneCommander\AttendanceDataController::class, 'riskDistribution'])
+            ->middleware('permission:zone.view.dashboard')
+            ->name('data.risk-distribution');
+
+        // Quick Actions
+        Route::get('/patrols/start', [\App\Http\Controllers\ZoneCommander\PatrolController::class, 'startPatrol'])
+            ->middleware('permission:zone.patrols.scan')
+            ->name('patrols.start');
+        Route::get('/reports/generate', [\App\Http\Controllers\ZoneCommander\ReportController::class, 'generate'])
+            ->middleware('permission:zone.reports.view')
+            ->name('reports.generate');
+
         // Clients & Sites management
         Route::get('/clients', [\App\Http\Controllers\ZoneCommander\ClientsController::class, 'index'])
             ->middleware('permission:zone.view.clients')

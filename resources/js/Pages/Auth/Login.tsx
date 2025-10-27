@@ -54,9 +54,9 @@ export default function Login({
 
                                 <form onSubmit={submit} className="space-y-4">
                                     <div>
-                                        <InputLabel htmlFor="email" value="Email" />
+                                        <InputLabel htmlFor="email-mobile" value="Email" />
                                         <TextInput
-                                            id="email"
+                                            id="email-mobile"
                                             type="email"
                                             name="email"
                                             value={data.email}
@@ -69,9 +69,9 @@ export default function Login({
                                     </div>
 
                                     <div>
-                                        <InputLabel htmlFor="password" value="Password" />
+                                        <InputLabel htmlFor="password-mobile" value="Password" />
                                         <TextInput
-                                            id="password"
+                                            id="password-mobile"
                                             type="password"
                                             name="password"
                                             value={data.password}
@@ -126,9 +126,9 @@ export default function Login({
 
                                 <form onSubmit={submit} className="flex flex-col gap-4">
                                     <div>
-                                        <InputLabel htmlFor="email" value="Email" />
+                                        <InputLabel htmlFor="email-desktop" value="Email" />
                                         <TextInput
-                                            id="email"
+                                            id="email-desktop"
                                             type="email"
                                             name="email"
                                             value={data.email}
@@ -141,9 +141,9 @@ export default function Login({
                                     </div>
 
                                     <div>
-                                        <InputLabel htmlFor="password" value="Password" />
+                                        <InputLabel htmlFor="password-desktop" value="Password" />
                                         <TextInput
-                                            id="password"
+                                            id="password-desktop"
                                             type="password"
                                             name="password"
                                             value={data.password}
