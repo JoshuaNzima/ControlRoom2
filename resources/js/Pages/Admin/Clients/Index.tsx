@@ -18,7 +18,7 @@ interface Client {
   sites_count?: number;
   total_due?: number;
   total_paid?: number;
-  service_count?: number;
+  services_count?: number;
   last_payment_date?: string;
   billing_start_date?: string;
 }
@@ -102,7 +102,7 @@ export default function ClientsIndex({ clients, filters }: ClientsIndexProps) {
               <IconMapper name="ShieldCheck" size={20} className="text-purple-500" />
             </div>
             <p className="text-2xl font-bold text-purple-900">
-              {clients.data.reduce((sum, client) => sum + (client.service_count || 0), 0)}
+              {clients.data.reduce((sum, client) => sum + (client.services_count || 0), 0)}
             </p>
             <p className="text-sm text-purple-700 mt-1">Services being provided</p>
           </Card>
@@ -192,7 +192,7 @@ export default function ClientsIndex({ clients, filters }: ClientsIndexProps) {
                         href={route('admin.clients.show', { client: client.id })}
                         className="inline-flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-800"
                       >
-                        <span>{client.service_count || 0}</span>
+                        <span>{client.services_count || 0}</span>
                         <IconMapper name="ChevronRight" size={16} />
                       </Link>
                     </td>

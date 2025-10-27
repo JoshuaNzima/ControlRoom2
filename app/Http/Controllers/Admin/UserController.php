@@ -33,9 +33,11 @@ class UserController extends Controller
     public function create()
     {
         $roles = Role::all();
+        $zones = Zone::orderBy('name')->get();
         
         return Inertia::render('Admin/Users/Create', [
             'roles' => $roles,
+            'zones' => $zones,
         ]);
     }
 
@@ -60,6 +62,8 @@ class UserController extends Controller
             'phone' => 'nullable|string',
             'employee_id' => 'nullable|string|unique:users',
             'role' => 'required|exists:roles,name',
+            'zone_id' => 'nullable|exists:zones,id',
+            'status' => 'nullable|in:active,inactive',
         ]);
 
         $user = User::create([
@@ -68,6 +72,8 @@ class UserController extends Controller
             'password' => Hash::make($validated['password']),
             'phone' => $validated['phone'] ?? null,
             'employee_id' => $validated['employee_id'] ?? null,
+            'status' => $validated['status'] ?? 'active',
+            'zone_id' => $validated['zone_id'] ?? null,
         ]);
 
         $user->assignRole($validated['role']);

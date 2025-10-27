@@ -18,7 +18,8 @@ interface Service {
   id: number;
   name: string;
   monthly_price: number;
-  custom_price?: number;
+  custom_price?: number | null;
+  quantity?: number;
 }
 
 interface Client {
@@ -30,8 +31,10 @@ interface Client {
   status?: string;
   sites?: Site[];
   services?: Service[];
+  services_count?: number;
   total_due?: number;
   total_paid?: number;
+  monthly_rate?: number;
   billing_start_date?: string;
   last_payment_date?: string;
 }
@@ -140,15 +143,15 @@ export default function ClientDetailsModal({ client, open, onClose }: ClientDeta
                     <h3 className="text-sm font-medium text-gray-500">Total Sites</h3>
                     <p className="mt-1 text-2xl font-semibold text-gray-900">{client.sites?.length || 0}</p>
                   </Card>
-                  <Card className="p-4">
-                    <h3 className="text-sm font-medium text-gray-500">Active Services</h3>
-                    <p className="mt-1 text-2xl font-semibold text-gray-900">{client.services?.length || 0}</p>
-                  </Card>
+                    <Card className="p-4">
+                      <h3 className="text-sm font-medium text-gray-500">Active Services</h3>
+                      <p className="mt-1 text-2xl font-semibold text-gray-900">{client.services_count || client.services?.length || 0}</p>
+                    </Card>
                   <Card className="p-4">
                     <h3 className="text-sm font-medium text-gray-500">Monthly Value</h3>
                     <p className="mt-1 text-2xl font-semibold text-gray-900">
-                      {formatCurrencyMWK(client.services?.reduce((sum, service) => 
-                        sum + (service.custom_price || service.monthly_price), 0) || 0)}
+                      {formatCurrencyMWK(client.monthly_rate || client.services?.reduce((sum, service) => 
+                        sum + ((service.custom_price ?? service.monthly_price) * (service.quantity || 1)), 0) || 0)}
                     </p>
                   </Card>
                 </div>
@@ -310,16 +313,29 @@ export default function ClientDetailsModal({ client, open, onClose }: ClientDeta
                 {client.services?.map(service => (
                   <Card key={service.id} className="p-4">
                     <div className="flex items-center justify-between">
-                      <div>
+                      <div className="flex-1">
                         <h4 className="text-sm font-medium text-gray-900">{service.name}</h4>
                         <p className="text-sm text-gray-500">
                           Base price: {formatCurrencyMWK(service.monthly_price)}
                         </p>
                       </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">
-                          Custom price: {formatCurrencyMWK(service.custom_price || service.monthly_price)}
-                        </p>
+                      <div className="flex items-center gap-6">
+                        <div className="text-sm">
+                          <p className="text-gray-500">Quantity</p>
+                          <p className="font-medium text-gray-900">{service.quantity || 1}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-gray-500">Rate</p>
+                          <p className="text-sm font-medium text-gray-900">
+                            {formatCurrencyMWK(service.custom_price ?? service.monthly_price)}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-gray-500">Total</p>
+                          <p className="text-sm font-medium text-gray-900">
+                            {formatCurrencyMWK((service.custom_price ?? service.monthly_price) * (service.quantity || 1))}
+                          </p>
+                        </div>
                       </div>
                     </div>
                   </Card>

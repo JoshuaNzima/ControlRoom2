@@ -44,12 +44,22 @@ class ClientController extends Controller
     }
     public function index()
     {
-        $clients = Client::withCount('sites')
+        $clients = Client::withCount(['sites', 'services'])
+            ->with(['services' => function ($query) {
+                $query->select('services.id', 'services.name', 'services.monthly_price')
+                    ->withPivot('custom_price', 'quantity');
+            }])
             ->when(request('search'), function($q, $search) {
                 $q->where('name', 'like', "%{$search}%");
             })
             ->orderBy('name')
             ->paginate(20);
+
+        // Calculate monthly rates for each client
+        $clients->through(function ($client) {
+            $client->monthly_rate = $client->getMonthlyDueAmount();
+            return $client;
+        });
 
         return Inertia::render('Admin/Clients/Index', [
             'clients' => $clients,
@@ -82,6 +92,7 @@ class ClientController extends Controller
             'services' => 'nullable|array',
             'services.*.id' => 'required_with:services|integer|exists:services,id',
             'services.*.custom_price' => 'nullable|numeric|min:0',
+            'services.*.quantity' => 'nullable|integer|min:1',
             // Optional initial site
             'site.name' => 'nullable|string|max:255',
             'site.address' => 'nullable|string',
@@ -101,18 +112,26 @@ class ClientController extends Controller
         if (!empty($validated['services'])) {
             $attach = [];
             foreach ($validated['services'] as $svc) {
-                $attach[(int) $svc['id']] = ['custom_price' => isset($svc['custom_price']) ? $svc['custom_price'] : null];
+                $attach[(int) $svc['id']] = [
+                    'custom_price' => isset($svc['custom_price']) ? $svc['custom_price'] : null,
+                    'quantity' => $svc['quantity'] ?? 1
+                ];
             }
             $client->services()->attach($attach);
         }
 
-        if (!empty($validated['site']) && !empty($validated['site']['name'])) {
-            $siteData = $validated['site'];
-            // Ensure required defaults
-            $siteData['status'] = $siteData['status'] ?? 'active';
-            $siteData['required_guards'] = $siteData['required_guards'] ?? 1;
-            $client->sites()->create($siteData);
-        }
+        // Create default site if no site is provided, or create the specified site
+        $siteData = !empty($validated['site']) ? $validated['site'] : [];
+        $siteData = array_merge([
+            'name' => 'Home/Residence',
+            'status' => 'active',
+            'required_guards' => 1,
+            'address' => $validated['address'] ?? '',
+            'contact_person' => $validated['contact_person'] ?? '',
+            'phone' => $validated['phone'] ?? '',
+        ], $siteData);
+        
+        $client->sites()->create($siteData);
 
         return redirect()->route('clients.index')
             ->with('success', 'Client created successfully.');
@@ -120,7 +139,16 @@ class ClientController extends Controller
 
     public function show(Client $client)
     {
-        $client->load('sites');
+        $client->load([
+            'sites',
+            'services' => function ($query) {
+                $query->select('services.id', 'services.name', 'services.monthly_price')
+                    ->withPivot('custom_price', 'quantity');
+            }
+        ]);
+
+        // Calculate monthly rate based on services
+        $client->monthly_rate = $client->getMonthlyDueAmount();
 
         return Inertia::render('Admin/Clients/Show', [
             'client' => $client,
@@ -161,9 +189,16 @@ class ClientController extends Controller
         if (array_key_exists('services', $validated)) {
             $sync = [];
             foreach ($validated['services'] as $svc) {
-                $sync[(int) $svc['id']] = ['custom_price' => $svc['custom_price'] ?? null];
+                $sync[(int) $svc['id']] = [
+                    'custom_price' => $svc['custom_price'] ?? null,
+                    'quantity' => $svc['quantity'] ?? 1
+                ];
             }
             $client->services()->sync($sync);
+            
+            // Update monthly rate based on services
+            $client->monthly_rate = $client->getMonthlyDueAmount();
+            $client->save();
         }
 
         return redirect()->route('clients.index')
@@ -177,11 +212,15 @@ class ClientController extends Controller
             'services' => 'nullable|array',
             'services.*.id' => 'required_with:services|integer|exists:services,id',
             'services.*.custom_price' => 'nullable|numeric|min:0',
+            'services.*.quantity' => 'nullable|integer|min:1',
         ]);
 
         $sync = [];
         foreach (($validated['services'] ?? []) as $svc) {
-            $sync[(int) $svc['id']] = ['custom_price' => $svc['custom_price'] ?? null];
+            $sync[(int) $svc['id']] = [
+                'custom_price' => $svc['custom_price'] ?? null,
+                'quantity' => $svc['quantity'] ?? 1
+            ];
         }
 
         $client->services()->sync($sync);

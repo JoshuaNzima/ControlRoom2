@@ -33,7 +33,9 @@ class Client extends Model
 
     public function services()
     {
-        return $this->belongsToMany(\App\Models\Service::class, 'client_service')->withPivot('custom_price')->withTimestamps();
+        return $this->belongsToMany(\App\Models\Service::class, 'client_service')
+                    ->withPivot('custom_price', 'quantity')
+                    ->withTimestamps();
     }
 
     public function sites(): HasMany
@@ -57,9 +59,12 @@ class Client extends Model
             $total = 0.0;
             foreach ($this->services as $service) {
                 $price = $service->pivot->custom_price ?? $service->monthly_price;
-                $total += (float) $price;
+                $quantity = $service->pivot->quantity ?? 1;
+                $total += (float) $price * $quantity;
             }
-            return (float) $total;
+            // Update the monthly_rate property
+            $this->monthly_rate = $total;
+            return $total;
         }
 
         return (float) ($this->monthly_rate ?? 0);
