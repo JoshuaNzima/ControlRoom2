@@ -116,7 +116,8 @@ class PaymentController extends Controller
                     $billingStart = $client->contract_start_date ? \Carbon\Carbon::parse($client->contract_start_date) : ($client->created_at ? \Carbon\Carbon::parse($client->created_at) : null);
                 }
                 $contractEnd = $client->contract_end_date ? \Carbon\Carbon::parse($client->contract_end_date) : null;
-                $monthlyRate = (float) ($client->monthly_rate ?? 0);
+                // Ensure we have a reliable monthly rate even if not stored on the model
+                $monthlyRate = (float) ($client->monthly_rate ?? optional($client)->getMonthlyDueAmount() ?? 0);
 
                 $carry = 0.0;
                 $currentYear = now()->year;

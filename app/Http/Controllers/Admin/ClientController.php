@@ -32,7 +32,8 @@ class ClientController extends Controller
                 $q->where('name', 'like', "%{$search}%");
             })
             ->orderBy('name')
-            ->paginate($perPage);
+            ->paginate($perPage)
+            ->withQueryString();
 
         // Calculate monthly rates for each client
         $clients->through(function ($client) {
