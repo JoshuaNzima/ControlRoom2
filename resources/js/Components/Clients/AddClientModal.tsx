@@ -17,7 +17,13 @@ interface AddClientModalProps {
   services?: Service[];
 }
 
-export default function AddClientModal({ open, onClose, services = [] }: AddClientModalProps) {
+interface Zone { id: number; name: string }
+
+interface AddClientModalPropsExtended extends AddClientModalProps {
+  zones?: Zone[];
+}
+
+export default function AddClientModal({ open, onClose, services = [], zones = [] }: AddClientModalPropsExtended) {
   const { data, setData, post, processing, errors, reset } = useForm({
     name: '',
     contact_person: '',
@@ -40,6 +46,7 @@ export default function AddClientModal({ open, onClose, services = [] }: AddClie
       latitude: '',
       longitude: '',
       required_guards: 1,
+      zone_id: '',
     },
     services: [] as Array<{ id: number; custom_price: number | null; quantity: number }>,
   });
@@ -242,6 +249,15 @@ export default function AddClientModal({ open, onClose, services = [] }: AddClie
                   onChange={(e) => setData('site', { ...data.site, address: e.target.value })} 
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg" 
                 />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Zone</label>
+                <select value={data.site.zone_id ?? ''} onChange={(e) => setData('site', { ...data.site, zone_id: e.target.value })} className="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                  <option value="">Select zone (optional)</option>
+                  {zones.map(z => (
+                    <option key={z.id} value={z.id}>{z.name}</option>
+                  ))}
+                </select>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Site Contact</label>

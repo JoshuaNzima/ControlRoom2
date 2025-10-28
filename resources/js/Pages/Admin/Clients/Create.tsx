@@ -3,7 +3,7 @@ import { Head, useForm } from '@inertiajs/react';
 import AdminLayout from '@/Layouts/AdminLayout';
 import IconMapper from '@/Components/IconMapper';
 
-export default function CreateClient(props: { services?: Array<{ id: number; name: string; monthly_price: number; required_guards?: number }> }) {
+export default function CreateClient(props: { services?: Array<{ id: number; name: string; monthly_price: number; required_guards?: number }>, zones?: Array<{ id: number; name: string }> }) {
   const { data, setData, post, processing, errors } = useForm({
     name: '',
     contact_person: '',
@@ -25,6 +25,7 @@ export default function CreateClient(props: { services?: Array<{ id: number; nam
       special_instructions: '',
       latitude: '',
       longitude: '',
+      zone_id: '',
     },
     services: [] as Array<{ id: number; custom_price: number | null; quantity: number }>,
   } as any);
@@ -258,6 +259,15 @@ export default function CreateClient(props: { services?: Array<{ id: number; nam
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Site Phone</label>
                 <input type="tel" value={data.site.phone} onChange={(e: any) => (setData as any)('site', { ...data.site, phone: e.target.value })} className="w-full px-4 py-2 border border-gray-300 rounded-lg" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Zone</label>
+                <select value={data.site.zone_id ?? ''} onChange={(e: any) => (setData as any)('site', { ...data.site, zone_id: e.target.value })} className="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                  <option value="">Select zone (optional)</option>
+                  {props.zones?.map(z => (
+                    <option key={z.id} value={z.id}>{z.name}</option>
+                  ))}
+                </select>
               </div>
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-2">Special Instructions</label>

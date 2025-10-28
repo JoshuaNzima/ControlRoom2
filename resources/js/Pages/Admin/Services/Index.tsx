@@ -138,7 +138,7 @@ export default function ServicesIndex({ services, stats }: {
                     step="0.01"
                     value={data.monthly_price}
                     onChange={(e) => (setData as any)('monthly_price', Number(e.target.value) || 0)}
-                    className="block w-full pl-7 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                    className="block w-full pl-10 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                     placeholder="0.00"
                   />
                 </div>
@@ -204,7 +204,7 @@ export default function ServicesIndex({ services, stats }: {
                         </div>
                         <input
                           type="number"
-                          className="block w-full pl-7 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                          className="block w-full pl-10 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                           value={editData.monthly_price ?? 0}
                           onChange={e => setEditData({ ...editData, monthly_price: Number(e.target.value) })}
                         />

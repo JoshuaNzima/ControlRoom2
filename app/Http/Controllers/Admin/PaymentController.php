@@ -18,7 +18,8 @@ class PaymentController extends Controller
     $perPage = (int) ($request->input('per_page') ?: 20);
         $sortField = $request->input('sort_field', 'name');
         $sortDirection = $request->input('sort_direction', 'asc');
-        $siteId = $request->input('site_id');
+    $siteId = $request->input('site_id');
+    $zoneId = $request->input('zone_id');
         $searchTerm = $request->input('search');
         $status = $request->input('status', 'all');
 
@@ -38,6 +39,13 @@ class PaymentController extends Controller
             });
         }
 
+        // Apply zone filter if provided (clients who have at least one site in the zone)
+        if ($zoneId) {
+            $query->whereHas('sites', function ($query) use ($zoneId) {
+                $query->where('zone_id', $zoneId);
+            });
+        }
+
         // Note: Status filtering will be done after computing payment summaries
         // This is because we need to determine if a client is late based on their
         // billing window and payment records, which is computed later
@@ -50,185 +58,238 @@ class PaymentController extends Controller
             $query->orderBy('name', 'asc'); // Default sort
         }
 
-        // Get ALL clients first (before pagination) to compute summaries correctly
-        $allClients = $query->get();
+        // We'll paginate the clients for display but compute global summaries in chunks
+        $currentPage = (int) ($request->input('page', 1));
+        $totalClients = $query->count();
 
-        $rawPayments = ClientPayment::where('year', $year)
-            ->get(['client_id', 'month', 'paid', 'amount_due', 'amount_paid'])
-            ->groupBy('client_id');
-
-        // Build derived payments per client with arrears carry-over and contract window
+        // Prepare containers
         $payments = collect();
-        foreach ($allClients as $client) {
-            $map = [];
-            for ($m = 1; $m <= 12; $m++) {
-                $map[$m] = [
-                    'paid' => false,
-                    'amount_due' => 0.0,
-                    'amount_paid' => 0.0,
-                ];
-            }
-            $rows = $rawPayments->get($client->id) ?? collect();
-            foreach ($rows as $r) {
-                $map[(int) $r->month]['paid'] = (bool) $r->paid;
-                $map[(int) $r->month]['amount_due'] = (float) $r->amount_due;
-                $map[(int) $r->month]['amount_paid'] = (float) $r->amount_paid;
-            }
-
-            // Determine billing window: prefer billing_start_date, then contract_start_date, then created_at
-            if (!empty($client->billing_start_date)) {
-                $billingStart = \Carbon\Carbon::parse($client->billing_start_date);
-            } else {
-                $billingStart = $client->contract_start_date ? \Carbon\Carbon::parse($client->contract_start_date) : ($client->created_at ? \Carbon\Carbon::parse($client->created_at) : null);
-            }
-            $contractEnd = $client->contract_end_date ? \Carbon\Carbon::parse($client->contract_end_date) : null;
-            $monthlyRate = (float) ($client->monthly_rate ?? 0);
-
-            $carry = 0.0;
-            for ($m = 1; $m <= 12; $m++) {
-                $ym = \Carbon\Carbon::createFromDate($year, $m, 1);
-                $inWindow = true;
-                if ($billingStart && $ym->lt($billingStart->copy()->startOfMonth())) {
-                    $inWindow = false;
-                }
-                if ($contractEnd && $ym->gt($contractEnd->copy()->endOfMonth())) {
-                    $inWindow = false;
-                }
-
-                $baseDue = $inWindow ? $monthlyRate : 0.0;
-                // amount due for month is base plus any unpaid carry from previous months in contract window
-                $map[$m]['amount_due'] = round($baseDue + $carry, 2);
-                if ($map[$m]['paid']) {
-                    // Only subtract this month's base from the rolling balance when paid
-                    $map[$m]['amount_paid'] = round($baseDue, 2);
-                    // Reduce carry by this month's base if any carry exists from previous months
-                    $carry = max(0.0, round($carry - $baseDue, 2));
-                } else {
-                    // Add this month's base to carry if unpaid
-                    $carry = round($carry + $baseDue, 2);
-                }
-            }
-
-            $payments->put($client->id, $map);
-        }
-
-        // Compute per-client summaries and flags: clients with 3+ unpaid months up to current month
-        $currentYear = now()->year;
-        $currentMonth = now()->month;
         $flags = [];
         $summaries = [];
+        $clientMinimal = []; // store small client info for sorting/filtering without loading relations
+
+        // We'll compute global aggregates by chunking all clients to avoid loading all at once.
         $totalDueAllClients = 0.0;
         $totalPaidAllClients = 0.0;
         $clientsWithOutstanding = 0;
         $maxOutstandingMonths = 0;
         $overdueClients = collect();
 
-        foreach ($allClients as $client) {
-            $clientPayments = $payments->get($client->id) ?? [];
-            // Determine billing start month for this year
-            $billingStartMonth = 1;
-            $billingStartYear = null;
-            if (!empty($client->billing_start_date)) {
-                $date = \Carbon\Carbon::parse($client->billing_start_date);
-                $billingStartYear = $date->year;
-                if ($billingStartYear === $year) {
-                    $billingStartMonth = $date->month;
-                } elseif ($billingStartYear > $year) {
-                    $billingStartMonth = 13; // No months to check this year
-                }
-            } elseif ($client->contract_start_date) {
-                $date = \Carbon\Carbon::parse($client->contract_start_date);
-                $billingStartYear = $date->year;
-                if ($billingStartYear === $year) {
-                    $billingStartMonth = $date->month;
-                } elseif ($billingStartYear > $year) {
-                    $billingStartMonth = 13;
-                }
-            } elseif ($client->created_at) {
-                $date = \Carbon\Carbon::parse($client->created_at);
-                $billingStartYear = $date->year;
-                if ($billingStartYear === $year) {
-                    $billingStartMonth = $date->month;
-                } elseif ($billingStartYear > $year) {
-                    $billingStartMonth = 13;
-                }
-            }
+        // Chunk through clients matching the same filters to compute summary aggregates
+        $chunkSelect = ['id', 'name', 'monthly_rate', 'billing_start_date', 'contract_start_date', 'contract_end_date', 'created_at'];
+        $chunkQuery = (clone $query)->select($chunkSelect)->orderBy('id');
+        $chunkQuery->chunkById(100, function ($clientsChunk) use ($year, &$totalDueAllClients, &$totalPaidAllClients, &$clientsWithOutstanding, &$maxOutstandingMonths, &$overdueClients, &$clientMinimal, &$summaries, &$flags) {
+            $clientIds = $clientsChunk->pluck('id')->all();
 
-            $limitMonth = $year < $currentYear ? 12 : ($year > $currentYear ? 0 : $currentMonth);
-            $unpaidCount = 0;
-            $totalDue = 0.0;
-            $totalPaid = 0.0;
-            
-            // Only count months from billing start date onwards
-            for ($m = $billingStartMonth; $m <= $limitMonth; $m++) {
-                $monthState = $clientPayments[$m] ?? ['paid' => false];
-                if (!($monthState['paid'] ?? false)) {
-                    // Only count as unpaid if there was an amount due
-                    if (($clientPayments[$m]['amount_due'] ?? 0) > 0) {
-                        $unpaidCount++;
+            // Fetch payments only for this chunk of clients
+            $rawPayments = ClientPayment::where('year', $year)
+                ->whereIn('client_id', $clientIds)
+                ->get(['client_id', 'month', 'paid', 'amount_due', 'amount_paid'])
+                ->groupBy('client_id');
+
+            foreach ($clientsChunk as $client) {
+                // store minimal info for sorting/filtering later (small footprint)
+                $clientMinimal[$client->id] = [
+                    'id' => $client->id,
+                    'name' => $client->name,
+                    'monthly_rate' => $client->monthly_rate ?? 0,
+                    'billing_start_date' => $client->billing_start_date,
+                    'contract_start_date' => $client->contract_start_date,
+                    'contract_end_date' => $client->contract_end_date,
+                    'created_at' => $client->created_at,
+                ];
+                $map = [];
+                for ($m = 1; $m <= 12; $m++) {
+                    $map[$m] = ['paid' => false, 'amount_due' => 0.0, 'amount_paid' => 0.0];
+                }
+                $rows = $rawPayments->get($client->id) ?? collect();
+                foreach ($rows as $r) {
+                    $map[(int) $r->month]['paid'] = (bool) $r->paid;
+                    $map[(int) $r->month]['amount_due'] = (float) $r->amount_due;
+                    $map[(int) $r->month]['amount_paid'] = (float) $r->amount_paid;
+                }
+
+                // Determine billing window
+                if (!empty($client->billing_start_date)) {
+                    $billingStart = \Carbon\Carbon::parse($client->billing_start_date);
+                } else {
+                    $billingStart = $client->contract_start_date ? \Carbon\Carbon::parse($client->contract_start_date) : ($client->created_at ? \Carbon\Carbon::parse($client->created_at) : null);
+                }
+                $contractEnd = $client->contract_end_date ? \Carbon\Carbon::parse($client->contract_end_date) : null;
+                $monthlyRate = (float) ($client->monthly_rate ?? 0);
+
+                $carry = 0.0;
+                $currentYear = now()->year;
+                $currentMonth = now()->month;
+                $limitMonth = $year < $currentYear ? 12 : ($year > $currentYear ? 0 : $currentMonth);
+
+                $unpaidCount = 0;
+                $totalDue = 0.0;
+                $totalPaid = 0.0;
+
+                // Only count months from billing start date onwards
+                $billingStartMonth = 1;
+                $billingStartYear = null;
+                if (!empty($client->billing_start_date)) {
+                    $date = \Carbon\Carbon::parse($client->billing_start_date);
+                    $billingStartYear = $date->year;
+                    if ($billingStartYear === $year) {
+                        $billingStartMonth = $date->month;
+                    } elseif ($billingStartYear > $year) {
+                        $billingStartMonth = 13;
+                    }
+                } elseif ($client->contract_start_date) {
+                    $date = \Carbon\Carbon::parse($client->contract_start_date);
+                    $billingStartYear = $date->year;
+                    if ($billingStartYear === $year) {
+                        $billingStartMonth = $date->month;
+                    } elseif ($billingStartYear > $year) {
+                        $billingStartMonth = 13;
+                    }
+                } elseif ($client->created_at) {
+                    $date = \Carbon\Carbon::parse($client->created_at);
+                    $billingStartYear = $date->year;
+                    if ($billingStartYear === $year) {
+                        $billingStartMonth = $date->month;
+                    } elseif ($billingStartYear > $year) {
+                        $billingStartMonth = 13;
                     }
                 }
-                $totalDue += (float) ($clientPayments[$m]['amount_due'] ?? 0);
-                $totalPaid += (float) ($clientPayments[$m]['amount_paid'] ?? 0);
-            }
-            if ($unpaidCount >= 3) {
-                $flags[$client->id] = true;
-            }
 
-            $billingStartStr = !empty($client->billing_start_date) ? (\Carbon\Carbon::parse($client->billing_start_date)->toDateString()) : ($client->contract_start_date ? (\Carbon\Carbon::parse($client->contract_start_date)->toDateString()) : ($client->created_at ? $client->created_at->toDateString() : null));
-            $outstandingAmount = round($totalDue - $totalPaid, 2);
-            
-            $summaries[$client->id] = [
-                'expected_amount' => round($totalDue, 2),
-                'total_paid' => round($totalPaid, 2),
-                'outstanding_amount' => $outstandingAmount,
-                'outstanding_months' => $unpaidCount,
-                'billing_start' => $billingStartStr,
-            ];
+                for ($m = $billingStartMonth; $m <= $limitMonth; $m++) {
+                    $monthState = $map[$m] ?? ['paid' => false, 'amount_due' => 0, 'amount_paid' => 0];
+                    // Determine base due using window logic
+                    $ym = \Carbon\Carbon::createFromDate($year, $m, 1);
+                    $inWindow = true;
+                    if ($billingStart && $ym->lt($billingStart->copy()->startOfMonth())) {
+                        $inWindow = false;
+                    }
+                    if ($contractEnd && $ym->gt($contractEnd->copy()->endOfMonth())) {
+                        $inWindow = false;
+                    }
+                    $baseDue = $inWindow ? $monthlyRate : 0.0;
 
-            // Update global stats
-            $totalDueAllClients += $totalDue;
-            $totalPaidAllClients += $totalPaid;
-            if ($outstandingAmount > 0) {
-                $clientsWithOutstanding++;
-                $maxOutstandingMonths = max($maxOutstandingMonths, $unpaidCount);
-                if ($unpaidCount >= 3) {
-                    $overdueClients->push([
-                        'id' => $client->id,
-                        'name' => $client->name,
-                        'outstanding_amount' => $outstandingAmount,
-                        'outstanding_months' => $unpaidCount,
-                    ]);
+                    // Rolling carry logic: if month was paid, assume it covered base due; otherwise add base due to carry.
+                    $computedDue = round($baseDue, 2);
+                    $computedPaid = ($monthState['paid'] ?? false) ? min($computedDue, (float) ($monthState['amount_paid'] ?? 0)) : 0.0;
+
+                    if (!($monthState['paid'] ?? false)) {
+                        if (($monthState['amount_due'] ?? 0) > 0) {
+                            $unpaidCount++;
+                        }
+                    }
+
+                    $totalDue += (float) ($monthState['amount_due'] ?? $computedDue);
+                    $totalPaid += (float) ($monthState['amount_paid'] ?? $computedPaid);
                 }
+
+                if ($unpaidCount >= 3) {
+                    $flags[$client->id] = true;
+                }
+
+                $billingStartStr = !empty($client->billing_start_date) ? (\Carbon\Carbon::parse($client->billing_start_date)->toDateString()) : ($client->contract_start_date ? (\Carbon\Carbon::parse($client->contract_start_date)->toDateString()) : ($client->created_at ? $client->created_at->toDateString() : null));
+                $outstandingAmount = round($totalDue - $totalPaid, 2);
+
+                // Update global stats
+                $totalDueAllClients += $totalDue;
+                $totalPaidAllClients += $totalPaid;
+                if ($outstandingAmount > 0) {
+                    $clientsWithOutstanding++;
+                    $maxOutstandingMonths = max($maxOutstandingMonths, $unpaidCount);
+                    if ($unpaidCount >= 3) {
+                        $overdueClients->push(['id' => $client->id, 'name' => $client->name, 'outstanding_amount' => $outstandingAmount, 'outstanding_months' => $unpaidCount]);
+                    }
+                }
+
+                // store the small summary for this client (used for filtering/sorting)
+                $summaries[$client->id] = [
+                    'expected_amount' => round($totalDue, 2),
+                    'total_paid' => round($totalPaid, 2),
+                    'outstanding_amount' => $outstandingAmount,
+                    'outstanding_months' => $unpaidCount,
+                    'billing_start' => $billingStartStr,
+                ];
             }
+        });
+
+        // After chunking we have summaries and minimal info for all clients matching filters.
+        // Now apply status filtering and sorting on the lightweight summaries, then fetch page models (with sites) only for the current page.
+
+        // Build a list of client IDs in the order determined by sortField/sortDirection
+        $clientIds = array_keys($clientMinimal);
+
+        // Filter by status (late/paid) using computed summaries
+        if ($status && $status !== 'all') {
+            $clientIds = array_values(array_filter($clientIds, function ($id) use ($status, $summaries) {
+                $summary = $summaries[$id] ?? null;
+                if (!$summary) return false;
+                if ($status === 'late') return $summary['outstanding_amount'] > 0;
+                if ($status === 'paid') return $summary['outstanding_amount'] <= 0;
+                return true;
+            }));
         }
 
-        // Sort overdue clients by outstanding amount
-        $overdueClients = $overdueClients->sortByDesc('outstanding_amount')->take(5);
-
-        // Filter clients by status if needed
-        $filteredClients = $allClients;
-        if ($status && $status !== 'all') {
-            $filteredClients = $allClients->filter(function ($client) use ($status, $summaries, $flags) {
-                if ($status === 'late') {
-                    // Client is late if they have outstanding amount > 0
-                    $summary = $summaries[$client->id] ?? null;
-                    return $summary && $summary['outstanding_amount'] > 0;
-                } elseif ($status === 'paid') {
-                    // Client is fully paid if outstanding amount is 0 or less
-                    $summary = $summaries[$client->id] ?? null;
-                    return $summary && $summary['outstanding_amount'] <= 0;
-                }
-                return true;
+        // Sort client IDs by requested field
+        if (in_array($sortField, ['expected_amount', 'outstanding_amount'])) {
+            usort($clientIds, function ($a, $b) use ($summaries, $sortField, $sortDirection) {
+                $va = $summaries[$a][$sortField] ?? 0;
+                $vb = $summaries[$b][$sortField] ?? 0;
+                if ($va == $vb) return 0;
+                $res = ($va < $vb) ? -1 : 1;
+                return $sortDirection === 'desc' ? -$res : $res;
+            });
+        } else {
+            // Sort by name using minimal info
+            usort($clientIds, function ($a, $b) use ($clientMinimal, $sortDirection) {
+                $na = strtolower($clientMinimal[$a]['name'] ?? '');
+                $nb = strtolower($clientMinimal[$b]['name'] ?? '');
+                if ($na == $nb) return 0;
+                $res = ($na < $nb) ? -1 : 1;
+                return $sortDirection === 'desc' ? -$res : $res;
             });
         }
 
-        $totalClients = $allClients->count();
+        $total = count($clientIds);
+        $pagedIds = array_slice($clientIds, ($currentPage - 1) * $perPage, $perPage);
+
+        // Fetch full client models for the page (including sites)
+        $pagedClients = collect();
+        if (!empty($pagedIds)) {
+            $fetched = Client::with(['sites' => function ($q) { $q->select('id','client_id','name','address'); }])->whereIn('id', $pagedIds)->get()->keyBy('id');
+            // reorder according to $pagedIds
+            foreach ($pagedIds as $id) {
+                if (isset($fetched[$id])) $pagedClients->push($fetched[$id]);
+            }
+        }
+
+        // Build detailed month maps only for clients on this page
+        if (!empty($pagedIds)) {
+            $pagePayments = ClientPayment::where('year', $year)->whereIn('client_id', $pagedIds)->get(['client_id','month','paid','amount_due','amount_paid'])->groupBy('client_id');
+            foreach ($pagedIds as $cid) {
+                $map = [];
+                for ($m = 1; $m <= 12; $m++) {
+                    $map[$m] = ['paid' => false, 'amount_due' => 0.0, 'amount_paid' => 0.0];
+                }
+                $rows = $pagePayments->get($cid) ?? collect();
+                foreach ($rows as $r) {
+                    $map[(int)$r->month]['paid'] = (bool)$r->paid;
+                    $map[(int)$r->month]['amount_due'] = (float)$r->amount_due;
+                    $map[(int)$r->month]['amount_paid'] = (float)$r->amount_paid;
+                }
+                $payments->put($cid, $map);
+            }
+        }
+
+        // Sort overdue clients by outstanding amount and take top 5
+        $overdueClients = $overdueClients->sortByDesc('outstanding_amount')->take(5);
+
+        // Total clients (after status filtering) computed earlier
+        // $total already computed above
 
         $overallSummary = [
-            'total_clients' => $totalClients,
+            'total_clients' => $total,
             'clients_with_outstanding' => $clientsWithOutstanding,
-            'clients_overdue_percentage' => $totalClients > 0 ? round(($clientsWithOutstanding / $totalClients) * 100, 1) : 0,
+            'clients_overdue_percentage' => $total > 0 ? round(($clientsWithOutstanding / $total) * 100, 1) : 0,
             'total_outstanding' => round($totalDueAllClients - $totalPaidAllClients, 2),
             'max_outstanding_months' => $maxOutstandingMonths,
             'overdue_clients' => $overdueClients->values()->all(),
@@ -249,21 +310,13 @@ class PaymentController extends Controller
                 ];
             });
 
-        // Apply sorting if sorting by computed fields
-        $sortedClients = $filteredClients;
-        if (in_array($sortField, ['expected_amount', 'outstanding_amount'])) {
-            $sortedClients = $filteredClients->sortBy(function ($client) use ($sortField, $summaries) {
-                return $summaries[$client->id][$sortField] ?? 0;
-            }, SORT_REGULAR, $sortDirection === 'desc');
-        }
+        // Also provide zones for filtering by zone (client_sites have zone_id)
+        $allZones = \App\Models\Zone::select('id', 'name')->orderBy('name')->get();
 
-        // Paginate the filtered and sorted clients
+        // Build paginator from the paged clients we fetched earlier
         $currentPage = (int) ($request->input('page', 1));
-        $total = $sortedClients->count();
-        $paged = $sortedClients->forPage($currentPage, $perPage)->values();
-
         $clients = new \Illuminate\Pagination\LengthAwarePaginator(
-            $paged,
+            $pagedClients->values(),
             $total,
             $perPage,
             $currentPage,
@@ -278,13 +331,17 @@ class PaymentController extends Controller
             'summaries' => $summaries,
             'overallSummary' => $overallSummary,
             'sites' => $allSites,
+            'zones' => $allZones,
             'filters' => [
                 'search' => $searchTerm,
                 'site_id' => $siteId,
+                'zone_id' => $zoneId,
                 'status' => $status,
                 'sort_field' => $sortField,
                 'sort_direction' => $sortDirection,
                 'page' => $request->input('page', 1),
+                'per_page' => $perPage,
+                'year' => $year,
             ],
         ]);
     }

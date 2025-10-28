@@ -28,10 +28,12 @@ type MonthState = { paid: boolean; amount_due: number; amount_paid: number };
 interface Filters {
   search: string;
   site_id: string;
+  zone_id?: string;
   status: 'all' | 'late' | 'paid';
   sort_field: string;
   sort_direction: 'asc' | 'desc';
   page: number;
+  per_page: number | string;
 }
 
 interface PaginationMeta {
@@ -53,6 +55,7 @@ interface Props {
   flags?: Record<string, boolean>;
   summaries?: Record<string, { expected_amount: number; total_paid: number; outstanding_amount: number; outstanding_months: number; billing_start?: string | null }>;
   sites: Site[];
+  zones?: Array<{ id: number; name: string }>;
   filters: Filters;
 }
 
@@ -94,26 +97,28 @@ export default function PaymentsIndex({
     collection_rate: 0
   },
   sites = [],
+  zones = [],
   filters = {
     search: '',
     site_id: '',
     status: 'all',
     sort_field: 'name',
     sort_direction: 'asc',
-    page: 1
+    page: 1,
+    per_page: 20,
   }
 }: Props & { overallSummary: OverallSummary }) {
   const [selectedYear, setSelectedYear] = React.useState<number>(year);
 
   const handlePageChange = (page: number) => {
-    router.get('/admin/payments', { ...filters, page }, {
+    router.get(route('admin.payments.index'), { ...filters, page }, {
       preserveState: true,
       preserveScroll: true,
     });
   };
 
   const handleFilterChange = (newFilters: Partial<Filters>) => {
-    router.get('/admin/payments', { 
+    router.get(route('admin.payments.index'), { 
       ...filters,
       ...newFilters,
       year: selectedYear.toString(),
@@ -234,21 +239,35 @@ export default function PaymentsIndex({
                     />
                   </div>
                   <div className="flex items-center gap-2">
+                    {/* Zone filter (clients grouped by site zone) */}
                     <select
                       className="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      value={filters.site_id || ''}
+                      value={String(filters.zone_id ?? '')}
                       onChange={(e) => {
                         router.get(
                           route('admin.payments.index'),
-                          { ...filters, site_id: e.target.value },
+                          { ...filters, zone_id: e.target.value },
                           { preserveState: true }
                         );
                       }}
                     >
-                      <option value="">All Sites</option>
-                      {sites.map(site => (
-                        <option key={site.id} value={site.id}>{site.name} - {site.address}</option>
+                      <option value="">All Zones</option>
+                      {zones.map(z => (
+                        <option key={z.id} value={z.id}>{z.name}</option>
                       ))}
+                    </select>
+                    <select
+                      className="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      value={String(filters.per_page ?? 20)}
+                      onChange={(e) => {
+                        // reset to first page when changing page size
+                        router.get(route('admin.payments.index'), { ...filters, per_page: e.target.value, page: 1 }, { preserveState: true });
+                      }}
+                    >
+                      <option value="10">10</option>
+                      <option value="20">20</option>
+                      <option value="50">50</option>
+                      <option value="100">100</option>
                     </select>
                     <select
                       className="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"

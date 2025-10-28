@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Client;
+use App\Models\Zone;
 use App\Models\Guards\ClientSite;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -18,8 +19,10 @@ class ClientController extends Controller
         // Simply redirect to clients index - the dashboard page is now just a redirect component
         return redirect()->route('admin.clients.index');
     }
-    public function index()
+    public function index(Request $request)
     {
+        $perPage = (int) ($request->input('per_page') ?: 20);
+
         $clients = Client::withCount(['sites', 'services'])
             ->with(['services' => function ($query) {
                 $query->select('services.id', 'services.name', 'services.monthly_price')
@@ -29,7 +32,7 @@ class ClientController extends Controller
                 $q->where('name', 'like', "%{$search}%");
             })
             ->orderBy('name')
-            ->paginate(20);
+            ->paginate($perPage);
 
         // Calculate monthly rates for each client
         $clients->through(function ($client) {
@@ -42,19 +45,21 @@ class ClientController extends Controller
             ->orderBy('name')
             ->get(['id', 'name', 'monthly_price']);
 
+        $zones = \App\Models\Zone::orderBy('name')->get(['id', 'name']);
+
         return Inertia::render('Admin/Clients/Index', [
             'clients' => $clients,
-            'filters' => request()->only(['search']),
+            'filters' => array_merge(request()->only(['search']), ['per_page' => $perPage, 'show_add' => $request->input('show_add')]),
             'services' => $services,
+            'zones' => $zones,
         ]);
     }
 
     public function create()
     {
-        $services = \App\Models\Service::where('active', true)->orderBy('name')->get(['id','name','monthly_price']);
-        return Inertia::render('Admin/Clients/Create', [
-            'services' => $services,
-        ]);
+        // The separate create page has been deprecated in favor of the Add Client modal
+        // Redirect to index and instruct the index page to open the modal via query param
+        return redirect()->route('admin.clients.index', ['show_add' => 1]);
     }
 
     public function store(Request $request)
@@ -86,6 +91,7 @@ class ClientController extends Controller
             'site.special_instructions' => 'nullable|string',
             'site.latitude' => 'nullable|numeric',
             'site.longitude' => 'nullable|numeric',
+            'site.zone_id' => 'nullable|integer|exists:zones,id',
         ]);
 
         $client = Client::create(collect($validated)->except(['site', 'services'])->toArray());
@@ -113,9 +119,10 @@ class ClientController extends Controller
             'phone' => $validated['phone'] ?? '',
         ], $siteData);
         
+        // If zone_id provided, ensure it's included in the site record
         $client->sites()->create($siteData);
 
-        return redirect()->route('clients.index')
+        return redirect()->route('admin.clients.index')
             ->with('success', 'Client created successfully.');
     }
 
@@ -135,6 +142,25 @@ class ClientController extends Controller
         return Inertia::render('Admin/Clients/Show', [
             'client' => $client,
         ]);
+    }
+
+    /**
+     * Return full client JSON (services & sites) for XHR/modal pre-fill
+     */
+    public function apiShow(Client $client)
+    {
+        $client->load([
+            'sites',
+            'services' => function ($query) {
+                $query->select('services.id', 'services.name', 'services.monthly_price')
+                    ->withPivot('custom_price', 'quantity');
+            }
+        ]);
+
+        // include calculated monthly_rate
+        $client->monthly_rate = $client->getMonthlyDueAmount();
+
+        return response()->json($client);
     }
 
     public function edit(Client $client)
@@ -243,7 +269,13 @@ class ClientController extends Controller
 
         $client->sites()->create($validated);
 
-        return redirect()->route('admin.clients.show', $client)
+        // If the request expects JSON (AJAX from modal), return success so frontend can refresh
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json(['success' => true]);
+        }
+
+        // Fallback redirect to index (standalone show page removed)
+        return redirect()->route('admin.clients.index')
             ->with('success', 'Site added successfully.');
     }
 

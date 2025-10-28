@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/Components/u
 import { Button } from '@/Components/ui/button';
 import { Card } from '@/Components/ui/card';
 import { useForm } from '@inertiajs/react';
+import axios from 'axios';
 import IconMapper from '@/Components/IconMapper';
 import { formatCurrencyMWK } from '@/Components/format';
 
@@ -43,9 +44,12 @@ interface ClientDetailsModalProps {
   client: Client;
   open: boolean;
   onClose: () => void;
+  services?: Service[];
+  onClientUpdated?: (client: any) => void;
 }
 
-export default function ClientDetailsModal({ client, open, onClose }: ClientDetailsModalProps) {
+export default function ClientDetailsModal({ client, open, onClose, services = [], onClientUpdated }: ClientDetailsModalProps) {
+  // Note: parent can pass services list and onClientUpdated handler
   const [activeTab, setActiveTab] = React.useState<'overview' | 'sites' | 'services'>('overview');
   const { data, setData, post, processing } = useForm({
     name: '',
@@ -58,22 +62,38 @@ export default function ClientDetailsModal({ client, open, onClose }: ClientDeta
     status: 'active',
   });
 
-  const handleAddSite = (e: React.FormEvent) => {
+  const handleAddSite = async (e: React.FormEvent) => {
     e.preventDefault();
-    post(route('admin.clients.sites.store', { client: client.id }), {
-      onSuccess: () => {
-        setData({
-          name: '',
-          address: '',
-          contact_person: '',
-          phone: '',
-          required_guards: 1,
-          services_requested: '',
-          special_instructions: '',
-          status: 'active'
-        });
-      },
-    });
+    try {
+      const url = route('admin.clients.sites.store', { client: client.id });
+      await axios.post(url, data, { headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' } });
+      // reset form
+      setData({
+        name: '',
+        address: '',
+        contact_person: '',
+        phone: '',
+        required_guards: 1,
+        services_requested: '',
+        special_instructions: '',
+        status: 'active'
+      });
+      // ask parent to refresh client details if callback provided
+      try {
+        if (onClientUpdated) {
+          // fetch fresh client
+          const showUrl = route('admin.clients.json', { client: client.id });
+          const resp = await axios.get(showUrl, { headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' } });
+          onClientUpdated(resp.data);
+        }
+      } catch (err) {
+        // ignore refresh errors
+        console.warn('Failed to refresh client after site add', err);
+      }
+    } catch (err) {
+      console.error('Failed to add site', err);
+      alert('Failed to add site. Please try again.');
+    }
   };
 
   // Using formatCurrencyMWK from Components/format.ts
@@ -310,36 +330,85 @@ export default function ClientDetailsModal({ client, open, onClose }: ClientDeta
 
             {activeTab === 'services' && (
               <div className="space-y-4">
-                {client.services?.map(service => (
-                  <Card key={service.id} className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <h4 className="text-sm font-medium text-gray-900">{service.name}</h4>
-                        <p className="text-sm text-gray-500">
-                          Base price: {formatCurrencyMWK(service.monthly_price)}
-                        </p>
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <h3 className="text-sm font-medium text-gray-900 mb-2">Manage Services</h3>
+                  <p className="text-sm text-gray-500 mb-3">Toggle services for this client, set custom rates or quantity, then save.</p>
+                  <div className="grid grid-cols-1 gap-2 max-h-64 overflow-y-auto">
+                    {services.map(svc => {
+                      const attached = (client.services || []).find(cs => cs.id === svc.id);
+                      const selected = !!attached;
+                      const initialCustom = attached?.custom_price ?? null;
+                      const initialQty = attached?.quantity ?? 1;
+                      return (
+                        <div key={svc.id} className="p-3 border rounded-lg flex items-center gap-4 bg-white">
+                          <input type="checkbox" defaultChecked={selected} id={`svc_${svc.id}`} className="h-4 w-4" />
+                          <div className="flex-1">
+                            <div className="font-medium text-gray-900">{svc.name}</div>
+                            <div className="text-sm text-gray-500">Base: {formatCurrencyMWK(svc.monthly_price)}</div>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <input type="number" defaultValue={initialCustom ?? ''} placeholder="Custom" data-svcid={svc.id} className="w-32 px-2 py-1 border rounded" />
+                            <input type="number" defaultValue={initialQty} min={1} data-svcqty={svc.id} className="w-20 px-2 py-1 border rounded" />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className="mt-4 flex justify-end">
+                    <Button onClick={async () => {
+                      try {
+                        const nodes = Array.from(document.querySelectorAll('[id^="svc_"]')) as HTMLInputElement[];
+                        const servicesPayload: any[] = [];
+                        nodes.forEach((checkbox) => {
+                          const id = checkbox.id.replace('svc_', '');
+                          const checked = checkbox.checked;
+                          if (checked) {
+                            const customInput = document.querySelector(`[data-svcid="${id}"]`) as HTMLInputElement | null;
+                            const qtyInput = document.querySelector(`[data-svcqty="${id}"]`) as HTMLInputElement | null;
+                            servicesPayload.push({ id: Number(id), custom_price: customInput && customInput.value !== '' ? Number(customInput.value) : null, quantity: qtyInput ? Number(qtyInput.value) : 1 });
+                          }
+                        });
+                        const url = route('admin.clients.services.update', { client: client.id });
+                        await axios.post(url, { services: servicesPayload }, { headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' } });
+                        // refresh
+                        if (onClientUpdated) {
+                          const showUrl = route('admin.clients.json', { client: client.id });
+                          const resp = await axios.get(showUrl, { headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' } });
+                          onClientUpdated(resp.data);
+                        }
+                      } catch (err) {
+                        console.error('Failed to update services', err);
+                        alert('Failed to update services.');
+                      }
+                    }}>Save Services</Button>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  {client.services?.map(service => (
+                    <Card key={service.id} className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                          <h4 className="text-sm font-medium text-gray-900">{service.name}</h4>
+                          <p className="text-sm text-gray-500">Base price: {formatCurrencyMWK(service.monthly_price)}</p>
+                        </div>
+                        <div className="flex items-center gap-6">
+                          <div className="text-sm">
+                            <p className="text-gray-500">Quantity</p>
+                            <p className="font-medium text-gray-900">{service.quantity || 1}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-gray-500">Rate</p>
+                            <p className="text-sm font-medium text-gray-900">{formatCurrencyMWK(service.custom_price ?? service.monthly_price)}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-gray-500">Total</p>
+                            <p className="text-sm font-medium text-gray-900">{formatCurrencyMWK((service.custom_price ?? service.monthly_price) * (service.quantity || 1))}</p>
+                          </div>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-6">
-                        <div className="text-sm">
-                          <p className="text-gray-500">Quantity</p>
-                          <p className="font-medium text-gray-900">{service.quantity || 1}</p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-gray-500">Rate</p>
-                          <p className="text-sm font-medium text-gray-900">
-                            {formatCurrencyMWK(service.custom_price ?? service.monthly_price)}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-gray-500">Total</p>
-                          <p className="text-sm font-medium text-gray-900">
-                            {formatCurrencyMWK((service.custom_price ?? service.monthly_price) * (service.quantity || 1))}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </Card>
-                ))}
+                    </Card>
+                  ))}
+                </div>
               </div>
             )}
 

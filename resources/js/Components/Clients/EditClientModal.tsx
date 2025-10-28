@@ -20,10 +20,11 @@ interface EditClientModalProps {
   client: Client;
   open: boolean;
   onClose: () => void;
+  services?: Array<{ id: number; name: string; monthly_price: number; required_guards?: number }>;
 }
 
-export default function EditClientModal({ client, open, onClose }: EditClientModalProps) {
-  const { data, setData, put, processing, errors } = useForm({
+export default function EditClientModal({ client, open, onClose, services = [] }: EditClientModalProps) {
+  const _form: any = useForm({
     name: client.name,
     contact_person: client.contact_person || '',
     phone: client.phone || '',
@@ -32,7 +33,10 @@ export default function EditClientModal({ client, open, onClose }: EditClientMod
     billing_start_date: client.billing_start_date || '',
     notes: client.notes || '',
     status: client.status || 'active',
+    // services array: { id, custom_price, quantity }
+    services: (client as any).services ? (client as any).services.map((s: any) => ({ id: s.id, custom_price: s.pivot?.custom_price ?? null, quantity: s.pivot?.quantity ?? 1 })) : [] as Array<{ id: number; custom_price: number | null; quantity: number }>,
   });
+  const { data, setData, put, processing, errors } = _form as any;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -153,6 +157,74 @@ export default function EditClientModal({ client, open, onClose }: EditClientMod
                     rows={3}
                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                   />
+                </div>
+              </div>
+
+              {/* Services selection - allow toggling services and setting custom price/quantity */}
+              <div className="pt-4">
+                <h3 className="text-sm font-medium text-gray-700 mb-2">Services</h3>
+                <div className="grid grid-cols-1 gap-2">
+                  {services.map((s) => {
+                    const selected = (data.services || []).some((ds: any) => ds.id === s.id);
+                    return (
+                      <div key={s.id} className="p-3 border rounded-lg flex items-center gap-4 bg-white hover:bg-gray-50 transition-colors">
+                        <input
+                          type="checkbox"
+                          checked={selected}
+                          onChange={(e: any) => {
+                            let list = Array.isArray(data.services) ? [...data.services] : [];
+                            if (e.target.checked) {
+                              list.push({ id: s.id, custom_price: null, quantity: 1 });
+                            } else {
+                              list = list.filter((it: any) => it.id !== s.id);
+                            }
+                            setData('services', list);
+                          }}
+                          className="h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300 rounded"
+                        />
+                        <div className="flex-1">
+                          <div className="font-medium text-gray-900">{s.name}</div>
+                          <div className="text-sm text-gray-500">Base Rate: {new Intl.NumberFormat('en-MW', { style: 'currency', currency: 'MWK' }).format(s.monthly_price)}</div>
+                        </div>
+                        {selected && (
+                          <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm text-gray-500">Custom Rate:</span>
+                              <input
+                                type="number"
+                                step="0.01"
+                                placeholder="Optional"
+                                value={(data.services.find((it: any) => it.id === s.id)?.custom_price ?? '') as any}
+                                onChange={(e: any) => {
+                                  const list = (data.services || []).map((it: any) =>
+                                    it.id === s.id ? ({ ...it, custom_price: e.target.value === '' ? null : Number(e.target.value) }) : it
+                                  );
+                                  setData('services', list);
+                                }}
+                                className="w-32 px-3 py-1 border rounded-md focus:ring-1 focus:ring-red-500"
+                              />
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm text-gray-500">Quantity:</span>
+                              <input
+                                type="number"
+                                min="1"
+                                value={data.services.find((it: any) => it.id === s.id)?.quantity || 1}
+                                onChange={(e: any) => {
+                                  const quantity = Math.max(1, parseInt(e.target.value) || 1);
+                                  const list = (data.services || []).map((it: any) =>
+                                    it.id === s.id ? ({ ...it, quantity }) : it
+                                  );
+                                  setData('services', list);
+                                }}
+                                className="w-20 px-3 py-1 border rounded-md focus:ring-1 focus:ring-red-500"
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
 

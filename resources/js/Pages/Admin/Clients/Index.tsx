@@ -1,5 +1,6 @@
 import React from 'react';
 import { Head, Link, router } from '@inertiajs/react';
+import axios from 'axios';
 import AdminLayout from '@/Layouts/AdminLayout';
 import IconMapper from '@/Components/IconMapper';
 import { Card } from '@/Components/ui/card';
@@ -26,6 +27,8 @@ interface Client {
 
 interface Filters {
   search?: string;
+  per_page?: number | string;
+  show_add?: number | string;
 }
 
 interface ClientsIndexProps {
@@ -35,17 +38,64 @@ interface ClientsIndexProps {
   };
   filters: Filters;
   services?: Array<{ id: number; name: string; monthly_price: number; required_guards?: number }>;
+  zones?: Array<{ id: number; name: string }>;
 }
 
-export default function ClientsIndex({ clients, filters, services = [] }: ClientsIndexProps) {
+export default function ClientsIndex({ clients, filters, services = [], zones = [] }: ClientsIndexProps) {
   const [search, setSearch] = React.useState(filters.search || '');
+  const initialPerPage = Number(filters?.per_page ?? clients.meta?.per_page ?? 20);
+  const [perPage, setPerPage] = React.useState<number>(initialPerPage);
   const [editingClient, setEditingClient] = React.useState<Client | null>(null);
+  const [loadingClientId, setLoadingClientId] = React.useState<number | null>(null);
   const [viewingClient, setViewingClient] = React.useState<Client | null>(null);
   const [showBulkImport, setShowBulkImport] = React.useState(false);
   const [showAddClient, setShowAddClient] = React.useState(false);
+  React.useEffect(() => {
+    // Open Add Client modal if server requested it (redirect from create route)
+    if (filters?.show_add) {
+      setShowAddClient(true);
+    }
+  }, []);
 
   const handleSearch = () => {
-    router.get(route('admin.clients.index'), { search }, { preserveState: true });
+    router.get(route('admin.clients.index'), { search, per_page: perPage }, { preserveState: true });
+  };
+
+  const fetchClientAndView = async (id: number) => {
+    setLoadingClientId(id);
+    try {
+      const url = route('admin.clients.json', { client: id });
+      const res = await axios.get(url, { headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }, timeout: 10000 });
+      setViewingClient(res.data as any);
+    } catch (e) {
+      console.error('Failed to load client for viewing', e);
+      if (confirm('Failed to load client details. Open full page instead?')) {
+        router.visit(route('admin.clients.edit', { client: id }));
+      }
+    } finally {
+      setLoadingClientId(null);
+    }
+  };
+
+  const fetchClientAndEdit = async (id: number) => {
+    setLoadingClientId(id);
+    try {
+      const url = route('admin.clients.json', { client: id });
+      const res = await axios.get(url, {
+        headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+        timeout: 10000,
+      });
+      // server returns full client object (with services & sites)
+      setEditingClient(res.data as any);
+    } catch (e) {
+      console.error('Failed to load client', e);
+      // Offer fallback: redirect to the edit page so user can still edit
+      if (confirm('Failed to load client details from the API. Open full edit page instead?')) {
+        router.visit(route('admin.clients.edit', { client: id }));
+      }
+    } finally {
+      setLoadingClientId(null);
+    }
   };
 
   return (
@@ -77,12 +127,12 @@ export default function ClientsIndex({ clients, filters, services = [] }: Client
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <Card className="p-6 bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+            <Card className="p-6 bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-sm font-medium text-blue-900">Total Clients</h3>
               <IconMapper name="Users" size={20} className="text-blue-500" />
             </div>
-            <p className="text-2xl font-bold text-blue-900">{clients.data.length}</p>
+            <p className="text-2xl font-bold text-blue-900">{clients.meta?.total ?? clients.data.length}</p>
             <p className="text-sm text-blue-700 mt-1">Active clients in the system</p>
           </Card>
 
@@ -132,9 +182,26 @@ export default function ClientsIndex({ clients, filters, services = [] }: Client
 
           <div className="flex gap-2 flex-wrap">
             <Button variant="outline" size="sm" onClick={() => handleSearch()}>All</Button>
-            <Button variant="outline" size="sm" onClick={() => router.get(route('admin.clients.index'), { status: 'active' })}>Active</Button>
-            <Button variant="outline" size="sm" onClick={() => router.get(route('admin.clients.index'), { status: 'overdue' })}>Overdue</Button>
-            <Button variant="outline" size="sm" onClick={() => router.get(route('admin.clients.index'), { status: 'inactive' })}>Inactive</Button>
+            <Button variant="outline" size="sm" onClick={() => router.get(route('admin.clients.index'), { status: 'active', per_page: perPage })}>Active</Button>
+            <Button variant="outline" size="sm" onClick={() => router.get(route('admin.clients.index'), { status: 'overdue', per_page: perPage })}>Overdue</Button>
+            <Button variant="outline" size="sm" onClick={() => router.get(route('admin.clients.index'), { status: 'inactive', per_page: perPage })}>Inactive</Button>
+            <div className="ml-2">
+              <select
+                className="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                value={String(perPage)}
+                onChange={(e) => {
+                  const v = Number(e.target.value);
+                  setPerPage(v);
+                  // reset to first page when changing page size
+                  router.get(route('admin.clients.index'), { per_page: v, page: 1 }, { preserveState: true });
+                }}
+              >
+                <option value={10}>10</option>
+                <option value={20}>20</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+              </select>
+            </div>
           </div>
         </Card>
 
@@ -160,12 +227,9 @@ export default function ClientsIndex({ clients, filters, services = [] }: Client
                           {client.name.charAt(0)}
                         </div>
                         <div>
-                          <Link
-                            href={route('admin.clients.show', { client: client.id })}
-                            className="font-medium text-gray-900 hover:text-blue-600 block"
-                          >
+                          <button onClick={() => fetchClientAndView(client.id)} className="font-medium text-gray-900 hover:text-blue-600 block text-left">
                             {client.name}
-                          </Link>
+                          </button>
                           <span className="text-xs text-gray-500">
                             Since: {client.billing_start_date || 'Not set'}
                           </span>
@@ -180,22 +244,16 @@ export default function ClientsIndex({ clients, filters, services = [] }: Client
                       </div>
                     </td>
                     <td className="px-6 py-4 text-center">
-                      <Link
-                        href={route('admin.clients.show', { client: client.id })}
-                        className="inline-flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-800"
-                      >
+                      <button onClick={() => fetchClientAndView(client.id)} className="inline-flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-800">
                         <span>{client.sites_count || 0}</span>
                         <IconMapper name="ChevronRight" size={16} />
-                      </Link>
+                      </button>
                     </td>
                     <td className="px-6 py-4 text-center">
-                      <Link
-                        href={route('admin.clients.show', { client: client.id })}
-                        className="inline-flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-800"
-                      >
+                      <button onClick={() => fetchClientAndView(client.id)} className="inline-flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-800">
                         <span>{client.services_count || 0}</span>
                         <IconMapper name="ChevronRight" size={16} />
-                      </Link>
+                      </button>
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex flex-col items-center gap-1">
@@ -225,9 +283,14 @@ export default function ClientsIndex({ clients, filters, services = [] }: Client
                         <Button 
                           variant="ghost" 
                           size="sm"
-                          onClick={() => setEditingClient(client)}
+                          onClick={() => fetchClientAndEdit(client.id)}
+                          disabled={loadingClientId === client.id}
                         >
-                          <IconMapper name="Pencil" size={16} />
+                          {loadingClientId === client.id ? (
+                            <svg className="animate-spin h-4 w-4 text-gray-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path></svg>
+                          ) : (
+                            <IconMapper name="Pencil" size={16} />
+                          )}
                         </Button>
                         <Button 
                           variant="ghost" 
@@ -271,6 +334,7 @@ export default function ClientsIndex({ clients, filters, services = [] }: Client
           <EditClientModal
             client={editingClient}
             open={true}
+            services={services}
             onClose={() => setEditingClient(null)}
           />
         )}
@@ -279,6 +343,8 @@ export default function ClientsIndex({ clients, filters, services = [] }: Client
           <ClientDetailsModal
             client={viewingClient}
             open={true}
+            services={services}
+            onClientUpdated={(c: any) => setViewingClient(c)}
             onClose={() => setViewingClient(null)}
           />
         )}
@@ -290,6 +356,7 @@ export default function ClientsIndex({ clients, filters, services = [] }: Client
           open={showAddClient}
           onClose={() => setShowAddClient(false)}
           services={services}
+          zones={zones}
         />
       </div>
     </AdminLayout>

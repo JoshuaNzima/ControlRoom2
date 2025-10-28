@@ -29,7 +29,6 @@ Route::middleware(['auth', 'role:admin,super_admin'])
         // Clients Management
         Route::prefix('clients')->name('clients.')->group(function () {
             Route::get('/', [\App\Http\Controllers\Admin\ClientController::class, 'index'])->name('index');
-            Route::get('/create', [\App\Http\Controllers\Admin\ClientController::class, 'create'])->name('create');
             Route::post('/', [\App\Http\Controllers\Admin\ClientController::class, 'store'])->name('store');
             
             // Bulk Import (must come before /{client} route)
@@ -37,7 +36,9 @@ Route::middleware(['auth', 'role:admin,super_admin'])
             Route::post('/bulk-import', [\App\Http\Controllers\Admin\ClientController::class, 'bulkImport'])->name('bulk-import');
             
             // Client-specific routes (parameter routes must come after specific routes)
-            Route::get('/{client}', [\App\Http\Controllers\Admin\ClientController::class, 'show'])->name('show');
+            // Standalone show page removed; use modal instead. Keep JSON and edit routes.
+            // JSON API for fetching a single client (used by modal pre-fill)
+            Route::get('/{client}/json', [\App\Http\Controllers\Admin\ClientController::class, 'apiShow'])->name('json');
             Route::get('/{client}/edit', [\App\Http\Controllers\Admin\ClientController::class, 'edit'])->name('edit');
             Route::put('/{client}', [\App\Http\Controllers\Admin\ClientController::class, 'update'])->name('update');
             Route::delete('/{client}', [\App\Http\Controllers\Admin\ClientController::class, 'destroy'])->name('destroy');
