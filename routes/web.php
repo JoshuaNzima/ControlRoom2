@@ -226,7 +226,6 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/dashboard', [SupervisorController::class, 'dashboard'])->name('dashboard');
         Route::get('/guards', [SupervisorController::class, 'guards'])->name('guards');
         Route::get('/attendance', [SupervisorController::class, 'attendance'])->name('attendance');
-        Route::get('/scanner', [SupervisorController::class, 'scanner'])->name('scanner');
 
         Route::get('/assignments', [\App\Http\Controllers\Guards\AssignmentController::class, 'index'])->name('assignments.index');
         Route::post('/assignments/assign', [\App\Http\Controllers\Guards\AssignmentController::class, 'assign'])->name('assignments.assign');

@@ -3,6 +3,7 @@ import { Head, Link, router } from '@inertiajs/react';
 import SupervisorLayout from '@/Layouts/SupervisorLayout';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
+import ScannerModal from '@/Components/Scanner/ScannerModal';
 
 interface AttendanceRecord {
   id: number;
@@ -47,12 +48,21 @@ interface Props {
     late: number;
     absent: number;
   };
+  activeScan: {
+    scan_id: number;
+    site_id: number;
+    site_name: string;
+    client_name: string;
+    scanned_at: string;
+    expires_at: string;
+  } | null;
 }
 
-export default function Attendance({ attendance, filters, stats }: Props) {
+export default function Attendance({ attendance, filters, stats, activeScan }: Props) {
   const [date, setDate] = useState(filters.date ? new Date(filters.date) : new Date());
   const [status, setStatus] = useState(filters.status || '');
   const [search, setSearch] = useState(filters.search || '');
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
 
   const handleFilter = () => {
     router.get(route('supervisor.attendance'), {
@@ -95,8 +105,17 @@ export default function Attendance({ attendance, filters, stats }: Props) {
 
       <div className="max-w-7xl mx-auto space-y-6 px-6">
         {/* Header with Stats */}
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-6">Attendance History</h1>
+        <div className="flex justify-between items-start mb-6">
+          <h1 className="text-2xl font-bold text-gray-900">Attendance History</h1>
+          <button
+            onClick={() => setIsScannerOpen(true)}
+            className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium flex items-center gap-2 transition transform hover:scale-105"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
+            </svg>
+            Scan Site
+          </button>
           
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="bg-white rounded-xl shadow-md p-4">
@@ -263,6 +282,13 @@ export default function Attendance({ attendance, filters, stats }: Props) {
             </div>
           )}
         </div>
+
+        {/* Scanner Modal */}
+        <ScannerModal
+          show={isScannerOpen}
+          onClose={() => setIsScannerOpen(false)}
+          activeScan={activeScan}
+        />
       </div>
     </SupervisorLayout>
   );

@@ -4,6 +4,7 @@ import DatePicker from '@/Components/DatePicker';
 import IconMapper from '@/Components/IconMapper';
 import DashboardLayout from '@/Layouts/SupervisorLayout';
 import CameraCapture from '@/Components/CameraCapture';
+import ScannerModal from '@/Components/Scanner/ScannerModal';
 
 interface GuardAttendance {
   id: number;
@@ -67,6 +68,9 @@ export default function Dashboard({
   const [date, setDate] = useState<Date>(new Date());
   const [showScannerModal, setShowScannerModal] = useState<boolean>(false);
   const [showCameraModal, setShowCameraModal] = useState<boolean>(false);
+  const [sortField, setSortField] = useState<'name' | 'employee_id' | 'status'>('name');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [filterStatus, setFilterStatus] = useState<'all' | 'on_duty' | 'off_duty'>('all');
   
 
   useEffect(() => {
@@ -82,18 +86,31 @@ export default function Dashboard({
     return () => clearInterval(interval);
   }, []);
 
-  // guard list defensive
-  const filteredGuards = (guards || []).filter((guard) => {
-    const term = searchTerm.trim().toLowerCase();
-    if (!term) return true;
-    return (
-      guard.name.toLowerCase().includes(term) ||
-      (guard.employee_id && guard.employee_id.toLowerCase().includes(term))
-    );
-  });
+  // Filter and sort guards
+  const filteredGuards = (guards || [])
+    .filter((guard) => {
+      const term = searchTerm.trim().toLowerCase();
+      const matchesSearch = !term || guard.name.toLowerCase().includes(term) || 
+        (guard.employee_id && guard.employee_id.toLowerCase().includes(term));
+      
+      const matchesStatus = filterStatus === 'all' ? true :
+        filterStatus === 'on_duty' ? guard.is_on_duty :
+        !guard.is_on_duty;
+      
+      return matchesSearch && matchesStatus;
+    });
+  
+  const sortedGuards = sortGuards(filteredGuards, sortField, sortDirection);
 
   const { activeScan } = usePage().props as {
-  activeScan?: { client_name: string; site_name: string } | null;
+  activeScan?: {
+    scan_id: number;
+    site_id: number;
+    site_name: string;
+    client_name: string;
+    scanned_at: string;
+    expires_at: string;
+  } | null;
 };
 
   const handleDateChange = (d: Date | null) => {
@@ -240,36 +257,114 @@ export default function Dashboard({
 
           {/* Quick Attendance toggle */}
           <div className="flex items-center justify-end mb-4">
-            <button
-              onClick={() => setShowQuickAttendance(!showQuickAttendance)}
-              className="flex items-center gap-2 px-6 py-3 bg-coin-600 hover:bg-coin-700 text-white rounded-lg font-medium shadow-md transition-all"
-            >
-              {showQuickAttendance ? 'Hide Guards' : 'Quick Attendance'}
-            </button>
+            <div className="flex flex-col md:flex-row gap-3">
+              <button
+                onClick={() => setShowQuickAttendance(!showQuickAttendance)}
+                className="flex items-center justify-center gap-2 px-6 py-3 bg-coin-600 hover:bg-coin-700 text-white rounded-lg font-medium shadow-md transition-all w-full md:w-auto"
+              >
+                {showQuickAttendance ? (
+                  <>
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                    Hide Guards
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                    </svg>
+                    Quick Attendance
+                  </>
+                )}
+              </button>
+              {showQuickAttendance && (
+                <div className="flex justify-end space-x-2">
+                  <button
+                    onClick={() => {
+                      // Add "select all" functionality here
+                    }}
+                    className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium"
+                  >
+                    Select All
+                  </button>
+                  <button
+                    onClick={() => {
+                      // Add "export" functionality here
+                    }}
+                    className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium"
+                  >
+                    Export
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Quick Attendance Section */}
           {showQuickAttendance && (
             <div className="bg-white rounded-xl shadow-lg overflow-hidden animate-slideDown">
               <div className="px-6 py-4 bg-gradient-to-r from-gray-50 to-gray-100 border-b">
+                <div className="flex flex-col space-y-4">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                  <h3 className="text-lg font-bold text-gray-900">Quick Attendance ({filteredGuards.length} Guards)</h3>
-                  <input
-                    type="text"
-                    placeholder="Search guards by name or ID..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent w-full md:w-80"
-                  />
+                  <h3 className="text-lg font-bold text-gray-900">Quick Attendance ({sortedGuards.length} Guards)</h3>
+                  <div className="flex flex-col md:flex-row gap-3">
+                    <input
+                      type="text"
+                      placeholder="Search guards by name or ID..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent w-full md:w-80"
+                    />
+                    <select
+                      value={filterStatus}
+                      onChange={(e) => setFilterStatus(e.target.value as 'all' | 'on_duty' | 'off_duty')}
+                      className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                    >
+                      <option value="all">All Guards</option>
+                      <option value="on_duty">On Duty</option>
+                      <option value="off_duty">Off Duty</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2 text-sm">
+                  <button
+                    onClick={() => {
+                      setSortField('name');
+                      setSortDirection(current => current === 'asc' ? 'desc' : 'asc');
+                    }}
+                    className={`px-3 py-1.5 rounded ${sortField === 'name' ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-100 hover:bg-gray-200'}`}
+                  >
+                    Name {sortField === 'name' && (sortDirection === 'asc' ? '↑' : '↓')}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setSortField('employee_id');
+                      setSortDirection(current => current === 'asc' ? 'desc' : 'asc');
+                    }}
+                    className={`px-3 py-1.5 rounded ${sortField === 'employee_id' ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-100 hover:bg-gray-200'}`}
+                  >
+                    ID {sortField === 'employee_id' && (sortDirection === 'asc' ? '↑' : '↓')}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setSortField('status');
+                      setSortDirection(current => current === 'asc' ? 'desc' : 'asc');
+                    }}
+                    className={`px-3 py-1.5 rounded ${sortField === 'status' ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-100 hover:bg-gray-200'}`}
+                  >
+                    Status {sortField === 'status' && (sortDirection === 'asc' ? '↑' : '↓')}
+                  </button>
+                </div>
                 </div>
               </div>
 
-              <div className="divide-y max-h-96 overflow-y-auto">
-                {filteredGuards.map((guard) => (
+              <div className="divide-y max-h-[calc(100vh-20rem)] overflow-y-auto">
+                {sortedGuards.map((guard) => (
                   <div key={guard.id} className="p-4 hover:bg-indigo-50 transition">
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                       <div className="flex-1">
-                        <div className="flex items-center gap-3">
+                        <div className="flex flex-col md:flex-row md:items-center gap-3">
                           <div className="w-10 h-10 bg-gradient-to-br from-red-500 to-rose-600 rounded-full flex items-center justify-center text-white font-bold">
                             {guard.name.charAt(0)}
                           </div>
@@ -304,8 +399,8 @@ export default function Dashboard({
                         )}
                       </div>
 
-                      <div className="ml-4 flex flex-col items-end gap-2">
-                        <button onClick={() => setShowScannerModal(true)} className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg font-semibold transition">View Details</button>
+                      <div className="flex flex-col md:flex-row items-center gap-2">
+                        <button onClick={() => setShowScannerModal(true)} className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg font-semibold transition w-full md:w-auto text-center">View Details</button>
                         {!guard.attendance ? (
                           <button
                             onClick={() => handleCheckIn(guard)}
@@ -513,23 +608,24 @@ function StatCard({ label = '', count = 0, description = '', color = 'gray', bad
   );
 }
 
-// Scanner & Camera modals
-function ScannerModal({ open, onClose }: { open: boolean; onClose: () => void }) {
-  if (!open) return null;
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl shadow-lg p-6 max-w-lg w-full">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-bold">Scanner</h3>
-          <button onClick={onClose} className="text-gray-500">Close</button>
-        </div>
-        <p className="text-sm text-gray-600">Use the checkpoint scanner here or view details.</p>
-        <div className="mt-4">
-          <Link href="/supervisor/scanner" className="px-4 py-2 bg-coin-600 text-white rounded">Open Full Scanner Page</Link>
-        </div>
-      </div>
-    </div>
-  );
+// Component helper utilities
+function sortGuards(guards: Guard[], field: string, direction: 'asc' | 'desc') {
+  return [...guards].sort((a, b) => {
+    let valueA = a[field as keyof Guard];
+    let valueB = b[field as keyof Guard];
+    
+    // Handle null or undefined values
+    if (!valueA) return direction === 'asc' ? -1 : 1;
+    if (!valueB) return direction === 'asc' ? 1 : -1;
+
+    // Convert to string for comparison
+    valueA = String(valueA).toLowerCase();
+    valueB = String(valueB).toLowerCase();
+
+    if (valueA < valueB) return direction === 'asc' ? -1 : 1;
+    if (valueA > valueB) return direction === 'asc' ? 1 : -1;
+    return 0;
+  });
 }
 
 function CameraModal({ open, onClose, onCaptured }: { open: boolean; onClose: () => void; onCaptured: (f: File) => void }) {
