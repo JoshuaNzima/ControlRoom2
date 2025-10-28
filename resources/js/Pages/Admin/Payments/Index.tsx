@@ -77,7 +77,8 @@ interface OverallSummary {
 
 export default function PaymentsIndex({ 
   year, 
-  clients = { data: [], meta: { current_page: 1, last_page: 1, per_page: 10, total: 0, from: 0, to: 0 } }, 
+  // Align default per_page with server default (20)
+  clients = { data: [], meta: { current_page: 1, last_page: 1, per_page: 20, total: 0, from: 0, to: 0 } }, 
   payments, 
   flags = {}, 
   summaries = {}, 
@@ -134,7 +135,7 @@ export default function PaymentsIndex({
 
   // Normalize clients payload so UI is resilient whether the server sends a paginator
   // or a plain array. This prevents trying to read `.meta` when it's undefined.
-  const defaultMeta: PaginationMeta = { current_page: 1, last_page: 1, per_page: 10, total: 0, from: 0, to: 0 };
+  const defaultMeta: PaginationMeta = { current_page: 1, last_page: 1, per_page: 20, total: 0, from: 0, to: 0 };
   const clientData: Client[] = Array.isArray(clients) ? (clients as unknown as Client[]) : (clients?.data ?? []);
   const meta: PaginationMeta = Array.isArray(clients) ? defaultMeta : (clients?.meta ?? defaultMeta);
 

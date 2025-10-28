@@ -14,7 +14,8 @@ class PaymentController extends Controller
     public function index(Request $request)
     {
         $year = (int) ($request->input('year') ?: now()->year);
-        $perPage = (int) ($request->input('per_page') ?: 10);
+    // Default to 20 per page to match other index pages in the app
+    $perPage = (int) ($request->input('per_page') ?: 20);
         $sortField = $request->input('sort_field', 'name');
         $sortDirection = $request->input('sort_direction', 'asc');
         $siteId = $request->input('site_id');
