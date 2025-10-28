@@ -285,7 +285,7 @@ export default function Attendance({ attendance, filters, stats, activeScan }: P
 
         {/* Scanner Modal */}
         <ScannerModal
-          show={isScannerOpen}
+          open={isScannerOpen}
           onClose={() => setIsScannerOpen(false)}
           activeScan={activeScan}
         />
