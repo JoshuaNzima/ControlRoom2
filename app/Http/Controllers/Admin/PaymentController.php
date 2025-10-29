@@ -296,6 +296,7 @@ class PaymentController extends Controller
         }
 
         $total = count($clientIds);
+        $currentPage = (int) $request->input('page', 1);
         $pagedIds = array_slice($clientIds, ($currentPage - 1) * $perPage, $perPage);
 
         // Fetch full client models for the page (including sites)

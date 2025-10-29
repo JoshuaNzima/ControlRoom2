@@ -146,7 +146,7 @@ class GuardController extends Controller
             'hire_date' => 'required|date',
             'notes' => 'nullable|string',
             'status' => 'required|in:active,inactive,suspended',
-        ]);
+        ];
 
         $validated = $request->validate($rules);
         
