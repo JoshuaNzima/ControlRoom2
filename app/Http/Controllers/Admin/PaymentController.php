@@ -53,6 +53,8 @@ class PaymentController extends Controller
         }
 
         // Calculate payment aggregates using raw SQL for efficiency
+        $currentYear = now()->year;
+        $currentMonth = now()->month;
         $aggregates = DB::table('clients')
             ->leftJoin('client_payments', function ($join) use ($year) {
                 $join->on('clients.id', '=', 'client_payments.client_id')
@@ -62,8 +64,8 @@ class PaymentController extends Controller
             ->select([
                 DB::raw('COUNT(DISTINCT clients.id) as total_clients'),
                 DB::raw('SUM(client_payments.amount_due) as total_due'),
-                DB::raw('SUM(client_payments.amount_paid) as total_paid'),
-                DB::raw('COUNT(DISTINCT CASE WHEN client_payments.amount_due > client_payments.amount_paid THEN clients.id END) as clients_with_outstanding')
+                    DB::raw("SUM(CASE WHEN client_payments.month <= {$currentMonth} OR client_payments.year < {$currentYear} THEN client_payments.amount_paid ELSE 0 END) as total_paid"),
+                    DB::raw("COUNT(DISTINCT CASE WHEN (client_payments.month <= {$currentMonth} OR client_payments.year < {$currentYear}) AND client_payments.amount_due > (client_payments.amount_paid + client_payments.prepaid_amount) THEN clients.id END) as clients_with_outstanding")
             ])
             ->first();
 
@@ -73,8 +75,8 @@ class PaymentController extends Controller
             ->select(['id', 'name'])
             ->withSum(['payments as outstanding_amount' => function ($query) use ($year) {
                 $query->where('year', $year)
-                    ->whereRaw('amount_due > amount_paid');
-            }], DB::raw('amount_due - amount_paid'))
+                    ->whereRaw('amount_due > (amount_paid + prepaid_amount)');
+            }], DB::raw('amount_due - (amount_paid + prepaid_amount)'))
             ->orderByDesc('outstanding_amount')
             ->take(5)
             ->get();
@@ -86,7 +88,7 @@ class PaymentController extends Controller
             }], 'amount_due')->orderBy('payments_sum_amount_due', $sortDirection),
             'outstanding_amount' => $query->withSum(['payments' => function ($query) use ($year) {
                 $query->where('year', $year);
-            }], DB::raw('amount_due - amount_paid'))->orderBy('payments_sum_amount_due_minus_amount_paid', $sortDirection),
+            }], DB::raw('amount_due - (amount_paid + prepaid_amount)'))->orderBy('payments_sum_amount_due_minus_amount_paid', $sortDirection),
             default => $query->orderBy('name', $sortDirection)
         };
 
@@ -96,15 +98,16 @@ class PaymentController extends Controller
         $clientIds = $clients->pluck('id');
         $payments = ClientPayment::where('year', $year)
             ->whereIn('client_id', $clientIds)
-            ->get(['client_id', 'month', 'paid', 'amount_due', 'amount_paid'])
+            ->get(['client_id', 'month', 'paid', 'amount_due', 'amount_paid', 'prepaid_amount'])
             ->groupBy('client_id')
             ->map(function ($clientPayments) {
-                $map = array_fill(1, 12, ['paid' => false, 'amount_due' => 0.0, 'amount_paid' => 0.0]);
+                $map = array_fill(1, 12, ['paid' => false, 'amount_due' => 0.0, 'amount_paid' => 0.0, 'prepaid_amount' => 0.0]);
                 foreach ($clientPayments as $payment) {
                     $map[$payment->month] = [
                         'paid' => (bool) $payment->paid,
                         'amount_due' => (float) $payment->amount_due,
-                        'amount_paid' => (float) $payment->amount_paid
+                        'amount_paid' => (float) $payment->amount_paid,
+                        'prepaid_amount' => (float) $payment->prepaid_amount,
                     ];
                 }
                 return $map;
@@ -129,7 +132,7 @@ class PaymentController extends Controller
             // Fetch payments only for this chunk of clients
             $rawPayments = ClientPayment::where('year', $year)
                 ->whereIn('client_id', $clientIds)
-                ->get(['client_id', 'month', 'paid', 'amount_due', 'amount_paid'])
+                ->get(['client_id', 'month', 'paid', 'amount_due', 'amount_paid', 'prepaid_amount'])
                 ->groupBy('client_id');
 
             foreach ($clientsChunk as $client) {
@@ -145,13 +148,14 @@ class PaymentController extends Controller
                 ];
                 $map = [];
                 for ($m = 1; $m <= 12; $m++) {
-                    $map[$m] = ['paid' => false, 'amount_due' => 0.0, 'amount_paid' => 0.0];
+                    $map[$m] = ['paid' => false, 'amount_due' => 0.0, 'amount_paid' => 0.0, 'prepaid_amount' => 0.0];
                 }
                 $rows = $rawPayments->get($client->id) ?? collect();
                 foreach ($rows as $r) {
                     $map[(int) $r->month]['paid'] = (bool) $r->paid;
                     $map[(int) $r->month]['amount_due'] = (float) $r->amount_due;
                     $map[(int) $r->month]['amount_paid'] = (float) $r->amount_paid;
+                    $map[(int) $r->month]['prepaid_amount'] = (float) $r->prepaid_amount;
                 }
 
                 // Determine billing window
@@ -203,7 +207,7 @@ class PaymentController extends Controller
                 }
 
                 for ($m = $billingStartMonth; $m <= $limitMonth; $m++) {
-                    $monthState = $map[$m] ?? ['paid' => false, 'amount_due' => 0, 'amount_paid' => 0];
+                    $monthState = $map[$m] ?? ['paid' => false, 'amount_due' => 0, 'amount_paid' => 0, 'prepaid_amount' => 0];
                     // Determine base due using window logic
                     $ym = \Carbon\Carbon::createFromDate($year, $m, 1);
                     $inWindow = true;
@@ -219,13 +223,14 @@ class PaymentController extends Controller
                     $computedDue = round($baseDue, 2);
                     $computedPaid = ($monthState['paid'] ?? false) ? min($computedDue, (float) ($monthState['amount_paid'] ?? 0)) : 0.0;
 
-                    if (!($monthState['paid'] ?? false)) {
-                        if (($monthState['amount_due'] ?? 0) > 0) {
-                            $unpaidCount++;
-                        }
+                    // Consider prepaid_amount as coverage when determining unpaid months
+                    $covered = (($monthState['amount_paid'] ?? 0) + ($monthState['prepaid_amount'] ?? 0));
+                    if ($covered < ($monthState['amount_due'] ?? $computedDue)) {
+                        $unpaidCount++;
                     }
 
                     $totalDue += (float) ($monthState['amount_due'] ?? $computedDue);
+                    // Only include actual paid amounts for revenue recognition. Prepaid amounts will be moved to amount_paid when the month arrives.
                     $totalPaid += (float) ($monthState['amount_paid'] ?? $computedPaid);
                 }
 
@@ -311,17 +316,18 @@ class PaymentController extends Controller
 
         // Build detailed month maps only for clients on this page
         if (!empty($pagedIds)) {
-            $pagePayments = ClientPayment::where('year', $year)->whereIn('client_id', $pagedIds)->get(['client_id','month','paid','amount_due','amount_paid'])->groupBy('client_id');
+            $pagePayments = ClientPayment::where('year', $year)->whereIn('client_id', $pagedIds)->get(['client_id','month','paid','amount_due','amount_paid','prepaid_amount'])->groupBy('client_id');
             foreach ($pagedIds as $cid) {
                 $map = [];
                 for ($m = 1; $m <= 12; $m++) {
-                    $map[$m] = ['paid' => false, 'amount_due' => 0.0, 'amount_paid' => 0.0];
+                    $map[$m] = ['paid' => false, 'amount_due' => 0.0, 'amount_paid' => 0.0, 'prepaid_amount' => 0.0];
                 }
                 $rows = $pagePayments->get($cid) ?? collect();
                 foreach ($rows as $r) {
                     $map[(int)$r->month]['paid'] = (bool)$r->paid;
                     $map[(int)$r->month]['amount_due'] = (float)$r->amount_due;
                     $map[(int)$r->month]['amount_paid'] = (float)$r->amount_paid;
+                    $map[(int)$r->month]['prepaid_amount'] = (float)$r->prepaid_amount;
                 }
                 $payments->put($cid, $map);
             }
@@ -379,40 +385,82 @@ class PaymentController extends Controller
 
         $client = Client::findOrFail($validated['client_id']);
         $amountDue = $client->getMonthlyDueAmount();
-
-        $payment = ClientPayment::firstOrCreate([
-            'client_id' => $validated['client_id'],
-            'year' => $validated['year'],
-            'month' => $validated['month'],
-        ], [
-            'paid' => false,
-            'amount_due' => $amountDue,
-            'amount_paid' => 0,
-        ]);
-
-        $newPaid = !$payment->paid;
-        $payment->update([
-            'paid' => $newPaid,
-            'amount_due' => $amountDue,
-            'amount_paid' => $newPaid ? $amountDue : 0,
-        ]);
-
-        // Check for delinquency
-        $unpaidCount = ClientPayment::where('client_id', $validated['client_id'])
-            ->where('year', $validated['year'])
-            ->where('month', '<=', now()->year === $validated['year'] ? now()->month : 12)
-            ->where('paid', false)
-            ->count();
-
-        if ($unpaidCount >= 3) {
-            Log::warning('Client has 3+ unpaid months', [
+        
+        DB::beginTransaction();
+        try {
+            // Get current payment record
+            $payment = ClientPayment::firstOrCreate([
                 'client_id' => $validated['client_id'],
                 'year' => $validated['year'],
-                'unpaid_months' => $unpaidCount
+                'month' => $validated['month'],
+            ], [
+                'paid' => false,
+                'amount_due' => $amountDue,
+                'amount_paid' => 0,
+                'prepaid_amount' => 0,
             ]);
-        }
 
-        return back();
+            $now = now();
+            $paymentDate = \Carbon\Carbon::createFromDate($validated['year'], $validated['month'], 1);
+            $isFutureMonth = $paymentDate->gt($now->endOfMonth());
+            
+            $newPaid = !$payment->paid;
+            
+            // If marking as paid
+            if ($newPaid) {
+                if ($isFutureMonth) {
+                    // For future months, set as prepaid
+                    $payment->prepaid_amount = $amountDue;
+                    $payment->amount_paid = 0; // Will be counted when the month arrives
+                } else {
+                    // For current or past months, count as paid
+                    $payment->amount_paid = $amountDue;
+                    $payment->prepaid_amount = 0;
+                }
+            } else {
+                // If unmarking, reset both amounts
+                $payment->amount_paid = 0;
+                $payment->prepaid_amount = 0;
+            }
+            
+            $payment->paid = $newPaid;
+            $payment->amount_due = $amountDue;
+            $payment->save();
+
+            // Update prepaid amounts for future months if applicable
+            if (!$isFutureMonth && $payment->prepaid_amount > 0) {
+                // Move prepaid amount to paid amount since we've reached this month
+                $payment->amount_paid = $payment->prepaid_amount;
+                $payment->prepaid_amount = 0;
+                $payment->save();
+            }
+
+            // Check for delinquency only considering current and past months
+            $unpaidCount = ClientPayment::where('client_id', $validated['client_id'])
+                ->where(function ($query) use ($validated) {
+                    $query->where('year', '<', now()->year)
+                        ->orWhere(function ($q) use ($validated) {
+                            $q->where('year', now()->year)
+                                ->where('month', '<=', now()->month);
+                        });
+                })
+                ->where('paid', false)
+                ->count();
+
+            if ($unpaidCount >= 3) {
+                Log::warning('Client has 3+ unpaid months', [
+                    'client_id' => $validated['client_id'],
+                    'year' => $validated['year'],
+                    'unpaid_months' => $unpaidCount
+                ]);
+            }
+
+            DB::commit();
+            return back();
+        } catch (\Exception $e) {
+            DB::rollBack();
+            throw $e;
+        }
     }
 }
 

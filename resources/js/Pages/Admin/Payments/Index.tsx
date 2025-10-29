@@ -25,7 +25,7 @@ type Client = {
   sites: Site[];
 };
 
-type MonthState = { paid: boolean; amount_due: number; amount_paid: number };
+type MonthState = { paid: boolean; amount_due: number; amount_paid: number; prepaid_amount?: number };
 interface Filters {
   search: string;
   site_id: string;
@@ -428,6 +428,7 @@ export default function PaymentsIndex({
                           {months.map((_, idx) => {
                             const month = idx + 1;
                             const paid = !!clientPayments[month]?.paid;
+                            const prepaid = !!(clientPayments[month]?.prepaid_amount && clientPayments[month]?.prepaid_amount > 0);
                             const isBillingStart = selectedYear === billingStartYear && month === billingStartMonth + 1;
                             const isBeforeBillingStart = startDate ? (
                               selectedYear < billingStartYear || 
@@ -442,14 +443,14 @@ export default function PaymentsIndex({
                                   className={`
                                     inline-flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold transition
                                     ${isBeforeBillingStart ? 'bg-gray-50 text-gray-300 cursor-not-allowed' : 
-                                      paid ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}
+                                      paid ? 'bg-green-500 text-white' : (prepaid ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200')}
                                     ${isBillingStart ? 'ring-2 ring-blue-500' : ''}
                                   `}
                                   aria-pressed={paid}
                                   aria-label={`Mark ${months[idx]} paid for ${c.name}`}
                                   title={isBillingStart ? 'Billing Start' : undefined}
                                 >
-                                  {paid ? '✓' : ''}
+                                  {paid ? '✓' : (prepaid ? 'P' : '')}
                                   {isBillingStart && !paid ? '★' : ''}
                                 </button>
                               </td>
