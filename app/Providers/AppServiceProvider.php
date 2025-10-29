@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Vite;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\App;
 use Carbon\Carbon;
+use Illuminate\Filesystem\Filesystem;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -14,7 +15,16 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // Ensure the 'files' binding exists early in the container. Some
+        // core service providers expect the 'files' singleton to be
+        // available; bind it here as a fallback so artisan commands and
+        // provider boot methods don't fail if the Filesystem provider
+        // isn't registered yet in this environment.
+        if (! $this->app->bound('files')) {
+            $this->app->singleton('files', function () {
+                return new Filesystem();
+            });
+        }
     }
 
     /**

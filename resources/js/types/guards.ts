@@ -12,5 +12,5 @@ export interface GuardFormData {
     supervisor_id: string;
     hire_date: string;
     notes: string;
-    status: 'active' | 'inactive' | 'suspended';
+    status: 'active' | 'inactive' | 'suspended' | 'terminated';
 }

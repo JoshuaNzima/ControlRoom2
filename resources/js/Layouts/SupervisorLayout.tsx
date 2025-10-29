@@ -4,6 +4,8 @@ import { Link, usePage, router } from "@inertiajs/react";
 import { PageProps } from '@/types';
 import { motion } from "framer-motion";
 import { useTheme } from '@/Providers/ThemeProvider';
+import useNotifications from '@/Hooks/useNotifications';
+import { Toaster } from 'react-hot-toast';
 
 const navLinks = [
   { href: "/supervisor/dashboard", label: "Dashboard", icon: <IconMapper name="Grid" size={22} /> },

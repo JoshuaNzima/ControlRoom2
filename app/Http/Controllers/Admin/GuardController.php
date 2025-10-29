@@ -50,13 +50,23 @@ class GuardController extends Controller
 
     public function create()
     {
-        $supervisors = User::role(['supervisor', 'manager'])
-            ->where('status', 'active')
-            ->orderBy('name')
-            ->get();
+        $this->authorize('create', Guard::class);
+        
+        $canAssignSupervisor = auth()->user()->can('assign_guard_supervisor');
+        $supervisors = [];
+        
+        if ($canAssignSupervisor) {
+            $supervisors = User::role(['supervisor', 'manager'])
+                ->where('status', 'active')
+                ->orderBy('name')
+                ->get();
+        }
 
         return Inertia::render('Admin/Guards/Create', [
             'supervisors' => $supervisors,
+            'can' => [
+                'assign_supervisor' => $canAssignSupervisor,
+            ],
         ]);
     }
 
@@ -80,6 +90,10 @@ class GuardController extends Controller
             'photo' => 'nullable|image|max:5120',
         ]);
 
+        if (!auth()->user()->can('assign_guard_supervisor')) {
+            unset($validated['supervisor_id']);
+        }
+
         if ($request->hasFile('photo')) {
             $validated['photo'] = $request->file('photo')->store('guards', 'public');
         }
@@ -92,20 +106,32 @@ class GuardController extends Controller
 
     public function edit(Guard $guard)
     {
-        $supervisors = User::role(['supervisor', 'manager'])
-            ->where('status', 'active')
-            ->orderBy('name')
-            ->get();
+        $this->authorize('update', $guard);
+        
+        $canAssignSupervisor = auth()->user()->can('assign_guard_supervisor');
+        $supervisors = [];
+        
+        if ($canAssignSupervisor) {
+            $supervisors = User::role(['supervisor', 'manager'])
+                ->where('status', 'active')
+                ->orderBy('name')
+                ->get();
+        }
 
         return Inertia::render('Admin/Guards/Edit', [
-            'guard' => $guard,
+            'guard' => $guard->load('supervisor'),
             'supervisors' => $supervisors,
+            'can' => [
+                'assign_supervisor' => $canAssignSupervisor,
+            ],
         ]);
     }
 
     public function update(Request $request, Guard $guard)
     {
-        $validated = $request->validate([
+        $this->authorize('update', $guard);
+        
+        $rules = [
             'employee_id' => 'required|string|unique:guards,employee_id,' . $guard->id,
             'name' => 'required|string|max:255',
             'phone' => 'nullable|string|max:20',
@@ -122,6 +148,12 @@ class GuardController extends Controller
             'status' => 'required|in:active,inactive,suspended',
         ]);
 
+        $validated = $request->validate($rules);
+        
+        if (!auth()->user()->can('assign_guard_supervisor')) {
+            unset($validated['supervisor_id']);
+        }
+        
         $guard->update($validated);
 
         return redirect()->route('guards.index')

@@ -2,6 +2,21 @@ import React, { useState, useEffect } from 'react';
 import { router } from '@inertiajs/react';
 import { Html5QrcodeScanner, Html5QrcodeScanType } from 'html5-qrcode';
 import CameraCapture from '@/Components/CameraCapture';
+import toast, { Toaster } from 'react-hot-toast';
+
+interface ScanResponse {
+  success: boolean;
+  message: string;
+  redirect: string;
+  scan: {
+    scan_id: number;
+    site_id: number;
+    site_name: string;
+    client_name: string;
+    scanned_at: string;
+    expires_at: string;
+  };
+}
 
 interface Props {
   open: boolean;
@@ -106,28 +121,46 @@ export default function ScannerModal({ open, onClose, activeScan }: Props) {
   };
 
   const submitScan = async (code: string) => {
+    const loadingToast = toast.loading('Processing scan...');
+    
     router.post(route('supervisor.checkpoint.scan'), {
       code: code,
       latitude: location?.lat,
       longitude: location?.lon,
     }, {
       preserveState: true,
-      onSuccess: () => {
+      onSuccess: (response: any) => {
+        toast.dismiss(loadingToast);
+        toast.success('Scan successful!');
         onClose();
+        
+        // Redirect to attendance page after a brief delay
+        setTimeout(() => {
+          window.location.href = response.redirect;
+        }, 1500);
       },
       onError: (errors) => {
+        toast.dismiss(loadingToast);
         const message = Object.values(errors)[0] as string;
-        alert(message || 'Failed to process scan. Please try again.');
+        toast.error(message || 'Failed to process scan. Please try again.');
       }
     });
   };
 
   const clearScan = () => {
+    const loadingToast = toast.loading('Clearing site lock...');
+    
     router.post(route('supervisor.checkpoint.clear'), {}, {
       preserveState: true,
       onSuccess: () => {
+        toast.dismiss(loadingToast);
+        toast.success('Site lock cleared');
         onClose();
       },
+      onError: () => {
+        toast.dismiss(loadingToast);
+        toast.error('Failed to clear site lock');
+      }
     });
   };
 
@@ -163,6 +196,21 @@ export default function ScannerModal({ open, onClose, activeScan }: Props) {
 
   const handleManualSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!location) {
+      toast.error('Location is required to submit manual scan. Please enable GPS and try again.');
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (position) => setLocation({ lat: position.coords.latitude, lon: position.coords.longitude }),
+          (err) => {
+            console.warn('Location access error:', err.message);
+            toast.error('Unable to acquire location.');
+          },
+          { enableHighAccuracy: true, timeout: 10000 }
+        );
+      }
+      return;
+    }
+
     if (manualCode.trim()) {
       handleScan(manualCode.trim());
       setManualCode('');
@@ -176,6 +224,8 @@ export default function ScannerModal({ open, onClose, activeScan }: Props) {
   if (!open) return null;
 
   return (
+    <>
+    <Toaster position="top-right" />
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-xl w-11/12 max-w-2xl p-6 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-4">
@@ -262,6 +312,24 @@ export default function ScannerModal({ open, onClose, activeScan }: Props) {
             <button
               onClick={() => {
                 setCameraError(null);
+                // Require GPS before starting scanner
+                if (!location) {
+                  toast.error('Location is required to scan. Please enable GPS and try again.');
+                  if (navigator.geolocation) {
+                    navigator.geolocation.getCurrentPosition(
+                      (position) => {
+                        setLocation({ lat: position.coords.latitude, lon: position.coords.longitude });
+                        toast.success('Location acquired. You can now scan.');
+                      },
+                      (err) => {
+                        console.warn('Location access error:', err.message);
+                        toast.error('Unable to acquire location. Please enable location services.');
+                      },
+                      { enableHighAccuracy: true, timeout: 10000 }
+                    );
+                  }
+                  return;
+                }
                 setScanning(true);
               }}
               disabled={isLoading}
@@ -491,5 +559,6 @@ export default function ScannerModal({ open, onClose, activeScan }: Props) {
         )}
       </div>
     </div>
+    </>
   );
 }

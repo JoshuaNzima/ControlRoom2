@@ -11,9 +11,12 @@ interface Supervisor {
 
 interface CreateGuardProps {
   supervisors: Supervisor[];
+  can: {
+    assign_supervisor: boolean;
+  };
 }
 
-export default function CreateGuard({ supervisors }: CreateGuardProps) {
+export default function CreateGuard({ supervisors, can }: CreateGuardProps) {
   const { data, setData, post, processing, errors } = useForm<GuardFormData>({
     employee_id: '',
     name: '',
@@ -166,21 +169,24 @@ export default function CreateGuard({ supervisors }: CreateGuardProps) {
               </div>
 
               {/* Supervisor */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Assign Supervisor
-                </label>
-                <select
-                  value={data.supervisor_id}
-                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setData('supervisor_id', e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
-                >
-                  <option value="">No Supervisor</option>
-                  {supervisors.map((sup: Supervisor) => (
-                    <option key={sup.id} value={sup.id}>{sup.name}</option>
-                  ))}
-                </select>
-              </div>
+              {can.assign_supervisor && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Assign Supervisor
+                  </label>
+                  <select
+                    value={data.supervisor_id}
+                    onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setData('supervisor_id', e.target.value)}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                  >
+                    <option value="">No Supervisor</option>
+                    {supervisors.map((sup: Supervisor) => (
+                      <option key={sup.id} value={sup.id}>{sup.name}</option>
+                    ))}
+                  </select>
+                  {errors.supervisor_id && <p className="text-red-600 text-sm mt-1">{errors.supervisor_id}</p>}
+                </div>
+              )}
 
               {/* Hire Date */}
               <div>

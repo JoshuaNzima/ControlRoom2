@@ -4,76 +4,121 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\ClientPayment;
+use App\Models\ClientSite;
 use App\Models\Guards\Client;
+use App\Models\Zone;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 
 class PaymentController extends Controller
 {
     public function index(Request $request)
     {
         $year = (int) ($request->input('year') ?: now()->year);
-    // Default to 20 per page to match other index pages in the app
-    $perPage = (int) ($request->input('per_page') ?: 20);
+        $perPage = (int) ($request->input('per_page') ?: 20);
         $sortField = $request->input('sort_field', 'name');
         $sortDirection = $request->input('sort_direction', 'asc');
-    $siteId = $request->input('site_id');
-    $zoneId = $request->input('zone_id');
+        $siteId = $request->input('site_id');
+        $zoneId = $request->input('zone_id');
         $searchTerm = $request->input('search');
         $status = $request->input('status', 'all');
 
+        // Build base query with site filter
         $query = Client::with(['sites' => function ($query) {
             $query->select('id', 'client_id', 'name', 'address');
         }]);
 
-        // Apply search if provided
+        // Apply filters
         if ($searchTerm) {
             $query->where('name', 'like', "%{$searchTerm}%");
         }
-
-        // Apply site filter if provided
+        
         if ($siteId) {
             $query->whereHas('sites', function ($query) use ($siteId) {
                 $query->where('id', $siteId);
             });
         }
 
-        // Apply zone filter if provided (clients who have at least one site in the zone)
         if ($zoneId) {
             $query->whereHas('sites', function ($query) use ($zoneId) {
                 $query->where('zone_id', $zoneId);
             });
         }
 
-        // Note: Status filtering will be done after computing payment summaries
-        // This is because we need to determine if a client is late based on their
-        // billing window and payment records, which is computed later
-        // We'll store the requested status and apply it during summary computation
-
-        // Apply server-side sorting for name field only
-        if ($sortField === 'name') {
-            $query->orderBy('name', $sortDirection);
-        } else {
-            $query->orderBy('name', 'asc'); // Default sort
+        // Apply payment status filter using the scope
+        if ($status && $status !== 'all') {
+            $query->byPaymentStatus($status, $year);
         }
 
-        // We'll paginate the clients for display but compute global summaries in chunks
-        $currentPage = (int) ($request->input('page', 1));
-        $totalClients = $query->count();
+        // Calculate payment aggregates using raw SQL for efficiency
+        $aggregates = DB::table('clients')
+            ->leftJoin('client_payments', function ($join) use ($year) {
+                $join->on('clients.id', '=', 'client_payments.client_id')
+                    ->where('client_payments.year', '=', $year)
+                    ->where('client_payments.month', '<=', now()->year === $year ? now()->month : 12);
+            })
+            ->select([
+                DB::raw('COUNT(DISTINCT clients.id) as total_clients'),
+                DB::raw('SUM(client_payments.amount_due) as total_due'),
+                DB::raw('SUM(client_payments.amount_paid) as total_paid'),
+                DB::raw('COUNT(DISTINCT CASE WHEN client_payments.amount_due > client_payments.amount_paid THEN clients.id END) as clients_with_outstanding')
+            ])
+            ->first();
 
-        // Prepare containers
-        $payments = collect();
-        $flags = [];
+        // Get top 5 overdue clients
+        $overdueClients = $query->clone()
+            ->withOverduePayments($year)
+            ->select(['id', 'name'])
+            ->withSum(['payments as outstanding_amount' => function ($query) use ($year) {
+                $query->where('year', $year)
+                    ->whereRaw('amount_due > amount_paid');
+            }], DB::raw('amount_due - amount_paid'))
+            ->orderByDesc('outstanding_amount')
+            ->take(5)
+            ->get();
+
+        // Apply sorting and get paginated results
+        $query = match ($sortField) {
+            'expected_amount' => $query->withSum(['payments' => function ($query) use ($year) {
+                $query->where('year', $year);
+            }], 'amount_due')->orderBy('payments_sum_amount_due', $sortDirection),
+            'outstanding_amount' => $query->withSum(['payments' => function ($query) use ($year) {
+                $query->where('year', $year);
+            }], DB::raw('amount_due - amount_paid'))->orderBy('payments_sum_amount_due_minus_amount_paid', $sortDirection),
+            default => $query->orderBy('name', $sortDirection)
+        };
+
+        $clients = $query->paginate($perPage);
+
+        // Get payment maps for the current page
+        $clientIds = $clients->pluck('id');
+        $payments = ClientPayment::where('year', $year)
+            ->whereIn('client_id', $clientIds)
+            ->get(['client_id', 'month', 'paid', 'amount_due', 'amount_paid'])
+            ->groupBy('client_id')
+            ->map(function ($clientPayments) {
+                $map = array_fill(1, 12, ['paid' => false, 'amount_due' => 0.0, 'amount_paid' => 0.0]);
+                foreach ($clientPayments as $payment) {
+                    $map[$payment->month] = [
+                        'paid' => (bool) $payment->paid,
+                        'amount_due' => (float) $payment->amount_due,
+                        'amount_paid' => (float) $payment->amount_paid
+                    ];
+                }
+                return $map;
+            });
+
+        // Calculate summaries for the current page
         $summaries = [];
-        $clientMinimal = []; // store small client info for sorting/filtering without loading relations
+        foreach ($clients as $client) {
+            $summaries[$client->id] = $client->getPaymentSummary($year);
+        }
 
-        // We'll compute global aggregates by chunking all clients to avoid loading all at once.
-        $totalDueAllClients = 0.0;
-        $totalPaidAllClients = 0.0;
-        $clientsWithOutstanding = 0;
-        $maxOutstandingMonths = 0;
-        $overdueClients = collect();
+        // Get flags for clients with 3+ unpaid months
+        $flags = array_filter($summaries, fn($s) => $s['is_overdue']);
+        $flags = array_combine(array_keys($flags), array_fill(0, count($flags), true));
 
         // Chunk through clients matching the same filters to compute summary aggregates
         $chunkSelect = ['id', 'name', 'monthly_rate', 'billing_start_date', 'contract_start_date', 'contract_end_date', 'created_at'];
@@ -282,47 +327,23 @@ class PaymentController extends Controller
         }
 
         // Sort overdue clients by outstanding amount and take top 5
-        $overdueClients = $overdueClients->sortByDesc('outstanding_amount')->take(5);
-
-        // Total clients (after status filtering) computed earlier
-        // $total already computed above
-
         $overallSummary = [
-            'total_clients' => $total,
-            'clients_with_outstanding' => $clientsWithOutstanding,
-            'clients_overdue_percentage' => $total > 0 ? round(($clientsWithOutstanding / $total) * 100, 1) : 0,
-            'total_outstanding' => round($totalDueAllClients - $totalPaidAllClients, 2),
-            'max_outstanding_months' => $maxOutstandingMonths,
-            'overdue_clients' => $overdueClients->values()->all(),
-            'total_due' => round($totalDueAllClients, 2),
-            'total_paid' => round($totalPaidAllClients, 2),
-            'collection_rate' => $totalDueAllClients > 0 ? round(($totalPaidAllClients / $totalDueAllClients) * 100, 1) : 100,
+            'total_clients' => $aggregates->total_clients,
+            'clients_with_outstanding' => $aggregates->clients_with_outstanding,
+            'clients_overdue_percentage' => $aggregates->total_clients > 0 ? 
+                round(($aggregates->clients_with_outstanding / $aggregates->total_clients) * 100, 1) : 0,
+            'total_outstanding' => round(($aggregates->total_due ?? 0) - ($aggregates->total_paid ?? 0), 2),
+            'max_outstanding_months' => DB::table('client_payments')
+                ->where('year', $year)
+                ->where('paid', false)
+                ->groupBy('client_id')
+                ->count(),
+            'overdue_clients' => $overdueClients,
+            'total_due' => round($aggregates->total_due ?? 0, 2),
+            'total_paid' => round($aggregates->total_paid ?? 0, 2),
+            'collection_rate' => $aggregates->total_due > 0 ? 
+                round(($aggregates->total_paid / $aggregates->total_due) * 100, 1) : 100,
         ];
-
-        // Get all unique sites for the filter dropdown
-        $allSites = \App\Models\ClientSite::select('id', 'name', 'address')
-            ->orderBy('name')
-            ->get()
-            ->map(function ($site) {
-                return [
-                    'id' => $site->id,
-                    'name' => $site->name,
-                    'address' => $site->address,
-                ];
-            });
-
-        // Also provide zones for filtering by zone (client_sites have zone_id)
-        $allZones = \App\Models\Zone::select('id', 'name')->orderBy('name')->get();
-
-        // Build paginator from the paged clients we fetched earlier
-        $currentPage = (int) ($request->input('page', 1));
-        $clients = new \Illuminate\Pagination\LengthAwarePaginator(
-            $pagedClients->values(),
-            $total,
-            $perPage,
-            $currentPage,
-            ['path' => request()->url(), 'query' => request()->query()]
-        );
 
         return Inertia::render('Admin/Payments/Index', [
             'year' => $year,
@@ -331,8 +352,8 @@ class PaymentController extends Controller
             'flags' => $flags,
             'summaries' => $summaries,
             'overallSummary' => $overallSummary,
-            'sites' => $allSites,
-            'zones' => $allZones,
+            'sites' => ClientSite::select('id', 'name', 'address')->orderBy('name')->get(),
+            'zones' => Zone::select('id', 'name')->orderBy('name')->get(),
             'filters' => [
                 'search' => $searchTerm,
                 'site_id' => $siteId,
@@ -353,8 +374,10 @@ class PaymentController extends Controller
             'client_id' => 'required|exists:clients,id',
             'year' => 'required|integer|min:2000|max:2100',
             'month' => 'required|integer|min:1|max:12',
-            // amount_due removed from UI; backend derives it
         ]);
+
+        $client = Client::findOrFail($validated['client_id']);
+        $amountDue = $client->getMonthlyDueAmount();
 
         $payment = ClientPayment::firstOrCreate([
             'client_id' => $validated['client_id'],
@@ -362,28 +385,30 @@ class PaymentController extends Controller
             'month' => $validated['month'],
         ], [
             'paid' => false,
-            'amount_due' => optional(Client::find($validated['client_id']))->getMonthlyDueAmount() ?? 0,
+            'amount_due' => $amountDue,
             'amount_paid' => 0,
         ]);
 
-        $newPaid = ! $payment->paid;
-        $amountDue = ($payment->amount_due ?: optional($payment->client)->getMonthlyDueAmount() ?: 0);
+        $newPaid = !$payment->paid;
         $payment->update([
             'paid' => $newPaid,
             'amount_due' => $amountDue,
             'amount_paid' => $newPaid ? $amountDue : 0,
         ]);
 
-        // After toggle, check for delinquency and log
-        $year = (int) $validated['year'];
-        $clientId = (int) $validated['client_id'];
-        $unpaidCount = ClientPayment::where('client_id', $clientId)
-            ->where('year', $year)
-            ->where('month', '<=', now()->year === $year ? now()->month : 12)
+        // Check for delinquency
+        $unpaidCount = ClientPayment::where('client_id', $validated['client_id'])
+            ->where('year', $validated['year'])
+            ->where('month', '<=', now()->year === $validated['year'] ? now()->month : 12)
             ->where('paid', false)
             ->count();
+
         if ($unpaidCount >= 3) {
-            Log::warning('Client has 3+ unpaid months', ['client_id' => $clientId, 'year' => $year, 'unpaid_months' => $unpaidCount]);
+            Log::warning('Client has 3+ unpaid months', [
+                'client_id' => $validated['client_id'],
+                'year' => $validated['year'],
+                'unpaid_months' => $unpaidCount
+            ]);
         }
 
         return back();

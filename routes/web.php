@@ -182,6 +182,11 @@ Route::middleware(['auth'])->group(function () {
             ->middleware('permission:zone.view.supervisors')
             ->name('supervisors.index');
 
+        // Control-room scan tags viewer
+        Route::get('/control-room/scan-tags', [\App\Http\Controllers\ControlRoom\ScanTagController::class, 'index'])
+            ->middleware(['auth', 'permission:control-room.view'])
+            ->name('control-room.scan-tags');
+
         // Patrols (checkpoint scans)
         Route::get('/patrols', [\App\Http\Controllers\ZoneCommander\PatrolController::class, 'index'])
             ->middleware('permission:zone.patrols.scan')

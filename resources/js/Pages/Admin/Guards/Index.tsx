@@ -24,9 +24,11 @@ interface GuardsIndexProps {
     meta?: any;
   };
   filters: Filters;
+  canAssignSupervisor: boolean;
+  canViewSupervisor: boolean;
 }
 
-export default function GuardsIndex({ guards, filters }: GuardsIndexProps) {
+export default function GuardsIndex({ guards, filters, canAssignSupervisor, canViewSupervisor }: GuardsIndexProps) {
   const [search, setSearch] = React.useState(filters.search || '');
   const [loadingId, setLoadingId] = React.useState<number | null>(null);
   const { push } = useNotification();
@@ -87,7 +89,9 @@ export default function GuardsIndex({ guards, filters }: GuardsIndexProps) {
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Guard</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Employee ID</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Supervisor</th>
+                {canViewSupervisor && (
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Supervisor</th>
+                )}
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Phone</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
@@ -107,7 +111,22 @@ export default function GuardsIndex({ guards, filters }: GuardsIndexProps) {
                     </div>
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-900">{guard.employee_id}</td>
-                  <td className="px-6 py-4 text-sm text-gray-700">{guard.supervisor?.name || 'Unassigned'}</td>
+                  {canViewSupervisor && (
+                    <td className="px-6 py-4">
+                      {canAssignSupervisor ? (
+                        <button
+                          onClick={() => router.get(route('guards.edit', { guard: guard.id }), {}, { preserveScroll: true })}
+                          className="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded-lg text-gray-700 transition"
+                        >
+                          {guard.supervisor?.name || 'Assign Supervisor'}
+                        </button>
+                      ) : (
+                        <span className="text-sm text-gray-700">
+                          {guard.supervisor?.name || 'Unassigned'}
+                        </span>
+                      )}
+                    </td>
+                  )}
                   <td className="px-6 py-4 text-sm text-gray-700">{guard.phone || 'N/A'}</td>
                   <td className="px-6 py-4">
                     <span className={`px-3 py-1 rounded-full text-xs font-semibold ${

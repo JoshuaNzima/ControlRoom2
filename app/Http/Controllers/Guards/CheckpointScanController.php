@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Guards;
 
 use App\Http\Controllers\Controller;
 use App\Models\Guards\{Checkpoint, CheckpointScan};
+use App\Jobs\TagScanJob;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -13,8 +14,9 @@ class CheckpointScanController extends Controller
     {
         $validated = $request->validate([
             'code' => 'required|string',
-            'latitude' => 'nullable|numeric',
-            'longitude' => 'nullable|numeric',
+            // GPS is required for scans to ensure location tagging
+            'latitude' => 'required|numeric',
+            'longitude' => 'required|numeric',
         ]);
 
         $checkpoint = Checkpoint::where('code', $validated['code'])
@@ -51,20 +53,38 @@ class CheckpointScanController extends Controller
         ]);
 
         // Store scan in session to lock site for attendance
-        session([
-            'active_checkpoint_scan' => [
-                'scan_id' => $scan->id,
-                'checkpoint_id' => $checkpoint->id,
-                'site_id' => $checkpoint->client_site_id,
+        $scanData = [
+            'scan_id' => $scan->id,
+            'checkpoint_id' => $checkpoint->id,
+            'site_id' => $checkpoint->client_site_id,
+            'site_name' => $checkpoint->clientSite->name,
+            'client_name' => $checkpoint->clientSite->client->name,
+            'scanned_at' => now()->toIso8601String(),
+            'expires_at' => now()->addHours(2)->toIso8601String(),
+        ];
+
+        session(['active_checkpoint_scan' => $scanData]);
+
+        // Dispatch tagging job (async) - job will persist scan tags to DB
+        TagScanJob::dispatch($scan->id)->onQueue('default');
+
+        // Dispatch event for real-time notifications (basic payload)
+        event(new \App\Events\QRScanned(
+            auth()->id(),
+            "Checkpoint scanned successfully",
+            [
                 'site_name' => $checkpoint->clientSite->name,
                 'client_name' => $checkpoint->clientSite->client->name,
-                'scanned_at' => now()->toIso8601String(),
-                'expires_at' => now()->addHours(2)->toIso8601String(), 
+                'scan_id' => $scan->id,
             ]
-        ]);
+        ));
 
-        return redirect()->route('supervisor.dashboard')
-            ->with('success', "Checkpoint verified! Site locked: {$checkpoint->clientSite->client->name} - {$checkpoint->clientSite->name}");
+        return response()->json([
+            'success' => true,
+            'message' => 'Checkpoint scanned successfully',
+            'redirect' => route('supervisor.attendance'),
+            'scan' => $scanData,
+        ]);
     }
 
     public function showScanner()
