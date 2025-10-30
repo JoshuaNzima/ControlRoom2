@@ -381,6 +381,7 @@ class PaymentController extends Controller
             'client_id' => 'required|exists:clients,id',
             'year' => 'required|integer|min:2000|max:2100',
             'month' => 'required|integer|min:1|max:12',
+            'amount' => 'nullable|numeric|min:0',
         ]);
 
         $client = Client::findOrFail($validated['client_id']);
@@ -410,12 +411,19 @@ class PaymentController extends Controller
             if ($newPaid) {
                 if ($isFutureMonth) {
                     // For future months, set as prepaid
-                    $payment->prepaid_amount = $amountDue;
+                    // allow partial/prepaid amount override from request
+                    $payment->prepaid_amount = $request->input('amount') !== null ? (float)$request->input('amount') : $amountDue;
                     $payment->amount_paid = 0; // Will be counted when the month arrives
                 } else {
-                    // For current or past months, count as paid
-                    $payment->amount_paid = $amountDue;
-                    $payment->prepaid_amount = 0;
+                    // For current or past months, count as paid.
+                    // If there was a prepaid amount recorded earlier for this same row, apply that first.
+                    if ($payment->prepaid_amount > 0) {
+                        $payment->amount_paid = (float) $payment->amount_paid + (float) $payment->prepaid_amount;
+                        $payment->prepaid_amount = 0;
+                    } else {
+                        $payment->amount_paid = $amountDue;
+                        $payment->prepaid_amount = 0;
+                    }
                 }
             } else {
                 // If unmarking, reset both amounts
@@ -427,13 +435,7 @@ class PaymentController extends Controller
             $payment->amount_due = $amountDue;
             $payment->save();
 
-            // Update prepaid amounts for future months if applicable
-            if (!$isFutureMonth && $payment->prepaid_amount > 0) {
-                // Move prepaid amount to paid amount since we've reached this month
-                $payment->amount_paid = $payment->prepaid_amount;
-                $payment->prepaid_amount = 0;
-                $payment->save();
-            }
+            // Note: prepaid amounts for months that become current without a toggle are handled by the scheduled command
 
             // Check for delinquency only considering current and past months
             $unpaidCount = ClientPayment::where('client_id', $validated['client_id'])

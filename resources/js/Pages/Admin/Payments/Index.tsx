@@ -3,6 +3,7 @@ import { Head, router } from '@inertiajs/react';
 import AdminLayout from '@/Layouts/AdminLayout';
 import { Card } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
+import Modal from '@/Components/Modal';
 import { formatCurrencyMWK } from '@/Components/format';
 import { SortIcon } from '@/Components/ui/icons/SortIcon';
 import { PaymentLegend } from '@/Components/ui/PaymentLegend';
@@ -128,7 +129,32 @@ export default function PaymentsIndex({
     router.get(route('admin.payments.index'), { year: newYear }, { preserveScroll: true, preserveState: true });
   };
 
+  const [prepayModalOpen, setPrepayModalOpen] = useState(false);
+  const [prepayClientId, setPrepayClientId] = useState<number | null>(null);
+  const [prepayMonth, setPrepayMonth] = useState<number | null>(null);
+  const [prepayAmountInput, setPrepayAmountInput] = useState<string>('');
+
+  const openPrepayModal = (clientId: number, month: number) => {
+    setPrepayClientId(clientId);
+    setPrepayMonth(month);
+    setPrepayAmountInput('');
+    setPrepayModalOpen(true);
+  };
+
+  const submitPrepay = () => {
+    if (!prepayClientId || !prepayMonth) return;
+    const amount = prepayAmountInput !== '' ? parseFloat(prepayAmountInput) : undefined;
+    router.post(route('admin.payments.toggle'), { client_id: prepayClientId, year: selectedYear, month: prepayMonth, amount }, { preserveScroll: true });
+    setPrepayModalOpen(false);
+  };
+
   const toggle = (clientId: number, month: number) => {
+    const now = new Date();
+    const isFuture = (selectedYear > now.getFullYear()) || (selectedYear === now.getFullYear() && month > (now.getMonth() + 1));
+    if (isFuture) {
+      openPrepayModal(clientId, month);
+      return;
+    }
     router.post(route('admin.payments.toggle'), { client_id: clientId, year: selectedYear, month }, { preserveScroll: true });
   };
 
@@ -170,6 +196,25 @@ export default function PaymentsIndex({
   return (
     <AdminLayout title="Payments Checker">
       <Head title="Payments Checker" />
+
+      <Modal show={prepayModalOpen} onClose={() => setPrepayModalOpen(false)} maxWidth="sm">
+        <div className="p-4">
+          <h3 className="text-lg font-semibold mb-2">Prepay Month</h3>
+          <div className="mb-2 text-sm text-gray-600">Enter an amount to prepay for the selected future month. Leave blank to prepay the full month rate.</div>
+          <input
+            type="number"
+            step="0.01"
+            className="w-full px-3 py-2 border rounded mb-3"
+            value={prepayAmountInput}
+            onChange={(e) => setPrepayAmountInput(e.target.value)}
+            placeholder="Amount (e.g. 1000.00)"
+          />
+          <div className="flex justify-end gap-2">
+            <Button variant="ghost" onClick={() => setPrepayModalOpen(false)}>Cancel</Button>
+            <Button onClick={submitPrepay}>Prepay</Button>
+          </div>
+        </div>
+      </Modal>
 
       <div className="py-6">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
@@ -448,7 +493,9 @@ export default function PaymentsIndex({
                                   `}
                                   aria-pressed={paid}
                                   aria-label={`Mark ${months[idx]} paid for ${c.name}`}
-                                  title={isBillingStart ? 'Billing Start' : undefined}
+                                  title={
+                                    prepaid ? `Prepaid: ${formatCurrencyMWK(clientPayments[month]?.prepaid_amount || 0)}` : (isBillingStart ? 'Billing Start' : undefined)
+                                  }
                                 >
                                   {paid ? '✓' : (prepaid ? 'P' : '')}
                                   {isBillingStart && !paid ? '★' : ''}
