@@ -36,10 +36,11 @@ export default function AddClientModal({ open, onClose, services = [], zones = [
     billing_start_date: new Date().toISOString().split('T')[0],
     notes: '',
     status: 'active',
-    site: {
-      name: 'Home/Residence',
+      site: {
+      name: 'Home',
       address: '',
       status: 'active',
+      site_type: 'residential',
       contact_person: '',
       phone: '',
       special_instructions: '',
@@ -121,26 +122,57 @@ export default function AddClientModal({ open, onClose, services = [], zones = [
               <p className="text-xs text-gray-500 mt-1">Defaults to today if not specified</p>
               {errors.billing_start_date && <p className="text-red-600 text-sm mt-1">{errors.billing_start_date}</p>}
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Contact Person</label>
-              <input 
-                type="text" 
-                value={data.contact_person} 
-                onChange={(e) => setData('contact_person', e.target.value)} 
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg" 
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Phone</label>
-              <input 
-                type="tel" 
-                value={data.phone} 
-                onChange={(e) => setData('phone', e.target.value)} 
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg" 
-              />
-            </div>
           </div>
 
+          <div className="border-t pt-6">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Contact Information</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Contact Person</label>
+                <input 
+                  type="text" 
+                  value={data.contact_person} 
+                  onChange={(e) => setData('contact_person', e.target.value)} 
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg" 
+                  placeholder="Primary contact name"
+                />
+                {errors.contact_person && <p className="text-red-600 text-sm mt-1">{errors.contact_person}</p>}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                <input 
+                  type="email" 
+                  value={data.email} 
+                  onChange={(e) => setData('email', e.target.value)} 
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg" 
+                  placeholder="contact@example.com"
+                />
+                {errors.email && <p className="text-red-600 text-sm mt-1">{errors.email}</p>}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Phone</label>
+                <input 
+                  type="tel" 
+                  value={data.phone} 
+                  onChange={(e) => setData('phone', e.target.value)} 
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg" 
+                  placeholder="Phone number"
+                />
+                {errors.phone && <p className="text-red-600 text-sm mt-1">{errors.phone}</p>}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Address</label>
+                <input 
+                  type="text" 
+                  value={data.address} 
+                  onChange={(e) => setData('address', e.target.value)} 
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg" 
+                  placeholder="Business address"
+                />
+                {errors.address && <p className="text-red-600 text-sm mt-1">{errors.address}</p>}
+              </div>
+            </div>
+          </div>
           <div className="pt-4">
             <div className="flex items-center justify-between mb-2">
               <label className="block text-sm font-medium text-gray-700">Select Services *</label>
@@ -230,6 +262,17 @@ export default function AddClientModal({ open, onClose, services = [], zones = [
                 />
                 <p className="text-xs text-gray-500 mt-1">Defaults to Home/Residence if not specified</p>
                 {errors['site.name'] && <p className="text-red-600 text-sm mt-1">{(errors as any)['site.name']}</p>}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Site Type</label>
+                <select 
+                  value={data.site.site_type || 'residential'} 
+                  onChange={(e) => setData('site', { ...data.site, site_type: e.target.value })} 
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                >
+                  <option value="residential">Residential</option>
+                  <option value="commercial">Commercial</option>
+                </select>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>

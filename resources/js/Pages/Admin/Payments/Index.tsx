@@ -201,14 +201,26 @@ export default function PaymentsIndex({
         <div className="p-4">
           <h3 className="text-lg font-semibold mb-2">Prepay Month</h3>
           <div className="mb-2 text-sm text-gray-600">Enter an amount to prepay for the selected future month. Leave blank to prepay the full month rate.</div>
-          <input
-            type="number"
-            step="0.01"
-            className="w-full px-3 py-2 border rounded mb-3"
-            value={prepayAmountInput}
-            onChange={(e) => setPrepayAmountInput(e.target.value)}
-            placeholder="Amount (e.g. 1000.00)"
-          />
+          <div className="relative">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">MWK</span>
+            <input
+              type="text"
+              className="w-full pl-12 pr-3 py-2 border rounded mb-3 text-right"
+              value={prepayAmountInput}
+              onChange={(e) => {
+                const value = e.target.value.replace(/[^0-9.]/g, '');
+                if (value === '' || /^\d*\.?\d{0,2}$/.test(value)) {
+                  setPrepayAmountInput(value);
+                }
+              }}
+              placeholder="0.00"
+            />
+          </div>
+          {prepayAmountInput && (
+            <div className="mb-3 text-sm text-gray-600 text-right">
+              {formatCurrencyMWK(parseFloat(prepayAmountInput) || 0)}
+            </div>
+          )}
           <div className="flex justify-end gap-2">
             <Button variant="ghost" onClick={() => setPrepayModalOpen(false)}>Cancel</Button>
             <Button onClick={submitPrepay}>Prepay</Button>
@@ -488,16 +500,19 @@ export default function PaymentsIndex({
                                   className={`
                                     inline-flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold transition
                                     ${isBeforeBillingStart ? 'bg-gray-50 text-gray-300 cursor-not-allowed' : 
-                                      paid ? 'bg-green-500 text-white' : (prepaid ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200')}
+                                      paid ? 'bg-green-500 text-white' : (prepaid ? 'bg-blue-500 text-white hover:bg-blue-600' : 'bg-gray-100 text-gray-600 hover:bg-gray-200')}
                                     ${isBillingStart ? 'ring-2 ring-blue-500' : ''}
                                   `}
                                   aria-pressed={paid}
                                   aria-label={`Mark ${months[idx]} paid for ${c.name}`}
-                                  title={
-                                    prepaid ? `Prepaid: ${formatCurrencyMWK(clientPayments[month]?.prepaid_amount || 0)}` : (isBillingStart ? 'Billing Start' : undefined)
-                                  }
+                                  title={prepaid ? `Prepaid: ${formatCurrencyMWK(clientPayments[month]?.prepaid_amount || 0)}` : (isBillingStart ? 'Billing Start' : undefined)}
                                 >
-                                  {paid ? '✓' : (prepaid ? 'P' : '')}
+                                  {paid ? '✓' : (prepaid ? (
+                                    <span className="flex items-center justify-center">
+                                      P
+                                      <span className="sr-only">Prepaid</span>
+                                    </span>
+                                  ) : '')}
                                   {isBillingStart && !paid ? '★' : ''}
                                 </button>
                               </td>

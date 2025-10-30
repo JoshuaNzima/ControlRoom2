@@ -59,9 +59,9 @@ class ControlRoomDashboardController extends Controller
         $totalSites = ClientSite::where('status', 'active')->count();
         if ($totalSites === 0) return 0;
         
-        $coveredSites = GuardAssignment::whereHas('site', function($query) {
+        $coveredSites = GuardAssignment::whereHas('clientSite', function($query) {
             $query->where('status', 'active');
-        })->where('status', 'active')->distinct('client_site_id')->count();
+        })->where('is_active', true)->distinct()->count('client_site_id');
         
         return round(($coveredSites / $totalSites) * 100, 1);
     }
@@ -127,16 +127,16 @@ class ControlRoomDashboardController extends Controller
         $totalSites = ClientSite::where('status', 'active')->count();
         if ($totalSites === 0) return 0;
         
-        $coveredSites = GuardAssignment::whereHas('site', function($query) {
+        $coveredSites = GuardAssignment::whereHas('clientSite', function($query) {
             $query->where('status', 'active');
-        })->where('status', 'active')
+        })->where('is_active', true)
         ->whereDate('start_date', '<=', $date)
         ->where(function($query) use ($date) {
             $query->whereNull('end_date')
                   ->orWhere('end_date', '>=', $date);
         })
-        ->distinct('client_site_id')
-        ->count();
+        ->distinct()
+        ->count('client_site_id');
         
         return round(($coveredSites / $totalSites) * 100, 1);
     }

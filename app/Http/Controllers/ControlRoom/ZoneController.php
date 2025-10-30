@@ -43,10 +43,9 @@ class ZoneController extends Controller
     public function store(StoreZoneRequest $request)
     {
         $data = $request->validated();
-        if (empty($data['code'])) {
-            $prefix = strtoupper(collect(explode(' ', $data['name']))->map(fn($w) => substr($w,0,1))->implode(''));
-            $data['code'] = $prefix . '-' . strtoupper(str_pad(dechex(random_int(0, 0xFFFF)), 4, '0', STR_PAD_LEFT));
-        }
+        // Always generate a new code
+        $prefix = strtoupper(collect(explode(' ', $data['name']))->map(fn($w) => substr($w,0,1))->implode(''));
+        $data['code'] = $prefix . '-' . strtoupper(str_pad(dechex(random_int(0, 0xFFFF)), 4, '0', STR_PAD_LEFT));
 
         $zone = Zone::create($data);
 

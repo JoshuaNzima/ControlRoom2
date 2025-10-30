@@ -63,9 +63,19 @@ const Zones = ({ auth, zones: zonesProp = [], commanders = [], sites = [] }: Zon
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (editing) {
-      put(route('control-room.zones.update', editing.id), { onSuccess: () => setOpen(false) });
+      put(route('control-room.zones.update', editing.id), { 
+        onSuccess: () => {
+          setOpen(false);
+          reset();
+        } 
+      });
     } else {
-      post(route('control-room.zones.store'), { onSuccess: () => setOpen(false) });
+      post(route('control-room.zones.store'), { 
+        onSuccess: () => {
+          setOpen(false);
+          reset();
+        }
+      });
     }
   };
   const handleDelete = (z: ZoneItem) => {
@@ -171,29 +181,27 @@ const Zones = ({ auth, zones: zonesProp = [], commanders = [], sites = [] }: Zon
                   <DialogTitle>{editing ? 'Edit Zone' : 'Add Zone'}</DialogTitle>
                 </DialogHeader>
                 <form className="space-y-6" onSubmit={handleSubmit}>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
+                  <div className="space-y-4">
+                    <div className="sm:col-span-2">
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">Name</label>
                       <input value={data.name} onChange={(e) => setData('name', e.target.value)} className="mt-1 w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800" />
-                    {errors.name && <p className="text-sm text-red-600 mt-1">{errors.name}</p>}
-                  </div>
-                  <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">Code</label>
-                      <input value={data.code} onChange={(e) => setData('code', e.target.value)} className="mt-1 w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800" />
-                    {errors.code && <p className="text-sm text-red-600 mt-1">{errors.code}</p>}
-                  </div>
-                  <div>
+                      {errors.name && <p className="text-sm text-red-600 mt-1">{errors.name}</p>}
+                    </div>
+
+                    <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">Status</label>
                       <select value={data.status} onChange={(e) => setData('status', e.target.value as any)} className="mt-1 w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800">
-                      <option value="active">Active</option>
-                      <option value="understaffed">Understaffed</option>
-                      <option value="inactive">Inactive</option>
-                    </select>
-                  </div>
-                  <div>
+                        <option value="active">Active</option>
+                        <option value="understaffed">Understaffed</option>
+                        <option value="inactive">Inactive</option>
+                      </select>
+                    </div>
+
+                    <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">Required Guards</label>
                       <input type="number" value={data.required_guard_count} onChange={(e) => setData('required_guard_count', Number(e.target.value))} className="mt-1 w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800" />
                     </div>
+
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">Zone Commander</label>
                       <select value={data.commander_id as any} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setData('commander_id', e.target.value ? Number(e.target.value) : '')} className="mt-1 w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800">
@@ -203,16 +211,19 @@ const Zones = ({ auth, zones: zonesProp = [], commanders = [], sites = [] }: Zon
                         ))}
                       </select>
                     </div>
+
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">Target Sites</label>
                       <input type="number" value={data.target_sites_count} onChange={(e) => setData('target_sites_count', Number(e.target.value))} className="mt-1 w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800" />
                       {errors.target_sites_count && <p className="text-sm text-red-600 mt-1">{errors.target_sites_count}</p>}
                     </div>
-                    <div className="sm:col-span-2">
+
+                    <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">Description</label>
-                      <textarea value={data.description as any} onChange={(e) => setData('description', e.target.value)} className="mt-1 w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800" rows={3} />
+                      <textarea value={data.description} onChange={(e) => setData('description', e.target.value)} className="mt-1 w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800" rows={3} />
                     </div>
-                    <div className="sm:col-span-2">
+
+                    <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">Add Sites to Zone</label>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-auto border rounded p-2">
                         {sites.map((s) => (

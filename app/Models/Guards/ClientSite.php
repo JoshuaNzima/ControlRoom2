@@ -24,6 +24,7 @@ class ClientSite extends Model
         'required_guards',
         'services_requested',
         'status',
+        'site_type',
     ];
 
     protected $casts = [

@@ -107,6 +107,11 @@ class ClientController extends Controller
                 ];
             }
             $client->services()->attach($attach);
+            
+            // Refresh the monthly rate based on attached services
+            $client->refresh();  // Reload relations
+            $client->monthly_rate = $client->getMonthlyDueAmount();
+            $client->save();
         }
 
         // Create default site if no site is provided, or create the specified site
