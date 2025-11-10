@@ -8,23 +8,44 @@ import { User } from '@/types';
 
 interface MonitoringProps {
   auth?: { user?: { name?: string } };
+  metrics?: {
+    activeSites: number;
+    guardsOnDuty: number;
+    activeAlerts: number;
+    systemStatus: string;
+  };
+  liveStatus?: { id: number; name: string; status: 'active' | 'inactive'; guards: number; lastUpdate: string; alerts: number }[];
+  recentActivity?: { id: string | number; type: string; guard: string; site: string; time: string; status: 'success' | 'warning' | 'info' | 'danger' }[];
 }
 
-const Monitoring = ({ auth }: MonitoringProps) => {
-  // Mock data for monitoring
-  const liveStatus = [
-    { id: 1, name: 'Site A - Main Gate', status: 'active', guards: 2, lastUpdate: '2 min ago', alerts: 0 },
-    { id: 2, name: 'Site B - Warehouse', status: 'active', guards: 1, lastUpdate: '1 min ago', alerts: 1 },
-    { id: 3, name: 'Site C - Office Building', status: 'inactive', guards: 0, lastUpdate: '15 min ago', alerts: 3 },
-    { id: 4, name: 'Site D - Parking Lot', status: 'active', guards: 1, lastUpdate: '30 sec ago', alerts: 0 },
-  ];
+const Monitoring = ({ auth, metrics, liveStatus: initialLiveStatus = [], recentActivity: initialRecent = [] }: MonitoringProps) => {
+  const [currentMetrics, setCurrentMetrics] = React.useState(metrics || { activeSites: 0, guardsOnDuty: 0, activeAlerts: 0, systemStatus: 'online' });
+  const [liveStatus, setLiveStatus] = React.useState(initialLiveStatus);
+  const [recentActivity, setRecentActivity] = React.useState(initialRecent);
 
-  const recentActivity = [
-    { id: 1, type: 'checkin', guard: 'John Doe', site: 'Site A', time: '2 min ago', status: 'success' },
-    { id: 2, type: 'alert', guard: 'Jane Smith', site: 'Site B', time: '5 min ago', status: 'warning' },
-    { id: 3, type: 'checkout', guard: 'Mike Johnson', site: 'Site C', time: '10 min ago', status: 'info' },
-    { id: 4, type: 'incident', guard: 'Sarah Wilson', site: 'Site D', time: '15 min ago', status: 'danger' },
-  ];
+  React.useEffect(() => {
+    let isMounted = true;
+    async function fetchData() {
+      try {
+        const res = await fetch(route('control-room.monitoring.data'), { headers: { 'Accept': 'application/json' } });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!isMounted) return;
+        setCurrentMetrics(data.metrics || {});
+        setLiveStatus(data.liveStatus || []);
+        setRecentActivity(data.recentActivity || []);
+      } catch (_) {
+        // no-op
+      }
+    }
+    // initial refresh in case page props were stale
+    fetchData();
+    const id = setInterval(fetchData, 30000);
+    return () => {
+      isMounted = false;
+      clearInterval(id);
+    };
+  }, []);
 
   return (
     <ControlRoomLayout title="Live Monitoring" user={auth?.user as User | undefined}>
@@ -38,7 +59,7 @@ const Monitoring = ({ auth }: MonitoringProps) => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Active Sites</p>
-                  <p className="text-2xl font-bold text-green-600 dark:text-green-400">3</p>
+                  <p className="text-2xl font-bold text-green-600 dark:text-green-400">{currentMetrics?.activeSites ?? 0}</p>
                 </div>
                 <div className="h-8 w-8 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center">
                   <span className="text-green-600 dark:text-green-400">✓</span>
@@ -52,7 +73,7 @@ const Monitoring = ({ auth }: MonitoringProps) => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Guards On Duty</p>
-                  <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">4</p>
+                  <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{currentMetrics?.guardsOnDuty ?? 0}</p>
                 </div>
                 <div className="h-8 w-8 bg-blue-100 dark:bg-blue-900/20 rounded-full flex items-center justify-center">
                   <span className="text-blue-600 dark:text-blue-400">👮</span>
@@ -66,7 +87,7 @@ const Monitoring = ({ auth }: MonitoringProps) => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Active Alerts</p>
-                  <p className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">4</p>
+                  <p className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">{currentMetrics?.activeAlerts ?? 0}</p>
                 </div>
                 <div className="h-8 w-8 bg-yellow-100 dark:bg-yellow-900/20 rounded-full flex items-center justify-center">
                   <span className="text-yellow-600 dark:text-yellow-400">⚠</span>
@@ -80,7 +101,9 @@ const Monitoring = ({ auth }: MonitoringProps) => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600 dark:text-gray-400">System Status</p>
-                  <p className="text-2xl font-bold text-green-600 dark:text-green-400">Online</p>
+                  <p className="text-2xl font-bold text-green-600 dark:text-green-400">
+                    {currentMetrics?.systemStatus ? currentMetrics.systemStatus.charAt(0).toUpperCase() + currentMetrics.systemStatus.slice(1) : 'Online'}
+                  </p>
                 </div>
                 <div className="h-8 w-8 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center">
                   <span className="text-green-600 dark:text-green-400">🟢</span>
@@ -171,19 +194,19 @@ const Monitoring = ({ auth }: MonitoringProps) => {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <Button variant="outline" className="h-12 flex flex-col items-center justify-center space-y-1 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
+              <Button onClick={() => (window.location.href = route('control-room.cameras.index'))} variant="outline" className="h-12 flex flex-col items-center justify-center space-y-1 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
                 <span className="text-lg">📹</span>
                 <span className="text-sm">View Cameras</span>
               </Button>
-              <Button variant="outline" className="h-12 flex flex-col items-center justify-center space-y-1 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
+              <Button onClick={() => (window.location.href = route('control-room.flags.index'))} variant="outline" className="h-12 flex flex-col items-center justify-center space-y-1 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
                 <span className="text-lg">🚨</span>
-                <span className="text-sm">Send Alert</span>
+                <span className="text-sm">View Flags</span>
               </Button>
-              <Button variant="outline" className="h-12 flex flex-col items-center justify-center space-y-1 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
+              <Button onClick={() => (window.location.href = route('control-room.tickets.create'))} variant="outline" className="h-12 flex flex-col items-center justify-center space-y-1 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
                 <span className="text-lg">📞</span>
-                <span className="text-sm">Emergency Call</span>
+                <span className="text-sm">Create Ticket</span>
               </Button>
-              <Button variant="outline" className="h-12 flex flex-col items-center justify-center space-y-1 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
+              <Button onClick={() => (window.location.href = route('control-room.reports'))} variant="outline" className="h-12 flex flex-col items-center justify-center space-y-1 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
                 <span className="text-lg">📊</span>
                 <span className="text-sm">Generate Report</span>
               </Button>

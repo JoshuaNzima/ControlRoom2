@@ -38,10 +38,10 @@ class Camera extends Model
         'last_restart' => 'datetime',
     ];
 
-    public function site(): BelongsTo
-    {
-        return $this->belongsTo(ClientSite::class, 'site_id');
-    }
+	public function site(): BelongsTo
+	{
+		return $this->belongsTo(ClientSite::class, 'client_site_id');
+	}
 
     public function recordings(): HasMany
     {

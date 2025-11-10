@@ -7,7 +7,8 @@ Route::middleware(['auth'])->group(function () {
     // Allow admins by role OR users with the specific permission
     Route::middleware(['role_or_permission:admin|control.dashboard.view'])->prefix('control-room')->name('control-room.')->group(function () {
 		Route::get('/dashboard', [\App\Http\Controllers\ControlRoomDashboardController::class, 'index'])->name('dashboard');
-		Route::get('/monitoring', fn() => Inertia::render('ControlRoom/Monitoring'))->name('monitoring');
+		Route::get('/monitoring', [\App\Http\Controllers\ControlRoom\MonitoringController::class, 'index'])->name('monitoring');
+		Route::get('/monitoring/data', [\App\Http\Controllers\ControlRoom\MonitoringController::class, 'data'])->name('monitoring.data');
 		// Zones Management
         Route::resource('zones', \App\Http\Controllers\ControlRoom\ZoneController::class)->only(['index','store','update','destroy']);
         Route::get('zones/{zone}/assign', [\App\Http\Controllers\ControlRoom\ZoneController::class, 'assign'])->name('zones.assign');

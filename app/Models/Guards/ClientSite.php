@@ -2,6 +2,7 @@
 
 namespace App\Models\Guards;
 
+use App\Models\Camera;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -54,6 +55,11 @@ class ClientSite extends Model
     public function attendance(): HasMany
     {
         return $this->hasMany(Attendance::class);
+    }
+
+    public function cameras(): HasMany
+    {
+        return $this->hasMany(Camera::class, 'client_site_id');
     }
 
     public function scopeActive($query)

@@ -1,88 +1,122 @@
 import React, { useState } from 'react';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import ControlRoomLayout from '@/Layouts/ControlRoomLayout';
-import ComingSoon from '@/Components/Shared/ComingSoon';
+import { Card } from '@/Components/ui/card';
+import IconMapper from '@/Components/IconMapper';
+
+type Guard = {
+  id: number;
+  name: string;
+  employee_id: string;
+  status: string;
+  supervisor?: { id: number; name: string } | null;
+  today_attendance?: { check_in?: string | null; check_out?: string | null } | null;
+};
+
+type PageProps = {
+  guards?: { data: Guard[]; links?: any; meta?: any };
+  filters?: { search?: string };
+};
 
 export default function GuardsIndex() {
-  const [openModal, setOpenModal] = useState<null | 'guards' | 'assignments' | 'clients'>(null);
+  const { guards: guardsProp = { data: [] }, filters = {} } = usePage<PageProps>().props as any;
+  const [search, setSearch] = useState(filters.search || '');
 
   return (
     <ControlRoomLayout title="Guards">
       <Head title="Guards" />
 
       <div className="max-w-7xl mx-auto mt-6 px-4 sm:px-6 lg:px-8 space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-white rounded-xl shadow p-6">
-            <h3 className="text-lg font-bold">Guards</h3>
-            <p className="text-sm text-gray-600 mt-2">Control Room scoped guard list and quick actions.</p>
-            <div className="mt-4 flex gap-2">
-              <button onClick={() => setOpenModal('guards')} className="px-4 py-2 bg-coin-600 text-white rounded">Manage Guards</button>
-              <Link href="#" className="px-4 py-2 bg-gray-100 rounded text-gray-700">Export</Link>
-            </div>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Guards Management</h1>
+            <p className="text-gray-600">Control Room scoped guard list and quick actions</p>
           </div>
-
-          <div className="bg-white rounded-xl shadow p-6">
-            <h3 className="text-lg font-bold">Assignments</h3>
-            <p className="text-sm text-gray-600 mt-2">Quick view of guard assignments for the Control Room.</p>
-            <div className="mt-4 flex gap-2">
-              <button onClick={() => setOpenModal('assignments')} className="px-4 py-2 bg-coin-600 text-white rounded">Manage Assignments</button>
-              <Link href="#" className="px-4 py-2 bg-gray-100 rounded text-gray-700">Sync</Link>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl shadow p-6">
-            <h3 className="text-lg font-bold">Clients</h3>
-            <p className="text-sm text-gray-600 mt-2">Client locations and contacts relevant to this control-room instance.</p>
-            <div className="mt-4 flex gap-2">
-              <button onClick={() => setOpenModal('clients')} className="px-4 py-2 bg-coin-600 text-white rounded">Manage Clients</button>
-              <Link href="#" className="px-4 py-2 bg-gray-100 rounded text-gray-700">Locations</Link>
-            </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => (window.location.href = route('control-room.assignments.index'))}
+              className="px-4 py-2 bg-coin-600 text-white rounded"
+            >
+              Manage Assignments
+            </button>
+            <Link href={route('control-room.clients')} className="px-4 py-2 bg-gray-100 rounded text-gray-700">
+              Clients
+            </Link>
           </div>
         </div>
 
-        <div>
-          <ComingSoon
-            title="Guards Management"
-            description="A tailored Control Room guards management experience is under construction. Use the quick actions above for immediate tasks."
-          />
-        </div>
-
-        {/* Simple modals for local Control Room actions */}
-        {openModal === 'guards' && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-xl p-6 max-w-md w-full">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-bold">Control Room — Guards</h3>
-                <button onClick={() => setOpenModal(null)} className="text-gray-500">Close</button>
+        <Card className="bg-white rounded-xl shadow p-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Search</label>
+              <div className="relative">
+                <span className="absolute left-3 top-3 text-gray-400"><IconMapper name="Search" size={20} /></span>
+                <input
+                  type="text"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && router.get(route('control-room.guards'), { search }, { preserveState: true })}
+                  placeholder="Name or Employee ID..."
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                />
               </div>
-              <p className="text-sm text-gray-600">This is a lightweight Control Room guards manager: quick search, filters, and actions will appear here.</p>
+            </div>
+            <div className="flex items-end">
+              <button
+                onClick={() => router.get(route('control-room.guards'), { search }, { preserveState: true })}
+                className="px-4 py-2 bg-coin-600 text-white rounded w-full md:w-auto"
+              >
+                Apply Filters
+              </button>
             </div>
           </div>
-        )}
+        </Card>
 
-        {openModal === 'assignments' && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-xl p-6 max-w-md w-full">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-bold">Control Room — Assignments</h3>
-                <button onClick={() => setOpenModal(null)} className="text-gray-500">Close</button>
-              </div>
-              <p className="text-sm text-gray-600">Assign guards to sites from the Control Room. This panel is a small quick-action surface.</p>
-            </div>
+        <Card className="bg-white rounded-xl shadow">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Employee ID</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Supervisor</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Today</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {guardsProp.data.map((g: Guard) => (
+                  <tr key={g.id}>
+                    <td className="px-6 py-3 text-sm text-gray-900">{g.name}</td>
+                    <td className="px-6 py-3 text-sm text-gray-700">{g.employee_id}</td>
+                    <td className="px-6 py-3 text-sm">
+                      <span className={`px-2 py-1 text-xs rounded-full ${
+                        g.status === 'active' ? 'bg-green-100 text-green-800' :
+                        g.status === 'inactive' ? 'bg-gray-100 text-gray-800' :
+                        'bg-yellow-100 text-yellow-800'
+                      }`}>
+                        {g.status}
+                      </span>
+                    </td>
+                    <td className="px-6 py-3 text-sm text-gray-700">{g.supervisor?.name || '-'}</td>
+                    <td className="px-6 py-3 text-sm text-gray-700">
+                      {g.today_attendance ? (
+                        <span>
+                          {g.today_attendance.check_in || '--:--'} → {g.today_attendance.check_out || '--:--'}
+                        </span>
+                      ) : <span className="text-gray-400">No entry</span>}
+                    </td>
+                  </tr>
+                ))}
+                {guardsProp.data.length === 0 && (
+                  <tr>
+                    <td colSpan={5} className="px-6 py-8 text-center text-gray-500">No guards found.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           </div>
-        )}
-
-        {openModal === 'clients' && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-xl p-6 max-w-md w-full">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-bold">Control Room — Clients</h3>
-                <button onClick={() => setOpenModal(null)} className="text-gray-500">Close</button>
-              </div>
-              <p className="text-sm text-gray-600">View and quickly manage client contacts and locations relevant to the Control Room.</p>
-            </div>
-          </div>
-        )}
+        </Card>
       </div>
     </ControlRoomLayout>
   );

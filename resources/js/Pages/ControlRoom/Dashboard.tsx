@@ -426,19 +426,19 @@ const Dashboard = ({ stats, recentIncidents, activeAlerts, coverageData, attenda
                             </CardHeader>
                             <CardContent>
                                 <div className="grid grid-cols-2 gap-3">
-                                <Button variant="outline" className="h-12 flex flex-col items-center justify-center space-y-1 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
+                                <Button onClick={() => (window.location.href = route('control-room.tickets.create'))} variant="outline" className="h-12 flex flex-col items-center justify-center space-y-1 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
                                         <span className="text-lg">🎫</span>
                                         <span className="text-sm">Create Ticket</span>
                                     </Button>
-                                <Button variant="outline" className="h-12 flex flex-col items-center justify-center space-y-1 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
+                                <Button onClick={() => (window.location.href = route('control-room.flags.create'))} variant="outline" className="h-12 flex flex-col items-center justify-center space-y-1 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
                                         <span className="text-lg">📝</span>
                                         <span className="text-sm">Report Issue</span>
                                     </Button>
-                                <Button variant="outline" className="h-12 flex flex-col items-center justify-center space-y-1 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
+                                <Button onClick={() => (window.location.href = route('control-room.cameras.index'))} variant="outline" className="h-12 flex flex-col items-center justify-center space-y-1 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
                                         <span className="text-lg">📹</span>
                                         <span className="text-sm">View Cameras</span>
                                     </Button>
-                                <Button variant="outline" className="h-12 flex flex-col items-center justify-center space-y-1 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
+                                <Button onClick={() => (window.location.href = route('control-room.reports'))} variant="outline" className="h-12 flex flex-col items-center justify-center space-y-1 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
                                         <span className="text-lg">📊</span>
                                         <span className="text-sm">Generate Report</span>
                                     </Button>
