@@ -25,6 +25,8 @@ Route::middleware(['auth', 'role:admin,super_admin'])
         Route::get('/settings', [\App\Http\Controllers\Admin\SettingController::class, 'index'])->name('settings.index');
         Route::get('/reports', [\App\Http\Controllers\Admin\ReportController::class, 'index'])->name('reports.index');
         Route::resource('users', \App\Http\Controllers\Admin\UserController::class);
+    // JSON users list for admin modals (assignable users)
+    Route::get('/users/json', [\App\Http\Controllers\Admin\UserController::class, 'apiIndex'])->name('users.json');
         Route::get('/clients/dashboard', [\App\Http\Controllers\Admin\ClientController::class, 'dashboard'])->name('clients.dashboard');
         // Clients Management
         Route::prefix('clients')->name('clients.')->group(function () {
@@ -74,13 +76,33 @@ Route::middleware(['auth', 'role:admin,super_admin'])
         Route::post('/payments/toggle', [\App\Http\Controllers\Admin\PaymentController::class, 'toggle'])->name('payments.toggle');
 
         // Downs (admin can view same control-room UI for now)
-        Route::get('/downs', [\App\Http\Controllers\ControlRoom\DownController::class, 'index'])->name('downs.index');
-        Route::post('/downs', [\App\Http\Controllers\ControlRoom\DownController::class, 'store'])->name('downs.store');
-        Route::post('/downs/{down}/escalate', [\App\Http\Controllers\ControlRoom\DownController::class, 'escalate'])->name('downs.escalate');
-        Route::post('/downs/{down}/resolve', [\App\Http\Controllers\ControlRoom\DownController::class, 'resolve'])->name('downs.resolve');
+        Route::get('/downs', [\App\Http\Controllers\Operations\ControlRoom\DownController::class, 'index'])->name('downs.index');
+        Route::post('/downs', [\App\Http\Controllers\Operations\ControlRoom\DownController::class, 'store'])->name('downs.store');
+        Route::post('/downs/{down}/escalate', [\App\Http\Controllers\Operations\ControlRoom\DownController::class, 'escalate'])->name('downs.escalate');
+        Route::post('/downs/{down}/resolve', [\App\Http\Controllers\Operations\ControlRoom\DownController::class, 'resolve'])->name('downs.resolve');
 
         // Admin Control Room dashboard
         Route::get('/control-room', [\App\Http\Controllers\Admin\ControlRoomController::class, 'dashboard'])->name('control-room.dashboard');
+
+        // Admin Incident & Flags management
+        Route::prefix('incidents')->name('incidents.')->group(function () {
+            // JSON endpoint for modals
+            Route::get('/{incident}/json', [\App\Http\Controllers\Admin\IncidentController::class, 'apiShow'])->name('json');
+            Route::get('/', [\App\Http\Controllers\Admin\IncidentController::class, 'index'])->name('index');
+            Route::get('/{incident}', [\App\Http\Controllers\Admin\IncidentController::class, 'show'])->name('show');
+            Route::post('/{incident}/assign', [\App\Http\Controllers\Admin\IncidentController::class, 'assign'])->name('assign');
+            Route::post('/{incident}/escalate', [\App\Http\Controllers\Admin\IncidentController::class, 'escalate'])->name('escalate');
+            Route::post('/{incident}/resolve', [\App\Http\Controllers\Admin\IncidentController::class, 'resolve'])->name('resolve');
+        });
+
+        Route::prefix('flags')->name('flags.')->group(function () {
+            // JSON endpoint for modals
+            Route::get('/{flag}/json', [\App\Http\Controllers\Admin\FlagController::class, 'apiShow'])->name('json');
+            Route::get('/', [\App\Http\Controllers\Admin\FlagController::class, 'index'])->name('index');
+            Route::get('/{flag}', [\App\Http\Controllers\Admin\FlagController::class, 'show'])->name('show');
+            Route::post('/{flag}/escalate', [\App\Http\Controllers\Admin\FlagController::class, 'escalate'])->name('escalate');
+            Route::post('/{flag}/resolve', [\App\Http\Controllers\Admin\FlagController::class, 'resolve'])->name('resolve');
+        });
 
         // Zone Commander mini dashboard (admin window)
         Route::get('/zone-commander/window', [\App\Http\Controllers\Admin\ZoneCommanderWindowController::class, 'index'])->name('zone-commander.window');

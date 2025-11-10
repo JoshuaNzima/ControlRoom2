@@ -69,15 +69,16 @@ export default function CreateGuard({ supervisors, can }: CreateGuardProps) {
               {/* Employee ID */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Employee ID *
+                  Employee ID
                 </label>
                 <input
                   type="text"
                   value={data.employee_id}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => setData('employee_id', e.target.value)}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
-                  required
+                  placeholder="Leave blank to auto-generate"
                 />
+                <p className="text-xs text-gray-500 mt-1">If left blank, the system will generate an employee ID (e.g. G101).</p>
                 {errors.employee_id && <p className="text-red-600 text-sm mt-1">{errors.employee_id}</p>}
               </div>
 

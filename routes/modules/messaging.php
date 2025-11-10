@@ -1,7 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\ControlRoom\MessagingController;
+use App\Http\Controllers\Operations\ControlRoom\MessagingController;
 
 Route::middleware(['auth'])->prefix('control-room')->name('control-room.')->group(function () {
     Route::prefix('messaging')->name('messaging.')->group(function () {

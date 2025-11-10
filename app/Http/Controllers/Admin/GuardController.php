@@ -73,7 +73,8 @@ class GuardController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'employee_id' => 'required|string|unique:guards,employee_id',
+            // allow nullable employee_id; we'll auto-generate if not provided
+            'employee_id' => 'nullable|string|unique:guards,employee_id',
             'name' => 'required|string|max:255',
             'phone' => 'nullable|string|max:20',
             'email' => 'nullable|email|unique:guards,email',
@@ -92,6 +93,27 @@ class GuardController extends Controller
 
         if (!auth()->user()->can('assign_guard_supervisor')) {
             unset($validated['supervisor_id']);
+        }
+
+        // Auto-generate employee_id when not provided
+        if (empty($validated['employee_id'])) {
+            // Find the current maximum numeric suffix in existing employee IDs
+            $maxNumeric = Guard::whereNotNull('employee_id')->get()->map(function ($g) {
+                if (preg_match('/(\\d+)$/', $g->employee_id, $m)) {
+                    return (int) $m[1];
+                }
+                return 0;
+            })->max() ?? 0;
+
+            $next = $maxNumeric + 1;
+            $candidate = 'G' . $next;
+            // Ensure uniqueness in case of race or odd existing IDs
+            while (Guard::where('employee_id', $candidate)->exists()) {
+                $next++;
+                $candidate = 'G' . $next;
+            }
+
+            $validated['employee_id'] = $candidate;
         }
 
         if ($request->hasFile('photo')) {

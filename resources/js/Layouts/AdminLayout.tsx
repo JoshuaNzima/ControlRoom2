@@ -3,6 +3,9 @@ import { Head, Link } from '@inertiajs/react';
 import IconMapper from '@/Components/IconMapper';
 import { User } from '@/types';
 import { useTheme } from '@/Providers/ThemeProvider';
+import { useNotifications } from '@/Providers/NotificationsProvider';
+import NotificationBadge from '@/Components/NotificationBadge';
+import NotificationBell from '@/Components/Operations/ControlRoom/NotificationBell';
 
 interface Props {
   title: string;
@@ -25,8 +28,22 @@ export default function AdminLayout({ title, children, user }: Props) {
 
   const isCurrent = (href: string) => window.location.pathname === href;
 
+  const { counts } = useNotifications();
+
   const adminLinks: ModuleNavItem[] = [
      { name: 'Admin Dashboard', href: route('admin.dashboard'), icon: <IconMapper name="home" className="h-6 w-6" />, current: isCurrent(route('admin.dashboard')) },
+     { name: 'Incidents', href: route('admin.incidents.index'), icon: (
+       <div className="relative">
+         <IconMapper name="alert-triangle" className="h-6 w-6" />
+         <NotificationBadge count={counts.incidents} />
+       </div>
+     ), current: isCurrent(route('admin.incidents.index')) },
+     { name: 'Flags', href: route('admin.flags.index'), icon: (
+       <div className="relative">
+         <IconMapper name="flag" className="h-6 w-6" />
+         <NotificationBadge count={counts.flags} />
+       </div>
+     ), current: isCurrent(route('admin.flags.index')) },
      { name: 'Services', href: route('admin.services.index'), icon: <IconMapper name="package" className="h-6 w-6" />, current: isCurrent(route('admin.services.index')) },
      { name: 'Users', href: route('admin.users.index'), icon: <IconMapper name="users-2" className="h-6 w-6" />, current: false },
      { name: 'Messaging', href: route('control-room.messaging.index'), icon: <IconMapper name="message-square-text" className="h-6 w-6" />, current: false },
@@ -36,10 +53,30 @@ export default function AdminLayout({ title, children, user }: Props) {
   ];
 
   const moduleLinks: ModuleNavItem[] = [
-  { name: 'Control Room', href: route('admin.control-room.dashboard'), icon: <IconMapper name="briefcase" className="h-6 w-6" />, current: isCurrent(route('admin.control-room.dashboard')) },
+  { 
+    name: 'Control Room', 
+    href: route('admin.control-room.dashboard'), 
+    icon: (
+      <div className="relative">
+        <IconMapper name="briefcase" className="h-6 w-6" />
+        <NotificationBadge count={counts.incidents + counts.downs} />
+      </div>
+    ), 
+    current: isCurrent(route('admin.control-room.dashboard')) 
+  },
   { name: 'Clients', href: route('admin.clients.index'), icon: <IconMapper name="building-2" className="h-6 w-6" />, current: false },
   { name: 'Guards', href: route('admin.guards.dashboard'), icon: <IconMapper name="shield-check" className="h-6 w-6" />, current: false },
-  { name: 'HR', href: route('hr.dashboard'), icon: <IconMapper name="users-2" className="h-6 w-6" />, current: false },
+  { 
+    name: 'HR', 
+    href: route('hr.dashboard'), 
+    icon: (
+      <div className="relative">
+        <IconMapper name="users-2" className="h-6 w-6" />
+        <NotificationBadge count={counts.flags} />
+      </div>
+    ), 
+    current: false 
+  },
   { name: 'K9', href: route('k9.dashboard'), icon: <IconMapper name="shield" className="h-6 w-6" />, current: false },
   { name: 'Finance', href: route('finance.dashboard'), icon: <IconMapper name="wallet" className="h-6 w-6" />, current: false },
   { name: 'Marketing', href: route('admin.marketing'), icon: <IconMapper name="megaphone" className="h-6 w-6" />, current: false },
@@ -114,6 +151,7 @@ export default function AdminLayout({ title, children, user }: Props) {
             <div className="flex items-center justify-between">
               <h1 className="text-xl font-semibold text-red-900 dark:text-gray-100">{title}</h1>
               <div className="flex items-center gap-4">
+                <NotificationBell />
                 <button onClick={toggle} className="text-sm px-3 py-1 rounded-md bg-red-100 text-red-800 hover:bg-red-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700">
                   {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
                 </button>

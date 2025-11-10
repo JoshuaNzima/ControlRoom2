@@ -37,21 +37,21 @@ Route::middleware('auth')->group(function () {
     
     // Control Room routes (allow admins and users with permission)
     Route::middleware(['role_or_permission:admin|control_room_operator|supervisor|manager|control.dashboard.view'])->prefix('control-room')->name('control-room.')->group(function () {
-        Route::get('/', [\App\Http\Controllers\ControlRoom\DashboardController::class, 'index'])->name('home');
+        Route::get('/', [\App\Http\Controllers\Operations\ControlRoom\DashboardController::class, 'index'])->name('home');
         
         // Ticket routes
-        Route::resource('tickets', \App\Http\Controllers\ControlRoom\TicketController::class);
-        Route::post('tickets/{ticket}/comments', [\App\Http\Controllers\ControlRoom\TicketController::class, 'addComment'])->name('tickets.comments.store');
+        Route::resource('tickets', \App\Http\Controllers\Operations\ControlRoom\TicketController::class);
+        Route::post('tickets/{ticket}/comments', [\App\Http\Controllers\Operations\ControlRoom\TicketController::class, 'addComment'])->name('tickets.comments.store');
 
         // Flag routes
-        Route::resource('flags', \App\Http\Controllers\ControlRoom\FlagController::class);
+        Route::resource('flags', \App\Http\Controllers\Operations\ControlRoom\FlagController::class);
 
         // Camera routes
-        Route::resource('cameras', \App\Http\Controllers\ControlRoom\CameraController::class);
-        Route::get('cameras/{camera}/recordings', [\App\Http\Controllers\ControlRoom\CameraController::class, 'getRecordings'])->name('cameras.recordings.index');
-        Route::get('recordings/{recording}/download', [\App\Http\Controllers\ControlRoom\CameraController::class, 'downloadRecording'])->name('cameras.recordings.download');
-        Route::post('cameras/{camera}/alerts/{alert}/acknowledge', [\App\Http\Controllers\ControlRoom\CameraController::class, 'acknowledgeAlert'])->name('cameras.alerts.acknowledge');
-        Route::post('cameras/{camera}/alerts/{alert}/resolve', [\App\Http\Controllers\ControlRoom\CameraController::class, 'resolveAlert'])->name('cameras.alerts.resolve');
+        Route::resource('cameras', \App\Http\Controllers\Operations\ControlRoom\CameraController::class);
+        Route::get('cameras/{camera}/recordings', [\App\Http\Controllers\Operations\ControlRoom\CameraController::class, 'getRecordings'])->name('cameras.recordings.index');
+        Route::get('recordings/{recording}/download', [\App\Http\Controllers\Operations\ControlRoom\CameraController::class, 'downloadRecording'])->name('cameras.recordings.download');
+        Route::post('cameras/{camera}/alerts/{alert}/acknowledge', [\App\Http\Controllers\Operations\ControlRoom\CameraController::class, 'acknowledgeAlert'])->name('cameras.alerts.acknowledge');
+        Route::post('cameras/{camera}/alerts/{alert}/resolve', [\App\Http\Controllers\Operations\ControlRoom\CameraController::class, 'resolveAlert'])->name('cameras.alerts.resolve');
     });
 });
 Route::middleware(['auth', 'role:super_admin'])->prefix('superadmin')->name('superadmin.')->group(function () {
@@ -114,6 +114,10 @@ Route::middleware(['auth'])->group(function () {
             case in_array('zone_commander', $roles):
                 return redirect()->route('zone.dashboard');
             case in_array('manager', $roles):
+                // Check if user has operations manager permission
+                if ($user->hasPermissionTo('operations.dashboard.view')) {
+                    return redirect()->route('control-room.operations.manager.dashboard');
+                }
                 return redirect()->route('manager.dashboard');
             case in_array('supervisor', $roles):
                 return redirect()->route('supervisor.dashboard');
@@ -136,6 +140,51 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/qr-codes', [\App\Http\Controllers\SupervisorQRCodesController::class, 'index'])->name('qr-codes');
         Route::get('/qr-codes/download-bulk', [\App\Http\Controllers\SupervisorQRCodesController::class, 'downloadBulk'])->name('qr-codes.download-bulk');
     });
+
+    // Legacy operations dashboard URL - redirect to control-room operations officer dashboard
+    Route::get('/operations/dashboard', function () {
+        return redirect()->route('control-room.operations.officer.dashboard');
+    })->middleware(['role_or_permission:admin|control_room_operator|operations_officer|operations.dashboard.view'])->name('operations.dashboard');
+
+    // Alias /operations to control-room (non-destructive)
+    // These are simple redirects to allow the new /operations entrypoints while keeping the
+    // canonical `control-room` module intact. They intentionally reuse the existing named
+    // routes so authorization is still enforced by the target routes.
+    Route::get('/operations', function () {
+        return redirect('/control-room');
+    })->name('operations.home');
+
+    Route::get('/operations/operations-manager', function () {
+        return redirect()->route('control-room.operations.manager.dashboard');
+    })->name('operations.manager.redirect');
+
+    Route::get('/operations/operations-manager/approvals', function () {
+        return redirect()->route('control-room.operations.manager.approvals');
+    })->name('operations.manager.approvals.redirect');
+
+    Route::get('/operations/operations-manager/reports/export', function () {
+        return redirect()->route('control-room.operations.manager.reports.export');
+    })->name('operations.manager.reports.export.redirect');
+
+    Route::get('/operations/operations-officer', function () {
+        return redirect()->route('control-room.operations.officer.dashboard');
+    })->name('operations.officer.redirect');
+
+    Route::get('/operations/operations-officer/alerts', function () {
+        return redirect()->route('control-room.operations.officer.alerts');
+    })->name('operations.officer.alerts.redirect');
+
+    Route::get('/operations/operations-officer/cameras', function () {
+        return redirect()->route('control-room.operations.officer.cameras');
+    })->name('operations.officer.cameras.redirect');
+
+    Route::get('/operations/operations-officer/zones', function () {
+        return redirect()->route('control-room.operations.officer.zones');
+    })->name('operations.officer.zones.redirect');
+
+    Route::get('/operations/operations-officer/shifts', function () {
+        return redirect()->route('control-room.operations.officer.shifts');
+    })->name('operations.officer.shifts.redirect');
 
     // Infractions routes - accessible by admin, zone commander, and supervisor
     Route::middleware(['auth'])->group(function () {
@@ -183,7 +232,7 @@ Route::middleware(['auth'])->group(function () {
             ->name('supervisors.index');
 
         // Control-room scan tags viewer
-        Route::get('/control-room/scan-tags', [\App\Http\Controllers\ControlRoom\ScanTagController::class, 'index'])
+        Route::get('/control-room/scan-tags', [\App\Http\Controllers\Operations\ControlRoom\ScanTagController::class, 'index'])
             ->middleware(['auth', 'permission:control-room.view'])
             ->name('control-room.scan-tags');
 

@@ -415,7 +415,7 @@ export default function PaymentsIndex({
             </div>
 
             <div className="p-4">
-              <div className="overflow-x-auto">
+              <div className="relative overflow-x-auto">
                 <table className="min-w-full border">
                   <thead>
                     <tr className="bg-gray-50">
@@ -424,7 +424,7 @@ export default function PaymentsIndex({
                           sort_field: 'name',
                           sort_direction: filters.sort_field === 'name' && filters.sort_direction === 'asc' ? 'desc' : 'asc'
                         })}
-                        className="px-3 py-2 text-left text-xs font-semibold text-gray-600 border cursor-pointer hover:bg-gray-50"
+                        className="sticky left-0 z-20 px-3 py-2 text-left text-xs font-semibold text-gray-600 border cursor-pointer hover:bg-gray-50 bg-gray-50"
                       >
                         <div className="flex items-center gap-2">
                           Client
@@ -474,7 +474,10 @@ export default function PaymentsIndex({
                       
                       return (
                         <tr key={c.id} className={`${isOverdue ? 'bg-red-50/80 hover:bg-red-100/90' : 'odd:bg-white even:bg-gray-50 hover:bg-gray-100'} transition-colors group`} title={isOverdue ? `${outstandingMonths} months overdue` : ''}>
-                          <td className={`px-3 py-2 text-sm border whitespace-nowrap ${isOverdue ? 'text-red-900 font-semibold' : 'text-gray-900'}`}>
+                          <td className={`sticky left-0 z-10 px-3 py-2 text-sm border whitespace-nowrap ${
+                            isOverdue ? 'text-red-900 font-semibold bg-red-50/80 group-hover:bg-red-100/90' : 
+                            'text-gray-900 ' + (c.id % 2 === 0 ? 'bg-gray-50 group-hover:bg-gray-100' : 'bg-white group-hover:bg-gray-100')
+                          }`}>
                             <div className="flex items-center gap-2">
                               <span className="group-hover:underline">{c.name}</span>
                               {isOverdue && (

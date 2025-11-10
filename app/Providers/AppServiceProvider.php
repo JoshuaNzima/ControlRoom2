@@ -38,6 +38,9 @@ class AppServiceProvider extends ServiceProvider
         App::setLocale(config('app.locale'));
         Carbon::setLocale(config('app.locale'));
 
+        // Register observers
+        \App\Models\Guards\Guard::observe(\App\Observers\GuardObserver::class);
+
         // SQLite compatibility shim: define MONTH() and YEAR() functions when using sqlite
         // Some raw SQL (or older queries) may use MONTH(CURRENT_DATE) / YEAR(CURRENT_DATE)
         // which are not available in SQLite. Define lightweight equivalents on the

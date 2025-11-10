@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
+use App\Models\Alert;
 
 class ClientSite extends Model
 {
@@ -54,6 +56,31 @@ class ClientSite extends Model
     public function attendance(): HasMany
     {
         return $this->hasMany(Attendance::class);
+    }
+
+    /**
+     * Active guards relationship (convenience)
+     * Returns guards currently marked active on the guard record.
+     */
+    public function activeGuards(): BelongsToMany
+    {
+        return $this->guards()->where('status', 'active');
+    }
+
+    /**
+     * Morph relation to alerts (alerts where this site is the source)
+     */
+    public function alerts(): MorphMany
+    {
+        return $this->morphMany(Alert::class, 'source');
+    }
+
+    /**
+     * Active alerts for this site
+     */
+    public function activeAlerts(): MorphMany
+    {
+        return $this->alerts()->where('status', 'active');
     }
 
     public function scopeActive($query)

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Head, Link, router } from '@inertiajs/react';
 import axios from 'axios';
 import AdminLayout from '@/Layouts/AdminLayout';
@@ -9,7 +9,7 @@ import EditClientModal from '@/Components/Clients/EditClientModal';
 import ClientDetailsModal from '@/Components/Clients/ClientDetailsModal';
 import BulkImportClientsModal from '@/Components/Clients/BulkImportClientsModal';
 import AddClientModal from '@/Components/Clients/AddClientModal';
-
+import ScrollableList from '@/Components/ScrollableList';
 interface Client {
   id: number;
   name: string;
@@ -48,6 +48,10 @@ export default function ClientsIndex({ clients, filters, services = [], zones = 
   const [editingClient, setEditingClient] = React.useState<Client | null>(null);
   const [loadingClientId, setLoadingClientId] = React.useState<number | null>(null);
   const [viewingClient, setViewingClient] = React.useState<Client | null>(null);
+  // Local client-side pagination state for infinite append
+  const [localClients, setLocalClients] = React.useState<Client[]>(clients.data || []);
+  const [meta, setMeta] = React.useState<any>(clients.meta ?? { current_page: 1, last_page: 1, total: localClients.length });
+  const [isLoading, setIsLoading] = React.useState<boolean>(false);
   const [showBulkImport, setShowBulkImport] = React.useState(false);
   const [showAddClient, setShowAddClient] = React.useState(false);
   React.useEffect(() => {
@@ -59,6 +63,39 @@ export default function ClientsIndex({ clients, filters, services = [], zones = 
 
   const handleSearch = () => {
     router.get(route('admin.clients.index'), { search, per_page: perPage }, { preserveState: true });
+  };
+
+  // Load more clients via axios and append to local state (client-side infinite append)
+  const loadMoreClients = async () => {
+    if (isLoading) return;
+    if (!meta) return;
+    if ((meta.current_page ?? 1) >= (meta.last_page ?? 1)) return;
+
+    const nextPage = (meta.current_page ?? 1) + 1;
+    setIsLoading(true);
+    try {
+      const res = await axios.get(route('admin.clients.index', { page: nextPage }), { headers: { 'X-Requested-With': 'XMLHttpRequest', Accept: 'application/json' } });
+      // Expect response.data to be a paginated object with data & meta
+      const payload = res.data;
+      const incoming = payload.data ?? [];
+      // append unique clients
+      setLocalClients((prev) => {
+        const ids = new Set(prev.map((c) => c.id));
+        const merged = [...prev];
+        for (const c of incoming) {
+          if (!ids.has(c.id)) {
+            merged.push(c);
+            ids.add(c.id);
+          }
+        }
+        return merged;
+      });
+      setMeta((prevMeta: any) => ({ ...(prevMeta ?? {}), ...(payload.meta ?? payload) }));
+    } catch (e) {
+      console.error('Failed to load more clients', e);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const fetchClientAndView = async (id: number) => {
@@ -205,21 +242,26 @@ export default function ClientsIndex({ clients, filters, services = [], zones = 
           </div>
         </Card>
 
-        <Card className="overflow-hidden">
-          <div className="overflow-x-auto">
+        <Card>
+          <ScrollableList
+            onLoadMore={loadMoreClients}
+            isLoading={isLoading}
+            hasMore={(meta?.current_page ?? 1) < (meta?.last_page ?? 1)}
+            containerClassName="max-h-[600px] overflow-x-auto"
+          >
             <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Client</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Contact Info</th>
-                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Sites</th>
-                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Services</th>
-                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Status</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {clients.data.map((client) => (
+                <thead className="bg-gray-50 sticky top-0 z-10">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Client</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Contact Info</th>
+                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Sites</th>
+                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Services</th>
+                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Status</th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {localClients.map((client) => (
                   <tr key={client.id} className="hover:bg-gray-50/50">
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
@@ -301,7 +343,7 @@ export default function ClientsIndex({ clients, filters, services = [], zones = 
                             }
                           }}
                         >
-                          <IconMapper name="Trash" size={16} className="text-red-500" />
+                          <IconMapper name="Trash" size={16} />
                         </Button>
                       </div>
                     </td>
@@ -309,30 +351,18 @@ export default function ClientsIndex({ clients, filters, services = [], zones = 
                 ))}
               </tbody>
             </table>
-          </div>
+          </ScrollableList>
         </Card>
 
-        {clients.meta?.links && clients.meta.links.length > 3 && (
-          <div className="mt-4 flex justify-center">
-            <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
-              {clients.meta.links.map((link: any, i: number) => (
-                <Button
-                  key={i}
-                  variant={link.active ? "default" : "outline"}
-                  disabled={!link.url}
-                  onClick={() => router.get(link.url)}
-                  className="relative inline-flex items-center px-4 py-2 text-sm font-medium"
-                >
-                  <span dangerouslySetInnerHTML={{ __html: link.label }}></span>
-                </Button>
-              ))}
-            </nav>
+        {meta?.total > 0 && (
+          <div className="mt-4 text-sm text-gray-600 text-center">
+            Showing {localClients.length} of {meta.total} clients
           </div>
         )}
 
         {editingClient && (
           <EditClientModal
-            client={editingClient}
+            client={editingClient as Client}
             open={true}
             services={services}
             onClose={() => setEditingClient(null)}
@@ -341,7 +371,7 @@ export default function ClientsIndex({ clients, filters, services = [], zones = 
 
         {viewingClient && (
           <ClientDetailsModal
-            client={viewingClient}
+            client={viewingClient as Client}
             open={true}
             services={services}
             onClientUpdated={(c: any) => setViewingClient(c)}

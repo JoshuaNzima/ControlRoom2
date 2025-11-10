@@ -132,4 +132,28 @@ class UserController extends Controller
         return redirect()->route('admin.users.index')
             ->with('success', 'User deleted successfully.');
     }
+
+    /**
+     * API index for fetching users as JSON for modal assignment lists
+     */
+    public function apiIndex(Request $request)
+    {
+        $query = User::query();
+
+        if ($request->input('role')) {
+            $role = $request->input('role');
+            $query->whereHas('roles', function ($q) use ($role) {
+                $q->where('name', $role);
+            });
+        } else {
+            // default: return admin/manager/super_admin/supervisor users
+            $query->whereHas('roles', function ($q) {
+                $q->whereIn('name', ['admin', 'manager', 'super_admin', 'supervisor']);
+            });
+        }
+
+        $users = $query->orderBy('name')->get(['id', 'name', 'email']);
+
+        return response()->json($users);
+    }
 }

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\ControlRoom;
 
 use App\Http\Controllers\Controller;
+use App\Traits\HandlesInfiniteScroll;
 use App\Http\Requests\StoreZoneRequest;
 use App\Http\Requests\UpdateZoneRequest;
 use App\Models\Zone;
@@ -10,12 +11,17 @@ use Inertia\Inertia;
 
 class ZoneController extends Controller
 {
+    use HandlesInfiniteScroll;
+
     public function index()
     {
-        $zones = Zone::query()
+        $zones = $this->handleInfiniteScroll(
+            Zone::query()
             ->select(['id', 'name', 'code', 'description', 'status', 'required_guard_count', 'target_sites_count'])
-            ->get()
-            ->map(function (Zone $zone) {
+            ->orderBy('name'),
+            request(),
+            10,
+            function (Zone $zone) {
                 return [
                     'id' => $zone->id,
                     'name' => $zone->name,
@@ -28,7 +34,8 @@ class ZoneController extends Controller
                     'active_guard_count' => $zone->active_guard_count,
                     'sites_count' => $zone->sites()->where('status', 'active')->count(),
                 ];
-            });
+            }
+        );
 
         $commanders = \App\Models\User::role('zone_commander')->select(['id','name'])->orderBy('name')->get();
         $sites = \App\Models\Guards\ClientSite::select(['id','name','zone_id'])->orderBy('name')->get();

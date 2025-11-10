@@ -13,6 +13,15 @@ class RolesAndPermissionsSeeder extends Seeder
         app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
 
         $permissions = [
+            // Operations module permissions
+            'operations.dashboard.view',
+            'operations.approvals.manage',
+            'operations.reports.export',
+            'operations.alerts.manage',
+            'operations.cameras.manage',
+            'operations.zones.manage',
+            'operations.shifts.manage',
+
             // Guards module
             'guards.view',
             'guards.create',
@@ -49,11 +58,6 @@ class RolesAndPermissionsSeeder extends Seeder
             'clients.edit',
             'clients.delete',
             'clients.sites.manage',
-            
-            // K9 module
-            'k9.view',
-            'k9.dogs.manage',
-            'k9.handlers.manage',
             
             // Control Room module
             'control.dashboard.view',
@@ -109,27 +113,36 @@ class RolesAndPermissionsSeeder extends Seeder
         // Manager role - most permissions except system settings
         $managerRole = Role::firstOrCreate(['name' => 'manager']);
         $managerRole->givePermissionTo([
+            // Operations permissions
+            'operations.dashboard.view',
+            'operations.approvals.manage',
+            'operations.reports.export',
+            'operations.alerts.manage',
+            'operations.cameras.manage',
+            'operations.zones.manage',
+            'operations.shifts.manage',
+
+            // Guards management
             'guards.view', 'guards.edit', 'guards.assign',
             'attendance.view', 'attendance.manage', 'attendance.export',
             'shifts.view', 'shifts.manage',
             'incidents.view', 'incidents.create',
-            'guards.operations.view', 'guards.sergeants.view',
+            'guards.operations.view',
+            'guards.sergeants.view',
             'guards.calendar.view',
             
-            'hr.employees.view', 'hr.employees.edit',
-            'hr.leaves.view', 'hr.leaves.approve',
-            
-            'clients.view', 'clients.edit', 'clients.sites.manage',
-            
-            'k9.view',
-            
-            'control.dashboard.view', 'control.incidents.view',
+            // Control Room permissions
+            'control.dashboard.view',
+            'control.incidents.view',
             'control.alerts.view',
+            'control.cameras.view',
+            'control.zones.view',
+            'control.reports.view',
             
+            // Other permissions
+            'clients.view', 'clients.sites.manage',
             'reports.view', 'reports.generate', 'reports.export',
             'reports.activity_logs.view',
-            
-            'admin.users.view', 'admin.users.create', 'admin.users.edit',
         ]);
 
         // Supervisor role - limited to attendance and viewing

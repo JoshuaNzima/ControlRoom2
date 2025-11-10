@@ -12,6 +12,6 @@ Route::middleware(['auth'])->group(function () {
 		Route::get('/dismissed', fn() => Inertia::render('ComingSoon'))->name('dismissed');
 
 		// Downs for HR visibility
-		Route::get('/downs', [\App\Http\Controllers\ControlRoom\DownController::class, 'index'])->name('downs.index');
+		Route::get('/downs', [\App\Http\Controllers\Operations\ControlRoom\DownController::class, 'index'])->name('downs.index');
 	});
 });

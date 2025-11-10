@@ -1,0 +1,1403 @@
+{
+    "App\\Models\\Alert": {
+        "table": "alerts",
+        "columns": [
+            "id",
+            "title",
+            "message",
+            "type",
+            "priority",
+            "status",
+            "source_type",
+            "source_id",
+            "target_groups",
+            "acknowledged_by",
+            "acknowledged_at",
+            "resolved_by",
+            "resolved_at",
+            "meta",
+            "created_at",
+            "updated_at",
+            "deleted_at"
+        ],
+        "fillable": [
+            "title",
+            "message",
+            "type",
+            "priority",
+            "status",
+            "source_type",
+            "source_id",
+            "target_groups",
+            "acknowledged_by",
+            "acknowledged_at",
+            "resolved_by",
+            "resolved_at"
+        ],
+        "missing_fillable": [],
+        "casts": {
+            "id": "int",
+            "target_groups": "array",
+            "acknowledged_at": "datetime",
+            "resolved_at": "datetime"
+        },
+        "missing_casts": []
+    },
+    "App\\Models\\Camera": {
+        "table": "cameras",
+        "columns": [
+            "id",
+            "name",
+            "client_site_id",
+            "stream_url",
+            "type",
+            "location",
+            "status",
+            "last_online",
+            "recording_enabled",
+            "retention_days",
+            "credentials",
+            "settings",
+            "created_at",
+            "updated_at",
+            "deleted_at",
+            "ip_address",
+            "port",
+            "username",
+            "password",
+            "model",
+            "motion_detection",
+            "night_vision",
+            "description",
+            "connection_status",
+            "last_connection_test",
+            "last_restart",
+            "created_by"
+        ],
+        "fillable": [
+            "name",
+            "location",
+            "ip_address",
+            "port",
+            "username",
+            "password",
+            "model",
+            "status",
+            "recording_enabled",
+            "motion_detection",
+            "night_vision",
+            "description",
+            "connection_status",
+            "last_connection_test",
+            "last_restart",
+            "created_by"
+        ],
+        "missing_fillable": [],
+        "casts": {
+            "id": "int",
+            "recording_enabled": "boolean",
+            "motion_detection": "boolean",
+            "night_vision": "boolean",
+            "last_connection_test": "datetime",
+            "last_restart": "datetime"
+        },
+        "missing_casts": []
+    },
+    "App\\Models\\CameraAlert": {
+        "table": "camera_alerts",
+        "columns": [
+            "id",
+            "camera_id",
+            "type",
+            "description",
+            "severity",
+            "status",
+            "metadata",
+            "acknowledged_by",
+            "acknowledged_at",
+            "created_at",
+            "updated_at",
+            "message",
+            "resolved_by",
+            "resolved_at"
+        ],
+        "fillable": [
+            "camera_id",
+            "type",
+            "message",
+            "status",
+            "acknowledged_by",
+            "acknowledged_at",
+            "resolved_by",
+            "resolved_at"
+        ],
+        "missing_fillable": [],
+        "casts": {
+            "id": "int",
+            "acknowledged_at": "datetime",
+            "resolved_at": "datetime"
+        },
+        "missing_casts": []
+    },
+    "App\\Models\\CameraRecording": {
+        "table": "camera_recordings",
+        "columns": [
+            "id",
+            "camera_id",
+            "start_time",
+            "end_time",
+            "file_path",
+            "size",
+            "type",
+            "trigger_type",
+            "trigger_metadata",
+            "status",
+            "created_at",
+            "updated_at",
+            "deleted_at",
+            "filename",
+            "file_size",
+            "duration",
+            "quality"
+        ],
+        "fillable": [
+            "camera_id",
+            "filename",
+            "file_path",
+            "file_size",
+            "duration",
+            "start_time",
+            "end_time",
+            "type",
+            "quality"
+        ],
+        "missing_fillable": [],
+        "casts": {
+            "id": "int",
+            "start_time": "datetime",
+            "end_time": "datetime"
+        },
+        "missing_casts": []
+    },
+    "App\\Models\\Client": {
+        "table": "clients",
+        "columns": [
+            "id",
+            "name",
+            "contact_person",
+            "phone",
+            "email",
+            "address",
+            "status",
+            "contract_start_date",
+            "contract_end_date",
+            "notes",
+            "created_at",
+            "updated_at",
+            "deleted_at",
+            "monthly_rate",
+            "supervisor_id",
+            "billing_start_date"
+        ],
+        "fillable": [
+            "name",
+            "contact_person",
+            "phone",
+            "email",
+            "address",
+            "status",
+            "billing_start_date",
+            "contract_start_date",
+            "contract_end_date",
+            "monthly_rate",
+            "notes"
+        ],
+        "missing_fillable": [],
+        "casts": {
+            "id": "int",
+            "contract_start_date": "date",
+            "contract_end_date": "date",
+            "billing_start_date": "date",
+            "monthly_rate": "decimal:2",
+            "deleted_at": "datetime"
+        },
+        "missing_casts": []
+    },
+    "App\\Models\\ClientPayment": {
+        "table": "client_payments",
+        "columns": [
+            "id",
+            "client_id",
+            "year",
+            "month",
+            "paid",
+            "amount_due",
+            "amount_paid",
+            "created_at",
+            "updated_at",
+            "prepaid_amount"
+        ],
+        "fillable": [
+            "client_id",
+            "year",
+            "month",
+            "paid",
+            "amount_due",
+            "amount_paid",
+            "prepaid_amount"
+        ],
+        "missing_fillable": [],
+        "casts": {
+            "id": "int",
+            "paid": "boolean",
+            "amount_due": "decimal:2",
+            "amount_paid": "decimal:2",
+            "prepaid_amount": "decimal:2"
+        },
+        "missing_casts": []
+    },
+    "App\\Models\\ClientSite": {
+        "table": "client_sites",
+        "columns": [
+            "id",
+            "client_id",
+            "name",
+            "address",
+            "contact_person",
+            "phone",
+            "latitude",
+            "longitude",
+            "special_instructions",
+            "required_guards",
+            "status",
+            "created_at",
+            "updated_at",
+            "deleted_at",
+            "zone_id",
+            "services_requested",
+            "site_type"
+        ],
+        "fillable": [
+            "client_id",
+            "name",
+            "address",
+            "contact_person",
+            "phone",
+            "latitude",
+            "longitude",
+            "special_instructions",
+            "required_guards",
+            "services_requested",
+            "status",
+            "site_type"
+        ],
+        "missing_fillable": [],
+        "casts": {
+            "id": "int",
+            "latitude": "decimal:8",
+            "longitude": "decimal:8",
+            "required_guards": "integer",
+            "deleted_at": "datetime"
+        },
+        "missing_casts": []
+    },
+    "App\\Models\\Communication\\AgentStatus": {
+        "table": "agent_statuses",
+        "columns": [
+            "id",
+            "user_id",
+            "status",
+            "location",
+            "location_updated_at",
+            "battery_level",
+            "metadata",
+            "created_at",
+            "updated_at"
+        ],
+        "fillable": [
+            "user_id",
+            "status",
+            "location",
+            "location_updated_at",
+            "battery_level",
+            "metadata"
+        ],
+        "missing_fillable": [],
+        "casts": {
+            "id": "int",
+            "location": "json",
+            "location_updated_at": "datetime",
+            "metadata": "json"
+        },
+        "missing_casts": []
+    },
+    "App\\Models\\Communication\\Conversation": {
+        "table": "conversations",
+        "columns": [
+            "id",
+            "title",
+            "type",
+            "created_by",
+            "last_message_at",
+            "status",
+            "meta",
+            "created_at",
+            "updated_at",
+            "deleted_at",
+            "name"
+        ],
+        "fillable": [
+            "title",
+            "type",
+            "created_by",
+            "last_message_at",
+            "status"
+        ],
+        "missing_fillable": [],
+        "casts": {
+            "id": "int",
+            "last_message_at": "datetime",
+            "meta": "json",
+            "deleted_at": "datetime"
+        },
+        "missing_casts": []
+    },
+    "App\\Models\\Communication\\Message": {
+        "table": "messages",
+        "columns": [
+            "id",
+            "conversation_id",
+            "sender_id",
+            "type",
+            "content",
+            "metadata",
+            "status",
+            "created_at",
+            "updated_at",
+            "deleted_at",
+            "is_emergency",
+            "read_at"
+        ],
+        "fillable": [
+            "conversation_id",
+            "sender_id",
+            "type",
+            "content",
+            "metadata",
+            "status"
+        ],
+        "missing_fillable": [],
+        "casts": {
+            "id": "int",
+            "metadata": "json",
+            "deleted_at": "datetime"
+        },
+        "missing_casts": []
+    },
+    "App\\Models\\Conversation": {
+        "table": "conversations",
+        "columns": [
+            "id",
+            "title",
+            "type",
+            "created_by",
+            "last_message_at",
+            "status",
+            "meta",
+            "created_at",
+            "updated_at",
+            "deleted_at",
+            "name"
+        ],
+        "fillable": [
+            "type",
+            "name",
+            "created_by"
+        ],
+        "missing_fillable": [],
+        "casts": {
+            "id": "int",
+            "created_at": "datetime",
+            "updated_at": "datetime"
+        },
+        "missing_casts": []
+    },
+    "App\\Models\\Core\\Module": {
+        "table": "modules",
+        "columns": [
+            "id",
+            "name",
+            "display_name",
+            "description",
+            "icon",
+            "color",
+            "is_active",
+            "is_core",
+            "config",
+            "sort_order",
+            "version",
+            "created_at",
+            "updated_at",
+            "category",
+            "route",
+            "order",
+            "settings"
+        ],
+        "fillable": [
+            "name",
+            "display_name",
+            "description",
+            "icon",
+            "color",
+            "is_active",
+            "is_core",
+            "config",
+            "sort_order",
+            "version"
+        ],
+        "missing_fillable": [],
+        "casts": {
+            "id": "int",
+            "is_active": "boolean",
+            "is_core": "boolean",
+            "config": "array"
+        },
+        "missing_casts": []
+    },
+    "App\\Models\\Down": {
+        "table": "downs",
+        "columns": [
+            "id",
+            "client_id",
+            "client_site_id",
+            "reported_by",
+            "type",
+            "title",
+            "description",
+            "status",
+            "escalation_level",
+            "resolved_at",
+            "resolved_by",
+            "resolution_notes",
+            "created_at",
+            "updated_at",
+            "deleted_at"
+        ],
+        "fillable": [
+            "client_id",
+            "client_site_id",
+            "reported_by",
+            "type",
+            "title",
+            "description",
+            "status",
+            "escalation_level",
+            "resolved_at",
+            "resolved_by",
+            "resolution_notes"
+        ],
+        "missing_fillable": [],
+        "casts": {
+            "id": "int",
+            "resolved_at": "datetime",
+            "deleted_at": "datetime"
+        },
+        "missing_casts": []
+    },
+    "App\\Models\\Flag": {
+        "table": "flags",
+        "columns": [
+            "id",
+            "flaggable_type",
+            "flaggable_id",
+            "reason",
+            "details",
+            "status",
+            "reported_by",
+            "reviewed_by",
+            "review_notes",
+            "review_date",
+            "meta",
+            "created_at",
+            "updated_at",
+            "title",
+            "severity"
+        ],
+        "fillable": [
+            "reason",
+            "details",
+            "status",
+            "flaggable_id",
+            "flaggable_type",
+            "reported_by",
+            "reviewed_by",
+            "review_notes",
+            "review_date",
+            "title",
+            "severity"
+        ],
+        "missing_fillable": [],
+        "casts": {
+            "id": "int",
+            "review_date": "datetime",
+            "meta": "array"
+        },
+        "missing_casts": []
+    },
+    "App\\Models\\GuardDocuments": {
+        "table": "guard_documents",
+        "columns": [
+            "id",
+            "created_at",
+            "updated_at"
+        ],
+        "fillable": [],
+        "missing_fillable": [],
+        "casts": {
+            "id": "int"
+        },
+        "missing_casts": []
+    },
+    "App\\Models\\Guards\\Attendance": {
+        "table": "attendance",
+        "columns": [
+            "id",
+            "guard_id",
+            "supervisor_id",
+            "client_site_id",
+            "date",
+            "check_in_time",
+            "check_out_time",
+            "hours_worked",
+            "overtime_hours",
+            "status",
+            "check_in_notes",
+            "check_out_notes",
+            "check_in_photo",
+            "check_out_photo",
+            "created_at",
+            "updated_at",
+            "checkpoint_scan_id",
+            "location_verified",
+            "check_in_latitude",
+            "check_in_longitude"
+        ],
+        "fillable": [
+            "guard_id",
+            "supervisor_id",
+            "client_site_id",
+            "date",
+            "check_in_time",
+            "check_out_time",
+            "hours_worked",
+            "overtime_hours",
+            "status",
+            "check_in_notes",
+            "check_out_notes",
+            "check_in_photo",
+            "check_out_photo"
+        ],
+        "missing_fillable": [],
+        "casts": {
+            "id": "int",
+            "date": "date",
+            "check_in_time": "datetime",
+            "check_out_time": "datetime",
+            "hours_worked": "decimal:2",
+            "overtime_hours": "decimal:2"
+        },
+        "missing_casts": []
+    },
+    "App\\Models\\Guards\\Checkpoint": {
+        "table": "checkpoints",
+        "columns": [
+            "id",
+            "client_site_id",
+            "name",
+            "code",
+            "type",
+            "description",
+            "is_active",
+            "requires_photo",
+            "scan_radius_meters",
+            "latitude",
+            "longitude",
+            "created_at",
+            "updated_at"
+        ],
+        "fillable": [
+            "client_site_id",
+            "name",
+            "code",
+            "type",
+            "description",
+            "is_active",
+            "requires_photo",
+            "scan_radius_meters",
+            "latitude",
+            "longitude"
+        ],
+        "missing_fillable": [],
+        "casts": {
+            "id": "int",
+            "is_active": "boolean",
+            "requires_photo": "boolean",
+            "scan_radius_meters": "integer",
+            "latitude": "decimal:8",
+            "longitude": "decimal:8"
+        },
+        "missing_casts": []
+    },
+    "App\\Models\\Guards\\CheckpointScan": {
+        "table": "checkpoint_scans",
+        "columns": [
+            "id",
+            "checkpoint_id",
+            "supervisor_id",
+            "scanned_at",
+            "latitude",
+            "longitude",
+            "device_info",
+            "location_verified",
+            "notes",
+            "created_at",
+            "updated_at"
+        ],
+        "fillable": [
+            "checkpoint_id",
+            "supervisor_id",
+            "scanned_at",
+            "latitude",
+            "longitude",
+            "device_info",
+            "location_verified",
+            "notes"
+        ],
+        "missing_fillable": [],
+        "casts": {
+            "id": "int",
+            "scanned_at": "datetime",
+            "latitude": "decimal:8",
+            "longitude": "decimal:8",
+            "location_verified": "boolean"
+        },
+        "missing_casts": []
+    },
+    "App\\Models\\Guards\\Client": {
+        "table": "clients",
+        "columns": [
+            "id",
+            "name",
+            "contact_person",
+            "phone",
+            "email",
+            "address",
+            "status",
+            "contract_start_date",
+            "contract_end_date",
+            "notes",
+            "created_at",
+            "updated_at",
+            "deleted_at",
+            "monthly_rate",
+            "supervisor_id",
+            "billing_start_date"
+        ],
+        "fillable": [
+            "name",
+            "contact_person",
+            "phone",
+            "email",
+            "address",
+            "status",
+            "billing_start_date",
+            "contract_start_date",
+            "contract_end_date",
+            "monthly_rate",
+            "notes"
+        ],
+        "missing_fillable": [],
+        "casts": {
+            "id": "int",
+            "contract_start_date": "date",
+            "contract_end_date": "date",
+            "billing_start_date": "date",
+            "monthly_rate": "decimal:2",
+            "deleted_at": "datetime"
+        },
+        "missing_casts": []
+    },
+    "App\\Models\\Guards\\ClientSite": {
+        "table": "client_sites",
+        "columns": [
+            "id",
+            "client_id",
+            "name",
+            "address",
+            "contact_person",
+            "phone",
+            "latitude",
+            "longitude",
+            "special_instructions",
+            "required_guards",
+            "status",
+            "created_at",
+            "updated_at",
+            "deleted_at",
+            "zone_id",
+            "services_requested",
+            "site_type"
+        ],
+        "fillable": [
+            "client_id",
+            "name",
+            "address",
+            "contact_person",
+            "phone",
+            "latitude",
+            "longitude",
+            "special_instructions",
+            "required_guards",
+            "services_requested",
+            "status",
+            "site_type"
+        ],
+        "missing_fillable": [],
+        "casts": {
+            "id": "int",
+            "latitude": "decimal:8",
+            "longitude": "decimal:8",
+            "required_guards": "integer",
+            "deleted_at": "datetime"
+        },
+        "missing_casts": []
+    },
+    "App\\Models\\Guards\\DownReport": {
+        "table": "down_reports",
+        "columns": [
+            "id",
+            "client_site_id",
+            "supervisor_id",
+            "checkpoint_id",
+            "reason",
+            "photo",
+            "created_at",
+            "updated_at"
+        ],
+        "fillable": [
+            "client_site_id",
+            "supervisor_id",
+            "checkpoint_id",
+            "reason",
+            "photo"
+        ],
+        "missing_fillable": [],
+        "casts": {
+            "id": "int"
+        },
+        "missing_casts": []
+    },
+    "App\\Models\\Guards\\Guard": {
+        "table": "guards",
+        "columns": [
+            "id",
+            "employee_id",
+            "name",
+            "phone",
+            "email",
+            "address",
+            "id_number",
+            "date_of_birth",
+            "gender",
+            "emergency_contact_name",
+            "emergency_contact_phone",
+            "status",
+            "hire_date",
+            "notes",
+            "photo",
+            "created_at",
+            "updated_at",
+            "deleted_at",
+            "supervisor_id",
+            "infraction_count",
+            "risk_level",
+            "last_infraction_at",
+            "zone_id"
+        ],
+        "fillable": [
+            "employee_id",
+            "name",
+            "zone_id",
+            "phone",
+            "email",
+            "address",
+            "id_number",
+            "date_of_birth",
+            "gender",
+            "emergency_contact_name",
+            "emergency_contact_phone",
+            "status",
+            "hire_date",
+            "notes",
+            "photo",
+            "supervisor_id"
+        ],
+        "missing_fillable": [],
+        "casts": {
+            "id": "int",
+            "date_of_birth": "date",
+            "hire_date": "date",
+            "deleted_at": "datetime"
+        },
+        "missing_casts": []
+    },
+    "App\\Models\\Guards\\GuardAssignment": {
+        "table": "guard_assignments",
+        "columns": [
+            "id",
+            "guard_id",
+            "client_site_id",
+            "assigned_by",
+            "start_date",
+            "end_date",
+            "assignment_type",
+            "notes",
+            "active",
+            "created_at",
+            "updated_at",
+            "is_active"
+        ],
+        "fillable": [
+            "guard_id",
+            "client_site_id",
+            "assigned_by",
+            "start_date",
+            "end_date",
+            "assignment_type",
+            "notes",
+            "is_active"
+        ],
+        "missing_fillable": [],
+        "casts": {
+            "id": "int",
+            "start_date": "date",
+            "end_date": "date",
+            "is_active": "boolean"
+        },
+        "missing_casts": []
+    },
+    "App\\Models\\Guards\\GuardInfraction": {
+        "table": "guard_infractions",
+        "columns": [
+            "id",
+            "guard_id",
+            "type",
+            "description",
+            "severity",
+            "incident_date",
+            "status",
+            "resolution",
+            "reported_by",
+            "reviewed_by",
+            "reviewed_at",
+            "created_at",
+            "updated_at",
+            "deleted_at"
+        ],
+        "fillable": [
+            "guard_id",
+            "type",
+            "description",
+            "severity",
+            "incident_date",
+            "status",
+            "resolution",
+            "reported_by",
+            "reviewed_by",
+            "reviewed_at"
+        ],
+        "missing_fillable": [],
+        "casts": {
+            "id": "int",
+            "incident_date": "datetime",
+            "reviewed_at": "datetime",
+            "deleted_at": "datetime"
+        },
+        "missing_casts": []
+    },
+    "App\\Models\\Guards\\Reliever": {
+        "table": "relievers",
+        "columns": [
+            "id",
+            "created_at",
+            "updated_at",
+            "guard_id",
+            "name",
+            "type",
+            "status",
+            "phone",
+            "email",
+            "notes"
+        ],
+        "fillable": [
+            "guard_id",
+            "name",
+            "type",
+            "status",
+            "phone",
+            "email",
+            "notes"
+        ],
+        "missing_fillable": [],
+        "casts": {
+            "id": "int"
+        },
+        "missing_casts": []
+    },
+    "App\\Models\\Guards\\Shift": {
+        "table": "shifts",
+        "columns": [
+            "id",
+            "guard_id",
+            "client_site_id",
+            "assigned_by",
+            "date",
+            "start_time",
+            "end_time",
+            "shift_type",
+            "instructions",
+            "status",
+            "created_at",
+            "updated_at",
+            "deleted_at",
+            "notes",
+            "reason_for_cancellation",
+            "actual_start_time",
+            "actual_end_time",
+            "is_overtime",
+            "overtime_hours",
+            "approved_by",
+            "approved_at",
+            "name",
+            "description",
+            "supervisor_id",
+            "required_guards",
+            "sites",
+            "created_by"
+        ],
+        "fillable": [
+            "guard_id",
+            "client_site_id",
+            "assigned_by",
+            "date",
+            "start_time",
+            "end_time",
+            "shift_type",
+            "instructions",
+            "status",
+            "notes",
+            "reason_for_cancellation",
+            "actual_start_time",
+            "actual_end_time",
+            "is_overtime",
+            "overtime_hours",
+            "approved_by",
+            "approved_at"
+        ],
+        "missing_fillable": [],
+        "casts": {
+            "id": "int",
+            "date": "date",
+            "start_time": "datetime",
+            "end_time": "datetime",
+            "actual_start_time": "datetime",
+            "actual_end_time": "datetime",
+            "approved_at": "datetime",
+            "is_overtime": "boolean",
+            "overtime_hours": "decimal:2",
+            "deleted_at": "datetime"
+        },
+        "missing_casts": []
+    },
+    "App\\Models\\Incident": {
+        "table": "incidents",
+        "columns": [
+            "id",
+            "title",
+            "type",
+            "severity",
+            "description",
+            "location",
+            "status",
+            "escalation_level",
+            "reporter_id",
+            "assigned_to",
+            "client_id",
+            "client_site_id",
+            "resolved_at",
+            "resolved_by",
+            "created_at",
+            "updated_at"
+        ],
+        "fillable": [
+            "title",
+            "type",
+            "severity",
+            "description",
+            "location",
+            "status",
+            "escalation_level",
+            "reporter_id",
+            "assigned_to",
+            "client_id",
+            "client_site_id",
+            "resolved_at",
+            "resolved_by"
+        ],
+        "missing_fillable": [],
+        "casts": {
+            "id": "int",
+            "resolved_at": "datetime"
+        },
+        "missing_casts": []
+    },
+    "App\\Models\\IncidentComment": {
+        "table": "incident_comments",
+        "columns": [
+            "id",
+            "incident_id",
+            "user_id",
+            "comment",
+            "is_internal",
+            "created_at",
+            "updated_at"
+        ],
+        "fillable": [
+            "incident_id",
+            "user_id",
+            "comment",
+            "is_internal"
+        ],
+        "missing_fillable": [],
+        "casts": {
+            "id": "int",
+            "is_internal": "boolean"
+        },
+        "missing_casts": []
+    },
+    "App\\Models\\Message": {
+        "table": "messages",
+        "columns": [
+            "id",
+            "conversation_id",
+            "sender_id",
+            "type",
+            "content",
+            "metadata",
+            "status",
+            "created_at",
+            "updated_at",
+            "deleted_at",
+            "is_emergency",
+            "read_at"
+        ],
+        "fillable": [
+            "conversation_id",
+            "sender_id",
+            "content",
+            "is_emergency",
+            "read_at"
+        ],
+        "missing_fillable": [],
+        "casts": {
+            "id": "int",
+            "is_emergency": "boolean",
+            "read_at": "datetime",
+            "created_at": "datetime",
+            "updated_at": "datetime"
+        },
+        "missing_casts": []
+    },
+    "App\\Models\\Module": {
+        "table": "modules",
+        "columns": [
+            "id",
+            "name",
+            "display_name",
+            "description",
+            "icon",
+            "color",
+            "is_active",
+            "is_core",
+            "config",
+            "sort_order",
+            "version",
+            "created_at",
+            "updated_at",
+            "category",
+            "route",
+            "order",
+            "settings"
+        ],
+        "fillable": [
+            "display_name",
+            "version",
+            "is_active",
+            "is_core",
+            "description",
+            "category",
+            "icon",
+            "route",
+            "order",
+            "settings"
+        ],
+        "missing_fillable": [],
+        "casts": {
+            "id": "int",
+            "is_active": "boolean",
+            "is_core": "boolean",
+            "settings": "array"
+        },
+        "missing_casts": []
+    },
+    "App\\Models\\Role": {
+        "table": "roles",
+        "columns": [
+            "id",
+            "name",
+            "guard_name",
+            "created_at",
+            "updated_at"
+        ],
+        "fillable": [],
+        "missing_fillable": [],
+        "casts": {
+            "id": "int"
+        },
+        "missing_casts": []
+    },
+    "App\\Models\\ScanTag": {
+        "table": "scan_tags",
+        "columns": [
+            "id",
+            "checkpoint_scan_id",
+            "tags",
+            "created_at",
+            "updated_at"
+        ],
+        "fillable": [
+            "checkpoint_scan_id",
+            "tags"
+        ],
+        "missing_fillable": [],
+        "casts": {
+            "id": "int",
+            "tags": "array"
+        },
+        "missing_casts": []
+    },
+    "App\\Models\\Service": {
+        "table": "services",
+        "columns": [
+            "id",
+            "name",
+            "description",
+            "monthly_price",
+            "active",
+            "created_at",
+            "updated_at"
+        ],
+        "fillable": [
+            "name",
+            "description",
+            "monthly_price",
+            "active"
+        ],
+        "missing_fillable": [],
+        "casts": {
+            "id": "int",
+            "monthly_price": "decimal:2",
+            "active": "boolean"
+        },
+        "missing_casts": []
+    },
+    "App\\Models\\Shift": {
+        "table": "shifts",
+        "columns": [
+            "id",
+            "guard_id",
+            "client_site_id",
+            "assigned_by",
+            "date",
+            "start_time",
+            "end_time",
+            "shift_type",
+            "instructions",
+            "status",
+            "created_at",
+            "updated_at",
+            "deleted_at",
+            "notes",
+            "reason_for_cancellation",
+            "actual_start_time",
+            "actual_end_time",
+            "is_overtime",
+            "overtime_hours",
+            "approved_by",
+            "approved_at",
+            "name",
+            "description",
+            "supervisor_id",
+            "required_guards",
+            "sites",
+            "created_by"
+        ],
+        "fillable": [
+            "name",
+            "start_time",
+            "end_time",
+            "description",
+            "status",
+            "supervisor_id",
+            "required_guards",
+            "sites",
+            "created_by"
+        ],
+        "missing_fillable": [],
+        "casts": {
+            "id": "int",
+            "sites": "array"
+        },
+        "missing_casts": []
+    },
+    "App\\Models\\Ticket": {
+        "table": "tickets",
+        "columns": [
+            "id",
+            "title",
+            "description",
+            "status",
+            "priority",
+            "category",
+            "reported_by",
+            "assigned_to",
+            "due_date",
+            "resolution",
+            "escalation_level",
+            "parent_ticket_id",
+            "meta",
+            "created_at",
+            "updated_at",
+            "deleted_at",
+            "ticket_number",
+            "client_id",
+            "client_site_id",
+            "closed_at",
+            "closed_by"
+        ],
+        "fillable": [
+            "ticket_number",
+            "title",
+            "category",
+            "priority",
+            "description",
+            "status",
+            "reported_by",
+            "assigned_to",
+            "client_id",
+            "client_site_id",
+            "closed_at",
+            "closed_by"
+        ],
+        "missing_fillable": [],
+        "casts": {
+            "id": "int",
+            "closed_at": "datetime"
+        },
+        "missing_casts": []
+    },
+    "App\\Models\\TicketComment": {
+        "table": "ticket_comments",
+        "columns": [
+            "id",
+            "ticket_id",
+            "user_id",
+            "comment",
+            "is_internal",
+            "created_at",
+            "updated_at"
+        ],
+        "fillable": [
+            "ticket_id",
+            "user_id",
+            "comment",
+            "is_internal"
+        ],
+        "missing_fillable": [],
+        "casts": {
+            "id": "int",
+            "is_internal": "boolean"
+        },
+        "missing_casts": []
+    },
+    "App\\Models\\User": {
+        "table": "users",
+        "columns": [
+            "id",
+            "name",
+            "email",
+            "email_verified_at",
+            "password",
+            "remember_token",
+            "created_at",
+            "updated_at",
+            "phone",
+            "employee_id",
+            "status",
+            "zone_id"
+        ],
+        "fillable": [
+            "name",
+            "email",
+            "password",
+            "phone",
+            "employee_id",
+            "status",
+            "zone_id"
+        ],
+        "missing_fillable": [],
+        "casts": {
+            "id": "int",
+            "email_verified_at": "datetime",
+            "password": "hashed"
+        },
+        "missing_casts": []
+    },
+    "App\\Models\\Zone": {
+        "table": "zones",
+        "columns": [
+            "id",
+            "name",
+            "code",
+            "description",
+            "status",
+            "created_at",
+            "updated_at",
+            "required_guard_count",
+            "target_sites_count"
+        ],
+        "fillable": [
+            "name",
+            "code",
+            "description",
+            "status",
+            "required_guard_count",
+            "target_sites_count"
+        ],
+        "missing_fillable": [],
+        "casts": {
+            "id": "int"
+        },
+        "missing_casts": []
+    }
+}

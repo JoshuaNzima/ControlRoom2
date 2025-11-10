@@ -35,22 +35,75 @@ class FlagController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'flaggable_type' => 'required|string',
-            'flaggable_id' => 'required|integer',
+            'flaggable_type' => 'required|string|in:App\\Models\\Guards\\Guard,App\\Models\\User',
+            'flaggable_id' => [
+                'required',
+                'integer',
+                function ($attribute, $value, $fail) use ($request) {
+                    $model = $request->input('flaggable_type');
+                    if (!class_exists($model) || !$model::find($value)) {
+                        $fail('The specified flaggable item does not exist.');
+                    }
+                },
+            ],
             'reason' => 'required|string|max:255',
             'details' => 'required|string',
             'client_id' => 'nullable|exists:clients,id',
+            'title' => 'nullable|string|max:255',
+            'severity' => 'nullable|string|in:low,medium,high',
         ]);
 
-        $flag = Flag::create([
-            'flaggable_type' => $validated['flaggable_type'],
-            'flaggable_id' => $validated['flaggable_id'],
-            'reason' => $validated['reason'],
-            'details' => $validated['details'],
-            'reported_by' => auth()->id(),
-            'status' => 'pending_review',
-            'meta' => [],
-        ]);
+        try {
+            \DB::beginTransaction();
+            
+            // Verify the flaggable item exists
+            $flaggableModel = $validated['flaggable_type']::findOrFail($validated['flaggable_id']);
+            
+            $flag = Flag::create([
+                'flaggable_type' => $validated['flaggable_type'],
+                'flaggable_id' => $validated['flaggable_id'],
+                'reason' => $validated['reason'],
+                'details' => $validated['details'],
+                'title' => $validated['title'] ?? null,
+                'severity' => $validated['severity'] ?? 'medium',
+                'reported_by' => auth()->id(),
+                'status' => 'pending_review',
+                'meta' => [
+                    'client_id' => $validated['client_id'] ?? null,
+                    'created_at_timestamp' => now()->timestamp,
+                    'reporter_name' => auth()->user()->name,
+                    'flaggable_name' => $flaggableModel->name ?? ($flaggableModel->employee_id ?? 'Unknown'),
+                ],
+            ]);
+
+            \DB::commit();
+
+            \Log::info('Flag created', ['flag_id' => $flag->id, 'reported_by' => auth()->id()]);
+            
+            return redirect()->route('control-room.flags.show', $flag)
+                ->with('success', 'Flag created successfully.');
+                
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            \DB::rollBack();
+            \Log::error('Flag creation failed - Model not found', [
+                'error' => $e->getMessage(),
+                'flaggable_type' => $validated['flaggable_type'] ?? null,
+                'flaggable_id' => $validated['flaggable_id'] ?? null
+            ]);
+            return redirect()->back()
+                ->withInput()
+                ->with('error', 'The specified item to flag could not be found.');
+                
+        } catch (\Exception $e) {
+            \DB::rollBack();
+            \Log::error('Flag creation failed', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return redirect()->back()
+                ->withInput()
+                ->with('error', 'An error occurred while creating the flag. Please try again.');
+        }
 
         return redirect()->route('control-room.flags.show', $flag)
             ->with('success', 'Flag created successfully.');

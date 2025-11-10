@@ -10,6 +10,7 @@ import 'nprogress/nprogress.css';
 import { router } from '@inertiajs/react';
 import { NotificationProvider } from './Providers/NotificationProvider';
 import { ThemeProvider } from './Providers/ThemeProvider';
+import { NotificationsProvider } from '@/Providers/NotificationsProvider';
 import FlashBridge from '@/Components/FlashBridge';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
@@ -30,8 +31,10 @@ createInertiaApp({
         root.render(
             <ThemeProvider>
                 <NotificationProvider>
-                    <App {...props} />
-                    <FlashBridge initialPageProps={props} />
+                    <NotificationsProvider>
+                        <App {...props} />
+                        <FlashBridge initialPageProps={props} />
+                    </NotificationsProvider>
                 </NotificationProvider>
             </ThemeProvider>
         );

@@ -3,11 +3,11 @@ import { Head } from '@inertiajs/react';
 import AdminLayout from '@/Layouts/AdminLayout';
 import { Card, CardContent, CardHeader } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
-import CoverageTrendChart from '@/Components/ControlRoom/CoverageTrendChart';
-import AttendanceChart from '@/Components/ControlRoom/AttendanceChart';
+import CoverageTrendChart from '@/Components/Operations/ControlRoom/CoverageTrendChart';
+import AttendanceChart from '@/Components/Operations/ControlRoom/AttendanceChart';
 import { Dialog } from '@/Components/ui/dialog';
-import CreateTicketForm from '@/Pages/ControlRoom/Tickets/CreateTicketForm';
-import CreateFlagForm from '@/Pages/ControlRoom/Flags/CreateFlagForm';
+import CreateTicketForm from '@/Pages/Operations/ControlRoom/Tickets/CreateTicketForm';
+import CreateFlagForm from '@/Pages/Operations/ControlRoom/Flags/CreateFlagForm';
 import {
   Chart as ChartJS,
   CategoryScale,

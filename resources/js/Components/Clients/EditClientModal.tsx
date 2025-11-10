@@ -4,6 +4,18 @@ import { Button } from '@/Components/ui/button';
 import { useForm } from '@inertiajs/react';
 import IconMapper from '@/Components/IconMapper';
 
+interface ServicePivot {
+  custom_price: number | null;
+  quantity: number;
+}
+
+interface Service {
+  id: number;
+  name: string;
+  monthly_price: number;
+  pivot?: ServicePivot;
+}
+
 interface Client {
   id: number;
   name: string;
@@ -12,8 +24,12 @@ interface Client {
   email?: string;
   address?: string;
   billing_start_date?: string;
+  contract_start_date?: string;
+  contract_end_date?: string;
+  monthly_rate?: number;
   notes?: string;
   status?: string;
+  services?: Service[];
 }
 
 interface EditClientModalProps {
@@ -24,24 +40,38 @@ interface EditClientModalProps {
 }
 
 export default function EditClientModal({ client, open, onClose, services = [] }: EditClientModalProps) {
-  const _form: any = useForm({
+  const _form = useForm({
     name: client.name,
     contact_person: client.contact_person || '',
     phone: client.phone || '',
     email: client.email || '',
     address: client.address || '',
     billing_start_date: client.billing_start_date || '',
+    contract_start_date: client.contract_start_date || '',
+    contract_end_date: client.contract_end_date || '',
+    monthly_rate: client.monthly_rate || 0,
     notes: client.notes || '',
     status: client.status || 'active',
     // services array: { id, custom_price, quantity }
-    services: (client as any).services ? (client as any).services.map((s: any) => ({ id: s.id, custom_price: s.pivot?.custom_price ?? null, quantity: s.pivot?.quantity ?? 1 })) : [] as Array<{ id: number; custom_price: number | null; quantity: number }>,
+    services: client.services?.map(s => ({
+      id: s.id,
+      custom_price: s.pivot?.custom_price ?? null,
+      quantity: s.pivot?.quantity ?? 1
+    })) || [],
   });
   const { data, setData, put, processing, errors } = _form as any;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     put(route('admin.clients.update', client.id), {
-      onSuccess: () => onClose(),
+      onSuccess: () => {
+        onClose();
+        // Force reload the clients index to get fresh data
+        window.location.reload();
+      },
+      onError: (errors: Record<string, string>) => {
+        console.error('Failed to update client:', errors);
+      }
     });
   };
 

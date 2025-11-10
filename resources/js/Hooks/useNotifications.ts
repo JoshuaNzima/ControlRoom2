@@ -6,7 +6,7 @@ import { toast } from 'react-hot-toast';
 declare global {
   interface Window {
     Pusher: typeof Pusher;
-    Echo: any;
+    Echo: Echo<any>;
   }
 }
 

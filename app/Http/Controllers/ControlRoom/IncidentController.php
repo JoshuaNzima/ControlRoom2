@@ -22,7 +22,18 @@ class IncidentController extends Controller
 
     public function create()
     {
-        return Inertia::render('ControlRoom/Incidents/Create');
+        $clients = \App\Models\Client::select('id', 'name')->with(['sites' => function($query) {
+            $query->select('id', 'client_id', 'name', 'address');
+        }])->get();
+        
+        $users = \App\Models\User::whereHas('roles', function($query) {
+            $query->whereIn('name', ['admin', 'supervisor', 'manager']);
+        })->select('id', 'name')->get();
+
+        return Inertia::render('ControlRoom/Incidents/Create', [
+            'clients' => $clients,
+            'users' => $users,
+        ]);
     }
 
     public function store(Request $request)
@@ -93,10 +104,32 @@ class IncidentController extends Controller
 
     public function escalate(Request $request, Incident $incident)
     {
+        $validated = $request->validate([
+            'assigned_to' => 'required|exists:users,id',
+            'reason' => 'required|string',
+        ]);
+
+        // Create an escalation comment
+        $incident->comments()->create([
+            'user_id' => auth()->id(),
+            'comment' => "Incident escalated: {$validated['reason']}",
+            'is_internal' => true,
+        ]);
+
+        // Update incident
         $incident->update([
             'escalation_level' => $incident->escalation_level + 1,
             'status' => 'escalated',
+            'assigned_to' => $validated['assigned_to']
         ]);
+
+        // Notify relevant parties
+        event(new NotificationEvent('incident_escalated', [
+            'incident_id' => $incident->id,
+            'escalation_level' => $incident->escalation_level,
+            'assigned_to' => $validated['assigned_to'],
+            'reason' => $validated['reason']
+        ]));
 
         return back()->with('success', 'Incident escalated successfully.');
     }

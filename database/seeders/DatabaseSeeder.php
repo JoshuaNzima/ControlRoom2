@@ -35,6 +35,7 @@ class DatabaseSeeder extends Seeder
             ModularPermissionsSeeder::class,
             DefaultModulesSeeder::class,            
             ZoneCommanderDemoSeeder::class,
+            OperationsOfficerSeeder::class,
         ]);
     }
 }

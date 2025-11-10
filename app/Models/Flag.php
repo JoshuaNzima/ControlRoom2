@@ -16,7 +16,9 @@ class Flag extends Model
         'reported_by',
         'reviewed_by',
         'review_notes',
-        'review_date'
+        'review_date',
+        'title',
+        'severity'
     ];
 
     protected $casts = [

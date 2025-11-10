@@ -8,6 +8,7 @@ use App\Models\CameraRecording;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Storage;
+use Intervention\Image\ImageManagerStatic as Image;
 
 class CameraController extends Controller
 {
@@ -124,6 +125,71 @@ class CameraController extends Controller
         }
 
         return Storage::download($recording->file_path, $recording->filename);
+    }
+
+    /**
+     * Return a temporary/signed URL (or redirect) to a recording's file so the browser can load a thumbnail/preview.
+     */
+    public function recordingThumbnail(CameraRecording $recording)
+    {
+        if (!Storage::exists($recording->file_path)) {
+            abort(404, 'Recording file not found.');
+        }
+
+        $thumbPath = 'thumbnails/recording-' . $recording->id . '.jpg';
+
+        // If thumbnail already exists, return a temporary URL or public URL
+        if (Storage::exists($thumbPath)) {
+            try {
+                if (method_exists(Storage::disk(), 'temporaryUrl')) {
+                    return redirect()->away(Storage::temporaryUrl($thumbPath, now()->addMinutes(10)));
+                }
+            } catch (\Throwable $e) {
+                // ignore
+            }
+
+            return redirect()->away(Storage::url($thumbPath));
+        }
+
+        // Try to generate a thumbnail synchronously for image files.
+        $ext = strtolower(pathinfo($recording->file_path, PATHINFO_EXTENSION));
+        $imageExts = ['jpg','jpeg','png','gif','webp'];
+
+        if (in_array($ext, $imageExts)) {
+            try {
+                $sourcePath = Storage::path($recording->file_path);
+                $img = Image::make($sourcePath)->fit(320, 180, function ($c) { $c->upsize(); });
+                $jpeg = (string) $img->encode('jpg', 75);
+
+                Storage::put($thumbPath, $jpeg);
+
+                if (method_exists(Storage::disk(), 'temporaryUrl')) {
+                    return redirect()->away(Storage::temporaryUrl($thumbPath, now()->addMinutes(10)));
+                }
+
+                return redirect()->away(Storage::url($thumbPath));
+            } catch (\Throwable $e) {
+                // Failed to generate thumbnail - fall back to placeholder or original
+                // continue to fallthrough
+            }
+        }
+
+        // Non-image recordings (e.g., videos) - return a placeholder or redirect to original recording
+        $placeholder = '/images/camera-placeholder.jpg';
+        if (file_exists(public_path($placeholder))) {
+            return redirect()->away(url($placeholder));
+        }
+
+        // As a last resort, redirect to the recording file (may be large)
+        try {
+            if (method_exists(Storage::disk(), 'temporaryUrl')) {
+                return redirect()->away(Storage::temporaryUrl($recording->file_path, now()->addMinutes(10)));
+            }
+        } catch (\Throwable $e) {
+            // ignore
+        }
+
+        return redirect()->away(Storage::url($recording->file_path));
     }
 
     public function acknowledgeAlert(Request $request, Camera $camera, $alertId)

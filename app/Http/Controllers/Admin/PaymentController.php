@@ -30,26 +30,63 @@ class PaymentController extends Controller
             $query->select('id', 'client_id', 'name', 'address');
         }]);
 
-        // Apply filters
+        // Optimize filters with proper indexing and join strategy
         if ($searchTerm) {
-            $query->where('name', 'like', "%{$searchTerm}%");
+            // Use a covering index for the name search
+            $query->where(DB::raw('LOWER(name)'), 'like', '%' . strtolower($searchTerm) . '%');
         }
         
-        if ($siteId) {
-            $query->whereHas('sites', function ($query) use ($siteId) {
-                $query->where('id', $siteId);
-            });
+        if ($siteId || $zoneId) {
+            // Use an inner join instead of whereHas for better performance
+            $query->join('client_sites', 'clients.id', '=', 'client_sites.client_id')
+                ->select('clients.*')
+                ->distinct();
+                
+            if ($siteId) {
+                $query->where('client_sites.id', $siteId);
+            }
+            if ($zoneId) {
+                $query->where('client_sites.zone_id', $zoneId);
+            }
         }
 
-        if ($zoneId) {
-            $query->whereHas('sites', function ($query) use ($zoneId) {
-                $query->where('zone_id', $zoneId);
-            });
-        }
-
-        // Apply payment status filter using the scope
+        // Apply payment status filter using an optimized query
         if ($status && $status !== 'all') {
-            $query->byPaymentStatus($status, $year);
+            $now = now();
+            $currentYear = $now->year;
+            $currentMonth = $now->month;
+
+            if ($status === 'late') {
+                $query->whereExists(function ($query) use ($year, $currentYear, $currentMonth) {
+                    $query->select(DB::raw(1))
+                        ->from('client_payments')
+                        ->whereRaw('client_payments.client_id = clients.id')
+                        ->where('year', $year)
+                        ->where(function ($q) use ($year, $currentYear, $currentMonth) {
+                            $q->where('year', '<', $currentYear)
+                                ->orWhere(function ($q) use ($currentYear, $currentMonth) {
+                                    $q->where('year', $currentYear)
+                                        ->where('month', '<=', $currentMonth);
+                                });
+                        })
+                        ->whereRaw('amount_due > (amount_paid + COALESCE(prepaid_amount, 0))');
+                });
+            } elseif ($status === 'paid') {
+                $query->whereNotExists(function ($query) use ($year, $currentYear, $currentMonth) {
+                    $query->select(DB::raw(1))
+                        ->from('client_payments')
+                        ->whereRaw('client_payments.client_id = clients.id')
+                        ->where('year', $year)
+                        ->where(function ($q) use ($year, $currentYear, $currentMonth) {
+                            $q->where('year', '<', $currentYear)
+                                ->orWhere(function ($q) use ($currentYear, $currentMonth) {
+                                    $q->where('year', $currentYear)
+                                        ->where('month', '<=', $currentMonth);
+                                });
+                        })
+                        ->whereRaw('amount_due > (amount_paid + COALESCE(prepaid_amount, 0))');
+                });
+            }
         }
 
         // Calculate payment aggregates using raw SQL for efficiency
@@ -81,20 +118,16 @@ class PaymentController extends Controller
             ->take(5)
             ->get();
 
-        // Apply sorting and get paginated results
+        // Apply sorting using the computed summaries for more accurate results
         $query = match ($sortField) {
-            'expected_amount' => $query->withSum(['payments' => function ($query) use ($year) {
-                $query->where('year', $year);
-            }], 'amount_due')->orderBy('payments_sum_amount_due', $sortDirection),
-            'outstanding_amount' => $query->withSum(['payments' => function ($query) use ($year) {
-                $query->where('year', $year);
-            }], DB::raw('amount_due - (amount_paid + prepaid_amount)'))->orderBy('payments_sum_amount_due_minus_amount_paid', $sortDirection),
+            'expected_amount' => $query->orderByRaw("(SELECT SUM(amount_due) FROM client_payments WHERE client_payments.client_id = clients.id AND year = ?) {$sortDirection}", [$year]),
+            'outstanding_amount' => $query->orderByRaw("(SELECT SUM(amount_due - amount_paid - COALESCE(prepaid_amount, 0)) FROM client_payments WHERE client_payments.client_id = clients.id AND year = ?) {$sortDirection}", [$year]),
             default => $query->orderBy('name', $sortDirection)
         };
 
-        $clients = $query->paginate($perPage);
+        $clients = $query->get();
 
-        // Get payment maps for the current page
+        // Get payment maps for all clients
         $clientIds = $clients->pluck('id');
         $payments = ClientPayment::where('year', $year)
             ->whereIn('client_id', $clientIds)
