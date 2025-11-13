@@ -1,0 +1,128 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+
+class Invoice extends Model
+{
+    protected $fillable = [
+        'invoice_number',
+        'user_id',
+        'client_name',
+        'client_email',
+        'subtotal',
+        'tax_amount',
+        'tax_percentage',
+        'discount_amount',
+        'total_amount',
+        'invoice_date',
+        'due_date',
+        'description',
+        'status',
+        'notes',
+    ];
+
+    protected $casts = [
+        'subtotal' => 'decimal:2',
+        'tax_amount' => 'decimal:2',
+        'tax_percentage' => 'decimal:2',
+        'discount_amount' => 'decimal:2',
+        'total_amount' => 'decimal:2',
+        'invoice_date' => 'datetime',
+        'due_date' => 'datetime',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
+    ];
+
+    /**
+     * Get the user who created this invoice
+     */
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    /**
+     * Get line items for this invoice
+     */
+    public function lineItems(): HasMany
+    {
+        return $this->hasMany(InvoiceLineItem::class);
+    }
+
+    /**
+     * Scope to filter invoices by status
+     */
+    public function scopeByStatus($query, $status)
+    {
+        return $query->where('status', $status);
+    }
+
+    /**
+     * Scope to filter unpaid invoices
+     */
+    public function scopeUnpaid($query)
+    {
+        return $query->whereIn('status', ['draft', 'sent', 'overdue']);
+    }
+
+    /**
+     * Scope to filter paid invoices
+     */
+    public function scopePaid($query)
+    {
+        return $query->where('status', 'paid');
+    }
+
+    /**
+     * Scope to filter overdue invoices
+     */
+    public function scopeOverdue($query)
+    {
+        return $query->where('status', 'overdue')
+            ->where('due_date', '<', now());
+    }
+
+    /**
+     * Scope to filter by date range
+     */
+    public function scopeByDateRange($query, $startDate, $endDate)
+    {
+        return $query->whereBetween('invoice_date', [$startDate, $endDate]);
+    }
+
+    /**
+     * Check if invoice is overdue
+     */
+    public function isOverdue(): bool
+    {
+        return $this->status !== 'paid' && $this->due_date < now();
+    }
+
+    /**
+     * Mark invoice as sent
+     */
+    public function markAsSent(): void
+    {
+        $this->update(['status' => 'sent']);
+    }
+
+    /**
+     * Mark invoice as paid
+     */
+    public function markAsPaid(): void
+    {
+        $this->update(['status' => 'paid']);
+    }
+
+    /**
+     * Mark invoice as cancelled
+     */
+    public function markAsCancelled(): void
+    {
+        $this->update(['status' => 'cancelled']);
+    }
+}

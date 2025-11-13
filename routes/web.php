@@ -44,7 +44,33 @@ Route::middleware('auth')->group(function () {
         Route::post('tickets/{ticket}/comments', [\App\Http\Controllers\ControlRoom\TicketController::class, 'addComment'])->name('tickets.comments.store');
 
         // Flag routes
-        Route::resource('flags', \App\Http\Controllers\ControlRoom\FlagController::class);
+        Route::middleware(['permission:control.flags.view'])->group(function () {
+            Route::get('flags', [\App\Http\Controllers\ControlRoom\FlagController::class, 'index'])->name('flags.index');
+            Route::get('flags/{flag}', [\App\Http\Controllers\ControlRoom\FlagController::class, 'show'])->name('flags.show');
+        });
+        
+        Route::middleware(['permission:control.flags.create'])->group(function () {
+            Route::get('flags/create', [\App\Http\Controllers\ControlRoom\FlagController::class, 'create'])->name('flags.create');
+            Route::post('flags', [\App\Http\Controllers\ControlRoom\FlagController::class, 'store'])->name('flags.store');
+        });
+        
+        Route::middleware(['permission:control.flags.manage'])->group(function () {
+            Route::get('flags/{flag}/edit', [\App\Http\Controllers\ControlRoom\FlagController::class, 'edit'])->name('flags.edit');
+            Route::put('flags/{flag}', [\App\Http\Controllers\ControlRoom\FlagController::class, 'update'])->name('flags.update');
+            Route::delete('flags/{flag}', [\App\Http\Controllers\ControlRoom\FlagController::class, 'destroy'])->name('flags.destroy');
+            Route::post('flags/{flag}/acknowledge', [\App\Http\Controllers\ControlRoom\FlagController::class, 'acknowledge'])->name('flags.acknowledge');
+            Route::post('flags/{flag}/resolve', [\App\Http\Controllers\ControlRoom\FlagController::class, 'resolve'])->name('flags.resolve');
+            Route::post('flags/{flag}/escalate', [\App\Http\Controllers\ControlRoom\FlagController::class, 'escalate'])->name('flags.escalate');
+            Route::post('flags/{flag}/update-status', [\App\Http\Controllers\ControlRoom\FlagController::class, 'updateStatus'])->name('flags.update-status');
+        });
+
+        // Live Monitoring Routes
+        Route::middleware(['permission:control.monitoring.view'])->group(function () {
+            Route::get('monitoring/events', [\App\Http\Controllers\ControlRoom\MonitoringController::class, 'events'])->name('monitoring.events');
+            Route::get('monitoring/guards', [\App\Http\Controllers\ControlRoom\MonitoringController::class, 'guards'])->name('monitoring.guards');
+            Route::get('monitoring/incidents', [\App\Http\Controllers\ControlRoom\MonitoringController::class, 'incidents'])->name('monitoring.incidents');
+            Route::get('monitoring/data', [\App\Http\Controllers\ControlRoom\MonitoringController::class, 'data'])->name('monitoring.data');
+        });
 
         // Camera routes
         Route::resource('cameras', \App\Http\Controllers\ControlRoom\CameraController::class);

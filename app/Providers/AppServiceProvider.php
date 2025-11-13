@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\App;
 use Carbon\Carbon;
 use Illuminate\Filesystem\Filesystem;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use PDO;
 
 class AppServiceProvider extends ServiceProvider
@@ -37,6 +38,22 @@ class AppServiceProvider extends ServiceProvider
         Vite::prefetch(concurrency: 3);
         App::setLocale(config('app.locale'));
         Carbon::setLocale(config('app.locale'));
+
+        // Map legacy polymorphic short type names (e.g. 'guard') to FQCNs so
+        // Eloquent's morphTo can resolve older DB rows that stored the short
+        // type name instead of the full class name. This prevents exceptions
+        // like "Class 'guard' not found" when loading polymorphic relations.
+        try {
+            Relation::morphMap([
+                'guard' => \App\Models\Guards\Guard::class,
+                'Guard' => \App\Models\Guards\Guard::class,
+                'user' => \App\Models\User::class,
+                'User' => \App\Models\User::class,
+            ], false);
+        } catch (\Throwable $e) {
+            // Non-fatal: if morphMap fails for any reason, allow the app to continue
+            // and let Eloquent throw the original error where appropriate.
+        }
 
         // SQLite compatibility shim: define MONTH() and YEAR() functions when using sqlite
         // Some raw SQL (or older queries) may use MONTH(CURRENT_DATE) / YEAR(CURRENT_DATE)

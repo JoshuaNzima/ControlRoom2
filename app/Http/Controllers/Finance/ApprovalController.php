@@ -1,0 +1,92 @@
+<?php
+
+namespace App\Http\Controllers\Finance;
+
+use App\Http\Controllers\Controller;
+use App\Models\Approval;
+use App\Models\Expense;
+use Illuminate\Http\Request;
+use Inertia\Inertia;
+use Illuminate\Support\Facades\Auth;
+
+class ApprovalController extends Controller
+{
+    public function index()
+    {
+        $user = Auth::user();
+        $approvals = Approval::with(['expense', 'approver'])
+            ->pendingForUser($user->id)
+            ->orderBy('stage')
+            ->get();
+
+        return Inertia::render('Finance/Approvals/Index', [
+            'approvals' => $approvals,
+        ]);
+    }
+
+    public function show(Approval $approval)
+    {
+        $this->authorize('view', $approval);
+
+        $approval->load('expense', 'approver');
+
+        return Inertia::render('Finance/Approvals/Show', [
+            'approval' => $approval,
+        ]);
+    }
+
+    public function store(Request $request)
+    {
+        $this->authorize('create', Approval::class);
+
+        $data = $request->validate([
+            'expense_id' => 'required|exists:expenses,id',
+            'approver_id' => 'required|exists:users,id',
+            'stage' => 'nullable|integer|min:1',
+            'comments' => 'nullable|string',
+        ]);
+
+        $approval = Approval::create(array_merge($data, ['status' => 'pending']));
+
+        return redirect()->route('finance.approvals.index')->with('success', 'Approval created');
+    }
+
+    public function approve(Approval $approval, Request $request)
+    {
+        $this->authorize('approve', $approval);
+
+        $approval->update([
+            'status' => 'approved',
+            'comments' => $request->input('comments'),
+        ]);
+
+        // If this is the final stage, mark the expense approved
+        $maxStage = Approval::where('expense_id', $approval->expense_id)->max('stage');
+        if ($approval->stage >= $maxStage) {
+            $expense = Expense::find($approval->expense_id);
+            if ($expense) {
+                $expense->update(['status' => 'approved']);
+            }
+        }
+
+        return back()->with('success', 'Approved');
+    }
+
+    public function reject(Approval $approval, Request $request)
+    {
+        $this->authorize('reject', $approval);
+
+        $approval->update([
+            'status' => 'rejected',
+            'comments' => $request->input('comments'),
+        ]);
+
+        // If any stage rejected, mark expense rejected
+        $expense = Expense::find($approval->expense_id);
+        if ($expense) {
+            $expense->update(['status' => 'rejected']);
+        }
+
+        return back()->with('success', 'Rejected');
+    }
+}
