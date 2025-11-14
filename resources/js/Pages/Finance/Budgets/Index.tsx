@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Head, Link, router } from '@inertiajs/react';
-import AdminLayout from '@/Layouts/AdminLayout';
+import FinanceLayout from '@/Layouts/FinanceLayout';
 import { formatCurrency } from '@/utils/formatters';
 
 interface Budget {
@@ -64,7 +64,7 @@ export default function BudgetIndex({ budgets, summary, filters, years }: Props)
   };
 
   return (
-    <AdminLayout title="Budgets">
+    <FinanceLayout title="Budgets">
       <Head title="Budgets" />
 
       <div className="py-6">
@@ -234,6 +234,6 @@ export default function BudgetIndex({ budgets, summary, filters, years }: Props)
           )}
         </div>
       </div>
-    </AdminLayout>
+    </FinanceLayout>
   );
 }

@@ -94,7 +94,8 @@ class RolesAndPermissionsSeeder extends Seeder
             'admin.modules.manage',
             'admin.settings.view',
             'admin.settings.manage',
-            // Finance module (basic)
+            // Finance module
+            'finance.access',
             'finance.view',
             'finance.manage',
             'finance.invoices.view',
@@ -200,15 +201,22 @@ class RolesAndPermissionsSeeder extends Seeder
         // Finance roles
         $financeOfficer = Role::firstOrCreate(['name' => 'finance_officer']);
         $financeOfficer->givePermissionTo([
-            'finance.view', 'finance.manage',
+            'finance.access', 'finance.view', 'finance.manage',
             'finance.invoices.view', 'finance.invoices.manage',
             'finance.budgets.view', 'finance.budgets.manage',
         ]);
 
         $accountant = Role::firstOrCreate(['name' => 'accountant']);
         $accountant->givePermissionTo([
-            'finance.view',
+            'finance.access', 'finance.view',
             'finance.invoices.view', 'finance.budgets.view',
+        ]);
+
+        // Add finance permissions to admin role
+        $adminRole->givePermissionTo([
+            'finance.access', 'finance.view', 'finance.manage',
+            'finance.invoices.view', 'finance.invoices.manage',
+            'finance.budgets.view', 'finance.budgets.manage',
         ]);
     }
 }

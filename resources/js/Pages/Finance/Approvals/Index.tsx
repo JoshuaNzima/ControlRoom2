@@ -1,5 +1,7 @@
 import React from 'react';
 import { router, Link, usePage } from '@inertiajs/react';
+import { Head } from '@inertiajs/react';
+import FinanceLayout from '@/Layouts/FinanceLayout';
 
 interface Props {
   approvals: any[];
@@ -15,7 +17,9 @@ export default function Index({ approvals }: Props) {
   };
 
   return (
-    <div>
+    <FinanceLayout title="Approvals">
+      <Head title="Approvals" />
+      <div>
       <h1 className="text-2xl font-semibold">Approvals</h1>
       {approvals.length === 0 ? (
         <p className="mt-4">No pending approvals.</p>
@@ -50,6 +54,7 @@ export default function Index({ approvals }: Props) {
           </tbody>
         </table>
       )}
-    </div>
+      </div>
+    </FinanceLayout>
   );
 }

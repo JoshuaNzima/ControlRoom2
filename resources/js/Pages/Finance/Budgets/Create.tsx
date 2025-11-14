@@ -1,6 +1,6 @@
 import React from 'react';
 import { Head, useForm } from '@inertiajs/react';
-import AdminLayout from '@/Layouts/AdminLayout';
+import FinanceLayout from '@/Layouts/FinanceLayout';
 
 interface Props {
   categories: string[];
@@ -40,7 +40,7 @@ export default function CreateBudget({ categories, currentYear }: Props) {
   const years = Array.from({ length: 10 }, (_, i) => currentYear - 3 + i);
 
   return (
-    <AdminLayout title="Create Budget">
+    <FinanceLayout title="Create Budget">
       <Head title="Create Budget" />
 
       <div className="py-6">
@@ -200,6 +200,6 @@ export default function CreateBudget({ categories, currentYear }: Props) {
           </div>
         </div>
       </div>
-    </AdminLayout>
+    </FinanceLayout>
   );
 }

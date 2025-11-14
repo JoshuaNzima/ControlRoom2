@@ -1,403 +1,272 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState, lazy, Suspense } from 'react';
 import { router, useForm } from '@inertiajs/react';
-import ConfirmModal from '@/Components/ConfirmModal';
+import { X, Plus, Trash2, UserPlus, Shield, Search, ChevronLeft, ChevronRight, ChevronDown, ChevronUp } from 'lucide-react';
 import SuperAdminLayout from '@/Layouts/SuperAdminLayout';
 
-const Roles = (props: any) => {
-    const { roles = {}, permissions = {}, users = {}, flash = {} } = props;
+const ConfirmModal = lazy(() => import('@/Components/ConfirmModal'));
 
-    const roleForm = useForm({ name: '' });
-    const permissionForm = useForm({ name: '' });
-    const [rolesState, setRolesState] = useState<any>(roles);
-    useEffect(() => setRolesState(roles), [roles]);
-    const [search, setSearch] = useState('');
-    const [searchUser, setSearchUser] = useState('');
+interface User { id: number; name: string; email: string }
+interface Permission { id: number; name: string }
+interface Role { id: number; name: string; permissions: Permission[]; users: User[] }
 
-    const [confirmOpen, setConfirmOpen] = useState(false);
-    const [confirmAction, setConfirmAction] = useState<() => void>(() => {});
-    const [confirmTitle, setConfirmTitle] = useState('');
-    const [confirmMessage, setConfirmMessage] = useState('');
+interface RolesResponse {
+  data: Role[];
+  current_page: number;
+  last_page: number;
+  from: number;
+  to: number;
+  total: number;
+  prev_page_url: string | null;
+  next_page_url: string | null;
+}
 
-    const openConfirm = (title: string, message: string, action: () => void) => {
-        setConfirmTitle(title);
-        setConfirmMessage(message);
-        setConfirmAction(() => action);
-        setConfirmOpen(true);
-    };
+interface Props { roles: RolesResponse; permissions: { data: Permission[] }; users: { data: User[] }; flash?: { success?: string; error?: string } }
 
-    const createRole = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!roleForm.data.name.trim()) return roleForm.setErrors({ name: 'Please enter a role name' });
-        roleForm.post('/superadmin/roles', {
-            preserveState: false,
-            onSuccess: () => roleForm.reset('name'),
-        });
-    };
+const RoleCard = React.memo(function RoleCard({ role, permissions, users, toggling, assigning, removing, onTogglePermission, onAssignUser, onRemoveUser, onDelete, openConfirm }: any) {
+  const [expanded, setExpanded] = useState(true);
+  const [showAllPerms, setShowAllPerms] = useState(false);
+  const PERM_SHOW_LIMIT = 6;
 
-    const deleteRole = (roleId: number, roleName: string) => {
-        openConfirm('Delete Role', `Delete role ${roleName}? This cannot be undone.`, () => {
-            router.delete(`/superadmin/roles/${roleId}`);
-        });
-    };
+  const displayedPermissions = (role.permissions ?? []).slice(0, showAllPerms ? undefined : PERM_SHOW_LIMIT);
 
-    const createPermission = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!permissionForm.data.name.trim()) return permissionForm.setErrors({ name: 'Please enter a permission name' });
-        permissionForm.post('/superadmin/permissions', {
-            onSuccess: () => permissionForm.reset('name'),
-        });
-    };
-
-    const deletePermission = (permissionId: number, name: string) => {
-        openConfirm('Delete Permission', `Delete permission ${name}? This cannot be undone.`, () => {
-            router.delete(`/superadmin/permissions/${permissionId}`);
-        });
-    };
-
-    const togglePermission = (roleId: number, permName: string) => {
-        // optimistic update
-        const previous = JSON.parse(JSON.stringify(rolesState));
-        const newRoles = JSON.parse(JSON.stringify(rolesState));
-        const role = newRoles?.data?.find((r: any) => r.id === roleId);
-        if (!role) return;
-        const has = role.permissions?.some((p: any) => p.name === permName);
-        if (has) {
-            role.permissions = role.permissions.filter((p: any) => p.name !== permName);
-        } else {
-            role.permissions = [...(role.permissions || []), { id: permName, name: permName }];
-        }
-        setRolesState(newRoles);
-
-        router.post(`/superadmin/roles/${roleId}/toggle-permission`, { permission: permName }, {
-            onError: () => setRolesState(previous),
-        });
-    };
-
-    const assignUser = (roleId: number, userId: number) => {
-        if (!userId) return;
-        const previous = JSON.parse(JSON.stringify(rolesState));
-        const newRoles = JSON.parse(JSON.stringify(rolesState));
-        const role = newRoles?.data?.find((r: any) => r.id === roleId);
-        const userObj = users?.data?.find((u: any) => u.id === userId) || { id: userId, name: 'Unknown' };
-        if (!role) return;
-        // avoid duplicates
-        if (!role.users?.some((u: any) => u.id === userId)) {
-            role.users = [...(role.users || []), userObj];
-            setRolesState(newRoles);
-        }
-
-        router.post(`/superadmin/roles/${roleId}/assign-user`, { user_id: userId }, {
-            onError: () => setRolesState(previous),
-        });
-    };
-
-    const removeUser = (roleId: number, userId: number) => {
-        openConfirm('Remove Role', 'Remove this role from the user?', () => {
-            const previous = JSON.parse(JSON.stringify(rolesState));
-            const newRoles = JSON.parse(JSON.stringify(rolesState));
-            const role = newRoles?.data?.find((r: any) => r.id === roleId);
-            if (!role) return;
-            role.users = (role.users || []).filter((u: any) => u.id !== userId);
-            setRolesState(newRoles);
-
-            router.post(`/superadmin/roles/${roleId}/remove-user`, { user_id: userId }, {
-                onError: () => setRolesState(previous),
-            });
-        });
-    };
-
-    const changePage = (pageUrl: string | null) => {
-        if (!pageUrl) return;
-        router.get(pageUrl);
-    };
-
-    const searchRoles = (e: React.FormEvent) => {
-        e.preventDefault();
-        router.get('/superadmin/roles', { q: search, q_user: searchUser }, { only: ['roles', 'permissions', 'users', 'flash'] });
-    };
-
-    return (
-        <div className="p-6">
-            <div className="flex items-center justify-between mb-4">
-                <h1 className="text-2xl font-bold">Roles & Permissions</h1>
-                <div className="text-sm text-gray-600">Page {roles?.current_page ?? 1} of {roles?.last_page ?? 1}</div>
-            </div>
-
-            {flash?.success && <div className="mb-4 p-3 bg-green-100 text-green-800 rounded">{flash.success}</div>}
-            {flash?.error && <div className="mb-4 p-3 bg-red-100 text-red-800 rounded">{flash.error}</div>}
-
-            <div className="mb-4 grid grid-cols-3 gap-6">
-                <div className="col-span-3 md:col-span-1 bg-white shadow rounded p-4">
-                    <h2 className="font-semibold mb-3">Create Role</h2>
-                    <form onSubmit={createRole} className="flex gap-2 flex-col">
-                        <label className="text-sm">Role Name</label>
-                        <input value={roleForm.data.name} onChange={e => roleForm.setData('name', e.target.value)} className="border rounded px-2 py-2" placeholder="e.g. finance_officer" />
-                        {roleForm.errors.name && <div className="text-red-600 text-sm">{roleForm.errors.name}</div>}
-                        <div className="flex justify-end">
-                            <button disabled={roleForm.processing} className="bg-blue-600 text-white px-4 py-2 rounded mt-2">{roleForm.processing ? 'Creating...' : 'Create Role'}</button>
-                        </div>
-                    </form>
-
-                    <h2 className="font-semibold mt-6 mb-3">Create Permission</h2>
-                    <form onSubmit={createPermission} className="flex gap-2 flex-col">
-                        <label className="text-sm">Permission Name</label>
-                        <input value={permissionForm.data.name} onChange={e => permissionForm.setData('name', e.target.value)} className="border rounded px-2 py-2" placeholder="e.g. finance.view" />
-                        {permissionForm.errors.name && <div className="text-red-600 text-sm">{permissionForm.errors.name}</div>}
-                        <div className="flex justify-end">
-                            <button disabled={permissionForm.processing} className="bg-blue-600 text-white px-4 py-2 rounded mt-2">{permissionForm.processing ? 'Creating...' : 'Create Permission'}</button>
-                        </div>
-                    </form>
+  return (
+    <article aria-labelledby={`role-${role.id}-title`} className="bg-gray-50 dark:bg-gray-700/30 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 transition-all duration-150 hover:shadow-md">
+      <header className="px-6 py-4 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex-1">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <button aria-expanded={expanded} aria-controls={`role-${role.id}-panel`} onClick={() => setExpanded(prev => !prev)} className="p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800/60 focus:outline-none focus:ring-2 focus:ring-coin-500">
+                  {expanded ? <ChevronUp className="h-5 w-5 text-gray-500" /> : <ChevronDown className="h-5 w-5 text-gray-500" />}
+                </button>
+                <div>
+                  <h3 id={`role-${role.id}-title`} className="text-lg font-semibold text-gray-900 dark:text-white">{role.name}</h3>
+                  <div className="mt-1 flex flex-wrap gap-2 text-sm text-gray-500 dark:text-gray-400">
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200">{role.permissions?.length ?? 0} Permissions</span>
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">{role.users?.length ?? 0} Users</span>
+                  </div>
                 </div>
-
-                <div className="col-span-3 md:col-span-2 bg-white shadow rounded p-4">
-                    <div className="mb-4 flex gap-3">
-                        <form onSubmit={searchRoles} className="flex gap-2 flex-1">
-                            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search roles/permissions" className="border rounded px-3 py-2 flex-1" />
-                            <input value={searchUser} onChange={e => setSearchUser(e.target.value)} placeholder="Search users by name or email" className="border rounded px-3 py-2 w-64" />
-                            <button className="bg-gray-800 text-white px-3 py-2 rounded">Search</button>
-                        </form>
-                    </div>
-
-                    <div className="space-y-3">
-                        {roles?.data?.map((r: any) => (
-                            <div key={r.id} className="border rounded p-4">
-                                <div className="flex flex-col md:flex-row md:justify-between md:items-center">
-                                    <div>
-                                        <div className="font-medium text-lg">{r.name}</div>
-                                        <div className="text-sm text-gray-600">Permissions: {r.permissions?.length ?? 0} — Users: {r.users?.length ?? 0}</div>
-                                    </div>
-                                    <div className="flex gap-2 mt-3 md:mt-0">
-                                        <button onClick={() => deleteRole(r.id, r.name)} className="text-red-600">Delete</button>
-                                    </div>
-                                </div>
-
-                                <div className="mt-3">
-                                    <div className="text-sm font-semibold mb-2">Permissions</div>
-                                    <div className="flex flex-wrap gap-2">
-                                        {permissions?.data?.map((p: any) => (
-                                            <label key={p.id} className="inline-flex items-center gap-2 text-sm bg-gray-50 border rounded px-2 py-1">
-                                                <input type="checkbox" checked={r.permissions?.some((rp: any) => rp.name === p.name)} onChange={() => togglePermission(r.id, p.name)} />
-                                                <span>{p.name}</span>
-                                            </label>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                <div className="mt-4">
-                                    <div className="text-sm font-semibold mb-2">Users</div>
-                                    <div className="flex gap-2 items-center mb-3">
-                                        <select onChange={e => assignUser(r.id, Number(e.target.value))} className="border rounded px-3 py-2">
-                                            <option value="">Assign user...</option>
-                                            {users?.data?.map((u: any) => (
-                                                <option key={u.id} value={u.id}>{u.name} — {u.email}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                    <div className="flex flex-wrap gap-2">
-                                        {r.users?.map((u: any) => (
-                                            <div key={u.id} className="px-3 py-1 border rounded text-sm inline-flex items-center gap-2">
-                                                <span>{u.name}</span>
-                                                <button onClick={() => removeUser(r.id, u.id)} className="text-red-600 text-sm">Remove</button>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-
-                    <div className="mt-4 flex justify-between items-center">
-                        <div className="text-sm text-gray-600">Showing {roles?.from ?? 1} - {roles?.to ?? (roles?.data?.length ?? 0)} of {roles?.total ?? (roles?.data?.length ?? 0)}</div>
-                        <div className="flex gap-2">
-                            <button disabled={!roles?.prev_page_url} onClick={() => changePage(roles?.prev_page_url)} className="px-3 py-2 border rounded disabled:opacity-50">Prev</button>
-                            <button disabled={!roles?.next_page_url} onClick={() => changePage(roles?.next_page_url)} className="px-3 py-2 border rounded disabled:opacity-50">Next</button>
-                        </div>
-                    </div>
-                </div>
+              </div>
             </div>
-
-            <ConfirmModal open={confirmOpen} title={confirmTitle} message={confirmMessage} onConfirm={() => { setConfirmOpen(false); confirmAction(); }} onCancel={() => setConfirmOpen(false)} />
+          </div>
+          <div className="flex items-center gap-2">
+            <button aria-label={`Delete role ${role.name}`} onClick={() => openConfirm('Delete Role', `Are you sure you want to delete the role "${role.name}"? This action cannot be undone.`, () => onDelete(role.id, role.name))} className="inline-flex items-center px-3 py-1.5 rounded-md text-sm font-medium text-red-700 bg-red-100 hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-60">
+              <Trash2 className="h-4 w-4 mr-1" /> Delete
+            </button>
+          </div>
         </div>
-    );
-};
+      </header>
 
-Roles.layout = (page: any) => <SuperAdminLayout title="Roles & Permissions" user={page.props?.auth?.user}>{page}</SuperAdminLayout>;
+      {expanded && (
+        <div className="p-6" id={`role-${role.id}-panel`}>
+          <section aria-label="permissions" className="mb-4">
+            <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Permissions</h4>
+            <div className="flex flex-wrap gap-2">
+              {displayedPermissions.map((permission: Permission) => {
+                const isActive = role.permissions?.some((p: Permission) => p.name === permission.name);
+                return (
+                  <button key={permission.id} type="button" onClick={() => onTogglePermission(role.id, permission.name)} role="switch" aria-checked={isActive} aria-label={`${isActive ? 'Revoke' : 'Grant'} ${permission.name} for ${role.name}`} disabled={!!toggling[role.id]} className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${isActive ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/50 dark:text-indigo-200' : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'} ${!!toggling[role.id] ? 'opacity-70 cursor-wait' : ''}`}>
+                    {permission.name}{isActive && <span className="ml-1.5 inline-flex items-center justify-center h-4 w-4 rounded-full bg-indigo-600 text-white text-[10px]">✓</span>}
+                  </button>
+                )
+              })}
 
-export default Roles;
+              {(role.permissions ?? []).length > PERM_SHOW_LIMIT && (
+                <button type="button" onClick={() => setShowAllPerms(prev => !prev)} className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600">
+                  {showAllPerms ? 'Show less' : `+${(role.permissions ?? []).length - PERM_SHOW_LIMIT} more`}
+                </button>
+              )}
+            </div>
+          </section>
 
-import React, { useState } from 'react';
-import { router, usePage, useForm } from '@inertiajs/react';
-import ConfirmModal from '@/Components/ConfirmModal';
-import SuperAdminLayout from '@/Layouts/SuperAdminLayout';
-
-const Roles = (props: any) => {
-    const { roles = {}, permissions = {}, users = {}, flash = {} } = props;
-    const { props: pageProps } = usePage();
-
-    const roleForm = useForm({ name: '' });
-    const permissionForm = useForm({ name: '' });
-    const [search, setSearch] = useState('');
-    const [searchUser, setSearchUser] = useState('');
-
-    const [confirmOpen, setConfirmOpen] = useState(false);
-    const [confirmAction, setConfirmAction] = useState<() => void>(() => {});
-    const [confirmTitle, setConfirmTitle] = useState('');
-    const [confirmMessage, setConfirmMessage] = useState('');
-
-    const openConfirm = (title: string, message: string, action: () => void) => {
-        setConfirmTitle(title);
-        setConfirmMessage(message);
-        setConfirmAction(() => action);
-        setConfirmOpen(true);
-    };
-
-    const createRole = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!roleForm.data.name.trim()) return roleForm.setErrors({ name: 'Please enter a role name' });
-        roleForm.post('/superadmin/roles', {
-            preserveState: false,
-            return (
-                <div className="p-6">
-                    <div className="flex items-center justify-between mb-4">
-                        <h1 className="text-2xl font-bold">Roles & Permissions</h1>
-                        <div className="text-sm text-gray-600">Page {roles?.current_page ?? 1} of {roles?.last_page ?? 1}</div>
-                    </div>
-
-                    {flash?.success && <div className="mb-4 p-3 bg-green-100 text-green-800 rounded">{flash.success}</div>}
-                    {flash?.error && <div className="mb-4 p-3 bg-red-100 text-red-800 rounded">{flash.error}</div>}
-
-                    <div className="mb-4 grid grid-cols-3 gap-6">
-                        <div className="col-span-3 md:col-span-1 bg-white shadow rounded p-4">
-                            <h2 className="font-semibold mb-3">Create Role</h2>
-                            <form onSubmit={createRole} className="flex gap-2 flex-col">
-                                <label className="text-sm">Role Name</label>
-                                <input value={roleForm.data.name} onChange={e => roleForm.setData('name', e.target.value)} className="border rounded px-2 py-2" placeholder="e.g. finance_officer" />
-                                {roleForm.errors.name && <div className="text-red-600 text-sm">{roleForm.errors.name}</div>}
-                                <div className="flex justify-end">
-                                    <button disabled={roleForm.processing} className="bg-blue-600 text-white px-4 py-2 rounded mt-2">{roleForm.processing ? 'Creating...' : 'Create Role'}</button>
-                                </div>
-                            </form>
-
-                            <h2 className="font-semibold mt-6 mb-3">Create Permission</h2>
-                            <form onSubmit={createPermission} className="flex gap-2 flex-col">
-                                <label className="text-sm">Permission Name</label>
-                                <input value={permissionForm.data.name} onChange={e => permissionForm.setData('name', e.target.value)} className="border rounded px-2 py-2" placeholder="e.g. finance.view" />
-                                {permissionForm.errors.name && <div className="text-red-600 text-sm">{permissionForm.errors.name}</div>}
-                                <div className="flex justify-end">
-                                    <button disabled={permissionForm.processing} className="bg-blue-600 text-white px-4 py-2 rounded mt-2">{permissionForm.processing ? 'Creating...' : 'Create Permission'}</button>
-                                </div>
-                            </form>
-                        </div>
-
-                        <div className="col-span-3 md:col-span-2 bg-white shadow rounded p-4">
-                            <div className="mb-4 flex gap-3">
-                                <form onSubmit={searchRoles} className="flex gap-2 flex-1">
-                                    <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search roles/permissions" className="border rounded px-3 py-2 flex-1" />
-                                    <input value={searchUser} onChange={e => setSearchUser(e.target.value)} placeholder="Search users by name or email" className="border rounded px-3 py-2 w-64" />
-                                    <button className="bg-gray-800 text-white px-3 py-2 rounded">Search</button>
-                                </form>
-                            </div>
-
-                            <div className="space-y-3">
-                                {roles?.data?.map((r: any) => (
-                                    <div key={r.id} className="border rounded p-4">
-                                        <div className="flex flex-col md:flex-row md:justify-between md:items-center">
-                                            <div>
-                                                <div className="font-medium text-lg">{r.name}</div>
-                                                <div className="text-sm text-gray-600">Permissions: {r.permissions?.length ?? 0} — Users: {r.users?.length ?? 0}</div>
-                                            </div>
-                                            <div className="flex gap-2 mt-3 md:mt-0">
-                                                <button onClick={() => deleteRole(r.id, r.name)} className="text-red-600">Delete</button>
-                                            </div>
-                                        </div>
-
-                                        <div className="mt-3">
-                                            <div className="text-sm font-semibold mb-2">Permissions</div>
-                                            <div className="flex flex-wrap gap-2">
-                                                {permissions?.data?.map((p: any) => (
-                                                    <label key={p.id} className="inline-flex items-center gap-2 text-sm bg-gray-50 border rounded px-2 py-1">
-                                                        <input type="checkbox" checked={r.permissions?.some((rp: any) => rp.name === p.name)} onChange={() => togglePermission(r.id, p.name)} />
-                                                        <span>{p.name}</span>
-                                                    </label>
-                                                ))}
-                                            </div>
-                                        </div>
-
-                                        <div className="mt-4">
-                                            <div className="text-sm font-semibold mb-2">Users</div>
-                                            <div className="flex gap-2 items-center mb-3">
-                                                <select onChange={e => assignUser(r.id, Number(e.target.value))} className="border rounded px-3 py-2">
-                                                    <option value="">Assign user...</option>
-                                                    {users?.data?.map((u: any) => (
-                                                        <option key={u.id} value={u.id}>{u.name} — {u.email}</option>
-                                                    ))}
-                                                </select>
-                                            </div>
-                                            <div className="flex flex-wrap gap-2">
-                                                {r.users?.map((u: any) => (
-                                                    <div key={u.id} className="px-3 py-1 border rounded text-sm inline-flex items-center gap-2">
-                                                        <span>{u.name}</span>
-                                                        <button onClick={() => removeUser(r.id, u.id)} className="text-red-600 text-sm">Remove</button>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-
-                            <div className="mt-4 flex justify-between items-center">
-                                <div className="text-sm text-gray-600">Showing {roles?.from ?? 1} - {roles?.to ?? (roles?.data?.length ?? 0)} of {roles?.total ?? (roles?.data?.length ?? 0)}</div>
-                                <div className="flex gap-2">
-                                    <button disabled={!roles?.prev_page_url} onClick={() => changePage(roles?.prev_page_url)} className="px-3 py-2 border rounded disabled:opacity-50">Prev</button>
-                                    <button disabled={!roles?.next_page_url} onClick={() => changePage(roles?.next_page_url)} className="px-3 py-2 border rounded disabled:opacity-50">Next</button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <ConfirmModal open={confirmOpen} title={confirmTitle} message={confirmMessage} onConfirm={() => { setConfirmOpen(false); confirmAction(); }} onCancel={() => setConfirmOpen(false)} />
-                </div>
-            );
-        };
-
-        Roles.layout = (page: any) => <SuperAdminLayout title="Roles & Permissions" user={page.props?.auth?.user}>{page}</SuperAdminLayout>;
-
-        export default Roles;
-                                    <div className="flex gap-2 items-center mb-2">
-                                        <select onChange={e => assignUser(r.id, Number(e.target.value))} className="border rounded px-2 py-1">
-                                            <option value="">Assign user...</option>
-                                            {users?.data?.map((u: any) => (
-                                                <option key={u.id} value={u.id}>{u.name} — {u.email}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                    <div className="flex flex-wrap gap-2">
-                                        {r.users?.map((u: any) => (
-                                            <div key={u.id} className="px-2 py-1 border rounded text-sm inline-flex items-center gap-2">
-                                                <span>{u.name}</span>
-                                                <button onClick={() => removeUser(r.id, u.id)} className="text-red-600 text-sm">Remove</button>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-
-                    <div className="mt-4 flex justify-between items-center">
-                        <div className="text-sm text-gray-600">Page {roles?.current_page} of {roles?.last_page}</div>
-                        <div className="flex gap-2">
-                            <button onClick={() => changePage(roles?.prev_page_url)} className="px-2 py-1 border rounded">Prev</button>
-                            <button onClick={() => changePage(roles?.next_page_url)} className="px-2 py-1 border rounded">Next</button>
-                        </div>
-                    </div>
-                </div>
+          <section aria-label="assigned-users">
+            <div className="flex items-center justify-between mb-2">
+              <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">Assigned Users</h4>
+              <div className="relative w-64">
+                <select onChange={(e) => { const userId = Number((e.target as HTMLSelectElement).value); if (userId) { onAssignUser(role.id, userId); (e.target as HTMLSelectElement).value = ''; } }} disabled={!!assigning[role.id]} aria-label={`Assign user to ${role.name}`} className="block w-full pl-3 pr-10 py-2 text-base border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white sm:text-sm disabled:opacity-60 disabled:cursor-not-allowed" defaultValue="">
+                  <option value="">Select a user to add...</option>
+                  {users?.filter((u: User) => !role.users?.some((ru: User) => ru.id === u.id)).map((u: User) => (<option key={u.id} value={u.id}>{u.name} — {u.email}</option>))}
+                </select>
+                <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none"><UserPlus className="h-4 w-4 text-gray-400" /></div>
+              </div>
             </div>
 
-            <ConfirmModal open={confirmOpen} title={confirmTitle} message={confirmMessage} onConfirm={() => { setConfirmOpen(false); confirmAction(); }} onCancel={() => setConfirmOpen(false)} />
+            {role.users?.length > 0 ? (
+              <div className="mt-2 flex flex-wrap gap-2">
+                {role.users.map((user: User) => (
+                  <div key={user.id} className="inline-flex items-center bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-full pl-3 pr-2 py-1 text-sm font-medium text-gray-700 dark:text-gray-200">
+                    <span className="truncate">{user.name}</span>
+                    <button type="button" onClick={() => openConfirm('Remove User', `Are you sure you want to remove ${user.name} from the ${role.name} role?`, () => onRemoveUser(role.id, user.id))} disabled={!!removing[role.id]} aria-label={`Remove ${user.name} from ${role.name}`} aria-busy={!!removing[role.id]} className="ml-1.5 inline-flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full text-gray-400 hover:text-red-500 hover:bg-red-100 dark:hover:bg-red-900/50 focus:outline-none disabled:opacity-60 disabled:cursor-not-allowed">
+                      {removing[role.id] ? (<svg className="animate-spin h-3.5 w-3.5 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>) : (<X className="h-3.5 w-3.5" />)}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : (<div className="text-center py-4 text-sm text-gray-500 dark:text-gray-400">No users assigned to this role yet.</div>)}
+          </section>
         </div>
-    );
-};
+      )}
+    </article>
+  )
+})
 
-export default Roles;
+export default function Roles({ roles, permissions, users, flash = {} }: Props) {
+  const roleForm = useForm({ name: '' });
+  const permissionForm = useForm({ name: '' });
+  const [search, setSearch] = useState('');
+  const [searchUser, setSearchUser] = useState('');
+
+  const [assigning, setAssigning] = useState<Record<number, boolean>>({});
+  const [removing, setRemoving] = useState<Record<number, boolean>>({});
+  const [toggling, setToggling] = useState<Record<number, boolean>>({});
+
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<() => void>(() => {});
+  const [confirmTitle, setConfirmTitle] = useState('');
+  const [confirmMessage, setConfirmMessage] = useState('');
+
+  const roleNameRef = useRef<HTMLInputElement | null>(null);
+  const permissionNameRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => { roleNameRef.current?.focus() }, []);
+
+  const openConfirm = (title: string, message: string, action: () => void) => { setConfirmTitle(title); setConfirmMessage(message); setConfirmAction(() => action); setConfirmOpen(true) };
+
+  const createRole = (e: React.FormEvent) => { e.preventDefault(); if (!roleForm.data.name.trim()) return roleForm.setError('name', 'Please enter a role name'); roleForm.post('/superadmin/roles', { preserveState: false, onSuccess: () => { roleForm.reset('name'); roleNameRef.current?.focus() } }) };
+
+  const deleteRole = useCallback((roleId: number, roleName: string) => { router.delete(`/superadmin/roles/${roleId}`) }, []);
+
+  const createPermission = (e: React.FormEvent) => { e.preventDefault(); if (!permissionForm.data.name.trim()) return permissionForm.setError('name', 'Please enter a permission name'); permissionForm.post('/superadmin/permissions', { onSuccess: () => { permissionForm.reset('name'); permissionNameRef.current?.focus() } }) };
+
+  const togglePermission = useCallback((roleId: number, permName: string) => { setToggling(prev => ({ ...prev, [roleId]: true })); router.post(`/superadmin/roles/${roleId}/toggle-permission`, { permission: permName }, { preserveScroll: true, onFinish: () => setToggling(prev => { const copy = { ...prev }; delete copy[roleId]; return copy }) }) }, []);
+
+  const assignUser = useCallback((roleId: number, userId: number) => { if (!userId) return; setAssigning(prev => ({ ...prev, [roleId]: true })); router.post(`/superadmin/roles/${roleId}/assign-user`, { user_id: userId }, { preserveScroll: true, onFinish: () => setAssigning(prev => { const copy = { ...prev }; delete copy[roleId]; return copy }) }) }, []);
+
+  const removeUser = useCallback((roleId: number, userId: number) => { setRemoving(prev => ({ ...prev, [roleId]: true })); router.post(`/superadmin/roles/${roleId}/remove-user`, { user_id: userId }, { preserveScroll: true, onFinish: () => setRemoving(prev => { const copy = { ...prev }; delete copy[roleId]; return copy }) }) }, []);
+
+  const changePage = useCallback((pageUrl: string | null) => { if (!pageUrl) return; router.get(pageUrl) }, []);
+
+  const searchRoles = useCallback((e: React.FormEvent) => { e.preventDefault(); router.get('/superadmin/roles', { q: search, q_user: searchUser }, { only: ['roles','permissions','users','flash'], preserveState: true, preserveScroll: true }) }, [search, searchUser]);
+
+  const userOptions = useMemo(() => users?.data ?? [], [users]);
+
+  return (
+    <div className="p-6 max-w-7xl mx-auto">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Roles & Permissions</h1>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Manage user roles and their permissions</p>
+        </div>
+        <div className="flex items-center space-x-2"><div className="text-sm text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-3 py-1.5 rounded-full">Page {roles?.current_page ?? 1} of {roles?.last_page ?? 1}</div></div>
+      </div>
+
+      {flash?.success && (<div className="mb-6 p-4 bg-green-50 border border-green-200 text-green-700 rounded-lg flex items-start"><div className="flex-shrink-0 h-5 w-5 text-green-400"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg></div><div className="ml-3"><p className="text-sm font-medium">{flash.success}</p></div></div>)}
+
+      {flash?.error && (<div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg flex items-start"><div className="flex-shrink-0 h-5 w-5 text-red-400"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" /></svg></div><div className="ml-3"><p className="text-sm font-medium">{flash.error}</p></div></div>)}
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="space-y-6 lg:col-span-1">
+          <div className="bg-white dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm overflow-hidden transition-all duration-200 hover:shadow-md">
+            <div className="px-6 py-4 bg-gradient-to-r from-coin-50 to-coin-100 dark:from-coin-900/30 dark:to-coin-900/10 border-b border-gray-200 dark:border-gray-700">
+              <div className="flex items-center justify-between"><h2 className="text-lg font-semibold text-gray-900 dark:text-white">Create Role</h2><Shield className="h-5 w-5 text-coin-600 dark:text-coin-400" /></div>
+            </div>
+            <div className="p-6">
+              <form onSubmit={createRole} className="space-y-4">
+                <div>
+                  <label htmlFor="roleName" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Role Name <span className="text-red-500 ml-0.5">*</span></label>
+                  <input ref={roleNameRef} id="roleName" type="text" value={roleForm.data.name} onChange={e => roleForm.setData('name', e.target.value)} className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-coin-500 focus:ring-coin-500 dark:bg-gray-700/50 dark:border-gray-600 dark:text-white dark:placeholder-gray-400 sm:text-sm transition duration-150 ease-in-out" placeholder="e.g. finance_officer" required />
+                  {roleForm.errors.name && (<p className="mt-1 text-sm text-red-600 dark:text-red-400">{roleForm.errors.name}</p>)}
+                </div>
+                <div className="flex justify-end">
+                  <button type="submit" disabled={roleForm.processing} className="inline-flex items-center justify-center rounded-lg border border-transparent bg-coin-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-coin-700 focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200">{roleForm.processing ? (<><svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>Creating...</>) : (<><Plus className="-ml-1 mr-2 h-4 w-4" />Create Role</>)}</button>
+                </div>
+              </form>
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm overflow-hidden transition-all duration-200 hover:shadow-md">
+            <div className="px-6 py-4 bg-gradient-to-r from-indigo-50 to-indigo-100 dark:from-indigo-900/30 dark:to-indigo-900/10 border-b border-gray-200 dark:border-gray-700"><div className="flex items-center justify-between"><h2 className="text-lg font-semibold text-gray-900 dark:text-white">Create Permission</h2><Shield className="h-5 w-5 text-indigo-600 dark:text-indigo-400" /></div></div>
+            <div className="p-6">
+              <form onSubmit={createPermission} className="space-y-4">
+                <div>
+                  <label htmlFor="permissionName" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Permission Name <span className="text-red-500 ml-0.5">*</span></label>
+                  <input ref={permissionNameRef} id="permissionName" type="text" value={permissionForm.data.name} onChange={e => permissionForm.setData('name', e.target.value)} className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700/50 dark:border-gray-600 dark:text-white dark:placeholder-gray-400 sm:text-sm transition duration-150 ease-in-out" placeholder="e.g. finance.view" required />
+                  {permissionForm.errors.name && (<p className="mt-1 text-sm text-red-600 dark:text-red-400">{permissionForm.errors.name}</p>)}
+                </div>
+                <div className="flex justify-end">
+                  <button type="submit" disabled={permissionForm.processing} className="inline-flex items-center justify-center rounded-lg border border-transparent bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200">{permissionForm.processing ? (<><svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>Creating...</>) : (<><Plus className="-ml-1 mr-2 h-4 w-4" />Create Permission</>)}</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+
+        <div className="lg:col-span-2 space-y-6">
+          <div className="bg-white dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm overflow-hidden">
+            <div className="px-6 py-4 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900/80 border-b border-gray-200 dark:border-gray-700">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div><h2 className="text-lg font-semibold text-gray-900 dark:text-white">Roles List</h2><p className="text-sm text-gray-600 dark:text-gray-400">Manage user roles and their permissions</p></div>
+                <form onSubmit={searchRoles} className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+                  <div className="relative flex-1"><div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><Search className="h-4 w-4 text-gray-400" /></div><input type="text" value={search} onChange={e => setSearch(e.target.value)} className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-coin-500 focus:border-coin-500 dark:bg-gray-700/50 dark:text-white dark:placeholder-gray-400 sm:text-sm transition duration-150 ease-in-out" placeholder="Search roles/permissions..." /></div>
+                  <div className="relative"><div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><Search className="h-4 w-4 text-gray-400" /></div><input type="text" value={searchUser} onChange={e => setSearchUser(e.target.value)} className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-coin-500 focus:border-coin-500 dark:bg-gray-700/50 dark:text-white dark:placeholder-gray-400 sm:text-sm transition duration-150 ease-in-out" placeholder="Search users..." /></div>
+                  <button type="submit" className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-coin-600 hover:bg-coin-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-coin-500 transition-colors duration-200"><Search className="h-4 w-4 mr-2" />Search</button>
+                </form>
+              </div>
+            </div>
+            <div className="p-6">
+              <div className="space-y-4">
+                {roles?.data?.length > 0 ? (roles.data.map((role) => (
+                  <RoleCard key={role.id} role={role} permissions={permissions} users={userOptions} toggling={toggling} assigning={assigning} removing={removing} onTogglePermission={togglePermission} onAssignUser={assignUser} onRemoveUser={removeUser} onDelete={deleteRole} openConfirm={openConfirm} />
+                ))) : (
+                  <div className="text-center py-8"><Shield className="mx-auto h-12 w-12 text-gray-400" /><h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-white">No roles found</h3><p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Get started by creating a new role.</p></div>
+                )}
+              </div>
+
+              {roles?.data && roles.data.length > 0 && (
+                <div className="mt-6 flex items-center justify-between border-t border-gray-200 dark:border-gray-700 pt-4">
+                  <div className="flex flex-1 justify-between sm:hidden">
+                    <button onClick={() => changePage(roles?.prev_page_url)} disabled={!roles?.prev_page_url} className="relative inline-flex items-center rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                      Previous
+                    </button>
+                    <button onClick={() => changePage(roles?.next_page_url)} disabled={!roles?.next_page_url} className="relative ml-3 inline-flex items-center rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                      Next
+                    </button>
+                  </div>
+
+                  <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+                    <div>
+                      <p className="text-sm text-gray-700 dark:text-gray-300">
+                        Showing <span className="font-medium">{roles?.from ?? 0}</span> to <span className="font-medium">{roles?.to ?? 0}</span> of <span className="font-medium">{roles?.total ?? 0}</span> results
+                      </p>
+                    </div>
+                    <nav className="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
+                      <button onClick={() => changePage(roles?.prev_page_url)} disabled={!roles?.prev_page_url} className="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 dark:ring-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 focus:z-20 focus:outline-offset-0 disabled:opacity-50 disabled:cursor-not-allowed">
+                        <span className="sr-only">Previous</span>
+                        <ChevronLeft className="h-5 w-5" aria-hidden="true" />
+                      </button>
+                      <span className="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-900 dark:text-white ring-1 ring-inset ring-gray-300 dark:ring-gray-600">
+                        Page {roles?.current_page ?? 1} of {roles?.last_page ?? 1}
+                      </span>
+                      <button onClick={() => changePage(roles?.next_page_url)} disabled={!roles?.next_page_url} className="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 dark:ring-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 focus:z-20 focus:outline-offset-0 disabled:opacity-50 disabled:cursor-not-allowed">
+                        <span className="sr-only">Next</span>
+                        <ChevronRight className="h-5 w-5" aria-hidden="true" />
+                      </button>
+                    </nav>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <Suspense fallback={null}>
+        <ConfirmModal open={confirmOpen} title={confirmTitle} message={confirmMessage} onConfirm={() => { setConfirmOpen(false); confirmAction(); }} onCancel={() => setConfirmOpen(false)} />
+      </Suspense>
+    </div>
+  )
+}
+
+(Roles as any).layout = (page: any) => (
+  <SuperAdminLayout title="Roles & Permissions" user={page.props?.auth?.user}>{page}</SuperAdminLayout>
+)

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Head, useForm } from '@inertiajs/react';
-import AdminLayout from '@/Layouts/AdminLayout';
+import FinanceLayout from '@/Layouts/FinanceLayout';
 
 interface Expense {
   id: number;
@@ -36,7 +36,7 @@ export default function EditExpense({ expense, categories, paymentMethods }: Pro
   };
 
   return (
-    <AdminLayout title="Edit Expense">
+    <FinanceLayout title="Edit Expense">
       <Head title="Edit Expense" />
       
       <div className="py-6">
@@ -186,6 +186,6 @@ export default function EditExpense({ expense, categories, paymentMethods }: Pro
           </div>
         </div>
       </div>
-    </AdminLayout>
+    </FinanceLayout>
   );
 }

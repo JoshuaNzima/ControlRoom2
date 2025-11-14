@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Head, useForm } from '@inertiajs/react';
-import AdminLayout from '@/Layouts/AdminLayout';
+import FinanceLayout from '@/Layouts/FinanceLayout';
 
 interface LineItem {
   description: string;
@@ -95,7 +95,7 @@ export default function CreateInvoice() {
   };
 
   return (
-    <AdminLayout title="Create Invoice">
+    <FinanceLayout title="Create Invoice">
       <Head title="Create Invoice" />
 
       <div className="py-6">
@@ -374,6 +374,6 @@ export default function CreateInvoice() {
           </div>
         </div>
       </div>
-    </AdminLayout>
+    </FinanceLayout>
   );
 }

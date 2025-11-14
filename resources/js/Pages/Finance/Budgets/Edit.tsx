@@ -1,6 +1,6 @@
 import React from 'react';
 import { Head, useForm } from '@inertiajs/react';
-import AdminLayout from '@/Layouts/AdminLayout';
+import FinanceLayout from '@/Layouts/FinanceLayout';
 
 interface Budget {
   id: number;
@@ -52,7 +52,7 @@ export default function EditBudget({ budget, categories }: Props) {
   const years = Array.from({ length: 10 }, (_, i) => budget.fiscal_year - 3 + i);
 
   return (
-    <AdminLayout title="Edit Budget">
+    <FinanceLayout title="Edit Budget">
       <Head title="Edit Budget" />
 
       <div className="py-6">
@@ -214,6 +214,6 @@ export default function EditBudget({ budget, categories }: Props) {
           </div>
         </div>
       </div>
-    </AdminLayout>
+    </FinanceLayout>
   );
 }

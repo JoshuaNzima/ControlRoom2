@@ -1,6 +1,6 @@
 import React from 'react';
 import { Head, Link, router } from '@inertiajs/react';
-import AdminLayout from '@/Layouts/AdminLayout';
+import FinanceLayout from '@/Layouts/FinanceLayout';
 import { formatCurrency, formatDate } from '@/utils/formatters';
 
 interface InvoiceLineItem {
@@ -60,7 +60,7 @@ export default function ShowInvoice({ invoice }: Props) {
   };
 
   return (
-    <AdminLayout title={`Invoice ${invoice.invoice_number}`}>
+    <FinanceLayout title={`Invoice ${invoice.invoice_number}`}>
       <Head title={`Invoice ${invoice.invoice_number}`} />
 
       <div className="py-6">
@@ -284,6 +284,6 @@ export default function ShowInvoice({ invoice }: Props) {
           </div>
         </div>
       </div>
-    </AdminLayout>
+    </FinanceLayout>
   );
 }

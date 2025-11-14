@@ -1,6 +1,6 @@
 import React from 'react';
 import { Head, Link } from '@inertiajs/react';
-import AdminLayout from '@/Layouts/AdminLayout';
+import FinanceLayout from '@/Layouts/FinanceLayout';
 import { formatCurrency, formatDate } from '@/utils/formatters';
 
 interface Expense {
@@ -41,7 +41,7 @@ export default function ShowExpense({ expense }: Props) {
   const statusColor = getStatusColor(expense.status);
 
   return (
-    <AdminLayout title={`Expense #${expense.id}`}>
+    <FinanceLayout title={`Expense #${expense.id}`}>
       <Head title={`Expense #${expense.id}`} />
       
       <div className="py-6">
@@ -189,6 +189,6 @@ export default function ShowExpense({ expense }: Props) {
           </div>
         </div>
       </div>
-    </AdminLayout>
+    </FinanceLayout>
   );
 }

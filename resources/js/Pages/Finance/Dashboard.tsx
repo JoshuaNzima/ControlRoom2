@@ -1,6 +1,6 @@
 import React from 'react';
 import { Head } from '@inertiajs/react';
-import AdminLayout from '@/Layouts/AdminLayout';
+import FinanceLayout from '@/Layouts/FinanceLayout';
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler } from 'chart.js';
 import { Line } from 'react-chartjs-2';
 import FinanceDrilldownPanel from '@/Components/FinanceDrilldownPanel';
@@ -134,7 +134,7 @@ export default function FinanceDashboard(props: Props) {
   };
 
   return (
-    <AdminLayout title="Finance" user={auth?.user}>
+    <FinanceLayout title="Finance" user={auth?.user}>
       <Head title="Finance" />
       <div className="py-6">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
@@ -260,7 +260,7 @@ export default function FinanceDashboard(props: Props) {
           <FinanceDrilldownPanel open={modalOpen} title={modalTitle} data={modalData} onClose={() => setModalOpen(false)} />
         </div>
       </div>
-    </AdminLayout>
+    </FinanceLayout>
   );
 }
 
