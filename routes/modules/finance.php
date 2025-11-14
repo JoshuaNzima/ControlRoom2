@@ -8,8 +8,15 @@ Route::middleware(['auth', 'role:admin,super_admin,finance_officer,accountant'])
     ->prefix('finance')
     ->name('finance.')
     ->group(function () {
-        Route::get('/', fn () => Inertia::render('Finance/Dashboard'))
+        Route::get('/', [\App\Http\Controllers\Finance\DashboardController::class, 'index'])
             ->name('dashboard');
+
+        // Drilldown API endpoints (returns JSON)
+        Route::get('drilldown/month/{year}/{month}', [\App\Http\Controllers\Finance\DashboardController::class, 'monthDrilldown'])
+            ->name('drilldown.month');
+
+        Route::get('drilldown/budget/{budget}', [\App\Http\Controllers\Finance\DashboardController::class, 'budgetDrilldown'])
+            ->name('drilldown.budget');
 
         // Expense Management
         Route::resource('expenses', \App\Http\Controllers\Finance\ExpenseController::class);

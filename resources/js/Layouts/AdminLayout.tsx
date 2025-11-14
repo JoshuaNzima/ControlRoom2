@@ -35,13 +35,25 @@ export default function AdminLayout({ title, children, user }: Props) {
     { name: 'Settings', href: route('admin.settings.index'), icon: <IconMapper name="settings" className="h-6 w-6" />, current: false },
   ];
 
+  const canSeeFinance = (() => {
+    if (!user) return false;
+    const allowedRoles = ['admin', 'super_admin', 'finance_officer', 'accountant'];
+    const roles = (user as any).roles ?? [];
+    if (Array.isArray(roles) && roles.some((r) => allowedRoles.includes(String(r)))) return true;
+    if (typeof roles === 'string' && allowedRoles.includes(roles)) return true;
+    const perms = (user as any).permissions ?? [];
+    if (Array.isArray(perms) && perms.includes('finance.access')) return true;
+    if (typeof perms === 'string' && perms === 'finance.access') return true;
+    return false;
+  })();
+
   const moduleLinks: ModuleNavItem[] = [
   { name: 'Control Room', href: route('admin.control-room.dashboard'), icon: <IconMapper name="briefcase" className="h-6 w-6" />, current: isCurrent(route('admin.control-room.dashboard')) },
   { name: 'Clients', href: route('admin.clients.index'), icon: <IconMapper name="building-2" className="h-6 w-6" />, current: false },
   { name: 'Guards', href: route('admin.guards.dashboard'), icon: <IconMapper name="shield-check" className="h-6 w-6" />, current: false },
   { name: 'HR', href: route('hr.dashboard'), icon: <IconMapper name="users-2" className="h-6 w-6" />, current: false },
   { name: 'K9', href: route('k9.dashboard'), icon: <IconMapper name="shield" className="h-6 w-6" />, current: false },
-  { name: 'Finance', href: route('finance.dashboard'), icon: <IconMapper name="wallet" className="h-6 w-6" />, current: false },
+  ...(canSeeFinance ? [{ name: 'Finance', href: route('finance.dashboard'), icon: <IconMapper name="wallet" className="h-6 w-6" />, current: isCurrent(route('finance.dashboard')) }] : []),
   { name: 'Marketing', href: route('admin.marketing'), icon: <IconMapper name="megaphone" className="h-6 w-6" />, current: false },
   ];
 

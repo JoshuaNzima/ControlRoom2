@@ -70,6 +70,12 @@ export default function SuperAdminLayout({ title, children, user }: Props) {
             icon: <IconMapper name="Shield" size={24} />, 
             current: window.location.pathname === route('superadmin.security') 
         },
+        {
+            name: 'Roles & Permissions',
+            href: route('superadmin.roles.index'),
+            icon: <IconMapper name="Users2" size={24} />,
+            current: window.location.pathname === route('superadmin.roles.index')
+        },
         { 
             name: 'Settings', 
             href: route('superadmin.settings'), 

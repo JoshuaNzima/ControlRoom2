@@ -1,7 +1,7 @@
 import React from 'react';
 import { Head, Link } from '@inertiajs/react';
 import AdminLayout from '@/Layouts/AdminLayout';
-import { formatCurrency, formatDate } from '@/Utils/formatters';
+import { formatCurrency, formatDate } from '@/utils/formatters';
 
 interface Expense {
   id: number;

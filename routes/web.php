@@ -104,6 +104,17 @@ Route::middleware(['auth', 'role:super_admin'])->prefix('superadmin')->name('sup
     Route::get('/audit', fn() => Inertia::render('SuperAdmin/Audit'))->name('audit');
     Route::get('/maintenance', fn() => Inertia::render('SuperAdmin/Maintenance'))->name('maintenance');
     Route::get('/cache', fn() => Inertia::render('SuperAdmin/Cache'))->name('cache');
+    
+        Route::get('/roles', [App\Http\Controllers\SuperAdmin\RoleController::class, 'index'])->name('roles.index');
+        Route::post('/roles', [App\Http\Controllers\SuperAdmin\RoleController::class, 'storeRole'])->name('roles.store');
+        Route::delete('/roles/{role}', [App\Http\Controllers\SuperAdmin\RoleController::class, 'deleteRole'])->name('roles.delete');
+    
+        Route::post('/permissions', [App\Http\Controllers\SuperAdmin\RoleController::class, 'storePermission'])->name('permissions.store');
+        Route::delete('/permissions/{permission}', [App\Http\Controllers\SuperAdmin\RoleController::class, 'deletePermission'])->name('permissions.delete');
+    
+        Route::post('/roles/{role}/toggle-permission', [App\Http\Controllers\SuperAdmin\RoleController::class, 'togglePermission'])->name('roles.togglePermission');
+        Route::post('/roles/{role}/assign-user', [App\Http\Controllers\SuperAdmin\RoleController::class, 'assignUser'])->name('roles.assignUser');
+        Route::post('/roles/{role}/remove-user', [App\Http\Controllers\SuperAdmin\RoleController::class, 'removeUser'])->name('roles.removeUser');
 });
 
 // Include all module routes

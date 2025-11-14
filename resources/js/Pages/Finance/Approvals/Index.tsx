@@ -1,6 +1,5 @@
 import React from 'react';
-import { Inertia } from '@inertiajs/inertia';
-import { InertiaLink, usePage } from '@inertiajs/inertia-react';
+import { router, Link, usePage } from '@inertiajs/react';
 
 interface Props {
   approvals: any[];
@@ -8,11 +7,11 @@ interface Props {
 
 export default function Index({ approvals }: Props) {
   const handleApprove = (id: number) => {
-    Inertia.post(route('finance.approvals.approve', { approval: id }), {});
+    router.post(route('finance.approvals.approve', { approval: id }), {});
   };
 
   const handleReject = (id: number) => {
-    Inertia.post(route('finance.approvals.reject', { approval: id }), {});
+    router.post(route('finance.approvals.reject', { approval: id }), {});
   };
 
   return (
@@ -35,9 +34,9 @@ export default function Index({ approvals }: Props) {
             {approvals.map((a: any) => (
               <tr key={a.id} className="border-t">
                 <td>
-                  <InertiaLink href={route('finance.expenses.show', a.expense.id)}>
+                  <Link href={route('finance.expenses.show', a.expense.id)}>
                     {a.expense.description || `#${a.expense.id}`}
-                  </InertiaLink>
+                  </Link>
                 </td>
                 <td>{a.expense.amount}</td>
                 <td>{a.stage}</td>
