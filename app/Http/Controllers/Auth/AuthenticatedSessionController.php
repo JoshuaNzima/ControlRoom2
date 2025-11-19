@@ -73,6 +73,11 @@ class AuthenticatedSessionController extends Controller
             return route('supervisor.dashboard', absolute: false);
         }
 
+        // Operations Officer - control room view
+        if ($user->hasRole('operations_officer')) {
+            return route('control-room.dashboard', absolute: false);
+        }
+
         // Control Room Operator - Manages control room operations
         if ($user->hasRole('control_room_operator')) {
             return route('control-room.dashboard', absolute: false);
@@ -100,7 +105,7 @@ class AuthenticatedSessionController extends Controller
         
         // Sergeant - Mid-level supervisor
         if ($user->hasRole('sergeant')) {
-            return route('sergeant.dashboard', absolute: false);
+            return route('supervisor.dashboard', absolute: false);
         }
         
         // Default dashboard for any other roles or unassigned users

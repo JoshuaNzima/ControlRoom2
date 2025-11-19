@@ -167,13 +167,20 @@ export default function SuperAdminLayout({ title, children, user }: Props) {
                 </div>
 
                 {/* User Menu */}
-                <div className="flex-shrink-0 flex border-t border-red-800 p-4">
-                    <div className="flex items-center">
-                        <div>
-                            <div className="text-base font-medium text-white">{user?.name}</div>
-                            <div className="text-sm font-medium text-gray-400">Super Admin</div>
-                        </div>
+                <div className="flex-shrink-0 flex items-center justify-between border-t border-red-800 p-4">
+                    <div>
+                        <div className="text-base font-medium text-white">{user?.name}</div>
+                        <div className="text-sm font-medium text-gray-400">Super Admin</div>
                     </div>
+                    <Link
+                        href={route('logout')}
+                        method="post"
+                        as="button"
+                        className="inline-flex items-center gap-2 rounded-md bg-red-700 px-3 py-2 text-sm font-medium text-white hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                    >
+                        <IconMapper name="LogOut" size={16} />
+                        Logout
+                    </Link>
                 </div>
             </div>
 

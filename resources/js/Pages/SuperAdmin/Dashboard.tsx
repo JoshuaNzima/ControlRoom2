@@ -111,9 +111,9 @@ interface HealthCardProps {
 // Helper Components
 const SystemStatCard: React.FC<SystemStatCardProps> = ({ icon, title, value, subtitle, color }) => {
   return (
-    <div className={`bg-white rounded-xl shadow-md p-6 border-l-4 border-${color}-500`}>
+    <div className="bg-white rounded-xl shadow-md p-6 border-l-4 border-indigo-500">
       <div className="flex items-center gap-4">
-        <div className={`p-3 rounded-lg bg-${color}-100 text-${color}-600`}>
+        <div className="p-3 rounded-lg bg-indigo-100 text-indigo-600">
           {icon}
         </div>
         <div>
@@ -153,7 +153,7 @@ const Dashboard: React.FC<SuperAdminDashboardProps> = ({
   isMaintenance,
 }) => {
   const handleToggleModule = (moduleId: number) => {
-    router.post(route('superadmin.modules.toggle', { id: moduleId }));
+    router.post(route('superadmin.modules.toggle', { module: moduleId }));
   };
 
   const handleClearCache = () => {
@@ -174,7 +174,7 @@ const Dashboard: React.FC<SuperAdminDashboardProps> = ({
   }, [modules]);
 
   return (
-    <SuperAdminLayout title="Control Room Dashboard" user={auth.user}>
+    <SuperAdminLayout title="Super Admin Dashboard" user={auth.user}>
       <Head title="Super Admin Dashboard" />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-8">
@@ -293,20 +293,18 @@ const Dashboard: React.FC<SuperAdminDashboardProps> = ({
                 {category.replace('_', ' ')} Modules
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {categoryModules.map((module) => {
-                  const moduleRoute = module.is_active && module.route ? route(module.route) : '#';
-                  return (
-                    <Link
-                      key={module.id}
-                      href={moduleRoute}
-                      className={`block p-6 rounded-xl shadow-md border-2 transition-all text-center ${
-                        module.is_active
-                          ? 'border-indigo-400 bg-white hover:shadow-xl hover:-translate-y-1'
-                          : 'border-gray-200 bg-gray-100 opacity-60 cursor-not-allowed'
-                      }`}
-                      tabIndex={module.is_active ? 0 : -1}
-                      aria-disabled={!module.is_active}
-                    >
+                {categoryModules.map((module) => (
+                  <div
+                    key={module.id}
+                    className={`p-6 rounded-xl shadow-md border-2 transition-all ${
+                      module.is_active
+                        ? 'border-indigo-400 bg-white hover:shadow-xl hover:-translate-y-1'
+                        : 'border-gray-200 bg-gray-100'
+                    }`}
+                    role="group"
+                    aria-label={`${module.display_name} module card`}
+                  >
+                    <div className="text-center">
                       <div className="text-4xl mb-2">{module.icon}</div>
                       <h3 className="font-bold text-gray-900 text-lg mb-1">{module.display_name}</h3>
                       <p className="text-xs text-gray-500 mb-2">v{module.version}</p>
@@ -314,9 +312,22 @@ const Dashboard: React.FC<SuperAdminDashboardProps> = ({
                       {module.is_core && (
                         <p className="text-xs text-red-600 mt-2">Core module</p>
                       )}
-                    </Link>
-                  );
-                })}
+                    </div>
+                    <div className="mt-4 flex items-center justify-center">
+                      <button
+                        onClick={() => handleToggleModule(module.id)}
+                        className={`inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium shadow ${
+                          module.is_active
+                            ? 'bg-rose-600 hover:bg-rose-700 text-white'
+                            : 'bg-indigo-600 hover:bg-indigo-700 text-white'
+                        }`}
+                        aria-pressed={module.is_active}
+                      >
+                        {module.is_active ? 'Disable' : 'Enable'}
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           ))}

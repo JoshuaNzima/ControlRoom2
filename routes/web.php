@@ -17,19 +17,16 @@ Route::middleware('web')->group(function () {
 });
 
 // Public landing page for guests (redirects authenticated users to dashboard)
-Route::get('/', function () {
-    if (Auth::check()) {
-        return redirect()->route('dashboard');
-    }
-
-    return Inertia::render('Public/Home');
-})->name('public.home');
+Route::get('/', [\App\Http\Controllers\Public\LandingController::class, 'index'])->name('public.home');
 
 // Guest routes
 Route::middleware('guest')->group(function () {
     Route::get('login', [\App\Http\Controllers\Auth\AuthenticatedSessionController::class, 'create'])->name('login');
     Route::post('login', [\App\Http\Controllers\Auth\AuthenticatedSessionController::class, 'store']);
 });
+
+// Public intake endpoint
+Route::post('/intake', [\App\Http\Controllers\PublicIntakeController::class, 'store'])->name('public.intake.store');
 
 // Authenticated routes
 Route::middleware('auth')->group(function () {
@@ -104,10 +101,18 @@ Route::middleware(['auth'])->group(function () {
                 return redirect()->route('manager.dashboard');
             case in_array('supervisor', $roles):
                 return redirect()->route('supervisor.dashboard');
+            case in_array('sergeant', $roles):
+                return redirect()->route('supervisor.dashboard');
+            case in_array('hr', $roles):
+            case in_array('human_resources', $roles):
+                return redirect()->route('hr.dashboard');
             case in_array('client', $roles):
                 return redirect()->route('client.dashboard');
             case in_array('finance_officer', $roles):
             case in_array('accountant', $roles):
+                return redirect()->route('finance.dashboard');
+            case in_array('finance', $roles):
+            case in_array('accounting', $roles):
                 return redirect()->route('finance.dashboard');
             default:
                 abort(403, 'Unauthorized. No dashboard is configured for your role.');

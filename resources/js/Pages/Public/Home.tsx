@@ -1,16 +1,47 @@
 import React, { useState, useEffect } from 'react';
-import { Head, Link } from '@inertiajs/react';
+import { Head, useForm, usePage } from '@inertiajs/react';
 import PublicLayout from '@/Layouts/PublicLayout';
 import IconMapper from '@/Components/IconMapper';
 
 export default function Home() {
   const [currentStat, setCurrentStat] = useState(0);
+  const [activeIntake, setActiveIntake] = useState<'ticket' | 'down' | 'incident'>('ticket');
+  const { flash, metrics }: any = usePage().props;
+  const { data, setData, post, processing, reset, errors, progress, transform } = useForm({
+    type: 'ticket' as 'ticket' | 'down' | 'incident',
+    name: '',
+    email: '',
+    phone: '',
+    client_name: '',
+    client_site: '',
+    title: '',
+    category: 'complaint',
+    priority: 'medium',
+    description: '',
+    down_type: 'guard_absent',
+    attachments: [] as File[]
+  });
+
+  useEffect(() => {
+    setData('type', activeIntake);
+  }, [activeIntake]);
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    transform((current) => current);
+    post(route('public.intake.store'), {
+      forceFormData: true,
+      onSuccess: () => {
+        reset('title', 'description', 'attachments');
+      }
+    });
+  };
   
-  const stats = [
-    { number: '500+', label: 'Active Guards', icon: 'Shield' },
-    { number: '150+', label: 'Client Sites', icon: 'Building' },
-    { number: '99.8%', label: 'Uptime Rate', icon: 'Activity' },
-    { number: '24/7', label: 'Monitoring', icon: 'Eye' }
+  const metricStats = [
+    { number: metrics?.guards_total ?? '—', label: 'Active Guards', icon: 'Shield' },
+    { number: metrics?.sites_total ?? '—', label: 'Active Sites', icon: 'MapPin' },
+    { number: typeof metrics?.uptime_pct === 'number' ? `${metrics.uptime_pct}%` : (metrics?.uptime_pct ?? '99.8%'), label: 'Uptime', icon: 'Activity' },
+    { number: metrics?.clients_total ?? '—', label: 'Clients', icon: 'Building' }
   ];
 
   const features = [
@@ -75,7 +106,7 @@ export default function Home() {
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setCurrentStat((prev) => (prev + 1) % stats.length);
+      setCurrentStat((prev) => (prev + 1) % metricStats.length);
     }, 3000);
     return () => clearInterval(interval);
   }, []);
@@ -104,13 +135,13 @@ export default function Home() {
               </div>
               
               <div className="flex flex-col sm:flex-row gap-4">
-                <Link 
-                  href={route('login')} 
+                <a 
+                  href="#intake" 
                   className="inline-flex items-center justify-center gap-3 px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
                 >
-                  <IconMapper name="LogIn" className="w-5 h-5" />
-                  Client Portal
-                </Link>
+                  <IconMapper name="Send" className="w-5 h-5" />
+                  Report an Issue
+                </a>
                 <a 
                   href="/contact" 
                   className="inline-flex items-center justify-center gap-3 px-8 py-4 bg-white/10 backdrop-blur-sm text-white font-semibold rounded-xl border border-white/20 hover:bg-white/20 transition-all duration-300"
@@ -122,7 +153,7 @@ export default function Home() {
 
               {/* Animated Stats */}
               <div className="grid grid-cols-2 gap-6 pt-8">
-                {stats.map((stat, index) => (
+                {metricStats.map((stat, index) => (
                   <div 
                     key={index}
                     className={`text-center p-4 rounded-xl bg-white/10 backdrop-blur-sm border border-white/20 transition-all duration-500 ${
@@ -174,6 +205,134 @@ export default function Home() {
               </div>
             </div>
           </div>
+        </div>
+      </section>
+
+      <section id="intake" className="py-16 bg-white">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+          {flash?.success && (
+            <div className="mb-6 rounded-xl border border-green-200 bg-green-50 text-green-800 px-4 py-3">
+              {flash.success}
+            </div>
+          )}
+          <div className="mb-8 grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <button type="button" onClick={() => setActiveIntake('ticket')} className={`w-full px-4 py-3 rounded-xl border transition ${activeIntake === 'ticket' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-200 hover:border-gray-300'}`}>
+              Raise Ticket
+            </button>
+            <button type="button" onClick={() => setActiveIntake('down')} className={`w-full px-4 py-3 rounded-xl border transition ${activeIntake === 'down' ? 'bg-purple-600 text-white border-purple-600' : 'bg-white text-gray-700 border-gray-200 hover:border-gray-300'}`}>
+              Report Down
+            </button>
+            <button type="button" onClick={() => setActiveIntake('incident')} className={`w-full px-4 py-3 rounded-xl border transition ${activeIntake === 'incident' ? 'bg-rose-600 text-white border-rose-600' : 'bg-white text-gray-700 border-gray-200 hover:border-gray-300'}`}>
+              Report Incident
+            </button>
+          </div>
+          <form onSubmit={submit} className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 md:p-8 space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-gray-700">Your Name</label>
+                <input value={data.name} onChange={(e) => setData('name', e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" required />
+                {errors.name && <div className="text-sm text-red-600">{errors.name}</div>}
+              </div>
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-gray-700">Email</label>
+                <input type="email" value={data.email} onChange={(e) => setData('email', e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" required />
+                {errors.email && <div className="text-sm text-red-600">{errors.email}</div>}
+              </div>
+            </div>
+            <details className="rounded-xl border border-gray-200 bg-gray-50 open:bg-white">
+              <summary className="cursor-pointer list-none px-4 py-3 text-sm font-medium text-gray-700 flex items-center justify-between">
+                <span className="flex items-center gap-2">
+                  <IconMapper name="MoreHorizontal" className="w-4 h-4 text-gray-500" />
+                  Additional Details (optional)
+                </span>
+                <span className="text-gray-400">▼</span>
+              </summary>
+              <div className="px-4 pb-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium text-gray-700">Phone</label>
+                    <input value={data.phone} onChange={(e) => setData('phone', e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    {errors.phone && <div className="text-sm text-red-600">{errors.phone}</div>}
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium text-gray-700">Client Name</label>
+                    <input value={data.client_name} onChange={(e) => setData('client_name', e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    {errors.client_name && <div className="text-sm text-red-600">{errors.client_name}</div>}
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium text-gray-700">Site</label>
+                    <input value={data.client_site} onChange={(e) => setData('client_site', e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    {errors.client_site && <div className="text-sm text-red-600">{errors.client_site}</div>}
+                  </div>
+                </div>
+              </div>
+            </details>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="md:col-span-2 space-y-1">
+                <label className="text-sm font-medium text-gray-700">Title</label>
+                <input value={data.title} onChange={(e) => setData('title', e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" required />
+                {errors.title && <div className="text-sm text-red-600">{errors.title}</div>}
+              </div>
+              {activeIntake === 'ticket' && (
+                <div className="space-y-1">
+                  <label className="text-sm font-medium text-gray-700">Priority</label>
+                  <select value={data.priority} onChange={(e) => setData('priority', e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="low">Low</option>
+                    <option value="medium">Medium</option>
+                    <option value="high">High</option>
+                    <option value="critical">Critical</option>
+                  </select>
+                  {errors.priority && <div className="text-sm text-red-600">{errors.priority}</div>}
+                </div>
+              )}
+              {activeIntake === 'down' && (
+                <div className="space-y-1">
+                  <label className="text-sm font-medium text-gray-700">Down Type</label>
+                  <select value={data.down_type} onChange={(e) => setData('down_type', e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="guard_absent">Guard Absent</option>
+                    <option value="site_unmanned">Site Unmanned</option>
+                    <option value="other">Other</option>
+                  </select>
+                  {errors.down_type && <div className="text-sm text-red-600">{errors.down_type}</div>}
+                </div>
+              )}
+              {activeIntake === 'ticket' && (
+                <div className="space-y-1">
+                  <label className="text-sm font-medium text-gray-700">Category</label>
+                  <select value={data.category} onChange={(e) => setData('category', e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="complaint">Complaint</option>
+                    <option value="incident">Incident</option>
+                    <option value="request">Request</option>
+                    <option value="maintenance">Maintenance</option>
+                    <option value="emergency">Emergency</option>
+                  </select>
+                  {errors.category && <div className="text-sm text-red-600">{errors.category}</div>}
+                </div>
+              )}
+            </div>
+            <div className="space-y-1">
+              <label className="text-sm font-medium text-gray-700">Description</label>
+              <textarea value={data.description} onChange={(e) => setData('description', e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[120px]" required />
+              {errors.description && <div className="text-sm text-red-600">{errors.description}</div>}
+            </div>  
+            <details className="rounded-xl border border-gray-200 bg-gray-50 open:bg-white">
+              <summary className="cursor-pointer list-none px-4 py-3 text-sm font-medium text-gray-700">
+                Attachments (optional)
+              </summary>
+              <div className="px-4 pb-4 space-y-2">
+                <label className="text-sm font-medium text-gray-700">Attach files</label>
+                <input type="file" multiple onChange={(e) => setData('attachments', Array.from(e.target.files || []))} className="block w-full text-sm text-gray-700 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" />
+                {progress && <div className="text-sm text-gray-600">Uploading {progress.percentage}%</div>}
+                {errors.attachments && <div className="text-sm text-red-600">{errors.attachments}</div>}
+              </div>
+            </details>
+            <div className="flex items-center justify-end gap-3">
+              <button type="submit" disabled={processing} className={`inline-flex items-center gap-2 px-6 py-3 rounded-xl text-white font-semibold shadow ${activeIntake === 'ticket' ? 'bg-blue-600 hover:bg-blue-700' : activeIntake === 'down' ? 'bg-purple-600 hover:bg-purple-700' : 'bg-rose-600 hover:bg-rose-700'} disabled:opacity-60`}>
+                <IconMapper name="Send" className="w-5 h-5" />
+                Submit
+              </button>
+            </div>
+          </form>
         </div>
       </section>
 
@@ -247,15 +406,15 @@ export default function Home() {
             Get a free security assessment and customized quote for your business.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link 
-              href={route('login')} 
-              className="inline-flex items-center justify-center gap-3 px-8 py-4 bg-white text-blue-600 font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
+            <a
+              href="#intake"
+              className="inline-flex items-center justify-center gap-3 px-8 py-4 bg-white text-blue-700 font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
             >
-              <IconMapper name="LogIn" className="w-5 h-5" />
-              Access Client Portal
-            </Link>
-            <a 
-              href="/contact" 
+              <IconMapper name="Shield" className="w-5 h-5" />
+              Report an Issue
+            </a>
+            <a
+              href="/contact"
               className="inline-flex items-center justify-center gap-3 px-8 py-4 bg-white/20 backdrop-blur-sm text-white font-semibold rounded-xl border border-white/30 hover:bg-white/30 transition-all duration-300"
             >
               <IconMapper name="Phone" className="w-5 h-5" />

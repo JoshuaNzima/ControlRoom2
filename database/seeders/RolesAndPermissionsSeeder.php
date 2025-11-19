@@ -75,6 +75,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'control.reports.generate',
             'control.qr_codes.view',
             'control.qr_codes.generate',
+            'zone.view.dashboard',
             
             // Reports module
             'reports.view',
@@ -160,6 +161,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'incidents.view',
             'reports.view',
             'clients.view',
+            'zone.view.dashboard',
             'control.zones.view',
             'control.reports.view',
         ]);
@@ -232,5 +234,15 @@ class RolesAndPermissionsSeeder extends Seeder
             'finance.invoices.view', 'finance.invoices.manage',
             'finance.budgets.view', 'finance.budgets.manage',
         ]);
+        
+        $hrPermissions = [
+            'hr.employees.view', 'hr.employees.create', 'hr.employees.edit', 'hr.employees.delete',
+            'hr.leaves.view', 'hr.leaves.approve', 'hr.archived.view', 'hr.resigned.view', 'hr.dismissed.view',
+        ];
+        $hr = Role::firstOrCreate(['name' => 'hr']);
+        $hr->givePermissionTo($hrPermissions);
+
+        $humanResources = Role::firstOrCreate(['name' => 'human_resources']);
+        $humanResources->givePermissionTo($hrPermissions);
     }
 }
