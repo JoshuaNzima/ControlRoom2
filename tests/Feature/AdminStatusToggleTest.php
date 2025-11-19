@@ -31,7 +31,7 @@ class AdminStatusToggleTest extends TestCase
         ]);
 
         // Toggle guard to suspended via PUT to admin guards.update
-        $response = $this->put(route('guards.update', ['guard' => $guard->id]), [
+        $response = $this->put(route('admin.guards.update', ['guard' => $guard->id]), [
             'employee_id' => $guard->employee_id,
             'name' => $guard->name,
             'hire_date' => $guard->hire_date,

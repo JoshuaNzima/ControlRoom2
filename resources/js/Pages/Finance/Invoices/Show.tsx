@@ -16,6 +16,8 @@ interface Invoice {
   invoice_number: string;
   client_name: string;
   client_email?: string;
+  billing_year: number;
+  billing_month: number;
   subtotal: number;
   tax_amount: number;
   tax_percentage: number;
@@ -52,6 +54,13 @@ export default function ShowInvoice({ invoice }: Props) {
   };
 
   const statusColor = getStatusColor(invoice.status);
+  const statusDescription: Record<string, string> = {
+    draft: 'Draft invoice. Not yet sent to the client.',
+    sent: 'Sent to the client and awaiting payment.',
+    paid: 'Payment received. This invoice is settled.',
+    overdue: 'Payment is overdue based on the due date.',
+    cancelled: 'Invoice has been cancelled and should not be collected.',
+  };
 
   const handleStatusChange = (action: string) => {
     if (window.confirm(`Are you sure you want to ${action} this invoice?`)) {
@@ -84,132 +93,149 @@ export default function ShowInvoice({ invoice }: Props) {
           </div>
 
           {/* Main Card */}
-          <div className="bg-white rounded-lg shadow overflow-hidden">
-            {/* Status Banner */}
-            <div className={`${statusColor.bg} ${statusColor.text} px-6 py-4 border-b`}>
+          <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+            <div className={`${statusColor.bg} ${statusColor.text} px-8 py-6 border-b`}>
               <div className="flex justify-between items-center">
-                <span className="text-lg font-semibold">
-                  Status: {invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1)}
-                </span>
-                <span className="text-2xl font-bold">{formatCurrency(invoice.total_amount)}</span>
+                <div>
+                  <span className="text-xl font-bold">
+                    Status: {invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1)}
+                  </span>
+                  {statusDescription[invoice.status] && (
+                    <p className="text-sm mt-2 opacity-90 max-w-lg">
+                      {statusDescription[invoice.status]}
+                    </p>
+                  )}
+                </div>
+                <div className="text-right">
+                  <span className="text-3xl font-bold">{formatCurrency(invoice.total_amount)}</span>
+                  <p className="text-sm mt-1 opacity-75">Invoice Total</p>
+                </div>
               </div>
             </div>
 
             {/* Content */}
-            <div className="p-6 space-y-6">
+            <div className="p-8 space-y-8">
               {/* Invoice and Client Details */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* Invoice Details */}
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">
+                <div className="lg:col-span-2">
+                  <h3 className="text-base font-bold text-gray-900 mb-4 uppercase tracking-wider border-b pb-2">
                     Invoice Information
                   </h3>
-                  <div className="space-y-2 text-sm">
-                    <p>
-                      <span className="text-gray-600">Invoice Number:</span>
-                      <span className="font-semibold ml-2">{invoice.invoice_number}</span>
-                    </p>
-                    <p>
-                      <span className="text-gray-600">Invoice Date:</span>
-                      <span className="font-semibold ml-2">{formatDate(invoice.invoice_date)}</span>
-                    </p>
-                    <p>
-                      <span className="text-gray-600">Due Date:</span>
-                      <span className="font-semibold ml-2">{formatDate(invoice.due_date)}</span>
-                    </p>
-                    <p>
-                      <span className="text-gray-600">Created By:</span>
-                      <span className="font-semibold ml-2">{invoice.user.name}</span>
-                    </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="bg-gray-50 p-4 rounded-lg">
+                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Invoice Number</p>
+                      <p className="font-semibold text-gray-900">{invoice.invoice_number}</p>
+                    </div>
+                    <div className="bg-gray-50 p-4 rounded-lg">
+                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Invoice Date</p>
+                      <p className="font-semibold text-gray-900">{formatDate(invoice.invoice_date)}</p>
+                    </div>
+                    <div className="bg-gray-50 p-4 rounded-lg">
+                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Due Date</p>
+                      <p className="font-semibold text-gray-900">{formatDate(invoice.due_date)}</p>
+                    </div>
+                    <div className="bg-gray-50 p-4 rounded-lg">
+                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Billing Period</p>
+                      <p className="font-semibold text-gray-900">{invoice.billing_month}/{invoice.billing_year}</p>
+                    </div>
+                    <div className="bg-gray-50 p-4 rounded-lg sm:col-span-2">
+                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Created By</p>
+                      <p className="font-semibold text-gray-900">{invoice.user.name}</p>
+                    </div>
                   </div>
                 </div>
 
                 {/* Client Details */}
                 <div>
-                  <h3 className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">
+                  <h3 className="text-base font-bold text-gray-900 mb-4 uppercase tracking-wider border-b pb-2">
                     Client Information
                   </h3>
-                  <div className="space-y-2 text-sm">
-                    <p>
-                      <span className="text-gray-600">Name:</span>
-                      <span className="font-semibold ml-2">{invoice.client_name}</span>
-                    </p>
+                  <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                    <p className="text-xs font-semibold text-blue-600 uppercase tracking-wide mb-1">Client Name</p>
+                    <p className="font-semibold text-gray-900 text-lg mb-3">{invoice.client_name}</p>
                     {invoice.client_email && (
-                      <p>
-                        <span className="text-gray-600">Email:</span>
-                        <span className="font-semibold ml-2">{invoice.client_email}</span>
-                      </p>
+                      <>
+                        <p className="text-xs font-semibold text-blue-600 uppercase tracking-wide mb-1">Email</p>
+                        <p className="font-semibold text-gray-900">{invoice.client_email}</p>
+                      </>
                     )}
                   </div>
                 </div>
               </div>
 
               {/* Line Items */}
-              <div className="border-t pt-6">
-                <h3 className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">
+              <div className="border-t pt-8">
+                <h3 className="text-base font-bold text-gray-900 mb-6 uppercase tracking-wider border-b pb-2">
                   Line Items
                 </h3>
-                <table className="w-full text-sm">
-                  <thead className="bg-gray-50 border-b">
-                    <tr>
-                      <th className="px-4 py-2 text-left font-semibold text-gray-700">
-                        Description
-                      </th>
-                      <th className="px-4 py-2 text-right font-semibold text-gray-700 w-16">
-                        Qty
-                      </th>
-                      <th className="px-4 py-2 text-right font-semibold text-gray-700 w-24">
-                        Unit Price
-                      </th>
-                      <th className="px-4 py-2 text-right font-semibold text-gray-700 w-24">
-                        Total
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y">
-                    {invoice.lineItems.map((item) => (
-                      <tr key={item.id}>
-                        <td className="px-4 py-2">{item.description}</td>
-                        <td className="px-4 py-2 text-right">{item.quantity}</td>
-                        <td className="px-4 py-2 text-right">
-                          {formatCurrency(item.unit_price)}
-                        </td>
-                        <td className="px-4 py-2 text-right font-semibold">
-                          {formatCurrency(item.line_total)}
-                        </td>
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-gray-100 border-y-2 border-gray-200">
+                      <tr>
+                        <th className="px-6 py-4 text-left font-bold text-gray-900 uppercase tracking-wider text-sm">
+                          Description
+                        </th>
+                        <th className="px-6 py-4 text-center font-bold text-gray-900 uppercase tracking-wider text-sm w-20">
+                          Qty
+                        </th>
+                        <th className="px-6 py-4 text-right font-bold text-gray-900 uppercase tracking-wider text-sm w-32">
+                          Unit Price
+                        </th>
+                        <th className="px-6 py-4 text-right font-bold text-gray-900 uppercase tracking-wider text-sm w-32">
+                          Total
+                        </th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {invoice.lineItems.map((item) => (
+                        <tr key={item.id} className="hover:bg-gray-50">
+                          <td className="px-6 py-4 font-medium text-gray-900">{item.description}</td>
+                          <td className="px-6 py-4 text-center text-gray-700">{item.quantity}</td>
+                          <td className="px-6 py-4 text-right text-gray-700">
+                            {formatCurrency(item.unit_price)}
+                          </td>
+                          <td className="px-6 py-4 text-right font-bold text-gray-900">
+                            {formatCurrency(item.line_total)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
 
               {/* Totals */}
-              <div className="border-t pt-6">
+              <div className="border-t-2 border-gray-200 pt-8">
                 <div className="flex justify-end">
-                  <div className="w-full md:w-72 space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Subtotal:</span>
-                      <span className="font-semibold">{formatCurrency(invoice.subtotal)}</span>
-                    </div>
-                    {invoice.tax_percentage > 0 && (
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">
-                          Tax ({invoice.tax_percentage}%):
-                        </span>
-                        <span className="font-semibold">{formatCurrency(invoice.tax_amount)}</span>
+                  <div className="w-full lg:w-96">
+                    <div className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl p-6 border border-gray-200">
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-600 font-medium">Subtotal:</span>
+                          <span className="font-bold text-gray-900">{formatCurrency(invoice.subtotal)}</span>
+                        </div>
+                        {invoice.tax_percentage > 0 && (
+                          <div className="flex justify-between items-center">
+                            <span className="text-gray-600 font-medium">
+                              Tax ({invoice.tax_percentage}%):
+                            </span>
+                            <span className="font-bold text-gray-900">{formatCurrency(invoice.tax_amount)}</span>
+                          </div>
+                        )}
+                        {invoice.discount_amount > 0 && (
+                          <div className="flex justify-between items-center">
+                            <span className="text-gray-600 font-medium">Discount:</span>
+                            <span className="font-bold text-green-600">
+                              -{formatCurrency(invoice.discount_amount)}
+                            </span>
+                          </div>
+                        )}
+                        <div className="flex justify-between items-center text-xl font-bold border-t-2 border-gray-300 pt-4">
+                          <span className="text-gray-900">Total:</span>
+                          <span className="text-indigo-600">{formatCurrency(invoice.total_amount)}</span>
+                        </div>
                       </div>
-                    )}
-                    {invoice.discount_amount > 0 && (
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">Discount:</span>
-                        <span className="font-semibold">
-                          -{formatCurrency(invoice.discount_amount)}
-                        </span>
-                      </div>
-                    )}
-                    <div className="flex justify-between text-lg font-bold border-t pt-2">
-                      <span>Total:</span>
-                      <span className="text-indigo-600">{formatCurrency(invoice.total_amount)}</span>
                     </div>
                   </div>
                 </div>
@@ -217,69 +243,81 @@ export default function ShowInvoice({ invoice }: Props) {
 
               {/* Notes */}
               {invoice.notes && (
-                <div className="border-t pt-6">
-                  <h3 className="text-sm font-semibold text-gray-700 mb-2 uppercase tracking-wide">
+                <div className="border-t pt-8">
+                  <h3 className="text-base font-bold text-gray-900 mb-4 uppercase tracking-wider border-b pb-2">
                     Notes
                   </h3>
-                  <div className="text-gray-900 bg-gray-50 p-3 rounded whitespace-pre-wrap text-sm">
-                    {invoice.notes}
+                  <div className="bg-amber-50 border border-amber-200 p-6 rounded-xl">
+                    <div className="whitespace-pre-wrap text-gray-800 leading-relaxed">
+                      {invoice.notes}
+                    </div>
                   </div>
                 </div>
               )}
             </div>
 
             {/* Actions */}
-            <div className="bg-gray-50 px-6 py-4 border-t flex flex-wrap gap-2">
-              {invoice.status === 'draft' && (
-                <>
-                  <Link
-                    href={route('finance.invoices.edit', invoice.id)}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium text-sm"
-                  >
-                    Edit
-                  </Link>
-                  <button
-                    onClick={() => handleStatusChange('send')}
-                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium text-sm"
-                  >
-                    Send Invoice
-                  </button>
-                </>
-              )}
+            <div className="bg-gradient-to-r from-gray-50 to-gray-100 px-8 py-6 border-t border-gray-200">
+              <div className="flex flex-wrap gap-3 justify-center">
+                {invoice.status === 'draft' && (
+                  <>
+                    <Link
+                      href={route('finance.invoices.edit', invoice.id)}
+                      className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all font-medium shadow-md hover:shadow-lg"
+                    >
+                      Edit Invoice
+                    </Link>
+                    <button
+                      onClick={() => handleStatusChange('send')}
+                      className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all font-medium shadow-md hover:shadow-lg"
+                    >
+                      Send Invoice
+                    </button>
+                  </>
+                )}
 
-              {invoice.status === 'sent' && (
-                <>
-                  <button
-                    onClick={() => handleStatusChange('mark-paid')}
-                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium text-sm"
-                  >
-                    Mark as Paid
-                  </button>
-                  <button
-                    onClick={() => handleStatusChange('cancel')}
-                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-medium text-sm"
-                  >
-                    Cancel Invoice
-                  </button>
-                </>
-              )}
+                {invoice.status === 'sent' && (
+                  <>
+                    <button
+                      onClick={() => handleStatusChange('mark-paid')}
+                      className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all font-medium shadow-md hover:shadow-lg"
+                    >
+                      Mark as Paid
+                    </button>
+                    <button
+                      onClick={() => handleStatusChange('cancel')}
+                      className="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all font-medium shadow-md hover:shadow-lg"
+                    >
+                      Cancel Invoice
+                    </button>
+                  </>
+                )}
 
-              {invoice.status === 'overdue' && (
-                <>
-                  <button
-                    onClick={() => handleStatusChange('mark-paid')}
-                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium text-sm"
-                  >
-                    Mark as Paid
-                  </button>
-                  <button
-                    onClick={() => handleStatusChange('cancel')}
-                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-medium text-sm"
-                  >
-                    Cancel Invoice
-                  </button>
-                </>
-              )}
+                {invoice.status === 'overdue' && (
+                  <>
+                    <button
+                      onClick={() => handleStatusChange('mark-paid')}
+                      className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all font-medium shadow-md hover:shadow-lg"
+                    >
+                      Mark as Paid
+                    </button>
+                    <button
+                      onClick={() => handleStatusChange('cancel')}
+                      className="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all font-medium shadow-md hover:shadow-lg"
+                    >
+                      Cancel Invoice
+                    </button>
+                  </>
+                )}
+
+                {(invoice.status === 'paid' || invoice.status === 'cancelled') && (
+                  <div className="text-center">
+                    <p className="text-gray-500 font-medium">
+                      {invoice.status === 'paid' ? 'Invoice has been paid and is closed.' : 'Invoice has been cancelled.'}
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>

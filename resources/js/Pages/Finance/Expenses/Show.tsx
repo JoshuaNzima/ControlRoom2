@@ -1,5 +1,5 @@
 import React from 'react';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import FinanceLayout from '@/Layouts/FinanceLayout';
 import { formatCurrency, formatDate } from '@/utils/formatters';
 
@@ -39,6 +39,12 @@ export default function ShowExpense({ expense }: Props) {
   };
 
   const statusColor = getStatusColor(expense.status);
+  const statusDescription: Record<string, string> = {
+    pending: 'Pending approval. This expense can still be edited or withdrawn until it is approved or rejected.',
+    approved: 'Approved and included in financial totals. Further edits should go through finance.',
+    rejected: 'Rejected. Review the notes for rejection details.',
+  };
+  const canModify = expense.status === 'pending';
 
   return (
     <FinanceLayout title={`Expense #${expense.id}`}>
@@ -66,12 +72,18 @@ export default function ShowExpense({ expense }: Props) {
 
           {/* Main Card */}
           <div className="bg-white rounded-lg shadow overflow-hidden">
-            {/* Status Banner */}
             <div className={`${statusColor.bg} ${statusColor.text} px-6 py-4 border-b`}>
               <div className="flex justify-between items-center">
-                <span className="text-lg font-semibold">
-                  Status: {expense.status.charAt(0).toUpperCase() + expense.status.slice(1)}
-                </span>
+                <div>
+                  <span className="text-lg font-semibold">
+                    Status: {expense.status.charAt(0).toUpperCase() + expense.status.slice(1)}
+                  </span>
+                  {statusDescription[expense.status] && (
+                    <p className="text-xs mt-1 opacity-80 max-w-md">
+                      {statusDescription[expense.status]}
+                    </p>
+                  )}
+                </div>
                 <span className="text-2xl font-bold">{formatCurrency(expense.amount)}</span>
               </div>
             </div>
@@ -163,28 +175,36 @@ export default function ShowExpense({ expense }: Props) {
               </div>
             </div>
 
-            {/* Actions */}
-            <div className="bg-gray-50 px-6 py-4 border-t flex gap-3">
-              <Link
-                href={route('finance.expenses.edit', expense.id)}
-                className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition font-medium"
-              >
-                Edit
-              </Link>
-              <button
-                onClick={() => {
-                  if (
-                    confirm(
-                      'Are you sure you want to delete this expense? This action cannot be undone.'
-                    )
-                  ) {
-                    window.location.href = route('finance.expenses.destroy', expense.id);
-                  }
-                }}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-medium"
-              >
-                Delete
-              </button>
+            <div className="bg-gray-50 px-6 py-4 border-t flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+              <div className="text-xs text-gray-500">
+                {canModify
+                  ? 'Pending expenses can be edited or deleted until a finance approver takes action.'
+                  : 'This expense is final and cannot be modified directly.'}
+              </div>
+              {canModify && (
+                <div className="flex gap-3">
+                  <Link
+                    href={route('finance.expenses.edit', expense.id)}
+                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition font-medium text-sm"
+                  >
+                    Edit
+                  </Link>
+                  <button
+                    onClick={() => {
+                      if (
+                        confirm(
+                          'Are you sure you want to delete this expense? This action cannot be undone.'
+                        )
+                      ) {
+                        router.delete(route('finance.expenses.destroy', expense.id));
+                      }
+                    }}
+                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-medium text-sm"
+                  >
+                    Delete
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>

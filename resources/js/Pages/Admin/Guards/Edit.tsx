@@ -18,16 +18,28 @@ interface EditGuardProps {
 }
 
 export default function EditGuard({ guard, supervisors, can }: EditGuardProps) {
-  const { post, processing, errors } = useForm();
+  const { data, setData, post, processing, errors } = useForm<GuardFormData>({
+    employee_id: guard.employee_id || '',
+    name: guard.name || '',
+    email: guard.email || '',
+    phone: guard.phone || '',
+    address: guard.address || '',
+    id_number: guard.id_number || '',
+    date_of_birth: guard.date_of_birth || '',
+    gender: guard.gender || '',
+    emergency_contact_name: guard.emergency_contact_name || '',
+    emergency_contact_phone: guard.emergency_contact_phone || '',
+    supervisor_id: guard.supervisor_id?.toString() || '',
+    hire_date: guard.hire_date || '',
+    notes: guard.notes || '',
+    status: guard.status || 'active',
+  });
 
-  const handleSubmit = (data: GuardFormData) => {
-    // Build FormData and send via POST with _method=PUT so Laravel treats it as an update
-    const formData = new FormData();
-    Object.entries(data).forEach(([k, v]) => {
-      if (v !== undefined && v !== null) formData.append(k, String(v));
-    });
-    formData.append('_method', 'PUT');
-    post(route('guards.update', { guard: guard.id }), formData as any);
+  const handleSubmit = (formData: GuardFormData) => {
+    post(route('admin.guards.update', { guard: guard.id }), {
+      ...formData,
+      _method: 'PUT',
+    } as any);
   };
 
   return (

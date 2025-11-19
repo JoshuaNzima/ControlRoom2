@@ -38,7 +38,7 @@ class ExpenseController extends Controller
             $query->where('payment_method', $request->payment_method);
         }
 
-        $expenses = $query->paginate(15);
+        $expenses = $query->paginate(15)->withQueryString();
 
         // Calculate totals
         $totals = [

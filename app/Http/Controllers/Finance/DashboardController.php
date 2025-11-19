@@ -42,6 +42,7 @@ class DashboardController extends Controller
             'paid' => (float) Invoice::paid()->sum('total_amount'),
             'unpaid' => (float) Invoice::unpaid()->sum('total_amount'),
             'overdue_count' => (int) Invoice::overdue()->count(),
+            'overdue_amount' => (float) Invoice::overdue()->sum('total_amount'),
         ];
 
         $expensesSummary = [

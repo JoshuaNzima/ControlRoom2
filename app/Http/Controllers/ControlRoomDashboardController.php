@@ -15,6 +15,9 @@ use App\Models\Camera;
 use App\Models\CameraAlert;
 use App\Models\Zone;
 use App\Models\Guards\Client;
+use App\Models\Incident;
+use App\Models\Down;
+use App\Models\User;
 use Carbon\Carbon;
 
 class ControlRoomDashboardController extends Controller
@@ -24,15 +27,27 @@ class ControlRoomDashboardController extends Controller
     public function index()
     {
         $stats = $this->getDashboardStats();
-        
-        return Inertia::render('ControlRoom/Dashboard', [
+
+        $basePayload = [
             'stats' => $stats,
             'recentIncidents' => $this->getRecentIncidents(),
             'activeAlerts' => $this->getActiveAlerts(),
             'coverageData' => $this->getCoverageData(),
             'attendanceData' => $this->getAttendanceData(),
             'zones' => $this->getZonesData(),
-        ]);
+        ];
+
+        $user = auth()->user();
+
+        if ($user && $user->hasRole('operations_officer')) {
+            return Inertia::render('ControlRoom/OperationsDashboard', array_merge($basePayload, [
+                'escalatedIncidents' => $this->getEscalatedIncidents(),
+                'escalatedDowns' => $this->getEscalatedDowns(),
+                'personnel' => $this->getPersonnelSummary(),
+            ]));
+        }
+
+        return Inertia::render('ControlRoom/Dashboard', $basePayload);
     }
 
     private function getDashboardStats()
@@ -188,5 +203,78 @@ class ControlRoomDashboardController extends Controller
                     'sites' => $sitesCount,
                 ];
             });
+    }
+
+    private function getEscalatedIncidents()
+    {
+        return Incident::with(['reporter', 'client', 'clientSite'])
+            ->where('status', 'escalated')
+            ->orderByDesc('updated_at')
+            ->limit(10)
+            ->get()
+            ->map(function ($incident) {
+                return [
+                    'id' => $incident->id,
+                    'title' => $incident->title,
+                    'severity' => $incident->severity,
+                    'status' => $incident->status,
+                    'escalation_level' => $incident->escalation_level,
+                    'reported_by' => $incident->reporter?->name ?? 'Unknown',
+                    'client_name' => $incident->client?->name ?? 'Unknown',
+                    'site_name' => $incident->clientSite?->name ?? 'Unknown',
+                    'updated_at' => optional($incident->updated_at ?? $incident->created_at)->format('Y-m-d H:i'),
+                ];
+            });
+    }
+
+    private function getEscalatedDowns()
+    {
+        return Down::with(['reporter', 'client', 'clientSite'])
+            ->where('status', 'escalated')
+            ->orderByDesc('updated_at')
+            ->limit(10)
+            ->get()
+            ->map(function ($down) {
+                return [
+                    'id' => $down->id,
+                    'title' => $down->title,
+                    'type' => $down->type,
+                    'status' => $down->status,
+                    'escalation_level' => $down->escalation_level,
+                    'reported_by' => $down->reporter?->name ?? 'Unknown',
+                    'client_name' => $down->client?->name ?? 'Unknown',
+                    'site_name' => $down->clientSite?->name ?? 'Unknown',
+                    'updated_at' => optional($down->updated_at ?? $down->created_at)->format('Y-m-d H:i'),
+                ];
+            });
+    }
+
+    private function getPersonnelSummary()
+    {
+        $guardsTotal = Guard::count();
+        $guardsActive = Guard::where('status', 'active')->count();
+        $guardsOnDuty = Guard::onDuty()->count();
+
+        $supervisorsTotal = User::role('supervisor')->count();
+        $zoneCommandersTotal = User::role('zone_commander')->count();
+
+        $zonesTotal = Zone::count();
+        $zonesWithCommander = Zone::whereHas('commander')->count();
+
+        return [
+            'guards' => [
+                'total' => $guardsTotal,
+                'active' => $guardsActive,
+                'on_duty' => $guardsOnDuty,
+            ],
+            'supervisors' => [
+                'total' => $supervisorsTotal,
+            ],
+            'zone_commanders' => [
+                'total' => $zoneCommandersTotal,
+                'zones_with_commander' => $zonesWithCommander,
+                'zones_total' => $zonesTotal,
+            ],
+        ];
     }
 }

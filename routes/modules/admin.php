@@ -22,8 +22,10 @@ Route::middleware(['auth', 'role:admin,super_admin'])
     ->prefix('admin')
     ->name('admin.')
     ->group(function () {
+        Route::get('/dashboard', [\App\Http\Controllers\Admin\DashboardController::class, 'index'])->name('dashboard');
         Route::get('/settings', [\App\Http\Controllers\Admin\SettingController::class, 'index'])->name('settings.index');
         Route::get('/reports', [\App\Http\Controllers\Admin\ReportController::class, 'index'])->name('reports.index');
+        Route::get('/modules', [\App\Http\Controllers\Admin\ModuleController::class, 'index'])->name('modules.index');
         Route::resource('users', \App\Http\Controllers\Admin\UserController::class);
         Route::get('/clients/dashboard', [\App\Http\Controllers\Admin\ClientController::class, 'dashboard'])->name('clients.dashboard');
         // Clients Management
@@ -60,6 +62,8 @@ Route::middleware(['auth', 'role:admin,super_admin'])
         // Client site routes moved into clients group above
         Route::get('/guards/dashboard', [\App\Http\Controllers\Admin\GuardController::class, 'dashboard'])->name('guards.dashboard');
         Route::resource('guards', \App\Http\Controllers\Admin\GuardController::class);
+        Route::get('/qr-codes', [\App\Http\Controllers\SupervisorQRCodesController::class, 'index'])->name('qr-codes');
+        Route::get('/qr-codes/download-bulk', [\App\Http\Controllers\SupervisorQRCodesController::class, 'downloadBulk'])->name('qr-codes.download-bulk');
         // Admin Finance landing (module-level admin page)
         Route::get('/finance', fn () => Inertia::render('Admin/Finance'))->name('finance');
 

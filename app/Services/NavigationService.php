@@ -92,8 +92,6 @@ class NavigationService
                 ['name' => 'Dashboard', 'route' => 'hr.dashboard', 'permission' => 'hr.employees.view', 'icon' => 'HiOutlineViewGrid'],
                 ['name' => 'Leave Management', 'route' => 'hr.leaves', 'permission' => 'hr.leaves.view', 'icon' => 'HiOutlineCalendar'],
                 ['name' => 'Archived Guards', 'route' => 'hr.archived', 'permission' => 'hr.employees.view', 'icon' => 'HiOutlineArchive'],
-                ['name' => 'Resigned', 'route' => 'hr.resigned', 'permission' => 'hr.employees.view', 'icon' => 'HiOutlineUserRemove'],
-                ['name' => 'Dismissed', 'route' => 'hr.dismissed', 'permission' => 'hr.employees.view', 'icon' => 'HiOutlineXCircle'],
             ],
             'clients' => [
                 ['name' => 'All Clients', 'route' => 'clients.index', 'permission' => 'clients.view', 'icon' => 'HiOutlineOfficeBuilding'],
@@ -117,9 +115,9 @@ class NavigationService
             'admin' => [
                 ['name' => 'Dashboard', 'route' => 'admin.dashboard', 'permission' => 'admin.system.view', 'icon' => 'HiOutlineViewGrid'],
                 ['name' => 'Users', 'route' => 'admin.users.index', 'permission' => 'admin.users.view', 'icon' => 'HiOutlineUsers'],
-                ['name' => 'Roles', 'route' => 'admin.roles', 'permission' => 'admin.roles.view', 'icon' => 'HiOutlineKey'],
-                ['name' => 'Modules', 'route' => 'admin.modules', 'permission' => 'admin.modules.manage', 'icon' => 'HiOutlinePuzzle'],
-                ['name' => 'Settings', 'route' => 'admin.settings', 'permission' => 'admin.settings.view', 'icon' => 'HiOutlineCog'],
+                ['name' => 'Roles', 'route' => 'superadmin.roles.index', 'permission' => 'admin.roles.view', 'icon' => 'HiOutlineKey'],
+                ['name' => 'Modules', 'route' => 'admin.modules.index', 'permission' => 'admin.modules.manage', 'icon' => 'HiOutlinePuzzle'],
+                ['name' => 'Settings', 'route' => 'admin.settings.index', 'permission' => 'admin.settings.view', 'icon' => 'HiOutlineCog'],
             ],
             default => [],
         };

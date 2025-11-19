@@ -5,12 +5,14 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use App\Models\Guards\Client as GuardClient;
 
 class Invoice extends Model
 {
     protected $fillable = [
         'invoice_number',
         'user_id',
+        'client_id',
         'client_name',
         'client_email',
         'subtotal',
@@ -20,6 +22,8 @@ class Invoice extends Model
         'total_amount',
         'invoice_date',
         'due_date',
+        'billing_year',
+        'billing_month',
         'description',
         'status',
         'notes',
@@ -33,6 +37,8 @@ class Invoice extends Model
         'total_amount' => 'decimal:2',
         'invoice_date' => 'datetime',
         'due_date' => 'datetime',
+        'billing_year' => 'integer',
+        'billing_month' => 'integer',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];
@@ -43,6 +49,14 @@ class Invoice extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * Get the guarding client associated with this invoice, when applicable
+     */
+    public function client(): BelongsTo
+    {
+        return $this->belongsTo(GuardClient::class, 'client_id');
     }
 
     /**

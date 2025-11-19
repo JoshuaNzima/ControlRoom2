@@ -100,7 +100,7 @@ class GuardController extends Controller
 
         Guard::create($validated);
 
-        return redirect()->route('guards.index')
+        return redirect()->route('admin.guards.index')
             ->with('success', 'Guard created successfully.');
     }
 
@@ -156,7 +156,7 @@ class GuardController extends Controller
         
         $guard->update($validated);
 
-        return redirect()->route('guards.index')
+        return redirect()->route('admin.guards.index')
             ->with('success', 'Guard updated successfully.');
     }
 
@@ -164,7 +164,7 @@ class GuardController extends Controller
     {
         $guard->delete();
 
-        return redirect()->route('guards.index')
+        return redirect()->route('admin.guards.index')
             ->with('success', 'Guard deleted successfully.');
     }
 }

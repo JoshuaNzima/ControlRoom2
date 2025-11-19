@@ -190,6 +190,20 @@ class RolesAndPermissionsSeeder extends Seeder
             'clients.view', // Need to see clients for incidents
         ]);
 
+        // Operations Officer - oversees control room, guards and zone operations
+        $operationsOfficerRole = Role::firstOrCreate(['name' => 'operations_officer']);
+        $operationsOfficerPermissions = array_unique(array_merge(
+            $managerRole->permissions->pluck('name')->toArray(),
+            $controlRoomRole->permissions->pluck('name')->toArray(),
+            Permission::whereIn('name', [
+                'reports.view',
+                'reports.generate',
+                'reports.export',
+                'reports.analytics',
+            ])->pluck('name')->toArray()
+        ));
+        $operationsOfficerRole->givePermissionTo($operationsOfficerPermissions);
+
         // Client role - very limited access
         $clientRole = Role::firstOrCreate(['name' => 'client']);
         $clientRole->givePermissionTo([

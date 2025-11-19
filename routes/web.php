@@ -34,51 +34,6 @@ Route::middleware('guest')->group(function () {
 // Authenticated routes
 Route::middleware('auth')->group(function () {
     Route::post('logout', [\App\Http\Controllers\Auth\AuthenticatedSessionController::class, 'destroy'])->name('logout');
-    
-    // Control Room routes (allow admins and users with permission)
-    Route::middleware(['role_or_permission:admin|control_room_operator|supervisor|manager|control.dashboard.view'])->prefix('control-room')->name('control-room.')->group(function () {
-        Route::get('/', [\App\Http\Controllers\ControlRoom\DashboardController::class, 'index'])->name('home');
-        
-        // Ticket routes
-        Route::resource('tickets', \App\Http\Controllers\ControlRoom\TicketController::class);
-        Route::post('tickets/{ticket}/comments', [\App\Http\Controllers\ControlRoom\TicketController::class, 'addComment'])->name('tickets.comments.store');
-
-        // Flag routes
-        Route::middleware(['permission:control.flags.view'])->group(function () {
-            Route::get('flags', [\App\Http\Controllers\ControlRoom\FlagController::class, 'index'])->name('flags.index');
-            Route::get('flags/{flag}', [\App\Http\Controllers\ControlRoom\FlagController::class, 'show'])->name('flags.show');
-        });
-        
-        Route::middleware(['permission:control.flags.create'])->group(function () {
-            Route::get('flags/create', [\App\Http\Controllers\ControlRoom\FlagController::class, 'create'])->name('flags.create');
-            Route::post('flags', [\App\Http\Controllers\ControlRoom\FlagController::class, 'store'])->name('flags.store');
-        });
-        
-        Route::middleware(['permission:control.flags.manage'])->group(function () {
-            Route::get('flags/{flag}/edit', [\App\Http\Controllers\ControlRoom\FlagController::class, 'edit'])->name('flags.edit');
-            Route::put('flags/{flag}', [\App\Http\Controllers\ControlRoom\FlagController::class, 'update'])->name('flags.update');
-            Route::delete('flags/{flag}', [\App\Http\Controllers\ControlRoom\FlagController::class, 'destroy'])->name('flags.destroy');
-            Route::post('flags/{flag}/acknowledge', [\App\Http\Controllers\ControlRoom\FlagController::class, 'acknowledge'])->name('flags.acknowledge');
-            Route::post('flags/{flag}/resolve', [\App\Http\Controllers\ControlRoom\FlagController::class, 'resolve'])->name('flags.resolve');
-            Route::post('flags/{flag}/escalate', [\App\Http\Controllers\ControlRoom\FlagController::class, 'escalate'])->name('flags.escalate');
-            Route::post('flags/{flag}/update-status', [\App\Http\Controllers\ControlRoom\FlagController::class, 'updateStatus'])->name('flags.update-status');
-        });
-
-        // Live Monitoring Routes
-        Route::middleware(['permission:control.monitoring.view'])->group(function () {
-            Route::get('monitoring/events', [\App\Http\Controllers\ControlRoom\MonitoringController::class, 'events'])->name('monitoring.events');
-            Route::get('monitoring/guards', [\App\Http\Controllers\ControlRoom\MonitoringController::class, 'guards'])->name('monitoring.guards');
-            Route::get('monitoring/incidents', [\App\Http\Controllers\ControlRoom\MonitoringController::class, 'incidents'])->name('monitoring.incidents');
-            Route::get('monitoring/data', [\App\Http\Controllers\ControlRoom\MonitoringController::class, 'data'])->name('monitoring.data');
-        });
-
-        // Camera routes
-        Route::resource('cameras', \App\Http\Controllers\ControlRoom\CameraController::class);
-        Route::get('cameras/{camera}/recordings', [\App\Http\Controllers\ControlRoom\CameraController::class, 'getRecordings'])->name('cameras.recordings.index');
-        Route::get('recordings/{recording}/download', [\App\Http\Controllers\ControlRoom\CameraController::class, 'downloadRecording'])->name('cameras.recordings.download');
-        Route::post('cameras/{camera}/alerts/{alert}/acknowledge', [\App\Http\Controllers\ControlRoom\CameraController::class, 'acknowledgeAlert'])->name('cameras.alerts.acknowledge');
-        Route::post('cameras/{camera}/alerts/{alert}/resolve', [\App\Http\Controllers\ControlRoom\CameraController::class, 'resolveAlert'])->name('cameras.alerts.resolve');
-    });
 });
 Route::middleware(['auth', 'role:super_admin'])->prefix('superadmin')->name('superadmin.')->group(function () {
     Route::get('/dashboard', [\App\Http\Controllers\SuperAdmin\DashboardController::class, 'index'])->name('dashboard');
@@ -122,16 +77,9 @@ foreach (glob(__DIR__ . '/modules/*.php') as $routeFile) {
     require $routeFile;
 }
 
-// Main authentication and dashboard routes
-require __DIR__.'/auth.php';
-
 Route::middleware(['auth'])->group(function () {
 
-    Route::middleware(['role:admin,super_admin'])->prefix('admin')->name('admin.')->group(function(){
-        Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
-    });
-
-     Route::get('/dashboard', function() {
+    Route::get('/dashboard', function() {
         $user = \Illuminate\Support\Facades\Auth::user();
         if (!$user) {
             return redirect()->route('login');
@@ -146,6 +94,8 @@ Route::middleware(['auth'])->group(function () {
                 return redirect()->route('superadmin.dashboard');
             case in_array('admin', $roles):
                 return redirect()->route('admin.dashboard');
+            case in_array('operations_officer', $roles):
+                return redirect()->route('control-room.dashboard');
             case in_array('control_room_operator', $roles):
                 return redirect()->route('control-room.dashboard');
             case in_array('zone_commander', $roles):
@@ -161,18 +111,6 @@ Route::middleware(['auth'])->group(function () {
         }
     
     })->name('dashboard');
-
-    // Admin Routes
-    Route::middleware(['role:admin,super_admin'])->prefix('admin')->name('admin.')->group(function () {
-        Route::get('/dashboard', [AdminDashboard::class, 'index'])->name('dashboard');
-        Route::resource('users', UserController::class);
-        Route::get('/reports', [\App\Http\Controllers\Admin\ReportController::class, 'index'])->name('reports.index');
-        Route::get('/modules', [\App\Http\Controllers\Admin\ModuleController::class, 'index'])->name('modules.index');
-        Route::get('/settings', [\App\Http\Controllers\Admin\SettingController::class, 'index'])->name('settings.index');
-        // Client and Service routes moved to routes/modules/admin.php
-        Route::get('/qr-codes', [\App\Http\Controllers\SupervisorQRCodesController::class, 'index'])->name('qr-codes');
-        Route::get('/qr-codes/download-bulk', [\App\Http\Controllers\SupervisorQRCodesController::class, 'downloadBulk'])->name('qr-codes.download-bulk');
-    });
 
     // Infractions routes - accessible by admin, zone commander, and supervisor
     Route::middleware(['auth'])->group(function () {
@@ -263,20 +201,12 @@ Route::middleware(['auth'])->group(function () {
             ->name('reports.index');
     });
 
-    // Supervisor Routes
     Route::middleware(['role:supervisor,manager,admin,super_admin'])->prefix('supervisor')->name('supervisor.')->group(function () {
-        Route::get('/dashboard', [SupervisorController::class, 'dashboard'])->name('dashboard');
-        Route::get('/guards', [SupervisorController::class, 'guards'])->name('guards');
-        Route::get('/attendance', [SupervisorController::class, 'attendance'])->name('attendance');
-
         Route::get('/assignments', [\App\Http\Controllers\Guards\AssignmentController::class, 'index'])->name('assignments.index');
         Route::post('/assignments/assign', [\App\Http\Controllers\Guards\AssignmentController::class, 'assign'])->name('assignments.assign');
         Route::delete('/assignments/unassign/{assignment}', [\App\Http\Controllers\Guards\AssignmentController::class, 'unassign'])->name('assignments.unassign');
     });
 
-    // Admin Guard Management
-    Route::resource('guards', \App\Http\Controllers\Admin\GuardController::class);
-    
     // Client routes are now moved to the admin group
     
     // Admin Guard Assignments

@@ -34,7 +34,7 @@ export default function GuardsIndex({ guards, filters, canAssignSupervisor, canV
   const { push } = useNotification();
 
   const handleSearch = () => {
-    router.get(route('guards.index'), { search }, { preserveState: true });
+    router.get(route('admin.guards.index'), { search }, { preserveState: true });
   };
 
   function showToast(message: string) {
@@ -53,7 +53,7 @@ export default function GuardsIndex({ guards, filters, canAssignSupervisor, canV
             <p className="text-gray-600">Manage field guards and assignments</p>
           </div>
           <Link
-            href={route('guards.create')}
+            href={route('admin.guards.create')}
         className="flex items-center gap-2 px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-bold shadow-md transition-all transform hover:scale-105"
           >
             <IconMapper name="Plus" size={20} />
@@ -115,7 +115,7 @@ export default function GuardsIndex({ guards, filters, canAssignSupervisor, canV
                     <td className="px-6 py-4">
                       {canAssignSupervisor ? (
                         <button
-                          onClick={() => router.get(route('guards.edit', { guard: guard.id }), {}, { preserveScroll: true })}
+                          onClick={() => router.get(route('admin.guards.edit', { guard: guard.id }), {}, { preserveScroll: true })}
                           className="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded-lg text-gray-700 transition"
                         >
                           {guard.supervisor?.name || 'Assign Supervisor'}
@@ -138,7 +138,7 @@ export default function GuardsIndex({ guards, filters, canAssignSupervisor, canV
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2">
                       <Link
-                        href={route('guards.edit', { guard: guard.id })}
+                        href={route('admin.guards.edit', { guard: guard.id })}
                         className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition"
                       >
                         <IconMapper name="Pencil" size={18} />
@@ -146,7 +146,7 @@ export default function GuardsIndex({ guards, filters, canAssignSupervisor, canV
                       <button
                         onClick={() => {
                           if (confirm('Are you sure you want to delete this guard?')) {
-                            router.delete(route('guards.destroy', { guard: guard.id }));
+                            router.delete(route('admin.guards.destroy', { guard: guard.id }));
                           }
                         }}
                         className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition"
@@ -160,7 +160,7 @@ export default function GuardsIndex({ guards, filters, canAssignSupervisor, canV
                           if (!confirm(`Are you sure you want to set status to ${newStatus}?`)) return;
                           setLoadingId(guard.id);
                           try {
-                            await router.put(route('guards.update', { guard: guard.id }), { status: newStatus });
+                            await router.put(route('admin.guards.update', { guard: guard.id }), { status: newStatus });
                             showToast(`Guard ${guard.name} set to ${newStatus}`);
                           } catch (e) {
                             showToast('Failed to update status');

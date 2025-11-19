@@ -50,10 +50,39 @@ interface Props {
 
 const statuses = ['draft', 'sent', 'paid', 'overdue', 'cancelled'];
 
+function downloadCSV(filename: string, rows: any[]) {
+  if (!rows || rows.length === 0) return;
+  const keys = Object.keys(rows[0]);
+  const csv = [keys.join(',')].concat(
+    rows.map((r) => keys.map((k) => `"${String(r[k] ?? '')}"`).join(','))
+  ).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 export default function InvoiceIndex({ invoices, summary, filters }: Props) {
   const [filterStatus, setFilterStatus] = useState(filters.status || '');
   const [startDate, setStartDate] = useState(filters.start_date || '');
   const [endDate, setEndDate] = useState(filters.end_date || '');
+
+  const handleExportCsv = () => {
+    if (!invoices || !invoices.data || invoices.data.length === 0) return;
+    const rows = invoices.data.map((invoice) => ({
+      invoice_number: invoice.invoice_number,
+      client_name: invoice.client_name,
+      total_amount: invoice.total_amount,
+      status: invoice.status,
+      invoice_date: invoice.invoice_date,
+      due_date: invoice.due_date,
+      user: invoice.user?.name,
+    }));
+    downloadCSV('invoices-export.csv', rows);
+  };
 
   const handleFilter = () => {
     const params: any = {};
@@ -183,6 +212,12 @@ export default function InvoiceIndex({ invoices, summary, filters }: Props) {
                 className="inline-flex items-center px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition text-sm"
               >
                 Clear Filters
+              </button>
+              <button
+                onClick={handleExportCsv}
+                className="inline-flex items-center px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition text-sm"
+              >
+                Export CSV
               </button>
             </div>
           </div>

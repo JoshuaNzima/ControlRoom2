@@ -53,6 +53,21 @@ const categories = [
 const statuses = ['pending', 'approved', 'rejected'];
 const paymentMethods = ['cash', 'card', 'transfer', 'check'];
 
+function downloadCSV(filename: string, rows: any[]) {
+  if (!rows || rows.length === 0) return;
+  const keys = Object.keys(rows[0]);
+  const csv = [keys.join(',')].concat(
+    rows.map((r) => keys.map((k) => `"${String(r[k] ?? '')}"`).join(','))
+  ).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 export default function ExpenseIndex({ expenses, totals, filters }: Props) {
   const [filterCategory, setFilterCategory] = useState(filters.category || '');
   const [filterStatus, setFilterStatus] = useState(filters.status || '');
@@ -61,6 +76,20 @@ export default function ExpenseIndex({ expenses, totals, filters }: Props) {
   );
   const [startDate, setStartDate] = useState(filters.start_date || '');
   const [endDate, setEndDate] = useState(filters.end_date || '');
+
+  const handleExportCsv = () => {
+    if (!expenses || !expenses.data || expenses.data.length === 0) return;
+    const rows = expenses.data.map((expense) => ({
+      date: expense.expense_date,
+      description: expense.description,
+      category: expense.category,
+      amount: expense.amount,
+      payment_method: expense.payment_method,
+      status: expense.status,
+      user: expense.user?.name,
+    }));
+    downloadCSV('expenses-export.csv', rows);
+  };
 
   const handleFilter = () => {
     const params: any = {};
@@ -220,6 +249,12 @@ export default function ExpenseIndex({ expenses, totals, filters }: Props) {
                 className="inline-flex items-center px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition text-sm"
               >
                 Clear Filters
+              </button>
+              <button
+                onClick={handleExportCsv}
+                className="inline-flex items-center px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition text-sm"
+              >
+                Export CSV
               </button>
             </div>
           </div>

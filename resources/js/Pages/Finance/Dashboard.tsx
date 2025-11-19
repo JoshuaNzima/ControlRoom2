@@ -30,6 +30,30 @@ export default function FinanceDashboard(props: Props) {
     recent = [],
   } = props as any;
 
+  const paidTotal = Number(invoicesSummary.paid || 0);
+  const approvedExpensesTotal = Number(expensesSummary.approved || 0);
+  const netCashflow = paidTotal - approvedExpensesTotal;
+  const overdueCount = Number(invoicesSummary.overdue_count || 0);
+  const overdueAmount = Number(invoicesSummary.overdue_amount || 0);
+
+  const budgetStats = React.useMemo(
+    () => {
+      const list = budgets || [];
+      let exceeded = 0;
+      let critical = 0;
+      list.forEach((b: any) => {
+        const pct = Number(b.percentageSpent || 0);
+        if (b.isExceeded) {
+          exceeded += 1;
+        } else if (pct >= 80) {
+          critical += 1;
+        }
+      });
+      return { total: list.length, exceeded, critical };
+    },
+    [budgets]
+  );
+
   const [modalOpen, setModalOpen] = React.useState(false);
   const [modalTitle, setModalTitle] = React.useState('');
   const [modalData, setModalData] = React.useState<any | null>(null);
@@ -153,7 +177,29 @@ export default function FinanceDashboard(props: Props) {
             </div>
             <div className="rounded-lg border bg-white p-4">
               <div className="text-sm text-gray-500">Overdue</div>
-              <div className="text-xl font-semibold text-red-600">{invoicesSummary.overdue_count || 0}</div>
+              <div className="text-xl font-semibold text-red-600">{overdueCount}</div>
+              <div className="text-xs text-gray-500 mt-1">
+                {formatCurrencyMWK(overdueAmount)} overdue
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="rounded-lg border bg-white p-4">
+              <div className="text-sm text-gray-500">Approved Expenses</div>
+              <div className="text-xl font-semibold text-red-600">
+                {formatCurrencyMWK(approvedExpensesTotal)}
+              </div>
+            </div>
+            <div className="rounded-lg border bg-white p-4">
+              <div className="text-sm text-gray-500">Net Cashflow (Paid - Approved)</div>
+              <div
+                className={`text-xl font-semibold ${
+                  netCashflow >= 0 ? 'text-emerald-600' : 'text-red-600'
+                }`}
+              >
+                {formatCurrencyMWK(netCashflow)}
+              </div>
             </div>
           </div>
 
@@ -186,6 +232,11 @@ export default function FinanceDashboard(props: Props) {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             <div className="rounded-lg border bg-white p-6">
               <h3 className="text-md font-semibold mb-4">Active Budgets</h3>
+              {budgets.length > 0 && (
+                <div className="mb-3 text-xs text-gray-600">
+                  {budgetStats.exceeded} exceeded / {budgetStats.critical} at risk (&gt;= 80%)
+                </div>
+              )}
               <div className="space-y-3">
                 {budgets.length === 0 && <div className="text-sm text-gray-500">No active budgets</div>}
                 {budgets.map((b: any) => {
