@@ -106,8 +106,11 @@ Route::middleware(['auth'])->group(function () {
                 return redirect()->route('supervisor.dashboard');
             case in_array('client', $roles):
                 return redirect()->route('client.dashboard');
+            case in_array('finance_officer', $roles):
+            case in_array('accountant', $roles):
+                return redirect()->route('finance.dashboard');
             default:
-                return redirect()->route('login');
+                abort(403, 'Unauthorized. No dashboard is configured for your role.');
         }
     
     })->name('dashboard');

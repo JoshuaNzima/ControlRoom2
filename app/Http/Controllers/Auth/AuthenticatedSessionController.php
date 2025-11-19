@@ -89,7 +89,12 @@ class AuthenticatedSessionController extends Controller
         }
         
         // Finance - Financial department
-        if ($user->hasRole('finance') || $user->hasRole('accounting')) {
+        if (
+            $user->hasRole('finance') ||
+            $user->hasRole('finance_officer') ||
+            $user->hasRole('accountant') ||
+            $user->hasRole('accounting')
+        ) {
             return route('finance.dashboard', absolute: false);
         }
         
