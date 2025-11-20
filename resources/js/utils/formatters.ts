@@ -1,11 +1,18 @@
 /**
  * Format a number as currency
  */
-export const formatCurrency = (amount: number, currency: string = 'USD'): string => {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: currency,
-  }).format(amount);
+export const formatCurrency = (amount: number, currency: string = 'MWK', locale: string = 'en-MW'): string => {
+  try {
+    return new Intl.NumberFormat(locale, {
+      style: 'currency',
+      currency,
+      currencyDisplay: 'symbol',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(amount ?? 0);
+  } catch (e) {
+    return `MWK ${(Number(amount) || 0).toFixed(2)}`;
+  }
 };
 
 /**

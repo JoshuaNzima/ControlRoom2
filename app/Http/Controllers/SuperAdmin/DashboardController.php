@@ -5,7 +5,7 @@ namespace App\Http\Controllers\SuperAdmin;
 use App\Http\Controllers\Controller;
 use App\Models\Guards\{Guard, Attendance, Client, Shift};
 use App\Models\User;
-use App\Models\Core\Module;
+use App\Models\Module as AppModule;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\{DB, Cache, Artisan, File};
 use Inertia\Inertia;
@@ -26,17 +26,18 @@ class DashboardController extends Controller
             'cache_size' => $this->getCacheSize(),
         ];
 
-        // Modules Management
-        $modules = Module::orderBy('sort_order')->get()->map(fn($m) => [
+        // Modules Management (App\Models\Module)
+        $modules = AppModule::orderBy('order')->get()->map(fn($m) => [
             'id' => $m->id,
-            'name' => $m->name,
             'display_name' => $m->display_name,
             'description' => $m->description,
-            'is_active' => $m->is_active,
-            'is_core' => $m->is_core,
+            'is_active' => (bool) $m->is_active,
+            'is_core' => (bool) $m->is_core,
             'version' => $m->version,
             'icon' => $m->icon,
-            'color' => $m->color,
+            'category' => $m->category,
+            'route' => $m->route,
+            'order' => $m->order,
         ]);
 
         // System Health
@@ -282,7 +283,7 @@ class DashboardController extends Controller
 
     public function toggleModule(Request $request, $moduleId)
     {
-        $module = Module::findOrFail($moduleId);
+        $module = AppModule::findOrFail($moduleId);
         
         if ($module->is_core) {
             return back()->with('error', 'Cannot disable core modules.');

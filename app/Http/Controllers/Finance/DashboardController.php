@@ -51,6 +51,57 @@ class DashboardController extends Controller
             'pending' => (float) Expense::pending()->sum('amount'),
         ];
 
+        $invoicesCount = (int) Invoice::count();
+        $avgInvoice = (float) (Invoice::avg('total_amount') ?? 0);
+        $collectionRate = $invoicesSummary['total'] > 0 ? ($invoicesSummary['paid'] / $invoicesSummary['total']) : 0.0;
+        $upcomingDue30 = (float) Invoice::whereIn('status', ['draft', 'sent', 'overdue'])
+            ->whereBetween('due_date', [now(), now()->addDays(30)])
+            ->sum('total_amount');
+        $runRateExpenses = (float) (Expense::whereBetween('expense_date', [now()->subDays(30), now()])->sum('amount') / 30);
+        $approvedExpensesCount = (int) Expense::approved()->count();
+        $pendingExpensesCount = (int) Expense::pending()->count();
+
+        $unpaid = Invoice::whereIn('status', ['draft', 'sent', 'overdue'])
+            ->select('total_amount', 'due_date')
+            ->get();
+        $aging = [
+            'current' => 0.0,
+            'one_to_30' => 0.0,
+            'thirty_one_to_60' => 0.0,
+            'sixty_one_to_90' => 0.0,
+            'over_90' => 0.0,
+        ];
+        $now = now();
+        foreach ($unpaid as $inv) {
+            if (! $inv->due_date || $inv->due_date >= $now) {
+                $aging['current'] += (float) $inv->total_amount;
+                continue;
+            }
+            $days = $inv->due_date->diffInDays($now);
+            if ($days <= 30) {
+                $aging['one_to_30'] += (float) $inv->total_amount;
+            } elseif ($days <= 60) {
+                $aging['thirty_one_to_60'] += (float) $inv->total_amount;
+            } elseif ($days <= 90) {
+                $aging['sixty_one_to_90'] += (float) $inv->total_amount;
+            } else {
+                $aging['over_90'] += (float) $inv->total_amount;
+            }
+        }
+
+        $topCategories = Expense::approved()
+            ->selectRaw('category, SUM(amount) as total')
+            ->groupBy('category')
+            ->orderByDesc('total')
+            ->limit(5)
+            ->get()
+            ->map(function ($r) {
+                return [
+                    'category' => $r->category,
+                    'total' => (float) $r->total,
+                ];
+            })->values();
+
         // Budgets
         $budgets = Budget::active()->get()->map(function ($b) {
             return [
@@ -109,6 +160,17 @@ class DashboardController extends Controller
             'monthlyExpenses' => $monthlyExpenses,
             'budgets' => $budgets,
             'recent' => $recent,
+            'kpis' => [
+                'invoices_count' => $invoicesCount,
+                'avg_invoice' => $avgInvoice,
+                'collection_rate' => $collectionRate,
+                'upcoming_due_30d' => $upcomingDue30,
+                'expenses_run_rate_daily' => $runRateExpenses,
+                'approved_expenses_count' => $approvedExpensesCount,
+                'pending_expenses_count' => $pendingExpensesCount,
+            ],
+            'aging' => $aging,
+            'topCategories' => $topCategories,
             'auth' => [
                 'user' => [
                     'name' => auth()->user()->name,

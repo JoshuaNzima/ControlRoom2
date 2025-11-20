@@ -45,7 +45,7 @@ class IncidentController extends Controller
         ]);
 
         return redirect()->route('control-room.incidents.show', $incident)
-            ->with('success', 'Incident created successfully.');
+            ->withSuccess('Incident created successfully.');
     }
 
     public function show(Incident $incident)
@@ -80,7 +80,7 @@ class IncidentController extends Controller
         $incident->update($validated);
 
         return redirect()->route('control-room.incidents.show', $incident)
-            ->with('success', 'Incident updated successfully.');
+            ->withSuccess('Incident updated successfully.');
     }
 
     public function destroy(Incident $incident)
@@ -88,7 +88,7 @@ class IncidentController extends Controller
         $incident->delete();
 
         return redirect()->route('control-room.incidents.index')
-            ->with('success', 'Incident deleted successfully.');
+            ->withSuccess('Incident deleted successfully.');
     }
 
     public function escalate(Request $request, Incident $incident)
@@ -98,7 +98,7 @@ class IncidentController extends Controller
             'status' => 'escalated',
         ]);
 
-        return back()->with('success', 'Incident escalated successfully.');
+        return back()->withSuccess('Incident escalated successfully.');
     }
 
     public function resolve(Request $request, Incident $incident)
@@ -109,7 +109,7 @@ class IncidentController extends Controller
             'resolved_by' => auth()->id(),
         ]);
 
-        return back()->with('success', 'Incident resolved successfully.');
+        return back()->withSuccess('Incident resolved successfully.');
     }
 
     public function assign(Request $request, Incident $incident)
@@ -123,6 +123,6 @@ class IncidentController extends Controller
             'status' => 'in_progress',
         ]);
 
-        return back()->with('success', 'Incident assigned successfully.');
+        return back()->withSuccess('Incident assigned successfully.');
     }
 }

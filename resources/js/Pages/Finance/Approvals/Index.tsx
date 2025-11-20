@@ -1,6 +1,7 @@
 import React from 'react';
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import FinanceLayout from '@/Layouts/FinanceLayout';
+import AdminLayout from '@/Layouts/AdminLayout';
 import { formatCurrency, formatDate } from '@/utils/formatters';
 
 interface Props {
@@ -18,8 +19,12 @@ export default function ApprovalsIndex({ approvals }: Props) {
 
   const pendingCount = approvals.length;
 
+  const { url } = usePage();
+  const isAdminRoute = typeof url === 'string' && url.startsWith('/admin/');
+  const Layout = isAdminRoute ? AdminLayout : FinanceLayout;
+
   return (
-    <FinanceLayout title="Approvals">
+    <Layout title="Approvals">
       <Head title="Approvals" />
       <div className="py-6">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
@@ -134,6 +139,6 @@ export default function ApprovalsIndex({ approvals }: Props) {
           </div>
         </div>
       </div>
-    </FinanceLayout>
+    </Layout>
   );
 }

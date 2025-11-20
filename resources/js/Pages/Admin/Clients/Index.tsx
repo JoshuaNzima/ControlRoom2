@@ -35,6 +35,7 @@ interface ClientsIndexProps {
   clients: {
     data: Client[];
     meta?: any;
+    links?: Array<{ url: string | null; label: string; active: boolean }>;
   };
   filters: Filters;
   services?: Array<{ id: number; name: string; monthly_price: number; required_guards?: number }>;
@@ -312,10 +313,10 @@ export default function ClientsIndex({ clients, filters, services = [], zones = 
           </div>
         </Card>
 
-        {clients.meta?.links && clients.meta.links.length > 3 && (
+        {clients.links && clients.links.length > 3 && (
           <div className="mt-4 flex justify-center">
             <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
-              {clients.meta.links.map((link: any, i: number) => (
+              {clients.links.map((link: any, i: number) => (
                 <Button
                   key={i}
                   variant={link.active ? "default" : "outline"}

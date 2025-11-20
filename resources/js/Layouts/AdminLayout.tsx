@@ -29,6 +29,7 @@ export default function AdminLayout({ title, children, user }: Props) {
      { name: 'Admin Dashboard', href: route('admin.dashboard'), icon: <IconMapper name="home" className="h-6 w-6" />, current: isCurrent(route('admin.dashboard')) },
      { name: 'Services', href: route('admin.services.index'), icon: <IconMapper name="package" className="h-6 w-6" />, current: isCurrent(route('admin.services.index')) },
      { name: 'Users', href: route('admin.users.index'), icon: <IconMapper name="users-2" className="h-6 w-6" />, current: false },
+     { name: 'Approvals', href: route('admin.approvals.index'), icon: <IconMapper name="check-circle" className="h-6 w-6" />, current: false },
      { name: 'Messaging', href: route('control-room.messaging.index'), icon: <IconMapper name="message-square-text" className="h-6 w-6" />, current: false },
     { name: 'Reports', href: route('admin.reports.index'), icon: <IconMapper name="bar-chart-2" className="h-6 w-6" />, current: false },
     { name: 'Payments Checker', href: route('admin.payments.index'), icon: <IconMapper name="wallet" className="h-6 w-6" />, current: false },
@@ -67,7 +68,7 @@ export default function AdminLayout({ title, children, user }: Props) {
         <div className="flex-1 flex flex-col pt-5 pb-4 overflow-y-auto">
             <div className="flex items-center flex-shrink-0 px-4">
             <img
-              src="/images/Coin-logo.png"
+              src="/images/coin-logo.png"
               alt="Coin Security"
               className="h-10 w-auto"
               style={{ display: logoOk ? 'block' : 'none' }}

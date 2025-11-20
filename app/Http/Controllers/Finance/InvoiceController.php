@@ -5,12 +5,17 @@ namespace App\Http\Controllers\Finance;
 use App\Models\Invoice;
 use App\Models\ClientPayment;
 use App\Models\Guards\Client as GuardClient;
+use App\Models\Service;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Carbon;
 use Inertia\Inertia;
+use App\Mail\InvoiceMailable;
 
 class InvoiceController extends Controller
 {
@@ -77,7 +82,7 @@ class InvoiceController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'invoice_number' => 'required|string|unique:invoices',
+            'invoice_number' => 'nullable|string|unique:invoices,invoice_number',
             'client_id' => 'nullable|exists:clients,id',
             'client_name' => 'required|string|max:255',
             'client_email' => 'nullable|email',
@@ -99,28 +104,38 @@ class InvoiceController extends Controller
         $billingYear = $validated['billing_year'] ?? $issueDate->year;
         $billingMonth = $validated['billing_month'] ?? $issueDate->month;
 
-        $invoice = Invoice::create([
-            ...$validated,
-            'user_id' => Auth::id(),
-            'status' => 'draft',
-            'billing_year' => $billingYear,
-            'billing_month' => $billingMonth,
-        ]);
+        $invoice = DB::transaction(function () use ($validated, $billingYear, $billingMonth, $request) {
+            $invoiceNumber = $validated['invoice_number'] ?? $this->generateInvoiceNumber();
 
-        // Create line items
-        if ($request->has('line_items')) {
-            foreach ($request->line_items as $item) {
-                $invoice->lineItems()->create([
-                    'description' => $item['description'],
-                    'quantity' => $item['quantity'],
-                    'unit_price' => $item['unit_price'],
-                    'line_total' => $item['quantity'] * $item['unit_price'],
-                ]);
+            $invoice = Invoice::create(array_merge($validated, [
+                'invoice_number' => $invoiceNumber,
+                'user_id' => Auth::id(),
+                'status' => 'draft',
+                'billing_year' => $billingYear,
+                'billing_month' => $billingMonth,
+            ]));
+
+            if ($request->has('line_items')) {
+                foreach ($request->line_items as $item) {
+                    if (! isset($item['description']) || $item['description'] === '') {
+                        continue;
+                    }
+                    $qty = (float) ($item['quantity'] ?? 1);
+                    $price = (float) ($item['unit_price'] ?? 0);
+                    $invoice->lineItems()->create([
+                        'description' => $item['description'],
+                        'quantity' => $qty,
+                        'unit_price' => $price,
+                        'line_total' => $qty * $price,
+                    ]);
+                }
             }
-        }
+
+            return $invoice;
+        });
 
         return redirect()->route('finance.invoices.show', $invoice)
-            ->with('success', 'Invoice created successfully.');
+            ->withSuccess('Invoice created successfully.');
     }
 
     /**
@@ -204,7 +219,7 @@ class InvoiceController extends Controller
         }
 
         return redirect()->route('finance.invoices.show', $invoice)
-            ->with('success', 'Invoice updated successfully.');
+            ->withSuccess('Invoice updated successfully.');
     }
 
     /**
@@ -217,19 +232,147 @@ class InvoiceController extends Controller
         $invoice->delete();
 
         return redirect()->route('finance.invoices.index')
-            ->with('success', 'Invoice deleted successfully.');
+            ->withSuccess('Invoice deleted successfully.');
     }
 
     /**
      * Mark invoice as sent
      */
-    public function send(Invoice $invoice)
+    public function send(Request $request, Invoice $invoice)
     {
         $this->authorize('update', $invoice);
 
-        $invoice->markAsSent();
+        $channels = $request->input('channels', ['email', 'whatsapp']);
+        if (is_string($channels)) {
+            $channels = explode(',', $channels);
+        }
 
-        return back()->with('success', 'Invoice marked as sent.');
+        $sentAny = false;
+        try {
+            if (in_array('email', $channels)) {
+                $this->sendInvoiceEmail($invoice);
+                $sentAny = true;
+            }
+        } catch (\Throwable $e) {
+            Log::warning('Invoice email send failed', ['invoice_id' => $invoice->id, 'error' => $e->getMessage()]);
+        }
+
+        try {
+            if (in_array('whatsapp', $channels)) {
+                $this->sendInvoiceWhatsApp($invoice);
+                $sentAny = true;
+            }
+        } catch (\Throwable $e) {
+            Log::warning('Invoice WhatsApp send failed', ['invoice_id' => $invoice->id, 'error' => $e->getMessage()]);
+        }
+
+        if ($sentAny) {
+            $invoice->markAsSent();
+            return back()->withSuccess('Invoice sent.');
+        }
+
+        return back()->withWarning('No delivery channels configured or client has no contact details.');
+    }
+
+    /**
+     * Return next invoice number suggestion.
+     */
+    public function nextNumber()
+    {
+        return response()->json(['invoice_number' => $this->generateInvoiceNumber()]);
+    }
+
+    /**
+     * Suggest line items from client services (with custom_price fallback).
+     */
+    public function serviceLineItems(Request $request)
+    {
+        $request->validate([
+            'client_id' => 'required|exists:clients,id',
+        ]);
+
+        $client = GuardClient::with(['services' => function ($q) {
+            $q->where('active', true);
+        }])->find($request->client_id);
+
+        if (! $client) {
+            return response()->json(['items' => []]);
+        }
+
+        $items = [];
+        foreach ($client->services as $service) {
+            $unit = (float) ($service->pivot->custom_price ?? $service->monthly_price ?? 0);
+            $qty = (int) ($service->pivot->quantity ?? 1);
+            $items[] = [
+                'description' => $service->name,
+                'quantity' => $qty > 0 ? $qty : 1,
+                'unit_price' => $unit,
+            ];
+        }
+
+        // Always append one empty custom line item slot
+        $items[] = [
+            'description' => '',
+            'quantity' => 1,
+            'unit_price' => 0,
+        ];
+
+        return response()->json(['items' => $items]);
+    }
+
+    private function generateInvoiceNumber(): string
+    {
+        $prefix = now()->format('Ym'); // e.g. 202511
+        $last = Invoice::whereYear('invoice_date', now()->year)
+            ->whereMonth('invoice_date', now()->month)
+            ->orderByDesc('id')
+            ->first();
+
+        $seq = 0;
+        if ($last && $last->invoice_number && preg_match('/INV-' . $prefix . '-(\d{4})/', $last->invoice_number, $m)) {
+            $seq = (int) $m[1];
+        }
+        $seq++;
+        return sprintf('INV-%s-%04d', $prefix, $seq);
+    }
+
+    private function sendInvoiceEmail(Invoice $invoice): void
+    {
+        $invoice->loadMissing('user', 'lineItems', 'client');
+        $to = $invoice->client_email ?: ($invoice->client->email ?? null);
+        if (! $to) {
+            return;
+        }
+        Mail::to($to)->send(new InvoiceMailable($invoice));
+    }
+
+    private function sendInvoiceWhatsApp(Invoice $invoice): void
+    {
+        $invoice->loadMissing('client');
+        $toPhone = optional($invoice->client)->phone;
+        $token = env('WHATSAPP_TOKEN');
+        $phoneId = env('WHATSAPP_PHONE_ID');
+        if (! $toPhone || ! $token || ! $phoneId) {
+            return;
+        }
+
+        $body = sprintf(
+            "Invoice %s for %s is %s and due on %s. Total: MWK %s",
+            $invoice->invoice_number,
+            $invoice->client_name,
+            strtoupper($invoice->status),
+            optional($invoice->due_date)->format('Y-m-d'),
+            number_format((float) $invoice->total_amount, 2)
+        );
+
+        // WhatsApp Cloud API simple text template
+        $url = sprintf('https://graph.facebook.com/v18.0/%s/messages', $phoneId);
+        Http::withToken($token)->post($url, [
+            'messaging_product' => 'whatsapp',
+            'to' => $toPhone,
+            'type' => 'text',
+            'text' => ['body' => $body],
+        ]);
     }
 
     /**
@@ -247,7 +390,7 @@ class InvoiceController extends Controller
             $this->syncClientPaymentForInvoice($invoice);
         }
 
-        return back()->with('success', 'Invoice marked as paid.');
+        return back()->withSuccess('Invoice marked as paid.');
     }
 
     /**
@@ -259,7 +402,7 @@ class InvoiceController extends Controller
 
         $invoice->markAsCancelled();
 
-        return back()->with('success', 'Invoice cancelled.');
+        return back()->withSuccess('Invoice cancelled.');
     }
 
     /**

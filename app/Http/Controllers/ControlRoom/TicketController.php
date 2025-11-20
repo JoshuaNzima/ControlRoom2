@@ -82,7 +82,7 @@ class TicketController extends Controller
         }
 
         return redirect()->route('control-room.tickets.show', $ticket)
-            ->with('success', 'Ticket created successfully.');
+            ->withSuccess('Ticket created successfully.');
     }
 
     public function show(Ticket $ticket)
@@ -116,7 +116,7 @@ class TicketController extends Controller
         $ticket->update($validated);
 
         return redirect()->route('control-room.tickets.show', $ticket)
-            ->with('success', 'Ticket updated successfully.');
+            ->withSuccess('Ticket updated successfully.');
     }
 
     public function destroy(Ticket $ticket)
@@ -124,7 +124,7 @@ class TicketController extends Controller
         $ticket->delete();
 
         return redirect()->route('control-room.tickets.index')
-            ->with('success', 'Ticket deleted successfully.');
+            ->withSuccess('Ticket deleted successfully.');
     }
 
     public function addComment(Request $request, Ticket $ticket)
@@ -141,7 +141,7 @@ class TicketController extends Controller
             'is_internal' => $validated['is_internal'] ?? false,
         ]);
 
-        return back()->with('success', 'Comment added successfully.');
+        return back()->withSuccess('Comment added successfully.');
     }
 
     public function assign(Request $request, Ticket $ticket)
@@ -155,7 +155,7 @@ class TicketController extends Controller
             'status' => 'in_progress',
         ]);
 
-        return back()->with('success', 'Ticket assigned successfully.');
+        return back()->withSuccess('Ticket assigned successfully.');
     }
 
     public function close(Request $request, Ticket $ticket)
@@ -166,7 +166,7 @@ class TicketController extends Controller
             'closed_by' => auth()->id(),
         ]);
 
-        return back()->with('success', 'Ticket closed successfully.');
+        return back()->withSuccess('Ticket closed successfully.');
     }
 
     public function reopen(Request $request, Ticket $ticket)
@@ -177,7 +177,7 @@ class TicketController extends Controller
             'closed_by' => null,
         ]);
 
-        return back()->with('success', 'Ticket reopened successfully.');
+        return back()->withSuccess('Ticket reopened successfully.');
     }
 
     private function generateTicketNumber()

@@ -1,6 +1,8 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Head, useForm } from '@inertiajs/react';
 import FinanceLayout from '@/Layouts/FinanceLayout';
+import { formatCurrency } from '@/utils/formatters';
+import { useNotification } from '@/Providers/NotificationProvider';
 
 interface LineItem {
   description: string;
@@ -84,6 +86,23 @@ export default function CreateInvoice({ clients = [], defaultBilling }: Props) {
 
   const [lineItems, setLineItems] = useState<LineItem[]>(data.line_items);
   const [documentMode, setDocumentMode] = useState<'invoice' | 'quotation'>('invoice');
+  const [loadingServices, setLoadingServices] = useState(false);
+  const [serviceError, setServiceError] = useState<string | null>(null);
+  const { push } = useNotification();
+
+  // Auto-generate invoice number on mount if empty
+  useEffect(() => {
+    if (!data.invoice_number) {
+      try {
+        fetch(route('finance.invoices.next-number'))
+          .then((r) => r.json())
+          .then((j) => {
+            if (j?.invoice_number) setData('invoice_number', j.invoice_number);
+          })
+          .catch(() => {});
+      } catch {}
+    }
+  }, []);
 
   const activeClient = useMemo(() => {
     if (!data.client_id) return null;
@@ -154,10 +173,56 @@ export default function CreateInvoice({ clients = [], defaultBilling }: Props) {
     updateTotals(lineItems, data.tax_percentage, discount);
   };
 
+  const regenerateNumber = () => {
+    try {
+      fetch(route('finance.invoices.next-number'))
+        .then((r) => r.json())
+        .then((j) => {
+          if (j?.invoice_number) setData('invoice_number', j.invoice_number);
+        })
+        .catch(() => {});
+    } catch {}
+  };
+
+  const loadServiceLineItems = async () => {
+    if (!data.client_id) return;
+    try {
+      setLoadingServices(true);
+      setServiceError(null);
+      const url = `${route('finance.invoices.service-line-items')}?client_id=${data.client_id}`;
+      const res = await fetch(url);
+      const json = await res.json();
+      if (Array.isArray(json?.items)) {
+        setLineItems(json.items as LineItem[]);
+        setData('line_items', json.items as LineItem[]);
+        updateTotals(json.items as LineItem[], data.tax_percentage, data.discount_amount);
+        if ((json.items as LineItem[]).filter(i => i.description).length === 0) {
+          push('No active services found for this client', 'info');
+        } else {
+          push('Loaded services for client', 'success');
+        }
+      }
+    } catch (e) {
+      setServiceError('Failed to load services. Please try again.');
+      push('Failed to load services', 'error');
+    } finally {
+      setLoadingServices(false);
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     post(route('finance.invoices.store'));
   };
+
+  const resetItems = () => {
+    const items: LineItem[] = [{ description: '', quantity: 1, unit_price: 0 }];
+    setLineItems(items);
+    setData('line_items', items);
+    updateTotals(items, data.tax_percentage, data.discount_amount);
+  };
+
+  const hasValidItem = useMemo(() => lineItems.some(i => (i.description || '').trim().length > 0 && (i.quantity ?? 0) > 0), [lineItems]);
 
   return (
     <FinanceLayout title="Create Invoice">
@@ -195,32 +260,52 @@ export default function CreateInvoice({ clients = [], defaultBilling }: Props) {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="text-sm font-medium text-gray-700">Invoice Number *</label>
-                      <input
-                        type="text"
-                        required
-                        value={data.invoice_number}
-                        onChange={(e) => setData('invoice_number', e.target.value)}
-                        className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                        placeholder="INV-001"
-                      />
+                      <div className="mt-1 flex gap-2">
+                        <input
+                          type="text"
+                          value={data.invoice_number}
+                          onChange={(e) => setData('invoice_number', e.target.value)}
+                          className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                          placeholder="INV-202511-0001"
+                        />
+                        <button
+                          type="button"
+                          onClick={regenerateNumber}
+                          className="px-3 py-2 rounded-lg border text-sm bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
+                          title="Auto-generate"
+                        >
+                          Auto
+                        </button>
+                      </div>
                       {errors.invoice_number && (
                         <p className="mt-1 text-xs text-red-600">{errors.invoice_number}</p>
                       )}
                     </div>
-                    <div>
+                    <div className="space-y-2">
                       <label className="text-sm font-medium text-gray-700">Client *</label>
-                      <select
-                        value={data.client_id ?? ''}
-                        onChange={(e) => handleClientChange(e.target.value)}
-                        className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                      >
-                        <option value="">Select client</option>
-                        {clients.map((client) => (
-                          <option key={client.id} value={client.id}>
-                            {client.name}
-                          </option>
-                        ))}
-                      </select>
+                      <div className="flex gap-2">
+                        <select
+                          value={data.client_id ?? ''}
+                          onChange={(e) => handleClientChange(e.target.value)}
+                          className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        >
+                          <option value="">Select client</option>
+                          {clients.map((client) => (
+                            <option key={client.id} value={client.id}>
+                              {client.name}
+                            </option>
+                          ))}
+                        </select>
+                        <button
+                          type="button"
+                          onClick={loadServiceLineItems}
+                          disabled={!data.client_id}
+                          className="px-3 py-2 rounded-lg border text-sm bg-emerald-50 text-emerald-700 border-emerald-200 disabled:opacity-50 hover:bg-emerald-100"
+                          title="Load line items from client services"
+                        >
+                          Load Services
+                        </button>
+                      </div>
                       {errors.client_id && (
                         <p className="mt-1 text-xs text-red-600">{errors.client_id}</p>
                       )}
@@ -318,6 +403,27 @@ export default function CreateInvoice({ clients = [], defaultBilling }: Props) {
                       + Add Item
                     </button>
                   </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={loadServiceLineItems}
+                      disabled={!data.client_id || loadingServices}
+                      className={`px-3 py-2 rounded-lg border text-sm ${loadingServices ? 'opacity-60 cursor-not-allowed' : 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'}`}
+                      title="Load line items from client services"
+                    >
+                      {loadingServices ? 'Loading…' : 'Load Services'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={resetItems}
+                      className="px-3 py-2 rounded-lg border text-sm bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100"
+                    >
+                      Reset
+                    </button>
+                    {serviceError && (
+                      <span className="text-sm text-red-600">{serviceError}</span>
+                    )}
+                  </div>
 
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm">
@@ -362,7 +468,7 @@ export default function CreateInvoice({ clients = [], defaultBilling }: Props) {
                               />
                             </td>
                             <td className="px-4 py-2 text-right font-semibold">
-                              {(item.quantity * item.unit_price).toFixed(2)}
+                              {formatCurrency(item.quantity * item.unit_price)}
                             </td>
                             <td className="px-4 py-2 text-center">
                               <button
@@ -383,7 +489,7 @@ export default function CreateInvoice({ clients = [], defaultBilling }: Props) {
                 <div className="bg-white rounded-2xl shadow p-6 space-y-4">
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Subtotal</span>
-                    <span className="font-semibold">MWK {Number(data.subtotal).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    <span className="font-semibold">{formatCurrency(Number(data.subtotal))}</span>
                   </div>
                   <div className="flex items-center justify-between text-sm">
                     <div className="flex items-center gap-2">
@@ -398,7 +504,7 @@ export default function CreateInvoice({ clients = [], defaultBilling }: Props) {
                         className="w-24 px-2 py-1 border border-gray-300 rounded"
                       />
                     </div>
-                    <span className="font-semibold">MWK {Number(data.tax_amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    <span className="font-semibold">{formatCurrency(Number(data.tax_amount))}</span>
                   </div>
                   <div className="flex items-center justify-between text-sm">
                     <div className="flex items-center gap-2">
@@ -412,11 +518,11 @@ export default function CreateInvoice({ clients = [], defaultBilling }: Props) {
                         className="w-32 px-2 py-1 border border-gray-300 rounded"
                       />
                     </div>
-                    <span className="font-semibold">- MWK {Number(data.discount_amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    <span className="font-semibold">- {formatCurrency(Number(data.discount_amount))}</span>
                   </div>
                   <div className="flex justify-between items-center border-t pt-4 text-lg font-bold">
                     <span>Total Due</span>
-                    <span className="text-indigo-600">MWK {Number(data.total_amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    <span className="text-indigo-600">{formatCurrency(Number(data.total_amount))}</span>
                   </div>
                 </div>
 
@@ -439,6 +545,11 @@ export default function CreateInvoice({ clients = [], defaultBilling }: Props) {
                     <span className="text-xs text-gray-400 uppercase tracking-wide">{documentMode}</span>
                   </div>
                   <div className="border rounded-xl p-4 text-sm space-y-3">
+                    {/* Brand header */}
+                    <div className="flex items-center gap-3 pb-3 border-b">
+                      <img src="/images/coin-logo.png" alt="Logo" className="h-8 w-auto" onError={(e) => ((e.currentTarget.style.display='none'))} />
+                      <div className="text-emerald-700 font-semibold">{import.meta.env.VITE_APP_NAME || 'Coin Security'}</div>
+                    </div>
                     <div>
                       <p className="text-gray-500">Recipient</p>
                       <p className="font-semibold text-gray-900">{data.client_name || '—'}</p>
@@ -457,19 +568,19 @@ export default function CreateInvoice({ clients = [], defaultBilling }: Props) {
                     <div className="border rounded-lg bg-gray-50 p-3 text-xs space-y-1">
                       <div className="flex justify-between">
                         <span>Subtotal</span>
-                        <span>MWK {Number(data.subtotal).toLocaleString()}</span>
+                        <span>{formatCurrency(Number(data.subtotal))}</span>
                       </div>
                       <div className="flex justify-between">
                         <span>Tax</span>
-                        <span>MWK {Number(data.tax_amount).toLocaleString()}</span>
+                        <span>{formatCurrency(Number(data.tax_amount))}</span>
                       </div>
                       <div className="flex justify-between">
                         <span>Discount</span>
-                        <span>- MWK {Number(data.discount_amount).toLocaleString()}</span>
+                        <span>- {formatCurrency(Number(data.discount_amount))}</span>
                       </div>
                       <div className="flex justify-between font-semibold border-t pt-2">
                         <span>Total</span>
-                        <span>MWK {Number(data.total_amount).toLocaleString()}</span>
+                        <span>{formatCurrency(Number(data.total_amount))}</span>
                       </div>
                     </div>
                   </div>
@@ -478,10 +589,10 @@ export default function CreateInvoice({ clients = [], defaultBilling }: Props) {
                 <div className="bg-white rounded-2xl shadow p-6 space-y-3">
                   <button
                     type="submit"
-                    disabled={processing}
+                    disabled={processing || !hasValidItem}
                     className="w-full px-4 py-3 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 disabled:bg-gray-400"
                   >
-                    {processing ? 'Saving...' : `Save ${documentMode === 'invoice' ? 'Invoice' : 'Quotation'}`}
+                    {processing ? 'Saving...' : (!hasValidItem ? 'Add a line item to save' : `Save ${documentMode === 'invoice' ? 'Invoice' : 'Quotation'}`)}
                   </button>
                   <a
                     href={route('finance.invoices.index')}

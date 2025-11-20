@@ -1,6 +1,6 @@
 import React, { useState, ReactNode } from 'react';
 
-type Notification = { id: number; message: string; type?: 'info' | 'success' | 'error' };
+type Notification = { id: number; message: string; type?: 'info' | 'success' | 'error' | 'warning' };
 
 interface NotificationContextValue {
   notifications: Notification[];
@@ -17,8 +17,8 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   function push(message: string, type: Notification['type'] = 'info') {
     const id = idCounter++;
     const n = { id, message, type };
-    setNotifications((prev) => [n, ...prev]);
-    setTimeout(() => remove(id), 3500);
+    setNotifications((prev) => [n, ...prev].slice(0, 3));
+    setTimeout(() => remove(id), 5000);
   }
 
   function remove(id: number) {
@@ -28,11 +28,19 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   return (
     <NotificationContext.Provider value={{ notifications, push, remove }}>
       {children}
-      <div className="fixed top-6 right-6 z-50 flex flex-col gap-3">
+      <div className="fixed z-50 flex flex-col gap-3 sm:top-6 sm:right-6 bottom-6 left-1/2 -translate-x-1/2 sm:left-auto sm:translate-x-0 transform">
         {notifications.map((n) => (
           <div
             key={n.id}
-            className={`px-4 py-2 rounded shadow-lg text-white ${n.type === 'error' ? 'bg-red-600' : n.type === 'success' ? 'bg-green-600' : 'bg-gray-800'}`}>
+            className={`px-4 py-2 rounded shadow-lg text-white ${
+              n.type === 'error'
+                ? 'bg-red-600'
+                : n.type === 'warning'
+                ? 'bg-amber-500'
+                : n.type === 'success'
+                ? 'bg-emerald-600'
+                : 'bg-gray-900'
+            }`}>
             {n.message}
           </div>
         ))}

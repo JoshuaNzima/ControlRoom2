@@ -16,6 +16,9 @@ type Props = {
   monthlyExpenses?: number[];
   budgets?: any[];
   recent?: any[];
+  kpis?: any;
+  aging?: any;
+  topCategories?: { category: string; total: number }[];
 };
 
 export default function FinanceDashboard(props: Props) {
@@ -28,6 +31,9 @@ export default function FinanceDashboard(props: Props) {
     monthlyExpenses = [],
     budgets = [],
     recent = [],
+    kpis = {},
+    aging = {},
+    topCategories = [],
   } = props as any;
 
   const paidTotal = Number(invoicesSummary.paid || 0);
@@ -70,6 +76,7 @@ export default function FinanceDashboard(props: Props) {
       return `MWK ${Number(value || 0).toFixed(2)}`;
     }
   };
+  const formatPercent = (value: number) => `${Math.round((value || 0) * 100)}%`;
 
   const revenueData = {
     labels: months,
@@ -203,6 +210,30 @@ export default function FinanceDashboard(props: Props) {
             </div>
           </div>
 
+          {/* Additional KPIs */}
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+            <div className="rounded-lg border bg-white p-4">
+              <div className="text-sm text-gray-500">Invoices</div>
+              <div className="text-xl font-semibold">{Number(kpis.invoices_count || 0)}</div>
+            </div>
+            <div className="rounded-lg border bg-white p-4">
+              <div className="text-sm text-gray-500">Avg Invoice</div>
+              <div className="text-xl font-semibold">{formatCurrencyMWK(kpis.avg_invoice || 0)}</div>
+            </div>
+            <div className="rounded-lg border bg-white p-4">
+              <div className="text-sm text-gray-500">Collection Rate</div>
+              <div className="text-xl font-semibold text-emerald-600">{formatPercent(kpis.collection_rate || 0)}</div>
+            </div>
+            <div className="rounded-lg border bg-white p-4">
+              <div className="text-sm text-gray-500">Due next 30d</div>
+              <div className="text-xl font-semibold text-yellow-700">{formatCurrencyMWK(kpis.upcoming_due_30d || 0)}</div>
+            </div>
+            <div className="rounded-lg border bg-white p-4">
+              <div className="text-sm text-gray-500">Expense Run Rate (daily)</div>
+              <div className="text-xl font-semibold text-red-600">{formatCurrencyMWK(kpis.expenses_run_rate_daily || 0)}</div>
+            </div>
+          </div>
+
           <div className="rounded-lg border bg-white p-6">
             <h2 className="text-lg font-medium mb-4">Revenue vs Expenses (Last 12 months)</h2>
             <div>
@@ -305,6 +336,51 @@ export default function FinanceDashboard(props: Props) {
                   </div>
                 ))}
               </div>
+            </div>
+          </div>
+
+          {/* Aging and Top Categories */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <div className="rounded-lg border bg-white p-6">
+              <h3 className="text-md font-semibold mb-3">A/R Aging</h3>
+              <dl className="grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <dt className="text-gray-500">Current</dt>
+                  <dd className="font-medium">{formatCurrencyMWK(aging.current || 0)}</dd>
+                </div>
+                <div>
+                  <dt className="text-gray-500">1–30</dt>
+                  <dd className="font-medium">{formatCurrencyMWK(aging.one_to_30 || 0)}</dd>
+                </div>
+                <div>
+                  <dt className="text-gray-500">31–60</dt>
+                  <dd className="font-medium">{formatCurrencyMWK(aging.thirty_one_to_60 || 0)}</dd>
+                </div>
+                <div>
+                  <dt className="text-gray-500">61–90</dt>
+                  <dd className="font-medium">{formatCurrencyMWK(aging.sixty_one_to_90 || 0)}</dd>
+                </div>
+                <div>
+                  <dt className="text-gray-500">90+</dt>
+                  <dd className="font-medium">{formatCurrencyMWK(aging.over_90 || 0)}</dd>
+                </div>
+              </dl>
+            </div>
+
+            <div className="rounded-lg border bg-white p-6 lg:col-span-2">
+              <h3 className="text-md font-semibold mb-3">Top Expense Categories</h3>
+              {topCategories.length === 0 ? (
+                <div className="text-sm text-gray-500">No data</div>
+              ) : (
+                <ul className="divide-y">
+                  {topCategories.map((c: { category: string; total: number }) => (
+                    <li key={c.category} className="py-2 flex justify-between text-sm">
+                      <span className="text-gray-700">{String(c.category).replace(/_/g, ' ')}</span>
+                      <span className="font-medium">{formatCurrencyMWK(c.total)}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
           </div>
 

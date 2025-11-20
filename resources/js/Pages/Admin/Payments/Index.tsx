@@ -158,10 +158,21 @@ export default function PaymentsIndex({
     router.post(route('admin.payments.toggle'), { client_id: clientId, year: selectedYear, month }, { preserveScroll: true });
   };
 
-  // Normalize clients payload for resilience
+  // Normalize clients payload for resilience (supports Laravel paginator top-level keys or meta object)
   const defaultMeta: PaginationMeta = { current_page: 1, last_page: 1, per_page: 20, total: 0, from: 0, to: 0 };
-  const clientData: Client[] = Array.isArray(clients) ? (clients as unknown as Client[]) : (clients?.data ?? []);
-  const meta: PaginationMeta = Array.isArray(clients) ? defaultMeta : (clients?.meta ?? defaultMeta);
+  const rawClients: any = clients as any;
+  const clientData: Client[] = Array.isArray(rawClients) ? (rawClients as unknown as Client[]) : (rawClients?.data ?? []);
+  const metaFromTop: PaginationMeta | null = rawClients && typeof rawClients === 'object' && !Array.isArray(rawClients) && (rawClients.current_page || rawClients.last_page || rawClients.total)
+    ? {
+        current_page: Number(rawClients.current_page ?? 1),
+        last_page: Number(rawClients.last_page ?? 1),
+        per_page: Number(rawClients.per_page ?? filters.per_page ?? 20),
+        total: Number(rawClients.total ?? clientData.length ?? 0),
+        from: Number(rawClients.from ?? ((clientData.length > 0 && rawClients.current_page && rawClients.per_page) ? ((Number(rawClients.current_page) - 1) * Number(rawClients.per_page) + 1) : 0)),
+        to: Number(rawClients.to ?? ((rawClients.from && clientData.length) ? (Number(rawClients.from) + clientData.length - 1) : (clientData.length || 0))),
+      }
+    : null;
+  const meta: PaginationMeta = Array.isArray(rawClients) ? defaultMeta : (rawClients?.meta ?? metaFromTop ?? defaultMeta);
 
   // Debounce search input
   useEffect(() => {

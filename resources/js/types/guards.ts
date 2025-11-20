@@ -11,6 +11,8 @@ export interface GuardFormData {
     emergency_contact_phone: string;
     supervisor_id: string;
     hire_date: string;
+    guard_type: 'permanent' | 'standby' | 'reliever';
     notes: string;
-    status: 'active' | 'inactive' | 'suspended' | 'terminated';
+    status: 'active' | 'inactive' | 'suspended';
+    client_id?: string;
 }

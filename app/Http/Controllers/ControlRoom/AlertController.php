@@ -28,7 +28,7 @@ class AlertController extends Controller
             'acknowledged_at' => now(),
         ]);
 
-        return back()->with('success', 'Alert acknowledged successfully.');
+        return back()->withSuccess('Alert acknowledged successfully.');
     }
 
     public function resolve(Request $request, Alert $alert)
@@ -39,7 +39,7 @@ class AlertController extends Controller
             'resolved_at' => now(),
         ]);
 
-        return back()->with('success', 'Alert resolved successfully.');
+        return back()->withSuccess('Alert resolved successfully.');
     }
 
     public function sendEmergency(Request $request)
@@ -66,6 +66,6 @@ class AlertController extends Controller
         // Here you would typically send notifications via SMS, email, push notifications, etc.
         // For now, we'll just create the alert record
 
-        return back()->with('success', 'Emergency alert sent successfully.');
+        return back()->withSuccess('Emergency alert sent successfully.');
     }
 }

@@ -27,7 +27,11 @@ Route::middleware(['auth', 'role:admin|super_admin|finance_officer|accountant|fi
             ->name('expenses.reject')
             ->middleware('can:manage,expense');
 
-        // Invoice Management
+        // Invoice Management (custom endpoints must come BEFORE the resource route)
+        Route::get('invoices/next-number', [\App\Http\Controllers\Finance\InvoiceController::class, 'nextNumber'])
+            ->name('invoices.next-number');
+        Route::get('invoices/service-line-items', [\App\Http\Controllers\Finance\InvoiceController::class, 'serviceLineItems'])
+            ->name('invoices.service-line-items');
         Route::resource('invoices', \App\Http\Controllers\Finance\InvoiceController::class);
         Route::post('invoices/{invoice}/send', [\App\Http\Controllers\Finance\InvoiceController::class, 'send'])
             ->name('invoices.send');

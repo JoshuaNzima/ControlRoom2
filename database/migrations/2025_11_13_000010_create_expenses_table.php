@@ -15,7 +15,7 @@ return new class extends Migration
             $table->string('description')->nullable();
             $table->dateTime('expense_date');
             $table->foreignId('user_id')->constrained();
-            $table->foreignId('account_id')->nullable()->constrained('accounts')->nullOnDelete();
+            $table->unsignedBigInteger('account_id')->nullable();
             $table->string('payment_method')->default('cash'); // cash, card, transfer, check
             $table->text('notes')->nullable();
             $table->enum('status', ['pending', 'approved', 'rejected'])->default('pending');

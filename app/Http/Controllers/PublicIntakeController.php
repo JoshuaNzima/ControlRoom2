@@ -4,7 +4,10 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Notification;
 use App\Models\PublicIntake;
+use App\Models\User;
+use App\Notifications\NewPublicIntakeNotification;
 
 class PublicIntakeController extends Controller
 {
@@ -20,6 +23,7 @@ class PublicIntakeController extends Controller
             'title' => 'nullable|string|max:255',
             'description' => 'required|string',
             'attachments.*' => 'file|max:5120',
+            'website' => 'nullable|string|max:0',
         ];
 
         $typeSpecific = [];
@@ -76,7 +80,12 @@ class PublicIntakeController extends Controller
             $payload['category'] = $validated['down_type'];
         }
 
-        PublicIntake::create($payload);
+        $intake = PublicIntake::create($payload);
+
+        $targets = User::role(['control_room_operator','operations_officer','admin','super_admin'])->get();
+        if ($targets->count() > 0) {
+            Notification::send($targets, new NewPublicIntakeNotification($intake));
+        }
 
         return back()->with('success', 'Thank you. Your submission has been received. Our team will review and respond shortly.');
     }

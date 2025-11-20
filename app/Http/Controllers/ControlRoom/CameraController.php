@@ -50,7 +50,7 @@ class CameraController extends Controller
         ]);
 
         return redirect()->route('control-room.cameras.show', $camera)
-            ->with('success', 'Camera added successfully.');
+            ->withSuccess('Camera added successfully.');
     }
 
     public function show(Camera $camera)
@@ -94,7 +94,7 @@ class CameraController extends Controller
         $camera->update($validated);
 
         return redirect()->route('control-room.cameras.show', $camera)
-            ->with('success', 'Camera updated successfully.');
+            ->withSuccess('Camera updated successfully.');
     }
 
     public function destroy(Camera $camera)
@@ -102,7 +102,7 @@ class CameraController extends Controller
         $camera->delete();
 
         return redirect()->route('control-room.cameras.index')
-            ->with('success', 'Camera deleted successfully.');
+            ->withSuccess('Camera deleted successfully.');
     }
 
     public function getRecordings(Camera $camera)
@@ -136,7 +136,7 @@ class CameraController extends Controller
             'acknowledged_at' => now(),
         ]);
 
-        return back()->with('success', 'Alert acknowledged successfully.');
+        return back()->withSuccess('Alert acknowledged successfully.');
     }
 
     public function resolveAlert(Request $request, Camera $camera, $alertId)
@@ -149,7 +149,7 @@ class CameraController extends Controller
             'resolved_at' => now(),
         ]);
 
-        return back()->with('success', 'Alert resolved successfully.');
+        return back()->withSuccess('Alert resolved successfully.');
     }
 
     public function testConnection(Camera $camera)
@@ -163,9 +163,7 @@ class CameraController extends Controller
         ]);
 
         $message = $isConnected ? 'Camera connection successful.' : 'Camera connection failed.';
-        $type = $isConnected ? 'success' : 'error';
-
-        return back()->with($type, $message);
+        return $isConnected ? back()->withSuccess($message) : back()->withError($message);
     }
 
     public function restart(Camera $camera)
@@ -179,7 +177,7 @@ class CameraController extends Controller
         // In a real implementation, you would send a restart command to the camera
         // For now, we'll simulate it by updating the status back to active after a delay
         
-        return back()->with('success', 'Camera restart initiated.');
+        return back()->withSuccess('Camera restart initiated.');
     }
 
     private function pingCamera($ip, $port)

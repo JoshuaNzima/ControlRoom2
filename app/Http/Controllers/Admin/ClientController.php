@@ -129,7 +129,7 @@ class ClientController extends Controller
         $client->sites()->create($siteData);
 
         return redirect()->route('admin.clients.index')
-            ->with('success', 'Client created successfully.');
+            ->withSuccess('Client created successfully.');
     }
 
     public function show(Client $client)
@@ -216,7 +216,7 @@ class ClientController extends Controller
         }
 
         return redirect()->route('admin.clients.index')
-            ->with('success', 'Client updated successfully.');
+            ->withSuccess('Client updated successfully.');
     }
 
     // Update just the services/pivot for a client (custom prices)
@@ -239,7 +239,7 @@ class ClientController extends Controller
 
         $client->services()->sync($sync);
 
-        return redirect()->back()->with('success', 'Client services updated');
+        return redirect()->back()->withSuccess('Client services updated');
     }
 
     public function destroy(Client $client)
@@ -247,7 +247,7 @@ class ClientController extends Controller
         $client->delete();
 
         return redirect()->route('clients.index')
-            ->with('success', 'Client deleted successfully.');
+            ->withSuccess('Client deleted successfully.');
     }
 
     // Site management
@@ -282,7 +282,7 @@ class ClientController extends Controller
 
         // Fallback redirect to index (standalone show page removed)
         return redirect()->route('admin.clients.index')
-            ->with('success', 'Site added successfully.');
+            ->withSuccess('Site added successfully.');
     }
 
     public function bulkImport(Request $request)
@@ -353,10 +353,9 @@ class ClientController extends Controller
 
                 DB::commit();
 
-                return back()->with([
-                    'success' => "Successfully imported {$results['success']} clients. Failed: {$results['failed']}",
-                    'import_results' => $results,
-                ]);
+                return back()
+                    ->with('import_results', $results)
+                    ->withSuccess("Successfully imported {$results['success']} clients. Failed: {$results['failed']}");
             } catch (\Exception $e) {
                 DB::rollBack();
                 throw $e;

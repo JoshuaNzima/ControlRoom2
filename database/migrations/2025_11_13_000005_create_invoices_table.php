@@ -22,13 +22,12 @@ return new class extends Migration
             $table->dateTime('invoice_date');
             $table->dateTime('due_date');
             $table->text('description')->nullable();
-            $table->enum('status', ['draft', 'sent', 'paid', 'overdue', 'cancelled'])->default('draft');
             $table->text('notes')->nullable();
+            $table->enum('status', ['draft', 'sent', 'paid', 'overdue', 'cancelled'])->default('draft');
             $table->timestamps();
-            $table->index('invoice_number');
-            $table->index('status');
             $table->index('invoice_date');
             $table->index('due_date');
+            $table->index('status');
         });
     }
 

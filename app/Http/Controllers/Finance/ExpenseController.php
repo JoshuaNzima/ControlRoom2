@@ -111,7 +111,7 @@ class ExpenseController extends Controller
         ]);
 
         return redirect()->route('finance.expenses.show', $expense)
-            ->with('success', 'Expense created successfully. Awaiting approval.');
+            ->withSuccess('Expense created successfully. Awaiting approval.');
     }
 
     /**
@@ -174,7 +174,7 @@ class ExpenseController extends Controller
         $expense->update($validated);
 
         return redirect()->route('finance.expenses.show', $expense)
-            ->with('success', 'Expense updated successfully.');
+            ->withSuccess('Expense updated successfully.');
     }
 
     /**
@@ -187,7 +187,7 @@ class ExpenseController extends Controller
         $expense->delete();
 
         return redirect()->route('finance.expenses.index')
-            ->with('success', 'Expense deleted successfully.');
+            ->withSuccess('Expense deleted successfully.');
     }
 
     /**
@@ -199,7 +199,7 @@ class ExpenseController extends Controller
 
         $expense->update(['status' => 'approved']);
 
-        return back()->with('success', 'Expense approved successfully.');
+        return back()->withSuccess('Expense approved successfully.');
     }
 
     /**
@@ -218,6 +218,6 @@ class ExpenseController extends Controller
             'notes' => ($expense->notes ? $expense->notes . "\n" : '') . "Rejected: {$request->reason}",
         ]);
 
-        return back()->with('success', 'Expense rejected.');
+        return back()->withSuccess('Expense rejected.');
     }
 }

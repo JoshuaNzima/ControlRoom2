@@ -96,7 +96,7 @@ class BudgetController extends Controller
         ]);
 
         return redirect()->route('finance.budgets.show', $budget)
-            ->with('success', 'Budget created successfully.');
+            ->withSuccess('Budget created successfully.');
     }
 
     /**
@@ -161,7 +161,7 @@ class BudgetController extends Controller
         $budget->update($validated);
 
         return redirect()->route('finance.budgets.show', $budget)
-            ->with('success', 'Budget updated successfully.');
+            ->withSuccess('Budget updated successfully.');
     }
 
     /**
@@ -174,6 +174,6 @@ class BudgetController extends Controller
         $budget->delete();
 
         return redirect()->route('finance.budgets.index')
-            ->with('success', 'Budget deleted successfully.');
+            ->withSuccess('Budget deleted successfully.');
     }
 }

@@ -346,9 +346,9 @@ export default function ExpenseIndex({ expenses, totals, filters }: Props) {
           </div>
 
           {/* Pagination */}
-          {expenses.meta.last_page > 1 && (
+          {expenses.meta && expenses.meta.last_page > 1 && (
             <div className="flex justify-center gap-2">
-              {expenses.links.map((link: any, index: number) => (
+              {expenses.links && expenses.links.map((link: any, index: number) => (
                 <Link
                   key={index}
                   href={link.url}

@@ -42,6 +42,7 @@ interface Props {
 }
 
 export default function ShowInvoice({ invoice }: Props) {
+  const [channels, setChannels] = React.useState<{ email: boolean; whatsapp: boolean }>({ email: true, whatsapp: true });
   const getStatusColor = (status: string) => {
     const colors: Record<string, { bg: string; text: string }> = {
       draft: { bg: 'bg-gray-100', text: 'text-gray-800' },
@@ -66,6 +67,13 @@ export default function ShowInvoice({ invoice }: Props) {
     if (window.confirm(`Are you sure you want to ${action} this invoice?`)) {
       router.post(route(`finance.invoices.${action}`, invoice.id));
     }
+  };
+
+  const handleSend = () => {
+    const selected = Object.entries(channels)
+      .filter(([, v]) => v)
+      .map(([k]) => k);
+    router.post(route('finance.invoices.send', invoice.id), { channels: selected });
   };
 
   return (
@@ -113,8 +121,11 @@ export default function ShowInvoice({ invoice }: Props) {
               </div>
             </div>
 
-            {/* Content */}
             <div className="p-8 space-y-8">
+              <div className="flex items-center gap-3 pb-4 border-b">
+                <img src="/images/coin-logo.png" alt="Logo" className="h-9 w-auto" onError={(e) => ((e.currentTarget.style.display='none'))} />
+                <div className="text-emerald-700 font-semibold text-lg">Coin Security</div>
+              </div>
               {/* Invoice and Client Details */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* Invoice Details */}
@@ -256,7 +267,6 @@ export default function ShowInvoice({ invoice }: Props) {
               )}
             </div>
 
-            {/* Actions */}
             <div className="bg-gradient-to-r from-gray-50 to-gray-100 px-8 py-6 border-t border-gray-200">
               <div className="flex flex-wrap gap-3 justify-center">
                 {invoice.status === 'draft' && (
@@ -267,12 +277,22 @@ export default function ShowInvoice({ invoice }: Props) {
                     >
                       Edit Invoice
                     </Link>
-                    <button
-                      onClick={() => handleStatusChange('send')}
-                      className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all font-medium shadow-md hover:shadow-lg"
-                    >
-                      Send Invoice
-                    </button>
+                    <div className="flex items-center gap-3">
+                      <label className="inline-flex items-center gap-2 text-sm">
+                        <input type="checkbox" checked={channels.email} onChange={(e) => setChannels((c) => ({ ...c, email: e.target.checked }))} />
+                        Email
+                      </label>
+                      <label className="inline-flex items-center gap-2 text-sm">
+                        <input type="checkbox" checked={channels.whatsapp} onChange={(e) => setChannels((c) => ({ ...c, whatsapp: e.target.checked }))} />
+                        WhatsApp
+                      </label>
+                      <button
+                        onClick={handleSend}
+                        className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all font-medium shadow-md hover:shadow-lg"
+                      >
+                        Send Selected
+                      </button>
+                    </div>
                   </>
                 )}
 

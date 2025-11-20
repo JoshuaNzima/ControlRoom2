@@ -22,14 +22,20 @@ export default function FinanceLayout({ title, children, user }: Props) {
   const [logoOk, setLogoOk] = React.useState<boolean>(true);
   const { theme, toggle } = useTheme();
 
-  const isCurrent = (href: string) => window.location.pathname === href;
+  const safeRoute = (name: string, fallback: string) => {
+    try { return route(name) as unknown as string; } catch { return fallback; }
+  };
+  const normalizePath = (href: string) => {
+    try { return new URL(href, window.location.origin).pathname; } catch { return href; }
+  };
+  const isCurrent = (href: string) => window.location.pathname === normalizePath(href);
 
   const financeLinks: ModuleNavItem[] = [
-    { name: 'Dashboard', href: route('finance.dashboard'), icon: <IconMapper name="home" className="h-6 w-6" />, current: isCurrent(route('finance.dashboard')) },
-    { name: 'Invoices', href: route('finance.invoices.index'), icon: <IconMapper name="file-text" className="h-6 w-6" />, current: isCurrent(route('finance.invoices.index')) },
-    { name: 'Expenses', href: route('finance.expenses.index'), icon: <IconMapper name="trending-down" className="h-6 w-6" />, current: isCurrent(route('finance.expenses.index')) },
-    { name: 'Budgets', href: route('finance.budgets.index'), icon: <IconMapper name="pie-chart" className="h-6 w-6" />, current: isCurrent(route('finance.budgets.index')) },
-    { name: 'Approvals', href: route('finance.approvals.index'), icon: <IconMapper name="check-circle" className="h-6 w-6" />, current: isCurrent(route('finance.approvals.index')) },
+    { name: 'Dashboard', href: safeRoute('finance.dashboard', '/finance'), icon: <IconMapper name="home" className="h-6 w-6" />, current: isCurrent(safeRoute('finance.dashboard', '/finance')) },
+    { name: 'Invoices', href: safeRoute('finance.invoices.index', '/finance/invoices'), icon: <IconMapper name="file-text" className="h-6 w-6" />, current: isCurrent(safeRoute('finance.invoices.index', '/finance/invoices')) },
+    { name: 'Expenses', href: safeRoute('finance.expenses.index', '/finance/expenses'), icon: <IconMapper name="trending-down" className="h-6 w-6" />, current: isCurrent(safeRoute('finance.expenses.index', '/finance/expenses')) },
+    { name: 'Budgets', href: safeRoute('finance.budgets.index', '/finance/budgets'), icon: <IconMapper name="pie-chart" className="h-6 w-6" />, current: isCurrent(safeRoute('finance.budgets.index', '/finance/budgets')) },
+    { name: 'Approvals', href: safeRoute('finance.approvals.index', '/finance/approvals'), icon: <IconMapper name="check-circle" className="h-6 w-6" />, current: isCurrent(safeRoute('finance.approvals.index', '/finance/approvals')) },
   ];
 
   const handleLogout = (e: React.FormEvent) => {
@@ -38,18 +44,18 @@ export default function FinanceLayout({ title, children, user }: Props) {
   };
 
   return (
-    <div className="min-h-screen bg-emerald-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-red-50 dark:bg-gray-900">
       <Head title={title} />
 
       {/* Sidebar overlay for mobile */}
       <div
-        className={`fixed inset-0 bg-emerald-900 bg-opacity-50 z-40 md:hidden ${sidebarOpen ? 'block' : 'hidden'}`}
+        className={`fixed inset-0 bg-red-900 bg-opacity-50 z-40 md:hidden ${sidebarOpen ? 'block' : 'hidden'}`}
         onClick={() => setSidebarOpen(false)}
       />
 
       {/* Sidebar */}
       <div
-        className={`fixed top-0 left-0 bottom-0 flex flex-col w-64 bg-emerald-900 dark:bg-gray-950 text-white transform ${
+        className={`fixed top-0 left-0 bottom-0 flex flex-col w-64 bg-red-900 dark:bg-gray-950 text-white transform ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         } md:translate-x-0 transition-transform duration-300 ease-in-out z-50`}
       >
@@ -75,8 +81,8 @@ export default function FinanceLayout({ title, children, user }: Props) {
                 href={item.href}
                 className={`group flex items-center px-2 py-3 text-sm font-medium rounded-md transition-colors ${
                   item.current
-                    ? 'bg-emerald-700 text-white'
-                    : 'text-emerald-100 hover:bg-emerald-700 hover:text-white'
+                    ? 'bg-red-800 text-white'
+                    : 'text-red-100 hover:bg-red-800 hover:text-white'
                 }`}
               >
                 {item.icon}
@@ -86,7 +92,7 @@ export default function FinanceLayout({ title, children, user }: Props) {
           </nav>
         </div>
 
-        <div className="flex-shrink-0 flex border-t border-emerald-700 p-4">
+        <div className="flex-shrink-0 flex border-t border-red-800 p-4">
           <div className="flex-shrink-0">
             <div className="flex items-center">
               <div className="text-sm font-medium text-white max-w-xs truncate">

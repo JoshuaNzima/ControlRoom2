@@ -28,7 +28,7 @@ class ServiceController extends Controller
 
         Service::create($validated);
 
-        return redirect()->back()->with('success', 'Service created');
+        return redirect()->back()->withSuccess('Service created');
     }
 
     public function update(Request $request, Service $service)
@@ -41,12 +41,12 @@ class ServiceController extends Controller
         ]);
 
         $service->update($validated);
-        return redirect()->back()->with('success', 'Service updated');
+        return redirect()->back()->withSuccess('Service updated');
     }
 
     public function destroy(Service $service)
     {
         $service->delete();
-        return redirect()->back()->with('success', 'Service deleted');
+        return redirect()->back()->withSuccess('Service deleted');
     }
 }

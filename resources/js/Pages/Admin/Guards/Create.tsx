@@ -9,14 +9,17 @@ interface Supervisor {
   employee_id: string;
 }
 
+interface ClientOption { id: number; name: string }
+
 interface CreateGuardProps {
   supervisors: Supervisor[];
+  clients: ClientOption[];
   can: {
     assign_supervisor: boolean;
   };
 }
 
-export default function CreateGuard({ supervisors, can }: CreateGuardProps) {
+export default function CreateGuard({ supervisors, clients, can }: CreateGuardProps) {
   const { data, setData, post, processing, errors } = useForm<GuardFormData>({
     employee_id: '',
     name: '',
@@ -30,9 +33,11 @@ export default function CreateGuard({ supervisors, can }: CreateGuardProps) {
     emergency_contact_phone: '',
     supervisor_id: '',
     hire_date: new Date().toISOString().split('T')[0],
+    guard_type: 'permanent',
     // hourly_rate: '',
     notes: '',
     status: 'active',
+    client_id: '',
   });
   const [photoFile, setPhotoFile] = React.useState<File | null>(null);
 
@@ -69,14 +74,13 @@ export default function CreateGuard({ supervisors, can }: CreateGuardProps) {
               {/* Employee ID */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Employee ID *
+                  Employee ID
                 </label>
                 <input
                   type="text"
                   value={data.employee_id}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => setData('employee_id', e.target.value)}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
-                  required
                 />
                 {errors.employee_id && <p className="text-red-600 text-sm mt-1">{errors.employee_id}</p>}
               </div>
@@ -191,45 +195,62 @@ export default function CreateGuard({ supervisors, can }: CreateGuardProps) {
               {/* Hire Date */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Hire Date *
+                  Hire Date
                 </label>
                 <input
                   type="date"
                   value={data.hire_date}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => setData('hire_date', e.target.value)}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
-                  required
                 />
               </div>
 
-              {/* Hourly Rate
+              {/* Guard Type */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Hourly Rate
+                  Guard Type
                 </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={data.hourly_rate}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setData('hourly_rate', e.target.value)}
+                <select
+                  value={data.guard_type}
+                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setData('guard_type', e.target.value as any)}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
-                />
-              </div> */}
+                >
+                  <option value="permanent">Permanent</option>
+                  <option value="standby">Standby</option>
+                  <option value="reliever">Reliever</option>
+                </select>
+              </div>
 
               {/* Status */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Status *
+                  Status
                 </label>
                 <select
                   value={data.status}
                   onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setData('status', e.target.value as GuardFormData['status'])}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
-                  required
                 >
                   <option value="active">Active</option>
                   <option value="inactive">Inactive</option>
                   <option value="suspended">Suspended</option>
+                </select>
+              </div>
+
+              {/* Assign to Client (optional) */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Assign to Client (optional)
+                </label>
+                <select
+                  value={data.client_id as any}
+                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setData('client_id', e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                >
+                  <option value="">No Client</option>
+                  {clients.map((c) => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
                 </select>
               </div>
             </div>

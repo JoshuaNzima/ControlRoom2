@@ -48,7 +48,7 @@ class ApprovalController extends Controller
 
         $approval = Approval::create(array_merge($data, ['status' => 'pending']));
 
-        return redirect()->route('finance.approvals.index')->with('success', 'Approval created');
+        return redirect()->route('finance.approvals.index')->withSuccess('Approval created');
     }
 
     public function approve(Approval $approval, Request $request)
@@ -69,7 +69,7 @@ class ApprovalController extends Controller
             }
         }
 
-        return back()->with('success', 'Approved');
+        return back()->withSuccess('Approved');
     }
 
     public function reject(Approval $approval, Request $request)
@@ -87,6 +87,6 @@ class ApprovalController extends Controller
             $expense->update(['status' => 'rejected']);
         }
 
-        return back()->with('success', 'Rejected');
+        return back()->withSuccess('Rejected');
     }
 }

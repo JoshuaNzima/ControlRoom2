@@ -77,6 +77,14 @@ Route::middleware(['auth', 'role:admin,super_admin'])
         Route::get('/payments', [\App\Http\Controllers\Admin\PaymentController::class, 'index'])->name('payments.index');
         Route::post('/payments/toggle', [\App\Http\Controllers\Admin\PaymentController::class, 'toggle'])->name('payments.toggle');
 
+        // Approvals (admin managing finance approvals)
+        Route::prefix('approvals')->name('approvals.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Finance\ApprovalController::class, 'index'])->name('index');
+            Route::get('/{approval}', [\App\Http\Controllers\Finance\ApprovalController::class, 'show'])->name('show');
+            Route::post('/{approval}/approve', [\App\Http\Controllers\Finance\ApprovalController::class, 'approve'])->name('approve');
+            Route::post('/{approval}/reject', [\App\Http\Controllers\Finance\ApprovalController::class, 'reject'])->name('reject');
+        });
+
         // Downs (admin can view same control-room UI for now)
         Route::get('/downs', [\App\Http\Controllers\ControlRoom\DownController::class, 'index'])->name('downs.index');
         Route::post('/downs', [\App\Http\Controllers\ControlRoom\DownController::class, 'store'])->name('downs.store');

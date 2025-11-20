@@ -216,9 +216,9 @@ export default function BudgetIndex({ budgets, summary, filters, years }: Props)
           )}
 
           {/* Pagination */}
-          {budgets.meta.last_page > 1 && (
+          {budgets.meta && budgets.meta.last_page > 1 && (
             <div className="flex justify-center gap-2">
-              {budgets.links.map((link: any, index: number) => (
+              {budgets.links && budgets.links.map((link: any, index: number) => (
                 <Link
                   key={index}
                   href={link.url}

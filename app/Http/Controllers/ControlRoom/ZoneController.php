@@ -58,7 +58,7 @@ class ZoneController extends Controller
         }
 
         return redirect()->route('control-room.zones.index')
-            ->with('success', 'Zone created successfully');
+            ->withSuccess('Zone created successfully');
     }
 
     public function update(UpdateZoneRequest $request, Zone $zone)
@@ -80,14 +80,14 @@ class ZoneController extends Controller
         }
 
         return redirect()->route('control-room.zones.index')
-            ->with('success', 'Zone updated successfully');
+            ->withSuccess('Zone updated successfully');
     }
 
     public function destroy(Zone $zone)
     {
         $zone->delete();
         return redirect()->route('control-room.zones.index')
-            ->with('success', 'Zone deleted successfully');
+            ->withSuccess('Zone deleted successfully');
     }
 
     public function assign(Zone $zone)
@@ -142,7 +142,7 @@ class ZoneController extends Controller
         // Ensure site belongs to the zone
         $siteBelongs = $zone->sites()->where('id', $data['client_site_id'])->exists();
         if (!$siteBelongs) {
-            return back()->with('error', 'Selected site does not belong to this zone.');
+            return back()->withError('Selected site does not belong to this zone.');
         }
 
         \App\Models\Guards\GuardAssignment::create([
@@ -153,14 +153,14 @@ class ZoneController extends Controller
             'is_active' => true,
         ]);
 
-        return back()->with('success', 'Guard assigned to site.');
+        return back()->withSuccess('Guard assigned to site.');
     }
 
     public function unassign(Zone $zone, \App\Models\Guards\GuardAssignment $assignment)
     {
         // Only allow if assignment site is in this zone
         if ($assignment->clientSite?->zone_id !== $zone->id) {
-            return back()->with('error', 'Assignment not in this zone.');
+            return back()->withError('Assignment not in this zone.');
         }
 
         $assignment->update([
@@ -168,7 +168,7 @@ class ZoneController extends Controller
             'end_date' => now()->startOfDay(),
         ]);
 
-        return back()->with('success', 'Guard unassigned from site.');
+        return back()->withSuccess('Guard unassigned from site.');
     }
 }
 

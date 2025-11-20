@@ -10,6 +10,8 @@ use Illuminate\Filesystem\Filesystem;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use PDO;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Session;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -38,6 +40,32 @@ class AppServiceProvider extends ServiceProvider
         Vite::prefetch(concurrency: 3);
         App::setLocale(config('app.locale'));
         Carbon::setLocale(config('app.locale'));
+
+        try {
+            if (method_exists(RedirectResponse::class, 'macro')) {
+                RedirectResponse::macro('withToast', function (string $message, string $type = 'info') {
+                    $toasts = Session::get('toasts', []);
+                    if (!is_array($toasts)) { $toasts = []; }
+                    $toasts[] = ['id' => uniqid('t', true), 'message' => $message, 'type' => $type];
+                    Session::flash('toasts', $toasts);
+                    return $this;
+                });
+                RedirectResponse::macro('withSuccess', function (string $message) {
+                    return $this->withToast($message, 'success');
+                });
+                RedirectResponse::macro('withError', function (string $message) {
+                    return $this->withToast($message, 'error');
+                });
+                RedirectResponse::macro('withInfo', function (string $message) {
+                    return $this->withToast($message, 'info');
+                });
+                RedirectResponse::macro('withWarning', function (string $message) {
+                    return $this->withToast($message, 'warning');
+                });
+            }
+        } catch (\Throwable $e) {
+            // Non-fatal if macros fail to register
+        }
 
         // Map legacy polymorphic short type names (e.g. 'guard') to FQCNs so
         // Eloquent's morphTo can resolve older DB rows that stored the short

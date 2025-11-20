@@ -24,6 +24,10 @@ return new class extends Migration
             $table->string('status')->default('open');
             $table->string('ip_address')->nullable();
             $table->text('user_agent')->nullable();
+            $table->enum('converted_type', ['ticket', 'down', 'incident'])->nullable();
+            $table->unsignedBigInteger('converted_id')->nullable();
+            $table->foreignId('converted_by')->nullable()->constrained('users');
+            $table->timestamp('converted_at')->nullable();
             $table->timestamps();
         });
     }

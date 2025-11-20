@@ -38,7 +38,7 @@ class DownController extends Controller
             'status' => 'open',
         ]);
 
-        return back()->with('success', 'Down reported.');
+        return back()->withSuccess('Down reported.');
     }
 
     public function escalate(Down $down)
@@ -53,7 +53,7 @@ class DownController extends Controller
 
         // TODO: notifications to stakeholders
 
-        return back()->with('success', 'Down escalated.');
+        return back()->withSuccess('Down escalated.');
     }
 
     public function resolve(Request $request, Down $down)
@@ -69,7 +69,7 @@ class DownController extends Controller
             ...$validated,
         ]);
 
-        return back()->with('success', 'Down marked as resolved.');
+        return back()->withSuccess('Down marked as resolved.');
     }
 
     public function show(Down $down)
@@ -99,14 +99,14 @@ class DownController extends Controller
 
         $down->update($validated);
 
-        return redirect()->route('control-room.downs.index')->with('success', 'Down updated successfully.');
+        return redirect()->route('control-room.downs.index')->withSuccess('Down updated successfully.');
     }
 
     public function destroy(Down $down)
     {
         $down->delete();
 
-        return redirect()->route('control-room.downs.index')->with('success', 'Down deleted successfully.');
+        return redirect()->route('control-room.downs.index')->withSuccess('Down deleted successfully.');
     }
 }
 

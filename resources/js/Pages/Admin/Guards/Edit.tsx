@@ -31,6 +31,7 @@ export default function EditGuard({ guard, supervisors, can }: EditGuardProps) {
     emergency_contact_phone: guard.emergency_contact_phone || '',
     supervisor_id: guard.supervisor_id?.toString() || '',
     hire_date: guard.hire_date || '',
+    guard_type: guard.guard_type || 'permanent',
     notes: guard.notes || '',
     status: guard.status || 'active',
   });

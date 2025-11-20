@@ -36,6 +36,7 @@ export default function ControlRoomLayout({ title, children, user }: Props) {
   { name: 'Tickets', href: route('control-room.tickets.index'), icon: <IconMapper name="briefcase" className="h-6 w-6" />, current: false },
   { name: 'Flags', href: route('control-room.flags.index'), icon: <IconMapper name="alert-triangle" className="h-6 w-6" />, current: false },
   { name: 'Downs', href: route('control-room.downs.index'), icon: <IconMapper name="activity" className="h-6 w-6" />, current: false },
+  { name: 'Public Intake Triage', href: route('control-room.triage.intakes.index'), icon: <IconMapper name="inbox" className="h-6 w-6" />, current: false },
   ];
 
     const communicationLinks: ModuleNavItem[] = [

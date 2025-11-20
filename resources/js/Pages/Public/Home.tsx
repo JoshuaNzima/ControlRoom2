@@ -19,7 +19,8 @@ export default function Home() {
     priority: 'medium',
     description: '',
     down_type: 'guard_absent',
-    attachments: [] as File[]
+    attachments: [] as File[],
+    website: ''
   });
 
   useEffect(() => {
@@ -227,6 +228,16 @@ export default function Home() {
             </button>
           </div>
           <form onSubmit={submit} className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 md:p-8 space-y-6">
+            <input
+              type="text"
+              name="website"
+              value={data.website}
+              onChange={(e) => setData('website', e.target.value)}
+              className="hidden"
+              tabIndex={-1}
+              autoComplete="off"
+              aria-hidden="true"
+            />
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1">
                 <label className="text-sm font-medium text-gray-700">Your Name</label>

@@ -33,7 +33,7 @@ interface Module {
   is_active: boolean;
   is_core: boolean;
   description: string;
-  icon: React.ReactNode;
+  icon: string;
   category: string;
   route: string;
   order: number;
@@ -305,7 +305,9 @@ const Dashboard: React.FC<SuperAdminDashboardProps> = ({
                     aria-label={`${module.display_name} module card`}
                   >
                     <div className="text-center">
-                      <div className="text-4xl mb-2">{module.icon}</div>
+                      <div className="mb-2 flex items-center justify-center">
+                        <IconMapper name={module.icon || 'Puzzle'} size={36} />
+                      </div>
                       <h3 className="font-bold text-gray-900 text-lg mb-1">{module.display_name}</h3>
                       <p className="text-xs text-gray-500 mb-2">v{module.version}</p>
                       <p className="text-xs text-gray-600">{module.description}</p>
@@ -325,6 +327,20 @@ const Dashboard: React.FC<SuperAdminDashboardProps> = ({
                       >
                         {module.is_active ? 'Disable' : 'Enable'}
                       </button>
+                      {(() => {
+                        if (!module.is_active || !module.route) return null;
+                        let href = '#';
+                        try { href = route(module.route) as unknown as string; } catch (e) { href = '#'; }
+                        if (href === '#') return null;
+                        return (
+                          <Link
+                            href={href}
+                            className="ml-3 inline-flex items-center px-3 py-2 rounded-lg text-sm font-medium border border-gray-200 hover:bg-gray-50"
+                          >
+                            Open
+                          </Link>
+                        );
+                      })()}
                     </div>
                   </div>
                 ))}

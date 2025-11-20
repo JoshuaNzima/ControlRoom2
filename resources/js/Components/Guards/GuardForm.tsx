@@ -37,6 +37,7 @@ export default function GuardForm({
     emergency_contact_phone: initialData.emergency_contact_phone || '',
     supervisor_id: initialData.supervisor_id || '',
     hire_date: initialData.hire_date || '',
+    guard_type: (initialData as any).guard_type || 'permanent',
     notes: initialData.notes || '',
     status: initialData.status || 'active',
   });
@@ -50,13 +51,12 @@ export default function GuardForm({
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Employee ID *</label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Employee ID</label>
           <input
             type="text"
             value={data.employee_id}
             onChange={(e) => setData('employee_id', e.target.value)}
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
-            required
           />
           {errors.employee_id && <p className="text-red-600 text-sm mt-1">{errors.employee_id}</p>}
         </div>
@@ -196,6 +196,20 @@ export default function GuardForm({
         </div>
 
         <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Guard Type</label>
+          <select
+            value={data.guard_type}
+            onChange={(e) => setData('guard_type', e.target.value as any)}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+          >
+            <option value="permanent">Permanent</option>
+            <option value="standby">Standby</option>
+            <option value="reliever">Reliever</option>
+          </select>
+          {errors.guard_type && <p className="text-red-600 text-sm mt-1">{errors.guard_type}</p>}
+        </div>
+
+        <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
           <select
             value={data.status}
@@ -203,8 +217,8 @@ export default function GuardForm({
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
           >
             <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
             <option value="suspended">Suspended</option>
-            <option value="terminated">Terminated</option>
           </select>
           {errors.status && <p className="text-red-600 text-sm mt-1">{errors.status}</p>}
         </div>

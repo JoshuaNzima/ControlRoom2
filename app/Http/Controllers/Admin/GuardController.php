@@ -4,6 +4,9 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Guards\Guard;
+use App\Models\Guards\GuardAssignment;
+use App\Models\Guards\ClientSite;
+use App\Models\Guards\Client;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -62,8 +65,11 @@ class GuardController extends Controller
                 ->get();
         }
 
+        $clients = Client::orderBy('name')->get(['id','name']);
+
         return Inertia::render('Admin/Guards/Create', [
             'supervisors' => $supervisors,
+            'clients' => $clients,
             'can' => [
                 'assign_supervisor' => $canAssignSupervisor,
             ],
@@ -73,7 +79,7 @@ class GuardController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'employee_id' => 'required|string|unique:guards,employee_id',
+            'employee_id' => 'nullable|string|unique:guards,employee_id',
             'name' => 'required|string|max:255',
             'phone' => 'nullable|string|max:20',
             'email' => 'nullable|email|unique:guards,email',
@@ -84,10 +90,13 @@ class GuardController extends Controller
             'emergency_contact_name' => 'nullable|string|max:255',
             'emergency_contact_phone' => 'nullable|string|max:20',
             'supervisor_id' => 'nullable|exists:users,id',
-            'hire_date' => 'required|date',
+            'hire_date' => 'nullable|date',
+            'guard_type' => 'nullable|in:permanent,standby,reliever',
             'notes' => 'nullable|string',
             'status' => 'required|in:active,inactive,suspended',
             'photo' => 'nullable|image|max:5120',
+            // Optional quick assignment by client only
+            'client_id' => 'nullable|exists:clients,id',
         ]);
 
         if (!auth()->user()->can('assign_guard_supervisor')) {
@@ -98,10 +107,29 @@ class GuardController extends Controller
             $validated['photo'] = $request->file('photo')->store('guards', 'public');
         }
 
-        Guard::create($validated);
+        $guard = Guard::create($validated);
+
+        // Optional quick assignment by client: pick first active site
+        if ($request->filled('client_id')) {
+            $site = ClientSite::where('client_id', $request->input('client_id'))
+                ->orderBy('id')
+                ->first();
+            if ($site) {
+                GuardAssignment::create([
+                    'guard_id' => $guard->id,
+                    'client_site_id' => $site->id,
+                    'assigned_by' => auth()->id(),
+                    'start_date' => now()->toDateString(),
+                    'end_date' => null,
+                    'assignment_type' => 'primary',
+                    'notes' => null,
+                    'is_active' => true,
+                ]);
+            }
+        }
 
         return redirect()->route('admin.guards.index')
-            ->with('success', 'Guard created successfully.');
+            ->withSuccess('Guard created successfully.');
     }
 
     public function edit(Guard $guard)
@@ -132,7 +160,7 @@ class GuardController extends Controller
         $this->authorize('update', $guard);
         
         $rules = [
-            'employee_id' => 'required|string|unique:guards,employee_id,' . $guard->id,
+            'employee_id' => 'nullable|string|unique:guards,employee_id,' . $guard->id,
             'name' => 'required|string|max:255',
             'phone' => 'nullable|string|max:20',
             'email' => 'nullable|email|unique:guards,email,' . $guard->id,
@@ -143,7 +171,8 @@ class GuardController extends Controller
             'emergency_contact_name' => 'nullable|string|max:255',
             'emergency_contact_phone' => 'nullable|string|max:20',
             'supervisor_id' => 'nullable|exists:users,id',
-            'hire_date' => 'required|date',
+            'hire_date' => 'nullable|date',
+            'guard_type' => 'nullable|in:permanent,standby,reliever',
             'notes' => 'nullable|string',
             'status' => 'required|in:active,inactive,suspended',
         ];
@@ -157,7 +186,7 @@ class GuardController extends Controller
         $guard->update($validated);
 
         return redirect()->route('admin.guards.index')
-            ->with('success', 'Guard updated successfully.');
+            ->withSuccess('Guard updated successfully.');
     }
 
     public function destroy(Guard $guard)
@@ -165,6 +194,6 @@ class GuardController extends Controller
         $guard->delete();
 
         return redirect()->route('admin.guards.index')
-            ->with('success', 'Guard deleted successfully.');
+            ->withSuccess('Guard deleted successfully.');
     }
 }

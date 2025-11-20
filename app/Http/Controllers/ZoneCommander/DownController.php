@@ -44,7 +44,7 @@ class DownController extends Controller
 			'escalation_level' => 0,
 		]);
 
-		return back()->with('success', 'Down reported');
+		return back()->withSuccess('Down reported');
 	}
 
 	public function escalate($down)
@@ -54,7 +54,7 @@ class DownController extends Controller
 		$record->increment('escalation_level');
 		$record->status = 'escalated';
 		$record->save();
-		return back()->with('success', 'Down escalated');
+		return back()->withSuccess('Down escalated');
 	}
 
 	public function resolve($down)
@@ -65,8 +65,6 @@ class DownController extends Controller
 		$record->resolved_at = now();
 		$record->resolved_by = Auth::id();
 		$record->save();
-		return back()->with('success', 'Down resolved');
+		return back()->withSuccess('Down resolved');
 	}
 }
-
-

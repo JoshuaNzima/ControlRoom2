@@ -17,11 +17,11 @@ class GuardPermissionSeeder extends Seeder
         ];
 
         foreach ($permissions as $permission) {
-            Permission::findOrCreate($permission);
+            Permission::firstOrCreate(['name' => $permission, 'guard_name' => 'web']);
         }
 
         // Assign to admin role
-        $adminRole = Role::findByName('admin');
+        $adminRole = Role::firstOrCreate(['name' => 'admin', 'guard_name' => 'web']);
         $adminRole->givePermissionTo($permissions);
 
         // Assign to manager role if exists

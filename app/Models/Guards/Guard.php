@@ -32,6 +32,7 @@ class Guard extends Model
         'emergency_contact_name',
         'emergency_contact_phone',
         'status',
+        'guard_type',
         'hire_date',
         'notes',
         'photo',

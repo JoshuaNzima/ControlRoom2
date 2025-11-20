@@ -19,7 +19,8 @@ return new class extends Migration
             $table->text('description')->nullable();
             $table->enum('status', ['active', 'inactive', 'archived'])->default('active');
             $table->timestamps();
-            $table->index(['category', 'fiscal_year', 'fiscal_month']);
+            $table->index('fiscal_year');
+            $table->index('category');
             $table->index('status');
         });
     }

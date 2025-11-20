@@ -53,7 +53,7 @@ class FlagController extends Controller
         ]);
 
         return redirect()->route('control-room.flags.show', $flag)
-            ->with('success', 'Flag created successfully.');
+            ->withSuccess('Flag created successfully.');
     }
 
     public function show(Flag $flag)
@@ -102,7 +102,7 @@ class FlagController extends Controller
         $flag->update($data);
 
         return redirect()->route('control-room.flags.show', $flag)
-            ->with('success', 'Flag updated successfully.');
+            ->withSuccess('Flag updated successfully.');
     }
 
     public function destroy(Flag $flag)
@@ -110,7 +110,7 @@ class FlagController extends Controller
         $flag->delete();
 
         return redirect()->route('control-room.flags.index')
-            ->with('success', 'Flag deleted successfully.');
+            ->withSuccess('Flag deleted successfully.');
     }
 
     public function acknowledge(Request $request, Flag $flag)
@@ -121,7 +121,7 @@ class FlagController extends Controller
             'review_date' => now(),
         ]);
 
-        return back()->with('success', 'Flag acknowledged successfully.');
+        return back()->withSuccess('Flag acknowledged successfully.');
     }
 
     public function resolve(Request $request, Flag $flag)
@@ -132,7 +132,7 @@ class FlagController extends Controller
             'review_date' => now(),
         ]);
 
-        return back()->with('success', 'Flag resolved successfully.');
+        return back()->withSuccess('Flag resolved successfully.');
     }
 
     public function escalate(Request $request, Flag $flag)
@@ -145,6 +145,6 @@ class FlagController extends Controller
             'status' => 'under_review',
         ]);
 
-        return back()->with('success', 'Flag escalated successfully.');
+        return back()->withSuccess('Flag escalated successfully.');
     }
 }

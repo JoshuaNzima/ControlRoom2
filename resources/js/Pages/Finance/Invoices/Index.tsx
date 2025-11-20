@@ -309,9 +309,9 @@ export default function InvoiceIndex({ invoices, summary, filters }: Props) {
           </div>
 
           {/* Pagination */}
-          {invoices.meta.last_page > 1 && (
+          {invoices.meta && invoices.meta.last_page > 1 && (
             <div className="flex justify-center gap-2">
-              {invoices.links.map((link: any, index: number) => (
+              {invoices.links && invoices.links.map((link: any, index: number) => (
                 <Link
                   key={index}
                   href={link.url}

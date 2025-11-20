@@ -11,6 +11,8 @@ import { router } from '@inertiajs/react';
 import { NotificationProvider } from './Providers/NotificationProvider';
 import { ThemeProvider } from './Providers/ThemeProvider';
 import FlashBridge from '@/Components/FlashBridge';
+import PwaControls from '@/Components/PwaControls';
+import './pwa';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 
@@ -32,6 +34,7 @@ createInertiaApp({
                 <NotificationProvider>
                     <App {...props} />
                     <FlashBridge initialPageProps={props} />
+                    <PwaControls />
                 </NotificationProvider>
             </ThemeProvider>
         );

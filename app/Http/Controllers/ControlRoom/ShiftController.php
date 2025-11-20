@@ -56,7 +56,7 @@ class ShiftController extends Controller
         ]);
 
         return redirect()->route('control-room.shifts.show', $shift)
-            ->with('success', 'Shift created successfully.');
+            ->withSuccess('Shift created successfully.');
     }
 
     public function show(Shift $shift)
@@ -107,7 +107,7 @@ class ShiftController extends Controller
         $shift->update($validated);
 
         return redirect()->route('control-room.shifts.show', $shift)
-            ->with('success', 'Shift updated successfully.');
+            ->withSuccess('Shift updated successfully.');
     }
 
     public function destroy(Shift $shift)
@@ -115,7 +115,7 @@ class ShiftController extends Controller
         $shift->delete();
 
         return redirect()->route('control-room.shifts.index')
-            ->with('success', 'Shift deleted successfully.');
+            ->withSuccess('Shift deleted successfully.');
     }
 
     public function assignGuard(Request $request, Shift $shift)
@@ -126,19 +126,19 @@ class ShiftController extends Controller
 
         // Check if guard is already assigned to this shift
         if ($shift->guards()->where('user_id', $validated['guard_id'])->exists()) {
-            return back()->with('error', 'Guard is already assigned to this shift.');
+            return back()->withError('Guard is already assigned to this shift.');
         }
 
         $shift->guards()->attach($validated['guard_id']);
 
-        return back()->with('success', 'Guard assigned to shift successfully.');
+        return back()->withSuccess('Guard assigned to shift successfully.');
     }
 
     public function unassignGuard(Shift $shift, User $guard)
     {
         $shift->guards()->detach($guard->id);
 
-        return back()->with('success', 'Guard unassigned from shift successfully.');
+        return back()->withSuccess('Guard unassigned from shift successfully.');
     }
 
     public function schedule(Shift $shift)

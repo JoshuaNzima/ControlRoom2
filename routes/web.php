@@ -25,8 +25,10 @@ Route::middleware('guest')->group(function () {
     Route::post('login', [\App\Http\Controllers\Auth\AuthenticatedSessionController::class, 'store']);
 });
 
-// Public intake endpoint
-Route::post('/intake', [\App\Http\Controllers\PublicIntakeController::class, 'store'])->name('public.intake.store');
+// Public intake endpoint (rate-limited)
+Route::post('/intake', [\App\Http\Controllers\PublicIntakeController::class, 'store'])
+    ->middleware('throttle:6,1')
+    ->name('public.intake.store');
 
 // Authenticated routes
 Route::middleware('auth')->group(function () {

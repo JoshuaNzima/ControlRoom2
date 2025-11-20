@@ -85,5 +85,12 @@ Route::middleware(['auth'])->group(function () {
 		Route::delete('/downs/{down}', [\App\Http\Controllers\ControlRoom\DownController::class, 'destroy'])->name('downs.destroy');
 		Route::post('/downs/{down}/escalate', [\App\Http\Controllers\ControlRoom\DownController::class, 'escalate'])->name('downs.escalate');
 		Route::post('/downs/{down}/resolve', [\App\Http\Controllers\ControlRoom\DownController::class, 'resolve'])->name('downs.resolve');
+
+		// Public Intake Triage
+		Route::prefix('triage')->name('triage.')->group(function () {
+			Route::get('/intakes', [\App\Http\Controllers\ControlRoom\PublicIntakeTriageController::class, 'index'])->name('intakes.index');
+			Route::get('/intakes/{intake}', [\App\Http\Controllers\ControlRoom\PublicIntakeTriageController::class, 'show'])->name('intakes.show');
+			Route::post('/intakes/{intake}/convert', [\App\Http\Controllers\ControlRoom\PublicIntakeTriageController::class, 'convert'])->name('intakes.convert');
+		});
 	});
 });
