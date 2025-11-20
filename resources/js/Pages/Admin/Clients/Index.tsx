@@ -9,6 +9,7 @@ import EditClientModal from '@/Components/Clients/EditClientModal';
 import ClientDetailsModal from '@/Components/Clients/ClientDetailsModal';
 import BulkImportClientsModal from '@/Components/Clients/BulkImportClientsModal';
 import AddClientModal from '@/Components/Clients/AddClientModal';
+import { Pagination } from '@/Components/ui/Pagination';
 
 interface Client {
   id: number;
@@ -87,7 +88,7 @@ export default function ClientsIndex({ clients, filters, services = [], zones = 
         timeout: 10000,
       });
       // server returns full client object (with services & sites)
-      setEditingClient(res.data as any);
+      setEditingClient(res.data);
     } catch (e) {
       console.error('Failed to load client', e);
       // Offer fallback: redirect to the edit page so user can still edit
@@ -98,6 +99,30 @@ export default function ClientsIndex({ clients, filters, services = [], zones = 
       setLoadingClientId(null);
     }
   };
+
+  // Normalize paginator meta for shared Pagination component
+  const defaultMeta: any = { current_page: 1, last_page: 1, per_page: perPage || 20, total: clients?.data?.length || 0, from: 0, to: 0 };
+  const rawClients: any = clients as any;
+  const clientArr: any[] = Array.isArray(rawClients) ? (rawClients as any[]) : (rawClients?.data ?? []);
+  const metaFromTop: any = rawClients && typeof rawClients === 'object' && !Array.isArray(rawClients) && (rawClients.current_page || rawClients.last_page || rawClients.total)
+    ? {
+        current_page: Number(rawClients.current_page ?? 1),
+        last_page: Number(rawClients.last_page ?? 1),
+        per_page: Number(rawClients.per_page ?? perPage ?? 20),
+        total: Number(rawClients.total ?? clientArr.length ?? 0),
+        from: Number(rawClients.from ?? ((clientArr.length > 0 && rawClients.current_page && rawClients.per_page) ? ((Number(rawClients.current_page) - 1) * Number(rawClients.per_page) + 1) : 0)),
+        to: Number(rawClients.to ?? ((rawClients.from && clientArr.length) ? (Number(rawClients.from) + clientArr.length - 1) : (clientArr.length || 0))),
+      }
+    : null;
+  const meta: any = Array.isArray(rawClients) ? defaultMeta : (rawClients?.meta ?? metaFromTop ?? defaultMeta);
+
+  const urlParams = React.useMemo(() => {
+    if (typeof window === 'undefined') return {} as any;
+    const p = new URLSearchParams(window.location.search);
+    const o: any = {};
+    p.forEach((v, k) => { o[k] = v; });
+    return o;
+  }, []);
 
   return (
     <AdminLayout title="Clients Management">
@@ -313,23 +338,18 @@ export default function ClientsIndex({ clients, filters, services = [], zones = 
           </div>
         </Card>
 
-        {clients.links && clients.links.length > 3 && (
-          <div className="mt-4 flex justify-center">
-            <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
-              {clients.links.map((link: any, i: number) => (
-                <Button
-                  key={i}
-                  variant={link.active ? "default" : "outline"}
-                  disabled={!link.url}
-                  onClick={() => router.get(link.url)}
-                  className="relative inline-flex items-center px-4 py-2 text-sm font-medium"
-                >
-                  <span dangerouslySetInnerHTML={{ __html: link.label }}></span>
-                </Button>
-              ))}
-            </nav>
-          </div>
-        )}
+        <div className="mt-4">
+          <Pagination
+            currentPage={meta.current_page}
+            lastPage={meta.last_page}
+            total={meta.total}
+            perPage={meta.per_page}
+            from={meta.from}
+            to={meta.to}
+            baseUrl={route('admin.clients.index')}
+            filters={{ ...urlParams, search, per_page: perPage }}
+          />
+        </div>
 
         {editingClient && (
           <EditClientModal

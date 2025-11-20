@@ -3,7 +3,7 @@
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
-        <meta name="theme-color" content="#065f46">
+        <meta name="theme-color" content="#B91C1C">
 
         <title inertia>{{ config('app.name', 'Laravel') }}</title>
 

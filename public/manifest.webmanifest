@@ -4,11 +4,11 @@
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "theme_color": "#065f46",
+  "theme_color": "#B91C1C",
   "background_color": "#ffffff",
   "description": "Operations, Finance, Admin and Control Room PWA",
   "icons": [
-    { "src": "/images/coin-logo.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "/images/coin-logo.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+    { "src": "/images/Coin-logo.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/images/Coin-logo.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
   ]
 }
