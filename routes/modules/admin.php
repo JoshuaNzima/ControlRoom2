@@ -65,7 +65,7 @@ Route::middleware(['auth', 'role:admin,super_admin'])
         Route::get('/qr-codes', [\App\Http\Controllers\SupervisorQRCodesController::class, 'index'])->name('qr-codes');
         Route::get('/qr-codes/download-bulk', [\App\Http\Controllers\SupervisorQRCodesController::class, 'downloadBulk'])->name('qr-codes.download-bulk');
         // Admin Finance landing (module-level admin page)
-        Route::get('/finance', fn () => Inertia::render('Admin/Finance'))->name('finance');
+        Route::get('/finance', [\App\Http\Controllers\Admin\FinanceController::class, 'index'])->name('finance');
 
         // Marketing landing (placeholder)
         Route::get('/marketing', fn () => Inertia::render('ComingSoon', [
