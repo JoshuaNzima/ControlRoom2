@@ -1,5 +1,6 @@
 import React from 'react';
 import { Head, Link } from '@inertiajs/react';
+import BaseShell from './BaseShell';
 import IconMapper from '@/Components/IconMapper';
 import { User } from '@/types';
 import { useTheme } from '@/Providers/ThemeProvider';
@@ -54,7 +55,7 @@ export default function AdminLayout({ title, children, user }: Props) {
   { name: 'Guards', href: route('admin.guards.dashboard'), icon: <IconMapper name="shield-check" className="h-6 w-6" />, current: false },
   { name: 'HR', href: route('hr.dashboard'), icon: <IconMapper name="users-2" className="h-6 w-6" />, current: false },
   { name: 'K9', href: route('k9.dashboard'), icon: <IconMapper name="shield" className="h-6 w-6" />, current: false },
-  ...(canSeeFinance ? [{ name: 'Finance', href: route('finance.dashboard'), icon: <IconMapper name="wallet" className="h-6 w-6" />, current: isCurrent(route('finance.dashboard')) }] : []),
+  ...(canSeeFinance ? [{ name: 'Finance', href: route('admin.finance'), icon: <IconMapper name="wallet" className="h-6 w-6" />, current: isCurrent(route('admin.finance')) }] : []),
   { name: 'Marketing', href: route('admin.marketing'), icon: <IconMapper name="megaphone" className="h-6 w-6" />, current: false },
   ];
 
@@ -68,7 +69,7 @@ export default function AdminLayout({ title, children, user }: Props) {
         <div className="flex-1 flex flex-col pt-5 pb-4 overflow-y-auto">
             <div className="flex items-center flex-shrink-0 px-4">
             <img
-              src="/images/coin-logo.png"
+              src="/images/Coin-logo.png"
               alt="Coin Security"
               className="h-10 w-auto"
               style={{ display: logoOk ? 'block' : 'none' }}
@@ -143,11 +144,9 @@ export default function AdminLayout({ title, children, user }: Props) {
             </div>
           </div>
         </div>
-        <main className="flex-1">
-          <div className="py-6">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 text-gray-900 dark:text-gray-100">{children}</div>
-          </div>
-        </main>
+        <BaseShell noHeader fullScreen={false}>
+          {children}
+        </BaseShell>
       </div>
     </div>
   );

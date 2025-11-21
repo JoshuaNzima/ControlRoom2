@@ -43,17 +43,27 @@ Route::middleware(['auth', 'role:admin|super_admin|finance_officer|accountant|fi
         // Budget Management
         Route::resource('budgets', \App\Http\Controllers\Finance\BudgetController::class);
 
-        // Approval Management
-        Route::get('approvals', [\App\Http\Controllers\Finance\ApprovalController::class, 'index'])
-            ->name('approvals.index');
-        Route::post('approvals', [\App\Http\Controllers\Finance\ApprovalController::class, 'store'])
-            ->name('approvals.store');
-        Route::get('approvals/{approval}', [\App\Http\Controllers\Finance\ApprovalController::class, 'show'])
-            ->name('approvals.show');
-        Route::post('approvals/{approval}/approve', [\App\Http\Controllers\Finance\ApprovalController::class, 'approve'])
-            ->name('approvals.approve');
-        Route::post('approvals/{approval}/reject', [\App\Http\Controllers\Finance\ApprovalController::class, 'reject'])
-            ->name('approvals.reject');
+        // Payroll
+        Route::get('payroll', [\App\Http\Controllers\Finance\PayrollRunController::class, 'index'])->name('payroll.index');
+        Route::get('payroll/create', [\App\Http\Controllers\Finance\PayrollRunController::class, 'create'])->name('payroll.create');
+        Route::post('payroll', [\App\Http\Controllers\Finance\PayrollRunController::class, 'store'])->name('payroll.store');
+        Route::get('payroll/{payroll}', [\App\Http\Controllers\Finance\PayrollRunController::class, 'show'])->name('payroll.show');
+        Route::post('payroll/{payroll}/process', [\App\Http\Controllers\Finance\PayrollRunController::class, 'process'])->name('payroll.process');
+        Route::put('payroll/entries/{entry}', [\App\Http\Controllers\Finance\PayrollRunController::class, 'updateEntry'])->name('payroll.entries.update');
+
+        // Approval Management (admins only)
+        Route::middleware(['role:super_admin|admin'])->group(function () {
+            Route::get('approvals', [\App\Http\Controllers\Finance\ApprovalController::class, 'index'])
+                ->name('approvals.index');
+            Route::post('approvals', [\App\Http\Controllers\Finance\ApprovalController::class, 'store'])
+                ->name('approvals.store');
+            Route::get('approvals/{approval}', [\App\Http\Controllers\Finance\ApprovalController::class, 'show'])
+                ->name('approvals.show');
+            Route::post('approvals/{approval}/approve', [\App\Http\Controllers\Finance\ApprovalController::class, 'approve'])
+                ->name('approvals.approve');
+            Route::post('approvals/{approval}/reject', [\App\Http\Controllers\Finance\ApprovalController::class, 'reject'])
+                ->name('approvals.reject');
+        });
     });
 
 

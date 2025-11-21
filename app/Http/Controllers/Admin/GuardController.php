@@ -106,6 +106,9 @@ class GuardController extends Controller
         if ($request->hasFile('photo')) {
             $validated['photo'] = $request->file('photo')->store('guards', 'public');
         }
+        if (empty($validated['employee_id'])) {
+            $validated['employee_id'] = $this->generateGuardEmployeeId();
+        }
 
         $guard = Guard::create($validated);
 
@@ -130,6 +133,14 @@ class GuardController extends Controller
 
         return redirect()->route('admin.guards.index')
             ->withSuccess('Guard created successfully.');
+    }
+
+    private function generateGuardEmployeeId(): string
+    {
+        do {
+            $candidate = 'G-'.now()->format('ym').'-'.sprintf('%04d', random_int(0, 9999));
+        } while (Guard::where('employee_id', $candidate)->exists());
+        return $candidate;
     }
 
     public function edit(Guard $guard)

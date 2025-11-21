@@ -24,13 +24,13 @@ export default function CreateExpense({ categories, paymentMethods }: Props) {
   };
 
   return (
-    <FinanceLayout title="Create Expense">
-      <Head title="Create Expense" />
+    <FinanceLayout title="Create Requisition">
+      <Head title="Create Requisition" />
       
       <div className="py-6">
         <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="bg-white rounded-lg shadow p-6">
-            <h1 className="text-2xl font-bold text-gray-900 mb-6">Create New Expense</h1>
+            <h1 className="text-2xl font-bold text-gray-900 mb-6">Create New Requisition</h1>
             
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* Amount */}
@@ -39,7 +39,7 @@ export default function CreateExpense({ categories, paymentMethods }: Props) {
                   Amount *
                 </label>
                 <div className="relative">
-                  <span className="absolute left-3 top-2 text-gray-500">$</span>
+                  <span className="absolute left-3 top-2 text-gray-500">MWK</span>
                   <input
                     type="number"
                     step="0.01"
@@ -47,7 +47,7 @@ export default function CreateExpense({ categories, paymentMethods }: Props) {
                     required
                     value={data.amount}
                     onChange={(e) => setData('amount', e.target.value)}
-                    className="w-full pl-8 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full pl-12 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     placeholder="0.00"
                   />
                 </div>
@@ -153,7 +153,7 @@ export default function CreateExpense({ categories, paymentMethods }: Props) {
               {/* Info Box */}
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                 <p className="text-sm text-blue-800">
-                  💡 Your expense will be submitted for approval. Once approved, it will appear in the system.
+                  💡 Your requisition will be submitted for approval. Once approved, it will appear in the system.
                 </p>
               </div>
 
@@ -164,7 +164,7 @@ export default function CreateExpense({ categories, paymentMethods }: Props) {
                   disabled={processing}
                   className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:bg-gray-400 transition font-medium"
                 >
-                  {processing ? 'Submitting...' : 'Submit Expense'}
+                  {processing ? 'Submitting...' : 'Submit Requisition'}
                 </button>
                 <a
                   href={route('finance.expenses.index')}

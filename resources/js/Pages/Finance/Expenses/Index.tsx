@@ -88,7 +88,7 @@ export default function ExpenseIndex({ expenses, totals, filters }: Props) {
       status: expense.status,
       user: expense.user?.name,
     }));
-    downloadCSV('expenses-export.csv', rows);
+    downloadCSV('requisitions-export.csv', rows);
   };
 
   const handleFilter = () => {
@@ -121,26 +121,20 @@ export default function ExpenseIndex({ expenses, totals, filters }: Props) {
   };
 
   return (
-    <FinanceLayout title="Expense Tracker">
-      <Head title="Expense Tracker" />
+    <FinanceLayout title="Requisitions">
+      <Head title="Requisitions" />
       
       <div className="py-6">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
           {/* Header */}
-          <div className="flex justify-between items-center">
-            <h1 className="text-3xl font-bold text-gray-900">Expense Tracker</h1>
-            <Link
-              href={route('finance.expenses.create')}
-              className="inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
-            >
-              + New Expense
-            </Link>
+          <div className="flex items-center">
+            <h1 className="text-3xl font-bold text-gray-900">Requisitions</h1>
           </div>
 
           {/* Summary Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="bg-white rounded-lg shadow p-6">
-              <p className="text-sm text-gray-600 mb-2">Total Expenses</p>
+              <p className="text-sm text-gray-600 mb-2">Total Requisitions</p>
               <p className="text-3xl font-bold text-gray-900">
                 {formatCurrency(totals.total)}
               </p>
@@ -337,7 +331,7 @@ export default function ExpenseIndex({ expenses, totals, filters }: Props) {
                 ) : (
                   <tr>
                     <td colSpan={8} className="px-6 py-8 text-center text-gray-500">
-                      No expenses found.
+                      No requisitions found.
                     </td>
                   </tr>
                 )}

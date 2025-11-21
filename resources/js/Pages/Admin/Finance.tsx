@@ -300,7 +300,7 @@ export default function FinancePage({
                 </div>
                 <div className="mt-3">
                   <Link
-                    href={route('finance.approvals.index')}
+                    href={route('admin.approvals.index')}
                     className="inline-flex items-center text-xs text-red-700 hover:text-red-900"
                   >
                     View approvals

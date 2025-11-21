@@ -145,8 +145,14 @@ class InvoiceController extends Controller
     {
         $invoice->load('user', 'lineItems', 'client');
 
+        $data = $invoice->toArray();
+        if (isset($data['line_items'])) {
+            $data['lineItems'] = $data['line_items'];
+            unset($data['line_items']);
+        }
+
         return Inertia::render('Finance/Invoices/Show', [
-            'invoice' => $invoice,
+            'invoice' => $data,
         ]);
     }
 
@@ -159,12 +165,18 @@ class InvoiceController extends Controller
 
         $invoice->load('lineItems', 'client');
 
+        $data = $invoice->toArray();
+        if (isset($data['line_items'])) {
+            $data['lineItems'] = $data['line_items'];
+            unset($data['line_items']);
+        }
+
         $clients = GuardClient::select('id', 'name', 'contact_person', 'phone', 'email', 'monthly_rate')
             ->orderBy('name')
             ->get();
 
         return Inertia::render('Finance/Invoices/Edit', [
-            'invoice' => $invoice,
+            'invoice' => $data,
             'clients' => $clients,
         ]);
     }

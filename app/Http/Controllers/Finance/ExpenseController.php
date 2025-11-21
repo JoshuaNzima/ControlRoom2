@@ -15,7 +15,7 @@ class ExpenseController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Expense::with('user', 'account')
+        $query = Expense::with('user')
             ->orderBy('expense_date', 'desc');
 
         // Filter by category
@@ -38,15 +38,50 @@ class ExpenseController extends Controller
             $query->where('payment_method', $request->payment_method);
         }
 
+        // Restrict visibility to own requisitions unless user can approve/manage
+        $user = Auth::user();
+        $canApprove = false;
+        if ($user) {
+            try {
+                $canApprove = $user->hasAnyRole(['admin','super_admin','finance_officer','accountant'])
+                    || $user->can('approve_expense')
+                    || $user->can('manage_expense')
+                    || $user->can('finance.approvals');
+            } catch (\Throwable $e) {
+                $canApprove = false;
+            }
+        }
+
+        if (! $canApprove && $user) {
+            $query->where('user_id', $user->id);
+        }
+
         $expenses = $query->paginate(15)->withQueryString();
 
-        // Calculate totals
+        // Calculate totals on the same filtered scope
+        $base = Expense::query();
+        if ($request->filled('category')) {
+            $base->byCategory($request->category);
+        }
+        if ($request->filled('status')) {
+            $base->byStatus($request->status);
+        }
+        if ($request->filled('start_date') && $request->filled('end_date')) {
+            $base->byDateRange($request->start_date, $request->end_date);
+        }
+        if ($request->filled('payment_method')) {
+            $base->where('payment_method', $request->payment_method);
+        }
+        if (! $canApprove && $user) {
+            $base->where('user_id', $user->id);
+        }
+
         $totals = [
-            'total' => Expense::sum('amount'),
-            'approved' => Expense::approved()->sum('amount'),
-            'pending' => Expense::pending()->sum('amount'),
-            'by_category' => Expense::selectRaw('category, SUM(amount) as total')
-                ->approved()
+            'total' => (clone $base)->sum('amount'),
+            'approved' => (clone $base)->approved()->sum('amount'),
+            'pending' => (clone $base)->pending()->sum('amount'),
+            'by_category' => (clone $base)->approved()
+                ->selectRaw('category, SUM(amount) as total')
                 ->groupBy('category')
                 ->get(),
         ];
@@ -99,7 +134,7 @@ class ExpenseController extends Controller
             'category' => 'required|string',
             'description' => 'nullable|string|max:255',
             'expense_date' => 'required|date',
-            'account_id' => 'nullable|exists:accounts,id',
+            'account_id' => 'nullable',
             'payment_method' => 'required|in:cash,card,transfer,check',
             'notes' => 'nullable|string',
         ]);
@@ -119,7 +154,24 @@ class ExpenseController extends Controller
      */
     public function show(Expense $expense)
     {
-        $expense->load('user', 'account');
+        $expense->load('user');
+
+        // Restrict viewing to owner unless approver/manager
+        $user = Auth::user();
+        $canApprove = false;
+        if ($user) {
+            try {
+                $canApprove = $user->hasAnyRole(['admin','super_admin','finance_officer','accountant'])
+                    || $user->can('approve_expense')
+                    || $user->can('manage_expense')
+                    || $user->can('finance.approvals');
+            } catch (\Throwable $e) {
+                $canApprove = false;
+            }
+        }
+        if (! $canApprove && $user && $expense->user_id !== $user->id) {
+            abort(403);
+        }
 
         return Inertia::render('Finance/Expenses/Show', [
             'expense' => $expense,
@@ -148,7 +200,7 @@ class ExpenseController extends Controller
         $paymentMethods = ['cash', 'card', 'transfer', 'check'];
 
         return Inertia::render('Finance/Expenses/Edit', [
-            'expense' => $expense->load('account'),
+            'expense' => $expense,
             'categories' => $categories,
             'paymentMethods' => $paymentMethods,
         ]);
@@ -166,7 +218,7 @@ class ExpenseController extends Controller
             'category' => 'required|string',
             'description' => 'nullable|string|max:255',
             'expense_date' => 'required|date',
-            'account_id' => 'nullable|exists:accounts,id',
+            'account_id' => 'nullable',
             'payment_method' => 'required|in:cash,card,transfer,check',
             'notes' => 'nullable|string',
         ]);

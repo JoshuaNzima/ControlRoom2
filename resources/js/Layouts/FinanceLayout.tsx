@@ -1,7 +1,8 @@
 import React from 'react';
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
+import BaseShell from './BaseShell';
 import IconMapper from '@/Components/IconMapper';
-import { User } from '@/types';
+import { User, PageProps } from '@/types';
 import { useTheme } from '@/Providers/ThemeProvider';
 
 interface Props {
@@ -21,6 +22,16 @@ export default function FinanceLayout({ title, children, user }: Props) {
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
   const [logoOk, setLogoOk] = React.useState<boolean>(true);
   const { theme, toggle } = useTheme();
+  const page = usePage<PageProps>();
+  const currentUser = (page?.props?.auth?.user as any) as (User & { roles?: string[]; permissions?: string[] }) | undefined;
+  const permissions = currentUser?.permissions ?? [];
+  const roles = currentUser?.roles ?? [];
+  const allowedRoles = ['admin', 'super_admin', 'finance_officer', 'accountant'];
+  const hasRoleApproval = Array.isArray(roles) && roles.some((r) => allowedRoles.includes(String(r)));
+  const hasPermApproval = Array.isArray(permissions) && permissions.some((p) => (
+    p === 'approve_expense' || p === 'manage_expense' || p === 'finance.approvals'
+  ));
+  const canApproveRequisitions = hasRoleApproval || hasPermApproval;
 
   const safeRoute = (name: string, fallback: string) => {
     try { return route(name) as unknown as string; } catch { return fallback; }
@@ -33,10 +44,11 @@ export default function FinanceLayout({ title, children, user }: Props) {
   const financeLinks: ModuleNavItem[] = [
     { name: 'Dashboard', href: safeRoute('finance.dashboard', '/finance'), icon: <IconMapper name="home" className="h-6 w-6" />, current: isCurrent(safeRoute('finance.dashboard', '/finance')) },
     { name: 'Invoices', href: safeRoute('finance.invoices.index', '/finance/invoices'), icon: <IconMapper name="file-text" className="h-6 w-6" />, current: isCurrent(safeRoute('finance.invoices.index', '/finance/invoices')) },
-    { name: 'Expenses', href: safeRoute('finance.expenses.index', '/finance/expenses'), icon: <IconMapper name="trending-down" className="h-6 w-6" />, current: isCurrent(safeRoute('finance.expenses.index', '/finance/expenses')) },
+    { name: 'Requisitions', href: safeRoute('finance.expenses.index', '/finance/expenses'), icon: <IconMapper name="trending-down" className="h-6 w-6" />, current: isCurrent(safeRoute('finance.expenses.index', '/finance/expenses')) },
     { name: 'Budgets', href: safeRoute('finance.budgets.index', '/finance/budgets'), icon: <IconMapper name="pie-chart" className="h-6 w-6" />, current: isCurrent(safeRoute('finance.budgets.index', '/finance/budgets')) },
-    { name: 'Approvals', href: safeRoute('finance.approvals.index', '/finance/approvals'), icon: <IconMapper name="check-circle" className="h-6 w-6" />, current: isCurrent(safeRoute('finance.approvals.index', '/finance/approvals')) },
+    { name: 'Payroll', href: safeRoute('finance.payroll.index', '/finance/payroll'), icon: <IconMapper name="users" className="h-6 w-6" />, current: isCurrent(safeRoute('finance.payroll.index', '/finance/payroll')) },
   ];
+  const linksToRender = financeLinks;
 
   const handleLogout = (e: React.FormEvent) => {
     e.preventDefault();
@@ -62,7 +74,7 @@ export default function FinanceLayout({ title, children, user }: Props) {
         <div className="flex-1 flex flex-col pt-5 pb-4 overflow-y-auto">
           <div className="flex items-center flex-shrink-0 px-4">
             <img
-              src="/images/coin-logo.png"
+              src="/images/Coin-logo.png"
               alt="Coin Security"
               className="h-10 w-auto"
               style={{ display: logoOk ? 'block' : 'none' }}
@@ -75,7 +87,7 @@ export default function FinanceLayout({ title, children, user }: Props) {
           </div>
 
           <nav className="mt-5 flex-1 px-2 space-y-1">
-            {financeLinks.map((item, idx) => (
+            {linksToRender.map((item, idx) => (
               <Link
                 key={idx}
                 href={item.href}
@@ -106,7 +118,7 @@ export default function FinanceLayout({ title, children, user }: Props) {
       {/* Main content */}
       <div className="md:pl-64 flex flex-col flex-1">
         {/* Top bar */}
-        <div className="sticky top-0 z-30 flex h-16 bg-white dark:bg-gray-800 shadow-sm">
+        <div className="sticky top-0 z-30 flex h-16 bg-white dark:bg-gray-800 border-b border-red-100 dark:border-gray-700">
           <button
             type="button"
             className="px-4 border-r border-gray-200 dark:border-gray-700 text-gray-500 focus:outline-none md:hidden"
@@ -120,6 +132,12 @@ export default function FinanceLayout({ title, children, user }: Props) {
           <div className="flex-1 flex items-center justify-between px-4">
             <h1 className="text-lg font-semibold text-gray-900 dark:text-white">{title}</h1>
             <div className="flex items-center space-x-4">
+              <Link
+                href={route('finance.expenses.create')}
+                className="inline-flex items-center px-3 py-1.5 rounded-md bg-red-600 text-white hover:bg-red-700 text-sm"
+              >
+                Request Requisition
+              </Link>
               <button
                 onClick={toggle}
                 className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
@@ -144,9 +162,9 @@ export default function FinanceLayout({ title, children, user }: Props) {
         </div>
 
         {/* Page content */}
-        <main className="flex-1 overflow-y-auto py-6 px-4 md:px-8">
+        <BaseShell noHeader fullScreen={false}>
           {children}
-        </main>
+        </BaseShell>
       </div>
     </div>
   );

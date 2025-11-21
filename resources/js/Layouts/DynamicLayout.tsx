@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Link, usePage } from "@inertiajs/react";
+import BaseShell from './BaseShell';
 import { PageProps } from '@/types';
 import { router } from "@inertiajs/react";
 
@@ -35,18 +36,18 @@ export default function DynamicLayout({ children, title, modules }: Props) {
   });
 
   return (
-    <div className="flex flex-col h-screen bg-gray-50 md:flex-row">
+    <div className="flex flex-col h-screen bg-red-50 dark:bg-gray-900 md:flex-row">
       {/* Dynamic sidebar with modules */}
-      <aside className="bg-white shadow-sm border-r w-64">
+      <aside className="w-64 bg-red-900 dark:bg-gray-950 text-white">
         <div className="flex flex-col h-full">
-          <div className="px-6 py-4 border-b">
-            <span className="font-bold text-xl text-gray-900">CoinSec</span>
+          <div className="px-6 py-4 border-b border-red-800 dark:border-gray-800">
+            <span className="font-bold text-xl text-white">CoinSec</span>
           </div>
 
           <nav className="flex-1 px-3 py-4 space-y-6 overflow-y-auto">
             {availableModules.map((module, mIdx) => (
               <div key={`${module.name || 'module'}-${mIdx}`} className="space-y-2">
-                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                <h3 className="text-xs font-semibold text-red-200 dark:text-gray-400 uppercase tracking-wider">
                   {module.display_name}
                 </h3>
                 {module.children
@@ -58,8 +59,8 @@ export default function DynamicLayout({ children, title, modules }: Props) {
                       className={`
                         flex items-center gap-3 px-3 py-2 rounded-lg transition-colors
                         ${url.startsWith(route(child.route))
-                          ? 'bg-indigo-100 text-indigo-700 font-medium'
-                          : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                          ? 'bg-red-800 text-white font-medium dark:bg-gray-800'
+                          : 'text-red-100 hover:bg-red-800 hover:text-white dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white'
                         }
                       `}
                     >
@@ -73,13 +74,9 @@ export default function DynamicLayout({ children, title, modules }: Props) {
       </aside>
 
       <div className="flex-1 flex flex-col">
-        <header className="h-16 bg-white border-b px-6 flex items-center justify-between">
-          <h1 className="text-xl font-semibold text-gray-900">{title}</h1>
-        </header>
-
-        <main className="flex-1 p-6 overflow-y-auto">
+        <BaseShell title={title} fullScreen={false}>
           {children}
-        </main>
+        </BaseShell>
       </div>
     </div>
   );

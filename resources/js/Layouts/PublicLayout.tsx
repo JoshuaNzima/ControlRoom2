@@ -9,7 +9,7 @@ interface Props {
 
 export default function PublicLayout({ title = 'Coin Security', children }: Props) {
   return (
-    <div className="min-h-screen bg-gray-50 text-gray-900">
+    <div className="min-h-screen bg-red-50 dark:bg-gray-900 text-gray-900">
       <Head title={title} />
 
       <header className="bg-white/95 backdrop-blur-sm shadow-lg sticky top-0 z-50">
@@ -17,20 +17,20 @@ export default function PublicLayout({ title = 'Coin Security', children }: Prop
           <div className="flex justify-between items-center py-4">
             <div className="flex items-center gap-3">
               <img src="/images/Coin-logo.png" alt="Coin Security" className="h-10 w-auto" />
-              <span className="text-lg font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              <span className="text-lg font-bold bg-gradient-to-r from-red-600 to-red-500 bg-clip-text text-transparent">
                 Coin Security
               </span>
             </div>
             <nav className="flex items-center gap-6">
               <Link 
                 href={route('public.home')} 
-                className="text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors duration-200"
+                className="text-sm font-medium text-gray-700 hover:text-red-600 transition-colors duration-200"
               >
                 Home
               </Link>
               <Link 
                 href={route('login')} 
-                className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white text-sm font-medium rounded-lg hover:shadow-lg transform hover:scale-105 transition-all duration-200"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-red-600 to-red-500 text-white text-sm font-medium rounded-lg hover:shadow-lg transform hover:scale-105 transition-all duration-200"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
@@ -39,7 +39,7 @@ export default function PublicLayout({ title = 'Coin Security', children }: Prop
               </Link>
               <a 
                 href="/contact" 
-                className="text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors duration-200"
+                className="text-sm font-medium text-gray-700 hover:text-red-600 transition-colors duration-200"
               >
                 Contact
               </a>

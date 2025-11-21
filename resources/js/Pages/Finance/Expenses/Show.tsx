@@ -40,15 +40,15 @@ export default function ShowExpense({ expense }: Props) {
 
   const statusColor = getStatusColor(expense.status);
   const statusDescription: Record<string, string> = {
-    pending: 'Pending approval. This expense can still be edited or withdrawn until it is approved or rejected.',
+    pending: 'Pending approval. This requisition can still be edited or withdrawn until it is approved or rejected.',
     approved: 'Approved and included in financial totals. Further edits should go through finance.',
     rejected: 'Rejected. Review the notes for rejection details.',
   };
   const canModify = expense.status === 'pending';
 
   return (
-    <FinanceLayout title={`Expense #${expense.id}`}>
-      <Head title={`Expense #${expense.id}`} />
+    <FinanceLayout title={`Requisition #${expense.id}`}>
+      <Head title={`Requisition #${expense.id}`} />
       
       <div className="py-6">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -56,7 +56,7 @@ export default function ShowExpense({ expense }: Props) {
           <div className="mb-6 flex justify-between items-start">
             <div>
               <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                Expense #{expense.id}
+                Requisition #{expense.id}
               </h1>
               <p className="text-gray-600">
                 Created on {formatDate(expense.created_at)}
@@ -66,7 +66,7 @@ export default function ShowExpense({ expense }: Props) {
               href={route('finance.expenses.index')}
               className="text-indigo-600 hover:text-indigo-900 font-medium"
             >
-              ← Back to Expenses
+              ← Back to Requisitions
             </Link>
           </div>
 
@@ -113,7 +113,7 @@ export default function ShowExpense({ expense }: Props) {
 
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-1">
-                    Expense Date
+                    Requisition Date
                   </label>
                   <p className="text-gray-900">{formatDate(expense.expense_date)}</p>
                 </div>
@@ -178,8 +178,8 @@ export default function ShowExpense({ expense }: Props) {
             <div className="bg-gray-50 px-6 py-4 border-t flex flex-col md:flex-row md:items-center md:justify-between gap-3">
               <div className="text-xs text-gray-500">
                 {canModify
-                  ? 'Pending expenses can be edited or deleted until a finance approver takes action.'
-                  : 'This expense is final and cannot be modified directly.'}
+                  ? 'Pending requisitions can be edited or deleted until a finance approver takes action.'
+                  : 'This requisition is final and cannot be modified directly.'}
               </div>
               {canModify && (
                 <div className="flex gap-3">

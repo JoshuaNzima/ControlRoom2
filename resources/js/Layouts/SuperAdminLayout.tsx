@@ -1,7 +1,8 @@
 import React from 'react';
-import { Head, Link } from '@inertiajs/react';
+import { Link } from '@inertiajs/react';
 import IconMapper from '@/Components/IconMapper';
 import { User } from '@/types';
+import BaseShell from './BaseShell';
 
 interface Props {
     title: string;
@@ -85,8 +86,7 @@ export default function SuperAdminLayout({ title, children, user }: Props) {
     ];
 
     return (
-        <div className="min-h-screen bg-red-50">
-            <Head title={title} />
+        <div className="min-h-screen bg-red-50 dark:bg-gray-900">
 
             {/* Mobile sidebar */}
             <div
@@ -186,7 +186,8 @@ export default function SuperAdminLayout({ title, children, user }: Props) {
 
             {/* Main Content */}
             <div className="md:pl-64">
-                <div className="sticky top-0 z-10 md:hidden pl-1 pt-1 sm:pl-3 sm:pt-3 bg-red-50">
+                {/* Mobile: keep compact bar, hide BaseShell header by using noHeader */}
+                <div className="sticky top-0 z-30 md:hidden pl-1 pt-1 sm:pl-3 sm:pt-3 bg-red-50 dark:bg-gray-900 border-b border-red-100 dark:border-gray-800">
                     <button
                         type="button"
                         className="-ml-0.5 -mt-0.5 h-12 w-12 inline-flex items-center justify-center rounded-md text-red-700 hover:text-red-900 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-red-500"
@@ -196,13 +197,15 @@ export default function SuperAdminLayout({ title, children, user }: Props) {
                         <IconMapper name="Menu" size={24} />
                     </button>
                 </div>
-                <main className="flex-1">
-                    <div className="py-6">
-                        <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
-                            {children}
+                {/* Desktop header via BaseShell; hide header on mobile */}
+                <BaseShell title={title} fullScreen={false} noHeader>
+                    <header className="hidden md:block bg-white dark:bg-gray-800 border-b border-red-100 dark:border-gray-800 sticky top-0 z-30">
+                        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+                            <h1 className="text-xl font-bold text-red-900 dark:text-gray-100">{title}</h1>
                         </div>
-                    </div>
-                </main>
+                    </header>
+                    {children}
+                </BaseShell>
             </div>
         </div>
     );

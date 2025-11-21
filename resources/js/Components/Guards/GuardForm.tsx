@@ -56,7 +56,7 @@ export default function GuardForm({
             type="text"
             value={data.employee_id}
             onChange={(e) => setData('employee_id', e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
           />
           {errors.employee_id && <p className="text-red-600 text-sm mt-1">{errors.employee_id}</p>}
         </div>
@@ -67,7 +67,7 @@ export default function GuardForm({
             type="text"
             value={data.name}
             onChange={(e) => setData('name', e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
             required
           />
           {errors.name && <p className="text-red-600 text-sm mt-1">{errors.name}</p>}
@@ -79,7 +79,7 @@ export default function GuardForm({
             <select
               value={data.supervisor_id}
               onChange={(e) => setData('supervisor_id', e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
             >
               <option value="">Select a Supervisor</option>
               {supervisors.map((supervisor) => (
@@ -98,7 +98,7 @@ export default function GuardForm({
             type="tel"
             value={data.phone}
             onChange={(e) => setData('phone', e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
           />
           {errors.phone && <p className="text-red-600 text-sm mt-1">{errors.phone}</p>}
         </div>
@@ -109,7 +109,7 @@ export default function GuardForm({
             type="email"
             value={data.email}
             onChange={(e) => setData('email', e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
           />
           {errors.email && <p className="text-red-600 text-sm mt-1">{errors.email}</p>}
         </div>
@@ -120,7 +120,7 @@ export default function GuardForm({
             type="text"
             value={data.id_number}
             onChange={(e) => setData('id_number', e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
           />
           {errors.id_number && <p className="text-red-600 text-sm mt-1">{errors.id_number}</p>}
         </div>
@@ -131,7 +131,7 @@ export default function GuardForm({
             type="date"
             value={data.date_of_birth}
             onChange={(e) => setData('date_of_birth', e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
           />
           {errors.date_of_birth && <p className="text-red-600 text-sm mt-1">{errors.date_of_birth}</p>}
         </div>
@@ -141,7 +141,7 @@ export default function GuardForm({
           <select
             value={data.gender}
             onChange={(e) => setData('gender', e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
           >
             <option value="">Select Gender</option>
             <option value="male">Male</option>
@@ -156,7 +156,7 @@ export default function GuardForm({
           <textarea
             value={data.address}
             onChange={(e) => setData('address', e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
             rows={3}
           />
           {errors.address && <p className="text-red-600 text-sm mt-1">{errors.address}</p>}
@@ -168,7 +168,7 @@ export default function GuardForm({
             type="text"
             value={data.emergency_contact_name}
             onChange={(e) => setData('emergency_contact_name', e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
           />
           {errors.emergency_contact_name && <p className="text-red-600 text-sm mt-1">{errors.emergency_contact_name}</p>}
         </div>
@@ -179,7 +179,7 @@ export default function GuardForm({
             type="tel"
             value={data.emergency_contact_phone}
             onChange={(e) => setData('emergency_contact_phone', e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
           />
           {errors.emergency_contact_phone && <p className="text-red-600 text-sm mt-1">{errors.emergency_contact_phone}</p>}
         </div>
@@ -190,7 +190,7 @@ export default function GuardForm({
             type="date"
             value={data.hire_date}
             onChange={(e) => setData('hire_date', e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
           />
           {errors.hire_date && <p className="text-red-600 text-sm mt-1">{errors.hire_date}</p>}
         </div>
@@ -200,7 +200,7 @@ export default function GuardForm({
           <select
             value={data.guard_type}
             onChange={(e) => setData('guard_type', e.target.value as any)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
           >
             <option value="permanent">Permanent</option>
             <option value="standby">Standby</option>
@@ -214,7 +214,7 @@ export default function GuardForm({
           <select
             value={data.status}
             onChange={(e) => setData('status', e.target.value as GuardFormData['status'])}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
           >
             <option value="active">Active</option>
             <option value="inactive">Inactive</option>
@@ -228,7 +228,7 @@ export default function GuardForm({
           <textarea
             value={data.notes}
             onChange={(e) => setData('notes', e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
             rows={4}
           />
           {errors.notes && <p className="text-red-600 text-sm mt-1">{errors.notes}</p>}

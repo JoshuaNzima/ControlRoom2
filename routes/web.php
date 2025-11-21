@@ -227,6 +227,17 @@ Route::middleware(['auth'])->group(function () {
     // Admin User Management
     Route::resource('users', UserController::class);
 
+    // Cross-module: One-time Expense Request (simple alias to Finance expense store)
+    Route::get('/request/expense', function() {
+        $categories = [
+            'general', 'office_supplies', 'travel', 'meals', 'utilities', 'maintenance', 'marketing', 'equipment', 'other'
+        ];
+        return Inertia::render('Finance/Expenses/Request', [
+            'categories' => $categories,
+        ]);
+    })->name('expense.request.create');
+    Route::post('/request/expense', [\App\Http\Controllers\Finance\ExpenseController::class, 'store'])->name('expense.request.store');
+
     // Profile routes (edit/update/destroy)
     Route::get('/profile', [\App\Http\Controllers\ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [\App\Http\Controllers\ProfileController::class, 'update'])->name('profile.update');

@@ -24,6 +24,15 @@ Route::middleware(['auth', 'role:admin,super_admin'])
     ->group(function () {
         Route::get('/dashboard', [\App\Http\Controllers\Admin\DashboardController::class, 'index'])->name('dashboard');
         Route::get('/settings', [\App\Http\Controllers\Admin\SettingController::class, 'index'])->name('settings.index');
+        // Finance Settings endpoints
+        Route::post('/settings/finance/payroll-defaults', [\App\Http\Controllers\Admin\FinanceSettingController::class, 'updatePayrollDefaults'])
+            ->name('settings.finance.payroll-defaults');
+        Route::post('/settings/finance/pay-profiles', [\App\Http\Controllers\Admin\FinanceSettingController::class, 'storePayProfile'])
+            ->name('settings.finance.pay-profiles.store');
+        Route::put('/settings/finance/pay-profiles/{payProfile}', [\App\Http\Controllers\Admin\FinanceSettingController::class, 'updatePayProfile'])
+            ->name('settings.finance.pay-profiles.update');
+        Route::delete('/settings/finance/pay-profiles/{payProfile}', [\App\Http\Controllers\Admin\FinanceSettingController::class, 'destroyPayProfile'])
+            ->name('settings.finance.pay-profiles.destroy');
         Route::get('/reports', [\App\Http\Controllers\Admin\ReportController::class, 'index'])->name('reports.index');
         Route::get('/modules', [\App\Http\Controllers\Admin\ModuleController::class, 'index'])->name('modules.index');
         Route::resource('users', \App\Http\Controllers\Admin\UserController::class);

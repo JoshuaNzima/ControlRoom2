@@ -22,6 +22,46 @@ class SettingController extends Controller
             'uptime' => $systemHealthService->getUptime(),
         ];
 
+        // Finance settings payloads
+        $payrollDefaults = [
+            'guard_absence_deduction_per_day' => 0,
+            'staff_absence_deduction_per_day' => 0,
+            'overtime_multiplier_default' => 1.5,
+        ];
+        try {
+            $row = \App\Models\Setting::where('key', 'finance.payroll.defaults')->first();
+            if ($row && is_array($row->value)) {
+                $payrollDefaults = array_merge($payrollDefaults, $row->value);
+            }
+        } catch (\Throwable $e) {}
+
+        $payProfiles = [];
+        try {
+            $payProfiles = \App\Models\PayProfile::orderBy('payee_type')->orderBy('payee_id')->get();
+        } catch (\Throwable $e) {
+            $payProfiles = [];
+        }
+
+        // Payee options for searchable selectors
+        $guardOptions = [];
+        $userOptions = [];
+        try {
+            $guardOptions = \App\Models\Guards\Guard::orderBy('name')
+                ->get(['id', 'name', 'employee_id'])
+                ->map(fn($g) => [
+                    'id' => $g->id,
+                    'label' => trim(($g->employee_id ? ($g->employee_id.' - ') : '') . $g->name),
+                ]);
+        } catch (\Throwable $e) {}
+        try {
+            $userOptions = \App\Models\User::orderBy('name')
+                ->get(['id', 'name', 'employee_id', 'email'])
+                ->map(fn($u) => [
+                    'id' => $u->id,
+                    'label' => trim(($u->employee_id ? ($u->employee_id.' - ') : '') . $u->name),
+                ]);
+        } catch (\Throwable $e) {}
+
         return Inertia::render('Admin/Settings/Index', [
             'auth' => [
                 'user' => [
@@ -32,6 +72,14 @@ class SettingController extends Controller
                 ],
             ],
             'system' => $system,
+            'finance' => [
+                'payrollDefaults' => $payrollDefaults,
+                'payProfiles' => $payProfiles,
+                'payeeOptions' => [
+                    'guards' => $guardOptions,
+                    'users' => $userOptions,
+                ],
+            ],
         ]);
     }
 }

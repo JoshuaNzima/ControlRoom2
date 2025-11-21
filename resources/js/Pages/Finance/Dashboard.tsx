@@ -41,6 +41,8 @@ export default function FinanceDashboard(props: Props) {
   const netCashflow = paidTotal - approvedExpensesTotal;
   const overdueCount = Number(invoicesSummary.overdue_count || 0);
   const overdueAmount = Number(invoicesSummary.overdue_amount || 0);
+  const roles = (auth?.user as any)?.roles ?? [];
+  const isAdmin = Array.isArray(roles) ? roles.includes('admin') || roles.includes('super_admin') : (roles === 'admin' || roles === 'super_admin');
 
   const budgetStats = React.useMemo(
     () => {
@@ -90,7 +92,7 @@ export default function FinanceDashboard(props: Props) {
         fill: true,
       },
       {
-        label: 'Expenses (Approved)',
+        label: 'Requisitions (Approved)',
         data: monthlyExpenses,
         borderColor: '#ef4444',
         backgroundColor: 'rgba(239,68,68,0.06)',
@@ -193,7 +195,7 @@ export default function FinanceDashboard(props: Props) {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="rounded-lg border bg-white p-4">
-              <div className="text-sm text-gray-500">Approved Expenses</div>
+              <div className="text-sm text-gray-500">Approved Requisitions</div>
               <div className="text-xl font-semibold text-red-600">
                 {formatCurrencyMWK(approvedExpensesTotal)}
               </div>
@@ -210,12 +212,54 @@ export default function FinanceDashboard(props: Props) {
             </div>
           </div>
 
+          {/* My Requisitions + Last Payroll */}
+          {(props as any).myRequisitions || (props as any).lastPayroll ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {(props as any).myRequisitions && (
+                <div className="rounded-lg border bg-white p-4">
+                  <div className="text-sm text-gray-500 mb-1">My Requisitions (This Month)</div>
+                  <div className="text-2xl font-bold text-red-700">{formatCurrencyMWK((props as any).myRequisitions.this_month_total || 0)}</div>
+                  <div className="mt-2 text-sm text-gray-600 flex gap-4">
+                    <span>Pending: <strong>{Number((props as any).myRequisitions.pending_count || 0)}</strong></span>
+                    <span>Approved: <strong className="text-emerald-600">{Number((props as any).myRequisitions.approved_count || 0)}</strong></span>
+                  </div>
+                </div>
+              )}
+              {(props as any).lastPayroll && (
+                <div className="rounded-lg border bg-white p-4">
+                  <div className="text-sm text-gray-500 mb-1">Last Payroll</div>
+                  <div className="text-sm text-gray-700">{(props as any).lastPayroll.period_start} → {(props as any).lastPayroll.period_end}</div>
+                  <div className="mt-2 grid grid-cols-3 gap-3">
+                    <div>
+                      <div className="text-xs text-gray-500">Status</div>
+                      <div className="text-sm font-semibold">{(props as any).lastPayroll.status}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-gray-500">Gross</div>
+                      <div className="text-sm font-semibold">{formatCurrencyMWK(Number((props as any).lastPayroll.gross_total || 0))}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-gray-500">Net</div>
+                      <div className="text-sm font-semibold">{formatCurrencyMWK(Number((props as any).lastPayroll.net_total || 0))}</div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : null}
+
           {/* Additional KPIs */}
           <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
             <div className="rounded-lg border bg-white p-4">
               <div className="text-sm text-gray-500">Invoices</div>
               <div className="text-xl font-semibold">{Number(kpis.invoices_count || 0)}</div>
             </div>
+            {isAdmin && (
+              <div className="rounded-lg border bg-white p-4">
+                <div className="text-sm text-gray-500">Pending Approvals</div>
+                <div className="text-xl font-semibold text-red-700">{Number(kpis.pending_expenses_count || 0)}</div>
+              </div>
+            )}
             <div className="rounded-lg border bg-white p-4">
               <div className="text-sm text-gray-500">Avg Invoice</div>
               <div className="text-xl font-semibold">{formatCurrencyMWK(kpis.avg_invoice || 0)}</div>
@@ -229,7 +273,7 @@ export default function FinanceDashboard(props: Props) {
               <div className="text-xl font-semibold text-yellow-700">{formatCurrencyMWK(kpis.upcoming_due_30d || 0)}</div>
             </div>
             <div className="rounded-lg border bg-white p-4">
-              <div className="text-sm text-gray-500">Expense Run Rate (daily)</div>
+              <div className="text-sm text-gray-500">Requisition Run Rate (daily)</div>
               <div className="text-xl font-semibold text-red-600">{formatCurrencyMWK(kpis.expenses_run_rate_daily || 0)}</div>
             </div>
           </div>
@@ -324,7 +368,7 @@ export default function FinanceDashboard(props: Props) {
                 {recent.map((r: any, idx: number) => (
                   <div key={`${r.type}-${r.id}-${idx}`} className="py-3 flex justify-between items-center">
                     <div>
-                      <div className="text-sm font-medium">{r.type === 'expense' ? 'Expense' : 'Invoice'} #{r.id}</div>
+                      <div className="text-sm font-medium">{r.type === 'expense' ? 'Requisition' : 'Invoice'} #{r.id}</div>
                       <div className="text-xs text-gray-500">{r.user ? `${r.user} — ` : ''}{r.date}</div>
                     </div>
                     <div className="text-right">
@@ -368,7 +412,7 @@ export default function FinanceDashboard(props: Props) {
             </div>
 
             <div className="rounded-lg border bg-white p-6 lg:col-span-2">
-              <h3 className="text-md font-semibold mb-3">Top Expense Categories</h3>
+              <h3 className="text-md font-semibold mb-3">Top Requisition Categories</h3>
               {topCategories.length === 0 ? (
                 <div className="text-sm text-gray-500">No data</div>
               ) : (

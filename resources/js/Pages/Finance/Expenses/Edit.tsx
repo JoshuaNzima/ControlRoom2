@@ -36,13 +36,13 @@ export default function EditExpense({ expense, categories, paymentMethods }: Pro
   };
 
   return (
-    <FinanceLayout title="Edit Expense">
-      <Head title="Edit Expense" />
+    <FinanceLayout title="Edit Requisition">
+      <Head title="Edit Requisition" />
       
       <div className="py-6">
         <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="bg-white rounded-lg shadow p-6">
-            <h1 className="text-2xl font-bold text-gray-900 mb-6">Edit Expense #{expense.id}</h1>
+            <h1 className="text-2xl font-bold text-gray-900 mb-6">Edit Requisition #{expense.id}</h1>
             
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* Amount */}
@@ -51,7 +51,7 @@ export default function EditExpense({ expense, categories, paymentMethods }: Pro
                   Amount *
                 </label>
                 <div className="relative">
-                  <span className="absolute left-3 top-2 text-gray-500">$</span>
+                  <span className="absolute left-3 top-2 text-gray-500">MWK</span>
                   <input
                     type="number"
                     step="0.01"
@@ -59,7 +59,7 @@ export default function EditExpense({ expense, categories, paymentMethods }: Pro
                     required
                     value={data.amount}
                     onChange={(e) => setData('amount', e.target.value)}
-                    className="w-full pl-8 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full pl-12 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
                 </div>
                 {errors.amount && (
@@ -162,7 +162,7 @@ export default function EditExpense({ expense, categories, paymentMethods }: Pro
               {/* Info Box */}
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                 <p className="text-sm text-blue-800">
-                  💡 Changes will be saved and may require re-approval depending on your system's workflow.
+                  💡 Changes to this requisition may require re-approval depending on your workflow.
                 </p>
               </div>
 

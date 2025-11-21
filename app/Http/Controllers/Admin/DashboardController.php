@@ -133,6 +133,9 @@ class DashboardController extends Controller
                 'unpaid_invoices_count' => 0,
                 'unpaid_invoices_value' => 0,
                 'cash_flow_indicator' => 'neutral',
+                // merged metrics
+                'requisitions_mtd_total' => 0,
+                'pending_requisitions_count' => 0,
             ],
             'it' => [
                 'uptime_30d' => 99.9,
@@ -185,6 +188,12 @@ class DashboardController extends Controller
             ],
         ];
 
+        // Merge Requisitions metrics into Finance KPIs (Admin mini-dashboard)
+        $kpis['finance']['requisitions_mtd_total'] = (float) \App\Models\Expense::whereYear('expense_date', now()->year)
+            ->whereMonth('expense_date', now()->month)
+            ->sum('amount');
+        $kpis['finance']['pending_requisitions_count'] = (int) \App\Models\Expense::pending()->count();
+
         return Inertia::render('Admin/Dashboard', [
             'stats' => $stats,
             'modules' => $modules,
@@ -202,7 +211,8 @@ class DashboardController extends Controller
                 'roles' => auth()->user()->roles ?? ['admin'], // Ensure roles array exists
                 'permissions' => auth()->user()->permissions ?? [], // Ensure permissions exist
                     ]
-            ]
+            ],
+            // financeOverview removed; merged into kpis.finance
         ]);
     }
 

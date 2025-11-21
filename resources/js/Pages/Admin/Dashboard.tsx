@@ -78,6 +78,7 @@ interface Props {
     outstanding_value?: number;
     total_clients?: number;
   };
+  // financeOverview removed; metrics merged into kpis.finance
 }
 
 export default function Dashboard({
@@ -215,6 +216,8 @@ export default function Dashboard({
               </div>
             </div>
           </Card>
+
+          {/* Finance Overview merged into Finance KPIs below */}
 
           {/* Zone Coverage - Hero (collapsible) */}
           <Card className="p-6">
@@ -367,6 +370,8 @@ export default function Dashboard({
             { label: 'Unpaid Invoices (Count)', key: 'unpaid_invoices_count' },
             { label: 'Unpaid Invoices (Value)', key: 'unpaid_invoices_value', prefix: '$' },
             { label: 'Cash Flow', key: 'cash_flow_indicator' },
+            { label: 'Requisitions (MTD)', key: 'requisitions_mtd_total', prefix: '$' },
+            { label: 'Pending Requisitions', key: 'pending_requisitions_count' },
           ]} />
 
           <KpiSection title="IT" subtitle="Systems and support status" data={kpis.it} items={[

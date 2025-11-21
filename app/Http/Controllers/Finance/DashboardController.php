@@ -152,6 +152,42 @@ class DashboardController extends Controller
             ->values()
             ->take(10);
 
+        // My requisitions (current user)
+        $myRequisitions = null;
+        try {
+            $me = auth()->user();
+            if ($me) {
+                $myRequisitions = [
+                    'this_month_total' => (float) Expense::where('user_id', $me->id)
+                        ->whereYear('expense_date', now()->year)
+                        ->whereMonth('expense_date', now()->month)
+                        ->sum('amount'),
+                    'pending_count' => (int) Expense::where('user_id', $me->id)->pending()->count(),
+                    'approved_count' => (int) Expense::where('user_id', $me->id)->approved()->count(),
+                ];
+            }
+        } catch (\Throwable $e) {
+            $myRequisitions = null;
+        }
+
+        // Last payroll run summary
+        $lastPayroll = null;
+        try {
+            $pr = \App\Models\PayrollRun::orderByDesc('created_at')->first();
+            if ($pr) {
+                $lastPayroll = [
+                    'id' => $pr->id,
+                    'period_start' => optional($pr->period_start)->toDateString(),
+                    'period_end' => optional($pr->period_end)->toDateString(),
+                    'status' => $pr->status,
+                    'gross_total' => (float) ($pr->gross_total ?? 0),
+                    'net_total' => (float) ($pr->net_total ?? 0),
+                ];
+            }
+        } catch (\Throwable $e) {
+            $lastPayroll = null;
+        }
+
         return Inertia::render('Finance/Dashboard', [
             'invoicesSummary' => $invoicesSummary,
             'expensesSummary' => $expensesSummary,
@@ -171,6 +207,8 @@ class DashboardController extends Controller
             ],
             'aging' => $aging,
             'topCategories' => $topCategories,
+            'myRequisitions' => $myRequisitions,
+            'lastPayroll' => $lastPayroll,
             'auth' => [
                 'user' => [
                     'name' => auth()->user()->name,

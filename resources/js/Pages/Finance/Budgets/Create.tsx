@@ -59,7 +59,7 @@ export default function CreateBudget({ categories, currentYear }: Props) {
                   required
                   value={data.name}
                   onChange={(e) => setData('name', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
                   placeholder="e.g., Marketing Q1 2025"
                 />
                 {errors.name && <p className="mt-1 text-sm text-red-600">{errors.name}</p>}
@@ -73,7 +73,7 @@ export default function CreateBudget({ categories, currentYear }: Props) {
                 <select
                   value={data.category}
                   onChange={(e) => setData('category', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
                 >
                   {categories.map((cat) => (
                     <option key={cat} value={cat}>
@@ -100,7 +100,7 @@ export default function CreateBudget({ categories, currentYear }: Props) {
                     required
                     value={data.budgeted_amount}
                     onChange={(e) => setData('budgeted_amount', e.target.value)}
-                    className="w-full pl-8 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full pl-8 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
                     placeholder="0.00"
                   />
                 </div>
@@ -117,7 +117,7 @@ export default function CreateBudget({ categories, currentYear }: Props) {
                 <select
                   value={data.fiscal_year}
                   onChange={(e) => setData('fiscal_year', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
                 >
                   {years.map((year) => (
                     <option key={year} value={year}>
@@ -141,7 +141,7 @@ export default function CreateBudget({ categories, currentYear }: Props) {
                 <select
                   value={data.fiscal_month}
                   onChange={(e) => setData('fiscal_month', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
                 >
                   <option value="">Annual Budget</option>
                   {months.map((month) => (
@@ -164,7 +164,7 @@ export default function CreateBudget({ categories, currentYear }: Props) {
                   value={data.description}
                   onChange={(e) => setData('description', e.target.value)}
                   rows={4}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
                   placeholder="Add notes about this budget..."
                 />
                 {errors.description && (
@@ -173,8 +173,8 @@ export default function CreateBudget({ categories, currentYear }: Props) {
               </div>
 
               {/* Info Box */}
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <p className="text-sm text-blue-800">
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                <p className="text-sm text-red-800">
                   💡 This budget will track expenses in the selected category. Expenses must be
                   marked as "approved" to count towards the budget.
                 </p>
@@ -185,7 +185,7 @@ export default function CreateBudget({ categories, currentYear }: Props) {
                 <button
                   type="submit"
                   disabled={processing}
-                  className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:bg-gray-400 transition font-medium"
+                  className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:bg-gray-400 transition font-medium"
                 >
                   {processing ? 'Creating...' : 'Create Budget'}
                 </button>

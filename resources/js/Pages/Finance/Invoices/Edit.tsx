@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Head, useForm } from '@inertiajs/react';
 import FinanceLayout from '@/Layouts/FinanceLayout';
+import { formatCurrency } from '@/utils/formatters';
 
 interface InvoiceLineItem {
   id?: number;
@@ -265,7 +266,7 @@ export default function EditInvoice({ invoice }: Props) {
                           <td className="px-4 py-2">
                             <div className="relative">
                               <span className="absolute left-2 top-1 text-gray-500 text-sm">
-                                $
+                                MWK
                               </span>
                               <input
                                 type="number"
@@ -275,12 +276,12 @@ export default function EditInvoice({ invoice }: Props) {
                                 onChange={(e) =>
                                   updateLineItem(index, 'unit_price', parseFloat(e.target.value) || 0)
                                 }
-                                className="w-full pl-6 px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 text-right"
+                                className="w-full pl-10 px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 text-right"
                               />
                             </div>
                           </td>
                           <td className="px-4 py-2 text-right font-semibold text-gray-900">
-                            ${(item.quantity * item.unit_price).toFixed(2)}
+                            {formatCurrency(item.quantity * item.unit_price)}
                           </td>
                           <td className="px-4 py-2 text-center">
                             <button
@@ -304,7 +305,7 @@ export default function EditInvoice({ invoice }: Props) {
                   <div className="w-full md:w-72 space-y-3">
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600">Subtotal:</span>
-                      <span className="font-semibold">${parseFloat(data.subtotal as any).toFixed(2)}</span>
+                      <span className="font-semibold">{formatCurrency(parseFloat(data.subtotal as any))}</span>
                     </div>
 
                     <div className="flex justify-between text-sm border-t pt-2">
@@ -322,7 +323,7 @@ export default function EditInvoice({ invoice }: Props) {
                         %
                       </div>
                       <span className="font-semibold">
-                        ${parseFloat(data.tax_amount as any).toFixed(2)}
+                        {formatCurrency(parseFloat(data.tax_amount as any))}
                       </span>
                     </div>
 
@@ -330,26 +331,26 @@ export default function EditInvoice({ invoice }: Props) {
                       <div>
                         <label className="text-gray-600">Discount:</label>
                         <div className="relative">
-                          <span className="absolute left-2 top-1 text-gray-500">$</span>
+                          <span className="absolute left-2 top-1 text-gray-500">MWK</span>
                           <input
                             type="number"
                             step="0.01"
                             min="0"
                             value={data.discount_amount}
                             onChange={handleDiscountChange}
-                            className="w-20 px-2 py-1 border border-gray-300 rounded text-sm pl-6"
+                            className="w-28 px-2 py-1 border border-gray-300 rounded text-sm pl-10"
                           />
                         </div>
                       </div>
                       <span className="font-semibold">
-                        -${parseFloat(data.discount_amount as any).toFixed(2)}
+                        - {formatCurrency(parseFloat(data.discount_amount as any))}
                       </span>
                     </div>
 
                     <div className="flex justify-between text-lg font-bold border-t pt-2">
                       <span>Total:</span>
                       <span className="text-indigo-600">
-                        ${parseFloat(data.total_amount as any).toFixed(2)}
+                        {formatCurrency(parseFloat(data.total_amount as any))}
                       </span>
                     </div>
                   </div>

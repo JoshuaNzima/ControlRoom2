@@ -66,6 +66,10 @@ class UserController extends Controller
             'status' => 'nullable|in:active,inactive',
         ]);
 
+        if (empty($validated['employee_id'])) {
+            $validated['employee_id'] = $this->generateUserEmployeeId();
+        }
+
         $user = User::create([
             'name' => $validated['name'],
             'email' => $validated['email'],
@@ -80,6 +84,14 @@ class UserController extends Controller
 
         return redirect()->route('admin.users.index')
             ->with('success', 'User created successfully.');
+    }
+
+    private function generateUserEmployeeId(): string
+    {
+        do {
+            $candidate = 'EMP-'.now()->format('ym').'-'.sprintf('%04d', random_int(0, 9999));
+        } while (User::where('employee_id', $candidate)->exists());
+        return $candidate;
     }
 
     public function update(Request $request, User $user)

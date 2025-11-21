@@ -89,8 +89,13 @@ class BudgetController extends Controller
             'description' => 'nullable|string',
         ]);
 
+        $normalized = $validated;
+        $normalized['fiscal_year'] = isset($normalized['fiscal_year']) ? (int) $normalized['fiscal_year'] : now()->year;
+        $normalized['fiscal_month'] = $request->filled('fiscal_month') ? (int) $normalized['fiscal_month'] : null;
+        $normalized['budgeted_amount'] = isset($normalized['budgeted_amount']) ? (float) $normalized['budgeted_amount'] : 0;
+
         $budget = Budget::create([
-            ...$validated,
+            ...$normalized,
             'user_id' => Auth::id(),
             'status' => 'active',
         ]);

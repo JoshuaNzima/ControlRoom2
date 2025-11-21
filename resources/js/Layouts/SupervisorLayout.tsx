@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import IconMapper from '@/Components/IconMapper';
+import BaseShell from './BaseShell';
 import { Link, usePage, router } from "@inertiajs/react";
 import { PageProps } from '@/types';
 import { motion } from "framer-motion";
@@ -151,6 +152,12 @@ export default function SupervisorLayout({ children, title }: SupervisorLayoutPr
         <header className="hidden md:flex h-16 bg-red-50 dark:bg-gray-900 border-b border-red-100 dark:border-gray-800 px-6 items-center justify-between shadow-sm">
           <h1 className="text-xl font-bold text-red-900 dark:text-gray-100">{title || "Dashboard"}</h1>
           <div className="flex items-center gap-3">
+            <Link
+              href={route('expense.request.create')}
+              className="inline-flex items-center px-3 py-1.5 rounded-md bg-red-600 text-white hover:bg-red-700 text-sm"
+            >
+              Request Requisition
+            </Link>
             <button className="p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 relative" onClick={() => setNotificationsOpen(!notificationsOpen)}>
               <IconMapper name="Bell" size={22} />
               {unreadCount > 0 && <span className="absolute top-0 right-0 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold">{unreadCount}</span>}
@@ -167,12 +174,11 @@ export default function SupervisorLayout({ children, title }: SupervisorLayoutPr
         </header>
 
         {/* Page Content */}
-              {/* Main Content */}
-      <main className="flex-1 bg-red-50 dark:bg-gray-900 overflow-y-auto">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 text-gray-900 dark:text-gray-100">
-          {children}
+        <div className="flex-1 bg-red-50 dark:bg-gray-900 overflow-y-auto">
+          <BaseShell noHeader fullScreen={false}>
+            {children}
+          </BaseShell>
         </div>
-      </main>
       </div>
 
       {/* Notifications Panel */}
@@ -183,7 +189,7 @@ export default function SupervisorLayout({ children, title }: SupervisorLayoutPr
             <div className="p-4 border-b flex items-center justify-between bg-red-50">
               <h3 className="font-bold text-gray-900">Notifications</h3>
               <div className="flex items-center gap-2">
-                {unreadCount > 0 && <button onClick={markAllAsRead} className="text-xs text-indigo-600 hover:text-indigo-800 font-medium">Mark all read</button>}
+                {unreadCount > 0 && <button onClick={markAllAsRead} className="text-xs text-red-600 hover:text-red-800 font-medium">Mark all read</button>}
                 <button onClick={() => setNotificationsOpen(false)} className="p-1 rounded hover:bg-gray-200"><IconMapper name="X" size={18} /></button>
               </div>
             </div>
@@ -196,13 +202,13 @@ export default function SupervisorLayout({ children, title }: SupervisorLayoutPr
               ) : (
                 <div className="divide-y">
                   {notifications.map(notification => (
-                    <div key={notification.id} className={`p-4 hover:bg-gray-50 transition-colors cursor-pointer ${!notification.read ? 'bg-blue-50/50' : ''}`} onClick={() => markAsRead(notification.id)}>
+                    <div key={notification.id} className={`p-4 hover:bg-gray-50 transition-colors cursor-pointer ${!notification.read ? 'bg-red-50/50' : ''}`} onClick={() => markAsRead(notification.id)}>
                       <div className="flex items-start gap-3">
                         <span className="text-2xl flex-shrink-0">{getNotificationIcon(notification.type)}</span>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1">
                             <p className="font-semibold text-gray-900 text-sm">{notification.title}</p>
-                            {!notification.read && <span className="w-2 h-2 bg-blue-600 rounded-full flex-shrink-0" />}
+                            {!notification.read && <span className="w-2 h-2 bg-red-600 rounded-full flex-shrink-0" />}
                           </div>
                           <p className="text-sm text-gray-600 mb-1">{notification.message}</p>
                           <p className="text-xs text-gray-400">{notification.time}</p>

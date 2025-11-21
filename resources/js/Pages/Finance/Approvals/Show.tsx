@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import FinanceLayout from '@/Layouts/FinanceLayout';
+import AdminLayout from '@/Layouts/AdminLayout';
 import { formatCurrency, formatDate } from '@/utils/formatters';
 
 type Expense = {
@@ -55,6 +56,10 @@ function getStatusClasses(status: string): { banner: string; badge: string } {
 
 export default function ApprovalShow({ approval }: Props) {
   const [comments, setComments] = useState<string>(approval.comments || '');
+  const { url } = usePage();
+  const isAdminRoute = typeof url === 'string' && url.startsWith('/admin/');
+  const prefix = isAdminRoute ? 'admin' : 'finance';
+  const Layout = isAdminRoute ? AdminLayout : FinanceLayout;
 
   const expense = approval.expense || null;
   const isPending = approval.status === 'pending';
@@ -64,35 +69,35 @@ export default function ApprovalShow({ approval }: Props) {
     if (!isPending) return;
     if (!window.confirm('Are you sure you want to ' + action + ' this expense?')) return;
 
-    router.post(route('finance.approvals.' + action, { approval: approval.id }), {
+    router.post(route(prefix + '.approvals.' + action, { approval: approval.id }), {
       comments,
     });
   };
 
   return (
-    <FinanceLayout title="Approval">
+    <Layout title="Approval">
       <Head title="Approval" />
       <div className="py-6">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
           <div className="flex items-start justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Expense approval</h1>
-              <p className="mt-1 text-sm text-gray-600">
-                {expense ? 'Expense #' + expense.id : 'Approval #' + approval.id}
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Requisition approval</h1>
+              <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
+                {expense ? 'Requisition #' + expense.id : 'Approval #' + approval.id}
                 {' '}
                 {'(' + approval.status + ')'}
                 {typeof approval.stage === 'number' && ' - Stage ' + approval.stage}
               </p>
             </div>
             <Link
-              href={route('finance.approvals.index')}
-              className="text-sm font-medium text-indigo-600 hover:text-indigo-800"
+              href={route(prefix + '.approvals.index')}
+              className="text-sm font-medium text-red-600 hover:text-red-800"
             >
               Back to approvals
             </Link>
           </div>
 
-          <div className="bg-white rounded-lg shadow overflow-hidden">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
             <div
               className={
                 'px-6 py-4 border-b flex items-center justify-between ' + statusClasses.banner
@@ -109,20 +114,20 @@ export default function ApprovalShow({ approval }: Props) {
                   </span>
                 </div>
                 {approval.approver && (
-                  <div className="mt-1 text-xs text-gray-700">
+                  <div className="mt-1 text-xs text-gray-700 dark:text-gray-300">
                     Assigned to {approval.approver.name}
                   </div>
                 )}
               </div>
               {expense && (
                 <div className="text-right">
-                  <div className="text-xs text-gray-600 uppercase">Amount</div>
+                  <div className="text-xs text-gray-600 dark:text-gray-300 uppercase">Amount</div>
                   <div className="mt-1 text-2xl font-bold text-emerald-600">
                     {formatCurrency(expense.amount)}
                   </div>
                   {expense.status && (
-                    <div className="mt-1 text-xs text-gray-700">
-                      Expense status: {expense.status}
+                    <div className="mt-1 text-xs text-gray-700 dark:text-gray-300">
+                      Requisition status: {expense.status}
                     </div>
                   )}
                 </div>
@@ -133,28 +138,28 @@ export default function ApprovalShow({ approval }: Props) {
               {expense && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <div className="text-sm font-medium text-gray-700 mb-1">Description</div>
-                    <div className="text-sm text-gray-900 bg-gray-50 rounded-lg px-3 py-2">
-                      {expense.description || 'Expense #' + expense.id}
+                    <div className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Description</div>
+                    <div className="text-sm text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-900 rounded-lg px-3 py-2">
+                      {expense.description || 'Requisition #' + expense.id}
                     </div>
                   </div>
                   <div>
-                    <div className="text-sm font-medium text-gray-700 mb-1">Category</div>
-                    <span className="inline-flex items-center px-3 py-1 rounded-full bg-blue-50 text-blue-800 text-xs font-medium">
+                    <div className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Category</div>
+                    <span className="inline-flex items-center px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-900 text-blue-800 dark:text-blue-100 text-xs font-medium">
                       {expense.category
                         ? String(expense.category).replace(/_/g, ' ')
                         : 'Uncategorised'}
                     </span>
                   </div>
                   <div>
-                    <div className="text-sm font-medium text-gray-700 mb-1">Expense date</div>
-                    <div className="text-sm text-gray-900">
+                    <div className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Requisition date</div>
+                    <div className="text-sm text-gray-900 dark:text-gray-100">
                       {expense.expense_date ? formatDate(expense.expense_date) : 'Not set'}
                     </div>
                   </div>
                   <div>
-                    <div className="text-sm font-medium text-gray-700 mb-1">Payment method</div>
-                    <div className="text-sm text-gray-900">
+                    <div className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Payment method</div>
+                    <div className="text-sm text-gray-900 dark:text-gray-100">
                       {expense.payment_method || 'Not specified'}
                     </div>
                   </div>
@@ -163,26 +168,26 @@ export default function ApprovalShow({ approval }: Props) {
 
               <div className="border-t pt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <div className="text-sm font-medium text-gray-700 mb-1">Approval stage</div>
-                  <div className="text-sm text-gray-900">
+                  <div className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Approval stage</div>
+                  <div className="text-sm text-gray-900 dark:text-gray-100">
                     {typeof approval.stage === 'number' ? 'Stage ' + approval.stage : 'Not set'}
                   </div>
                 </div>
                 <div>
-                  <div className="text-sm font-medium text-gray-700 mb-1">Approval ID</div>
-                  <div className="text-sm text-gray-900">{approval.id}</div>
+                  <div className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Approval ID</div>
+                  <div className="text-sm text-gray-900 dark:text-gray-100">{approval.id}</div>
                 </div>
               </div>
 
               <div className="border-t pt-6 space-y-3">
                 <div className="flex items-center justify-between">
-                  <div className="text-sm font-medium text-gray-700">Comments</div>
+                  <div className="text-sm font-medium text-gray-700 dark:text-gray-300">Comments</div>
                   {!isPending && (
-                    <div className="text-xs text-gray-500">This approval has already been processed.</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">This approval has already been processed.</div>
                   )}
                 </div>
                 <textarea
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:bg-gray-900 dark:text-gray-100"
                   rows={4}
                   value={comments}
                   onChange={(e) => setComments(e.target.value)}
@@ -191,7 +196,7 @@ export default function ApprovalShow({ approval }: Props) {
               </div>
 
               {(approval.created_at || approval.updated_at) && (
-                <div className="border-t pt-4 grid grid-cols-1 md:grid-cols-2 gap-4 text-xs text-gray-600">
+                <div className="border-t pt-4 grid grid-cols-1 md:grid-cols-2 gap-4 text-xs text-gray-600 dark:text-gray-400">
                   {approval.created_at && (
                     <div>
                       <div className="font-medium">Created</div>
@@ -208,8 +213,8 @@ export default function ApprovalShow({ approval }: Props) {
               )}
             </div>
 
-            <div className="px-6 py-4 border-t bg-gray-50 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-              <div className="text-xs text-gray-500">
+            <div className="px-6 py-4 border-t bg-gray-50 dark:bg-gray-900 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+              <div className="text-xs text-gray-500 dark:text-gray-400">
                 {isPending
                   ? 'Review the expense details, add an optional comment, then approve or reject.'
                   : 'No further action is required on this approval.'}
@@ -236,7 +241,7 @@ export default function ApprovalShow({ approval }: Props) {
           </div>
         </div>
       </div>
-    </FinanceLayout>
+    </Layout>
   );
 }
 

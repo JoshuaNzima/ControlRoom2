@@ -1,6 +1,7 @@
 import React from 'react';
-import { Head, Link, usePage } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 import IconMapper from '@/Components/IconMapper';
+import BaseShell from './BaseShell';
 
 type Props = {
 	title: string;
@@ -25,7 +26,6 @@ export default function ZoneCommanderLayout({ title, children }: Props) {
 
 	return (
 		<div className="min-h-screen bg-red-50 dark:bg-gray-900">
-			<Head title={title} />
 			<div className="flex">
 				<aside className="hidden md:flex md:w-64 bg-red-900 dark:bg-gray-950 text-white min-h-screen flex-col">
 					<div className="px-6 py-4 border-b border-red-800 dark:border-gray-800">
@@ -41,14 +41,25 @@ export default function ZoneCommanderLayout({ title, children }: Props) {
 					</nav>
 				</aside>
 				<div className="flex-1">
-					<header className="bg-red-50 dark:bg-gray-900 border-b border-red-100 dark:border-gray-800 px-6 py-4 sticky top-0 z-10">
-						<h1 className="text-xl font-semibold text-red-900 dark:text-gray-100">{title}</h1>
-					</header>
-					<main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 text-gray-900 dark:text-gray-100">{children}</main>
+					<BaseShell
+						title={title}
+						fullScreen={false}
+						header={
+							<div className="flex items-center justify-between">
+								<h1 className="text-xl font-bold text-red-900 dark:text-gray-100">{title}</h1>
+								<Link
+									href={route('expense.request.create')}
+									className="inline-flex items-center px-3 py-1.5 rounded-md bg-red-600 text-white hover:bg-red-700 text-sm"
+								>
+									Request Requisition
+								</Link>
+							</div>
+						}
+					>
+						{children}
+					</BaseShell>
 				</div>
 			</div>
 		</div>
 	);
 }
-
-

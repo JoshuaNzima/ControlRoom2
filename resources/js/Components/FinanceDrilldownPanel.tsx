@@ -79,11 +79,11 @@ export default function FinanceDrilldownPanel({ open, title, data, onClose }: Pr
       <div className="p-4 border-b flex items-center justify-between">
         <div>
           <div className="font-semibold">{title || 'Details'}</div>
-          <div className="text-xs text-gray-500">{data?.totals ? `Invoices: ${formatCurrency(data.totals.invoices_total || 0)} • Expenses: ${formatCurrency(data.totals.expenses_total || 0)}` : ''}</div>
+          <div className="text-xs text-gray-500">{data?.totals ? `Invoices: ${formatCurrency(data.totals.invoices_total || 0)} • Requisitions: ${formatCurrency(data.totals.expenses_total || 0)}` : ''}</div>
         </div>
         <div className="flex items-center gap-2">
           <button onClick={() => downloadCSV(`${title || 'drilldown'}-invoices.csv`, data?.invoices ?? [])} className="text-sm px-2 py-1 bg-gray-100 rounded">CSV Invoices</button>
-          <button onClick={() => downloadCSV(`${title || 'drilldown'}-expenses.csv`, data?.expenses ?? [])} className="text-sm px-2 py-1 bg-gray-100 rounded">CSV Expenses</button>
+          <button onClick={() => downloadCSV(`${title || 'drilldown'}-requisitions.csv`, data?.expenses ?? [])} className="text-sm px-2 py-1 bg-gray-100 rounded">CSV Requisitions</button>
           <button onClick={onClose} className="text-sm px-2 py-1 bg-red-100 text-red-800 rounded">Close</button>
         </div>
       </div>
@@ -91,7 +91,7 @@ export default function FinanceDrilldownPanel({ open, title, data, onClose }: Pr
       <div className="p-4">
         <div className="flex gap-2 mb-3">
           <button className={`px-3 py-1 rounded ${tab === 'invoices' ? 'bg-red-800 text-white' : 'bg-gray-100'}`} onClick={() => { setTab('invoices'); setPage(1); }}>Invoices ({invoices.length})</button>
-          <button className={`px-3 py-1 rounded ${tab === 'expenses' ? 'bg-red-800 text-white' : 'bg-gray-100'}`} onClick={() => { setTab('expenses'); setPage(1); }}>Expenses ({expenses.length})</button>
+          <button className={`px-3 py-1 rounded ${tab === 'expenses' ? 'bg-red-800 text-white' : 'bg-gray-100'}`} onClick={() => { setTab('expenses'); setPage(1); }}>Requisitions ({expenses.length})</button>
         </div>
 
         <div className="mb-3 flex items-center gap-2">
@@ -119,7 +119,7 @@ export default function FinanceDrilldownPanel({ open, title, data, onClose }: Pr
             {visible.map((r: any) => (
               <li key={r.id} className="py-2 flex justify-between">
                 <div>
-                  <div className="text-sm font-medium">{tab === 'invoices' ? `#${r.invoice_number ?? r.id}` : r.category ?? 'Expense'}</div>
+                  <div className="text-sm font-medium">{tab === 'invoices' ? `#${r.invoice_number ?? r.id}` : r.category ?? 'Requisition'}</div>
                   <div className="text-xs text-gray-500">{r.date} • {r.user ?? '—'}</div>
                 </div>
                 <div className="text-sm font-medium">{formatCurrency(r.amount)}</div>

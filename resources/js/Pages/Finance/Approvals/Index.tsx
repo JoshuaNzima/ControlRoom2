@@ -9,19 +9,20 @@ interface Props {
 }
 
 export default function ApprovalsIndex({ approvals }: Props) {
+  const { url } = usePage();
+  const isAdminRoute = typeof url === 'string' && url.startsWith('/admin/');
+  const prefix = isAdminRoute ? 'admin' : 'finance';
+  const Layout = isAdminRoute ? AdminLayout : FinanceLayout;
+
   const handleApprove = (id: number) => {
-    router.post(route('finance.approvals.approve', { approval: id }), {});
+    router.post(route(`${prefix}.approvals.approve`, { approval: id }), {});
   };
 
   const handleReject = (id: number) => {
-    router.post(route('finance.approvals.reject', { approval: id }), {});
+    router.post(route(`${prefix}.approvals.reject`, { approval: id }), {});
   };
 
   const pendingCount = approvals.length;
-
-  const { url } = usePage();
-  const isAdminRoute = typeof url === 'string' && url.startsWith('/admin/');
-  const Layout = isAdminRoute ? AdminLayout : FinanceLayout;
 
   return (
     <Layout title="Approvals">
@@ -30,63 +31,63 @@ export default function ApprovalsIndex({ approvals }: Props) {
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Approvals</h1>
-              <p className="mt-1 text-sm text-gray-600">
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Approvals</h1>
+              <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
                 {pendingCount === 0
                   ? 'No pending approvals assigned to you.'
-                  : `You have ${pendingCount} pending expense approval${pendingCount === 1 ? '' : 's'}.`}
+                  : `You have ${pendingCount} pending requisition approval${pendingCount === 1 ? '' : 's'}.`}
               </p>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow overflow-hidden">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
             {approvals.length === 0 ? (
               <div className="p-8 text-center">
-                <p className="text-gray-500 mb-3">
-                  There are currently no expenses waiting for your approval.
+                <p className="text-gray-500 dark:text-gray-400 mb-3">
+                  There are currently no requisitions waiting for your approval.
                 </p>
                 <Link
                   href={route('finance.expenses.index')}
                   className="inline-flex items-center px-4 py-2 text-sm font-medium rounded-lg bg-emerald-600 text-white hover:bg-emerald-700"
                 >
-                  View all expenses
+                  View all requisitions
                 </Link>
               </div>
             ) : (
               <table className="w-full">
-                <thead className="bg-gray-50 border-b">
+                <thead className="bg-gray-50 dark:bg-gray-700 border-b dark:border-gray-600">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                      Expense
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-300 uppercase tracking-wide">
+                      Requisition
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-300 uppercase tracking-wide">
                       Amount
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-300 uppercase tracking-wide">
                       Date
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-300 uppercase tracking-wide">
                       Stage
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-300 uppercase tracking-wide">
                       Approver
                     </th>
-                    <th className="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                    <th className="px-6 py-3 text-right text-xs font-semibold text-gray-500 dark:text-gray-300 uppercase tracking-wide">
                       Actions
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y">
+                <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                   {approvals.map((a: any) => (
-                    <tr key={a.id} className="hover:bg-gray-50 transition">
+                    <tr key={a.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition">
                       <td className="px-6 py-4 text-sm">
                         <Link
                           href={route('finance.expenses.show', a.expense.id)}
-                          className="font-medium text-indigo-600 hover:text-indigo-800"
+                          className="font-medium text-red-600 hover:text-red-800"
                         >
-                          {a.expense.description || `Expense #${a.expense.id}`}
+                          {a.expense.description || `Requisition #${a.expense.id}`}
                         </Link>
-                        <div className="mt-1 text-xs text-gray-500">
+                        <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                           {a.expense.category && (
                             <span className="inline-block mr-2">
                               {String(a.expense.category).replace(/_/g, ' ')}
@@ -97,29 +98,29 @@ export default function ApprovalsIndex({ approvals }: Props) {
                           )}
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-sm font-semibold text-gray-900">
+                      <td className="px-6 py-4 text-sm font-semibold text-gray-900 dark:text-gray-100">
                         {formatCurrency(a.expense.amount)}
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-700">
+                      <td className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">
                         {a.expense.expense_date ? formatDate(a.expense.expense_date) : '-'}
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-700">
+                      <td className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">
                         {a.stage ?? '-'}
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-700">
+                      <td className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">
                         {a.approver?.name || '-'}
                       </td>
                       <td className="px-6 py-4 text-sm text-right space-x-2">
                         <Link
-                          href={route('finance.approvals.show', a.id)}
-                          className="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-medium bg-gray-100 text-gray-700 hover:bg-gray-200"
+                          href={route(`${prefix}.approvals.show`, a.id)}
+                          className="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600"
                         >
                           Details
                         </Link>
                         <button
                           type="button"
                           onClick={() => handleApprove(a.id)}
-                          className="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-medium bg-emerald-600 text-white hover:bg-emerald-700"
+                          className="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-medium bg-red-600 text-white hover:bg-red-700"
                         >
                           Approve
                         </button>
