@@ -3,6 +3,7 @@ import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import type { LatLngExpression, LatLngTuple } from 'leaflet';
+import './GuardLocationMap.css';
 
 interface Location {
   lat: number;
@@ -34,20 +35,25 @@ interface GuardLocationMapProps {
   zoom?: number;
 }
 
-// Create custom guard icon
+// Create custom guard icon using default Leaflet icon
 const guardIcon = new L.Icon({
-  iconUrl: '/images/guard-marker.png', // Make sure to add this image to your public folder
-  iconSize: [32, 32],
-  iconAnchor: [16, 32],
-  popupAnchor: [0, -32],
+  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41]
 });
 
-// Create custom site icon
+// Create custom site icon using default Leaflet icon with different color
 const siteIcon = new L.Icon({
-  iconUrl: '/images/site-marker.png', // Make sure to add this image to your public folder
-  iconSize: [32, 32],
-  iconAnchor: [16, 32],
-  popupAnchor: [0, -32],
+  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41],
+  className: 'site-marker'
 });
 
 function MapUpdater({ center, zoom }: { center?: LatLngExpression; zoom?: number }) {

@@ -86,6 +86,13 @@ Route::middleware(['auth'])->group(function () {
 		Route::post('/downs/{down}/escalate', [\App\Http\Controllers\ControlRoom\DownController::class, 'escalate'])->name('downs.escalate');
 		Route::post('/downs/{down}/resolve', [\App\Http\Controllers\ControlRoom\DownController::class, 'resolve'])->name('downs.resolve');
 
+		// Live Monitoring
+		Route::get('/live/scans', [\App\Http\Controllers\ControlRoom\LiveMonitoringController::class, 'getRecentScans'])->name('live.scans');
+		Route::get('/live/attendance', [\App\Http\Controllers\ControlRoom\LiveMonitoringController::class, 'getRecentAttendance'])->name('live.attendance');
+		Route::get('/live/stats', [\App\Http\Controllers\ControlRoom\LiveMonitoringController::class, 'getLiveStats'])->name('live.stats');
+		Route::get('/live/locations', [\App\Http\Controllers\ControlRoom\LiveMonitoringController::class, 'getGuardLocations'])->name('live.locations');
+		Route::get('/live/alerts', [\App\Http\Controllers\ControlRoom\LiveMonitoringController::class, 'getAttendanceAlerts'])->name('live.alerts');
+
 		// Public Intake Triage
 		Route::prefix('triage')->name('triage.')->group(function () {
 			Route::get('/intakes', [\App\Http\Controllers\ControlRoom\PublicIntakeTriageController::class, 'index'])->name('intakes.index');

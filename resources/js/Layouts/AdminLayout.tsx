@@ -55,6 +55,7 @@ export default function AdminLayout({ title, children, user }: Props) {
   { name: 'Guards', href: route('admin.guards.dashboard'), icon: <IconMapper name="shield-check" className="h-6 w-6" />, current: false },
   { name: 'HR', href: route('hr.dashboard'), icon: <IconMapper name="users-2" className="h-6 w-6" />, current: false },
   { name: 'K9', href: route('k9.dashboard'), icon: <IconMapper name="shield" className="h-6 w-6" />, current: false },
+  { name: 'Business Dev', href: route('admin.business-dev'), icon: <IconMapper name="handshake" className="h-6 w-6" />, current: isCurrent(route('admin.business-dev')) },
   ...(canSeeFinance ? [{ name: 'Finance', href: route('admin.finance'), icon: <IconMapper name="wallet" className="h-6 w-6" />, current: isCurrent(route('admin.finance')) }] : []),
   { name: 'Marketing', href: route('admin.marketing'), icon: <IconMapper name="megaphone" className="h-6 w-6" />, current: false },
   ];

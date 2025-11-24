@@ -36,9 +36,17 @@ class ShiftController extends Controller
 
         $shifts = $query->latest('date')->paginate(20);
 
+        $guards = Guard::when(Auth::user()->hasRole('supervisor'), function($query) {
+            $query->forSupervisor(Auth::id());
+        })->active()->select(['id','name'])->get();
+
+        $sites = ClientSite::active()->select(['id','name'])->get();
+
         return Inertia::render('Shifts/Index', [
             'shifts' => $shifts,
             'filters' => request()->only(['search', 'date', 'status']),
+            'guards' => $guards,
+            'sites' => $sites,
         ]);
     }
 

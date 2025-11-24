@@ -1,0 +1,16 @@
+/* GuardLocationMap.css */
+.site-marker {
+  filter: hue-rotate(120deg) brightness(1.2);
+}
+
+.leaflet-popup-content-wrapper {
+  border-radius: 8px;
+}
+
+.leaflet-popup-content {
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+.leaflet-container {
+  border-radius: 8px;
+}

@@ -19,6 +19,10 @@ Route::middleware('web')->group(function () {
 // Public landing page for guests (redirects authenticated users to dashboard)
 Route::get('/', [\App\Http\Controllers\Public\LandingController::class, 'index'])->name('public.home');
 
+// Public contact page
+Route::get('/contact', [\App\Http\Controllers\Public\ContactController::class, 'index'])->name('public.contact');
+Route::post('/contact', [\App\Http\Controllers\Public\ContactController::class, 'store'])->name('public.contact.store');
+
 // Guest routes
 Route::middleware('guest')->group(function () {
     Route::get('login', [\App\Http\Controllers\Auth\AuthenticatedSessionController::class, 'create'])->name('login');

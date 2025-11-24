@@ -68,14 +68,19 @@ class CheckpointScanController extends Controller
         // Dispatch tagging job (async) - job will persist scan tags to DB
         TagScanJob::dispatch($scan->id)->onQueue('default');
 
-        // Dispatch event for real-time notifications (basic payload)
+        // Dispatch event for real-time notifications (comprehensive payload)
         event(new \App\Events\QRScanned(
             auth()->id(),
             "Checkpoint scanned successfully",
             [
+                'id' => $scan->id,
+                'supervisor_name' => auth()->user()->name,
                 'site_name' => $checkpoint->clientSite->name,
                 'client_name' => $checkpoint->clientSite->client->name,
-                'scan_id' => $scan->id,
+                'scanned_at' => $scan->scanned_at->toISOString(),
+                'location_verified' => $locationVerified,
+                'latitude' => $validated['latitude'] ?? null,
+                'longitude' => $validated['longitude'] ?? null,
             ]
         ));
 

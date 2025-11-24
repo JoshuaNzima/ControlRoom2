@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link, router, useForm } from '@inertiajs/react';
 import FinanceLayout from '@/Layouts/FinanceLayout';
+import Modal from '@/Components/Modal';
 import { formatCurrency, formatDate } from '@/utils/formatters';
 
 interface Expense {
@@ -11,7 +12,9 @@ interface Expense {
   expense_date: string;
   payment_method: string;
   status: 'pending' | 'approved' | 'rejected';
-  user: {
+  account_id?: number | null;
+  notes?: string | null;
+  user?: {
     id: number;
     name: string;
   };
@@ -77,6 +80,43 @@ export default function ExpenseIndex({ expenses, totals, filters }: Props) {
   const [startDate, setStartDate] = useState(filters.start_date || '');
   const [endDate, setEndDate] = useState(filters.end_date || '');
 
+  const [viewingExpense, setViewingExpense] = useState<Expense | null>(null);
+  const [viewModalOpen, setViewModalOpen] = useState(false);
+  const [loadingId, setLoadingId] = useState<number | null>(null);
+
+  const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
+
+  const openViewModal = async (id: number) => {
+    setLoadingId(id);
+    try {
+      const response = await fetch(route('finance.expenses.show', id), {
+        headers: {
+          Accept: 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to load requisition');
+      }
+
+      const json = (await response.json()) as Expense;
+      setViewingExpense(json);
+      setViewModalOpen(true);
+    } catch (e) {
+      router.visit(route('finance.expenses.show', id));
+    } finally {
+      setLoadingId(null);
+    }
+  };
+
+  const openEditModal = (expense: Expense) => {
+    setEditingExpense(expense);
+    setEditModalOpen(true);
+  };
+
   const handleExportCsv = () => {
     if (!expenses || !expenses.data || expenses.data.length === 0) return;
     const rows = expenses.data.map((expense) => ({
@@ -127,8 +167,15 @@ export default function ExpenseIndex({ expenses, totals, filters }: Props) {
       <div className="py-6">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
           {/* Header */}
-          <div className="flex items-center">
+          <div className="flex items-center justify-between">
             <h1 className="text-3xl font-bold text-gray-900">Requisitions</h1>
+            <button
+              type="button"
+              onClick={() => setCreateModalOpen(true)}
+              className="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition text-sm font-medium"
+            >
+              New Requisition
+            </button>
           </div>
 
           {/* Summary Cards */}
@@ -316,15 +363,28 @@ export default function ExpenseIndex({ expenses, totals, filters }: Props) {
                         </span>
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-600">
-                        {expense.user.name}
+                        {expense.user?.name}
                       </td>
                       <td className="px-6 py-4 text-sm">
-                        <Link
-                          href={route('finance.expenses.show', expense.id)}
-                          className="text-indigo-600 hover:text-indigo-900 font-medium"
-                        >
-                          View
-                        </Link>
+                        <div className="flex items-center gap-3">
+                          <button
+                            type="button"
+                            onClick={() => openViewModal(expense.id)}
+                            className="text-indigo-600 hover:text-indigo-900 font-medium disabled:opacity-50"
+                            disabled={loadingId === expense.id}
+                          >
+                            {loadingId === expense.id ? 'Opening…' : 'View'}
+                          </button>
+                          {expense.status === 'pending' && (
+                            <button
+                              type="button"
+                              onClick={() => openEditModal(expense)}
+                              className="text-red-600 hover:text-red-800 font-medium"
+                            >
+                              Edit
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))
@@ -356,8 +416,537 @@ export default function ExpenseIndex({ expenses, totals, filters }: Props) {
               ))}
             </div>
           )}
+
+          <CreateExpenseModal
+            open={createModalOpen}
+            onClose={() => setCreateModalOpen(false)}
+            categories={categories}
+            paymentMethods={paymentMethods}
+          />
+
+          {editingExpense && (
+            <EditExpenseModal
+              key={editingExpense.id}
+              open={editModalOpen}
+              onClose={() => {
+                setEditModalOpen(false);
+                setEditingExpense(null);
+              }}
+              expense={editingExpense}
+              categories={categories}
+              paymentMethods={paymentMethods}
+            />
+          )}
+
+          {viewingExpense && (
+            <Modal
+              show={viewModalOpen}
+              onClose={() => setViewModalOpen(false)}
+              maxWidth="2xl"
+            >
+              <div className="px-6 py-4 border-b flex items-center justify-between bg-white">
+                <h2 className="text-lg font-semibold text-gray-900">
+                  Requisition #{viewingExpense.id}
+                </h2>
+                <button
+                  type="button"
+                  onClick={() => setViewModalOpen(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <span className="sr-only">Close</span>
+                  <svg
+                    className="h-5 w-5"
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </button>
+              </div>
+              <div className="px-6 py-4 bg-white space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm font-semibold text-gray-700">Amount</p>
+                    <p className="text-lg font-bold text-gray-900">
+                      {formatCurrency(viewingExpense.amount)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-gray-700">Status</p>
+                    <span
+                      className={`inline-flex mt-1 px-2 py-1 rounded text-xs font-medium ${getStatusBadge(
+                        viewingExpense.status
+                      )}`}
+                    >
+                      {viewingExpense.status.charAt(0).toUpperCase() +
+                        viewingExpense.status.slice(1)}
+                    </span>
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-gray-700">Category</p>
+                    <p className="text-sm text-gray-900">
+                      {viewingExpense.category.replace(/_/g, ' ')}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-gray-700">Date</p>
+                    <p className="text-sm text-gray-900">
+                      {formatDate(viewingExpense.expense_date)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-gray-700">Payment Method</p>
+                    <p className="text-sm text-gray-900">
+                      {viewingExpense.payment_method.charAt(0).toUpperCase() +
+                        viewingExpense.payment_method.slice(1)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-gray-700">Submitted By</p>
+                    <p className="text-sm text-gray-900">
+                      {viewingExpense.user?.name}
+                    </p>
+                  </div>
+                </div>
+
+                {viewingExpense.description && (
+                  <div>
+                    <p className="text-sm font-semibold text-gray-700">Description</p>
+                    <p className="text-sm text-gray-900 bg-gray-50 rounded px-3 py-2">
+                      {viewingExpense.description}
+                    </p>
+                  </div>
+                )}
+
+                {viewingExpense.notes && (
+                  <div>
+                    <p className="text-sm font-semibold text-gray-700">Notes</p>
+                    <p className="text-sm text-gray-900 bg-gray-50 rounded px-3 py-2 whitespace-pre-wrap">
+                      {viewingExpense.notes}
+                    </p>
+                  </div>
+                )}
+              </div>
+              <div className="px-6 py-3 bg-gray-50 border-t text-xs text-gray-500 flex justify-between">
+                <span>
+                  Status:{' '}
+                  {viewingExpense.status === 'pending'
+                    ? 'Pending approval'
+                    : viewingExpense.status === 'approved'
+                    ? 'Approved'
+                    : 'Rejected'}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setViewModalOpen(false)}
+                  className="text-indigo-600 hover:text-indigo-800 font-medium"
+                >
+                  Close
+                </button>
+              </div>
+            </Modal>
+          )}
         </div>
       </div>
     </FinanceLayout>
+  );
+}
+
+interface CreateExpenseModalProps {
+  open: boolean;
+  onClose: () => void;
+  categories: string[];
+  paymentMethods: string[];
+}
+
+function CreateExpenseModal({ open, onClose, categories, paymentMethods }: CreateExpenseModalProps) {
+  const { data, setData, post, processing, errors, reset } = useForm({
+    amount: '',
+    category: categories[0] || 'general',
+    description: '',
+    expense_date: new Date().toISOString().slice(0, 10),
+    account_id: '',
+    payment_method: paymentMethods[0] || 'cash',
+    notes: '',
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    post(route('finance.expenses.store'), {
+      onSuccess: () => {
+        reset();
+        onClose();
+      },
+    });
+  };
+
+  const handleClose = () => {
+    if (!processing) {
+      onClose();
+    }
+  };
+
+  return (
+    <Modal show={open} onClose={handleClose} maxWidth="2xl">
+      <div className="px-6 py-4 border-b flex items-center justify-between bg-white">
+        <h2 className="text-lg font-semibold text-gray-900">New Requisition</h2>
+        <button
+          type="button"
+          onClick={handleClose}
+          className="text-gray-400 hover:text-gray-600"
+        >
+          <span className="sr-only">Close</span>
+          <svg
+            className="h-5 w-5"
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 20 20"
+            fill="currentColor"
+          >
+            <path
+              fillRule="evenodd"
+              d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+              clipRule="evenodd"
+            />
+          </svg>
+        </button>
+      </div>
+      <form onSubmit={handleSubmit} className="px-6 py-4 bg-white space-y-6">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Amount *
+          </label>
+          <div className="relative">
+            <span className="absolute left-3 top-2 text-gray-500">MWK</span>
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              required
+              value={data.amount}
+              onChange={(e) => setData('amount', e.target.value)}
+              className="w-full pl-12 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              placeholder="0.00"
+            />
+          </div>
+          {errors.amount && (
+            <p className="mt-1 text-sm text-red-600">{errors.amount}</p>
+          )}
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Category *
+          </label>
+          <select
+            value={data.category}
+            onChange={(e) => setData('category', e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          >
+            {categories.map((cat) => (
+              <option key={cat} value={cat}>
+                {cat.replace(/_/g, ' ')}
+              </option>
+            ))}
+          </select>
+          {errors.category && (
+            <p className="mt-1 text-sm text-red-600">{errors.category}</p>
+          )}
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Description
+          </label>
+          <input
+            type="text"
+            value={data.description}
+            onChange={(e) => setData('description', e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            placeholder="e.g., Office supplies from Staples"
+            maxLength={255}
+          />
+          {errors.description && (
+            <p className="mt-1 text-sm text-red-600">{errors.description}</p>
+          )}
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Expense Date *
+          </label>
+          <input
+            type="date"
+            required
+            value={data.expense_date}
+            onChange={(e) => setData('expense_date', e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          />
+          {errors.expense_date && (
+            <p className="mt-1 text-sm text-red-600">{errors.expense_date}</p>
+          )}
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Payment Method *
+          </label>
+          <select
+            value={data.payment_method}
+            onChange={(e) => setData('payment_method', e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          >
+            {paymentMethods.map((method) => (
+              <option key={method} value={method}>
+                {method.charAt(0).toUpperCase() + method.slice(1)}
+              </option>
+            ))}
+          </select>
+          {errors.payment_method && (
+            <p className="mt-1 text-sm text-red-600">{errors.payment_method}</p>
+          )}
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Notes
+          </label>
+          <textarea
+            value={data.notes}
+            onChange={(e) => setData('notes', e.target.value)}
+            rows={4}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            placeholder="Additional details or comments about this expense"
+          />
+          {errors.notes && (
+            <p className="mt-1 text-sm text-red-600">{errors.notes}</p>
+          )}
+        </div>
+
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <p className="text-sm text-blue-800">
+            Your requisition will be submitted for approval. Once approved, it will appear in the system.
+          </p>
+        </div>
+
+        <div className="flex gap-3 pt-2">
+          <button
+            type="button"
+            onClick={handleClose}
+            className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition font-medium"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={processing}
+            className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:bg-gray-400 transition font-medium"
+          >
+            {processing ? 'Submitting...' : 'Submit Requisition'}
+          </button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+interface EditExpenseModalProps {
+  open: boolean;
+  onClose: () => void;
+  expense: Expense;
+  categories: string[];
+  paymentMethods: string[];
+}
+
+function EditExpenseModal({ open, onClose, expense, categories, paymentMethods }: EditExpenseModalProps) {
+  const { data, setData, put, processing, errors, reset } = useForm({
+    amount: expense.amount.toString(),
+    category: expense.category,
+    description: expense.description || '',
+    expense_date: (expense.expense_date || '').slice(0, 10),
+    account_id: expense.account_id ? String(expense.account_id) : '',
+    payment_method: expense.payment_method,
+    notes: expense.notes || '',
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    put(route('finance.expenses.update', expense.id), {
+      onSuccess: () => {
+        reset();
+        onClose();
+      },
+    });
+  };
+
+  const handleClose = () => {
+    if (!processing) {
+      onClose();
+    }
+  };
+
+  return (
+    <Modal show={open} onClose={handleClose} maxWidth="2xl">
+      <div className="px-6 py-4 border-b flex items-center justify-between bg-white">
+        <h2 className="text-lg font-semibold text-gray-900">
+          Edit Requisition #{expense.id}
+        </h2>
+        <button
+          type="button"
+          onClick={handleClose}
+          className="text-gray-400 hover:text-gray-600"
+        >
+          <span className="sr-only">Close</span>
+          <svg
+            className="h-5 w-5"
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 20 20"
+            fill="currentColor"
+          >
+            <path
+              fillRule="evenodd"
+              d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+              clipRule="evenodd"
+            />
+          </svg>
+        </button>
+      </div>
+      <form onSubmit={handleSubmit} className="px-6 py-4 bg-white space-y-6">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Amount *
+          </label>
+          <div className="relative">
+            <span className="absolute left-3 top-2 text-gray-500">MWK</span>
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              required
+              value={data.amount}
+              onChange={(e) => setData('amount', e.target.value)}
+              className="w-full pl-12 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+          </div>
+          {errors.amount && (
+            <p className="mt-1 text-sm text-red-600">{errors.amount}</p>
+          )}
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Category *
+          </label>
+          <select
+            value={data.category}
+            onChange={(e) => setData('category', e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          >
+            {categories.map((cat) => (
+              <option key={cat} value={cat}>
+                {cat.replace(/_/g, ' ')}
+              </option>
+            ))}
+          </select>
+          {errors.category && (
+            <p className="mt-1 text-sm text-red-600">{errors.category}</p>
+          )}
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Description
+          </label>
+          <input
+            type="text"
+            value={data.description}
+            onChange={(e) => setData('description', e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            maxLength={255}
+          />
+          {errors.description && (
+            <p className="mt-1 text-sm text-red-600">{errors.description}</p>
+          )}
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Expense Date *
+          </label>
+          <input
+            type="date"
+            required
+            value={data.expense_date}
+            onChange={(e) => setData('expense_date', e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          />
+          {errors.expense_date && (
+            <p className="mt-1 text-sm text-red-600">{errors.expense_date}</p>
+          )}
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Payment Method *
+          </label>
+          <select
+            value={data.payment_method}
+            onChange={(e) => setData('payment_method', e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          >
+            {paymentMethods.map((method) => (
+              <option key={method} value={method}>
+                {method.charAt(0).toUpperCase() + method.slice(1)}
+              </option>
+            ))}
+          </select>
+          {errors.payment_method && (
+            <p className="mt-1 text-sm text-red-600">{errors.payment_method}</p>
+          )}
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Notes
+          </label>
+          <textarea
+            value={data.notes}
+            onChange={(e) => setData('notes', e.target.value)}
+            rows={4}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          />
+          {errors.notes && (
+            <p className="mt-1 text-sm text-red-600">{errors.notes}</p>
+          )}
+        </div>
+
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <p className="text-sm text-blue-800">
+            Changes to this requisition may require re-approval depending on your workflow.
+          </p>
+        </div>
+
+        <div className="flex gap-3 pt-2">
+          <button
+            type="button"
+            onClick={handleClose}
+            className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition font-medium"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={processing}
+            className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:bg-gray-400 transition font-medium"
+          >
+            {processing ? 'Saving...' : 'Save Changes'}
+          </button>
+        </div>
+      </form>
+    </Modal>
   );
 }

@@ -18,8 +18,13 @@ class ShiftController extends Controller
             ->latest()
             ->paginate(20);
 
+        $supervisors = User::role('supervisor')->select(['id','name'])->orderBy('name')->get();
+        $sites = ClientSite::select(['id','name'])->orderBy('name')->get();
+
         return Inertia::render('ControlRoom/Shifts/Index', [
             'shifts' => $shifts,
+            'supervisors' => $supervisors,
+            'sites' => $sites,
         ]);
     }
 
@@ -55,11 +60,11 @@ class ShiftController extends Controller
             'created_by' => auth()->id(),
         ]);
 
-        return redirect()->route('control-room.shifts.show', $shift)
+        return redirect()->route('control-room.shifts.index')
             ->withSuccess('Shift created successfully.');
     }
 
-    public function show(Shift $shift)
+    public function show(Request $request, Shift $shift)
     {
         $shift->load(['guards', 'supervisor', 'createdBy']);
         $availableGuards = Guard::select(['id','name'])
@@ -68,6 +73,14 @@ class ShiftController extends Controller
             ->get();
         $sitesMap = ClientSite::whereIn('id', (array) $shift->sites)
             ->pluck('name','id');
+
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json([
+                'shift' => $shift,
+                'availableGuards' => $availableGuards,
+                'sitesMap' => $sitesMap,
+            ]);
+        }
 
         return Inertia::render('ControlRoom/Shifts/Show', [
             'shift' => $shift,
@@ -100,13 +113,13 @@ class ShiftController extends Controller
             'supervisor_id' => 'required|exists:users,id',
             'required_guards' => 'required|integer|min:1',
             'sites' => 'required|array|min:1',
-            'sites.*' => 'string|max:255',
+            'sites.*' => 'integer|exists:client_sites,id',
             'status' => 'required|in:active,inactive,completed',
         ]);
 
         $shift->update($validated);
 
-        return redirect()->route('control-room.shifts.show', $shift)
+        return redirect()->route('control-room.shifts.index')
             ->withSuccess('Shift updated successfully.');
     }
 

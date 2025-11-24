@@ -10,20 +10,20 @@ use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
-class QRScanned implements ShouldBroadcast
+class AttendanceUpdated implements ShouldBroadcast
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
-    public $supervisorId;
+    public $attendanceId;
     public $message;
     public $data;
 
     /**
      * Create a new event instance.
      */
-    public function __construct($supervisorId, $message, $data = [])
+    public function __construct($attendanceId, $message, $data = [])
     {
-        $this->supervisorId = $supervisorId;
+        $this->attendanceId = $attendanceId;
         $this->message = $message;
         $this->data = $data;
     }
@@ -36,8 +36,8 @@ class QRScanned implements ShouldBroadcast
     public function broadcastOn(): array
     {
         return [
-            new PrivateChannel("supervisor.{$this->supervisorId}"),
             new PrivateChannel('control-room'),
+            new PrivateChannel("supervisor.{$this->data['supervisor_id']}"),
         ];
     }
 

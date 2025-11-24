@@ -145,14 +145,14 @@ class ExpenseController extends Controller
             'status' => 'pending', // Expenses start as pending and need approval
         ]);
 
-        return redirect()->route('finance.expenses.show', $expense)
+        return redirect()->route('finance.expenses.index')
             ->withSuccess('Expense created successfully. Awaiting approval.');
     }
 
     /**
      * Display a specific expense
      */
-    public function show(Expense $expense)
+    public function show(Request $request, Expense $expense)
     {
         $expense->load('user');
 
@@ -171,6 +171,10 @@ class ExpenseController extends Controller
         }
         if (! $canApprove && $user && $expense->user_id !== $user->id) {
             abort(403);
+        }
+
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json($expense);
         }
 
         return Inertia::render('Finance/Expenses/Show', [
@@ -225,7 +229,7 @@ class ExpenseController extends Controller
 
         $expense->update($validated);
 
-        return redirect()->route('finance.expenses.show', $expense)
+        return redirect()->route('finance.expenses.index')
             ->withSuccess('Expense updated successfully.');
     }
 

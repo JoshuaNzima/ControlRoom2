@@ -235,6 +235,14 @@ class RolesAndPermissionsSeeder extends Seeder
             'finance.budgets.view', 'finance.budgets.manage',
         ]);
         
+        // Business Development Officer - client liaison, K9 program, events
+        $businessDev = Role::firstOrCreate(['name' => 'business_dev']);
+        $businessDev->givePermissionTo([
+            'clients.view', 'clients.create', 'clients.edit', 'clients.sites.manage',
+            'k9.view',
+            'reports.view',
+        ]);
+
         $hrPermissions = [
             'hr.employees.view', 'hr.employees.create', 'hr.employees.edit', 'hr.employees.delete',
             'hr.leaves.view', 'hr.leaves.approve', 'hr.archived.view', 'hr.resigned.view', 'hr.dismissed.view',

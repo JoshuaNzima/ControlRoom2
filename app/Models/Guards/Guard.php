@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\{HasMany, BelongsTo};
 use App\Models\User;
+use App\Models\ClientSite;
 use App\Models\Guards\{Attendance, Shift};
 use App\Models\Guards\GuardAssignment;
 use App\Models\Flag;
@@ -130,6 +131,16 @@ class Guard extends Model
     public function shifts(): HasMany
     {
         return $this->hasMany(Shift::class);
+    }
+
+    public function currentShift()
+    {
+        return $this->hasOne(Shift::class)->where('is_active', true);
+    }
+
+    public function currentSite()
+    {
+        return $this->belongsTo(ClientSite::class, 'current_site_id');
     }
 
     public function todayAttendance()

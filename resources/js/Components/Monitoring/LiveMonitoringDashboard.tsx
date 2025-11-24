@@ -52,7 +52,15 @@ interface Incident {
 export default function LiveMonitoringDashboard() {
   const [guards, setGuards] = useState<Guard[]>([]);
   const [incidents, setIncidents] = useState<Incident[]>([]);
-  const [activityData, setActivityData] = useState({
+  const [activityData, setActivityData] = useState<{
+    labels: string[];
+    datasets: {
+      label: string;
+      data: number[];
+      borderColor: string;
+      tension: number;
+    }[];
+  }>({
     labels: [],
     datasets: [
       {
@@ -63,62 +71,146 @@ export default function LiveMonitoringDashboard() {
       },
     ],
   });
+  const [loading, setLoading] = useState(true);
+
+  // Fetch initial data
+  useEffect(() => {
+    const fetchInitialData = async () => {
+      try {
+        const [guardsResponse, incidentsResponse] = await Promise.all([
+          fetch('/control-room/monitoring/guards', { headers: { 'Accept': 'application/json' } }),
+          fetch('/control-room/monitoring/incidents', { headers: { 'Accept': 'application/json' } })
+        ]);
+
+        if (guardsResponse.ok) {
+          const guardsData = await guardsResponse.json();
+          setGuards(guardsData);
+        }
+
+        if (incidentsResponse.ok) {
+          const incidentsData = await incidentsResponse.json();
+          setIncidents(incidentsData);
+        }
+
+        // Generate some sample activity data for the chart
+        const hours = Array.from({ length: 24 }, (_, i) => `${i}:00`);
+        setActivityData({
+          labels: hours,
+          datasets: [
+            {
+              label: 'Guard Activity',
+              data: hours.map(() => Math.floor(Math.random() * 10) + 1),
+              borderColor: 'rgb(75, 192, 192)',
+              tension: 0.1,
+            },
+          ],
+        });
+      } catch (error) {
+        console.error('Failed to fetch initial data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchInitialData();
+  }, []);
 
   useEffect(() => {
     // Subscribe to real-time updates
     const echo = window.Echo;
     
-    echo.private('monitoring')
-      .listen('GuardLocationUpdated', (e: any) => {
-        setGuards(current => {
-          const index = current.findIndex(g => g.id === e.guard.id);
-          if (index === -1) return [...current, e.guard];
-          const newGuards = [...current];
-          newGuards[index] = e.guard;
-          return newGuards;
-        });
-      })
-      .listen('IncidentReported', (e: any) => {
-        setIncidents(current => [e.incident, ...current]);
-      });
+    if (echo) {
+      const privateChannel = echo.private('monitoring');
+      
+      if (privateChannel) {
+        privateChannel
+          .listen('GuardLocationUpdated', (e: any) => {
+            setGuards(current => {
+              const index = current.findIndex(g => g.id === e.guard.id);
+              if (index === -1) return [...current, e.guard];
+              const newGuards = [...current];
+              newGuards[index] = e.guard;
+              return newGuards;
+            });
+          })
+          .listen('IncidentReported', (e: any) => {
+            setIncidents(current => [e.incident, ...current]);
+          });
+      }
+    }
+
+    // Fallback: fetch data periodically if Echo is not available
+    if (!echo) {
+      const fetchData = async () => {
+        try {
+          const response = await fetch('/control-room/monitoring/guards', {
+            headers: { 'Accept': 'application/json' }
+          });
+          if (response.ok) {
+            const guardsData = await response.json();
+            setGuards(guardsData);
+          }
+        } catch (error) {
+          console.log('Fallback fetch failed:', error);
+        }
+      };
+      
+      fetchData();
+      const interval = setInterval(fetchData, 30000);
+      
+      return () => {
+        clearInterval(interval);
+      };
+    }
 
     // Cleanup
     return () => {
-      echo.leave('monitoring');
+      if (echo) {
+        echo.leave('monitoring');
+      }
     };
   }, []);
 
   return (
     <div className="grid grid-cols-12 gap-4 p-4">
-      {/* Map Section */}
-      <div className="col-span-8 bg-white rounded-lg shadow-sm p-4">
-        <h2 className="text-lg font-medium mb-4">Live Guard Locations</h2>
-        <div className="h-[500px] rounded-lg overflow-hidden">
-          <MapContainer
-            center={[-26.2041, 28.0473]}
-            zoom={13}
-            className="h-full w-full"
-          >
-            <TileLayer
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            />
-            {guards.map((guard) => (
-              <Marker key={guard.id} position={[guard.location.lat, guard.location.lng]}>
-                <Popup>
-                  <div className="p-2">
-                    <h3 className="font-medium">{guard.name}</h3>
-                    <p className="text-sm text-gray-600">Status: {guard.status}</p>
-                    <p className="text-sm text-gray-600">
-                      Last Check-in: {new Date(guard.lastCheckIn).toLocaleTimeString()}
-                    </p>
-                  </div>
-                </Popup>
-              </Marker>
-            ))}
-          </MapContainer>
+      {loading ? (
+        <div className="col-span-12 flex items-center justify-center h-64">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading monitoring data...</p>
+          </div>
         </div>
-      </div>
+      ) : (
+        <>
+          {/* Map Section */}
+          <div className="col-span-8 bg-white rounded-lg shadow-sm p-4">
+            <h2 className="text-lg font-medium mb-4">Live Guard Locations</h2>
+            <div className="h-[500px] rounded-lg overflow-hidden">
+              <MapContainer
+                center={[-26.2041, 28.0473]}
+                zoom={13}
+                className="h-full w-full"
+              >
+                <TileLayer
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                />
+                {guards.map((guard) => (
+                  <Marker key={guard.id} position={[guard.location.lat, guard.location.lng]}>
+                    <Popup>
+                      <div className="p-2">
+                        <h3 className="font-medium">{guard.name}</h3>
+                        <p className="text-sm text-gray-600">Status: {guard.status}</p>
+                        <p className="text-sm text-gray-600">
+                          Last Check-in: {new Date(guard.lastCheckIn).toLocaleTimeString()}
+                        </p>
+                      </div>
+                    </Popup>
+                  </Marker>
+                ))}
+              </MapContainer>
+            </div>
+          </div>
 
       {/* Activity Feed */}
       <div className="col-span-4 space-y-4">
@@ -185,6 +277,8 @@ export default function LiveMonitoringDashboard() {
           }} />
         </div>
       </div>
+        </>
+      )}
     </div>
   );
 }

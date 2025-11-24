@@ -76,11 +76,31 @@ Route::middleware(['auth', 'role:admin,super_admin'])
         // Admin Finance landing (module-level admin page)
         Route::get('/finance', [\App\Http\Controllers\Admin\FinanceController::class, 'index'])->name('finance');
 
-        // Marketing landing (placeholder)
-        Route::get('/marketing', fn () => Inertia::render('ComingSoon', [
-            'title' => 'Marketing',
-            'description' => 'Marketing module is coming soon.'
-        ]))->name('marketing');
+        // Marketing landing (module-level admin page)
+        Route::get('/marketing', [\App\Http\Controllers\Admin\MarketingController::class, 'index'])->name('marketing');
+
+        // Marketing Campaigns CRUD (modal-driven from Admin/Marketing index)
+        Route::prefix('marketing')->name('marketing.')->group(function () {
+            Route::get('/campaigns/{campaign}/json', [\App\Http\Controllers\Admin\MarketingCampaignController::class, 'showJson'])
+                ->name('campaigns.json');
+
+            Route::resource('campaigns', \App\Http\Controllers\Admin\MarketingCampaignController::class)
+                ->except(['show', 'create', 'edit']);
+        });
+
+        // Business Development Officer (BDO) dashboard & per-event management
+        Route::get('/business-dev', [\App\Http\Controllers\Admin\BusinessDevController::class, 'index'])->name('business-dev');
+
+        Route::prefix('business-dev')->name('business-dev.')->group(function () {
+            Route::get('/events/{event}/json', [\App\Http\Controllers\Admin\BusinessDevEventController::class, 'showJson'])
+                ->name('events.json');
+
+            Route::resource('events', \App\Http\Controllers\Admin\BusinessDevEventController::class)
+                ->except(['show', 'create', 'edit']);
+
+            Route::post('/events/{event}/invoice', [\App\Http\Controllers\Admin\BusinessDevEventController::class, 'createInvoice'])
+                ->name('events.invoice');
+        });
 
         // Payments checker
         Route::get('/payments', [\App\Http\Controllers\Admin\PaymentController::class, 'index'])->name('payments.index');

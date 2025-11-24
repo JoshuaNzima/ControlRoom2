@@ -19,6 +19,7 @@ import {
 } from 'chart.js';
 import { Line, Bar } from 'react-chartjs-2';
 import QRCodeGenerator from '@/Components/QRCodeGenerator';
+import LiveMonitoring from '@/Components/ControlRoom/LiveMonitoring';
 import { User } from '@/types';
 
 ChartJS.register(
@@ -236,6 +237,9 @@ const Dashboard = ({ stats, recentIncidents, activeAlerts, coverageData, attenda
                             </Card>
                         ))}
                     </div>
+
+                    {/* Live Monitoring */}
+                    <LiveMonitoring />
 
                     {/* Zone Coverage Overview */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
