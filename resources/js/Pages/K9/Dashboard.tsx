@@ -1,11 +1,12 @@
 import React from 'react';
-import { Head } from '@inertiajs/react';
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import { Head, usePage } from '@inertiajs/react';
+import AdminLayout from '@/Layouts/AdminLayout';
 import IconMapper from '@/Components/IconMapper';
 
 export default function K9Dashboard() {
+  const { auth } = (usePage().props as any);
   return (
-    <AuthenticatedLayout>
+    <AdminLayout title="K9 Dashboard" user={auth?.user as any}>
       <Head title="K9 Dashboard" />
       <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
@@ -53,6 +54,6 @@ export default function K9Dashboard() {
           </div>
         </div>
       </div>
-    </AuthenticatedLayout>
+    </AdminLayout>
   );
 }

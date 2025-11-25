@@ -105,6 +105,14 @@ Route::middleware(['auth'])->group(function () {
                 return redirect()->route('zone.dashboard');
             case in_array('manager', $roles):
                 return redirect()->route('manager.dashboard');
+            case in_array('business_dev', $roles):
+            case in_array('business_development', $roles):
+            case in_array('bdo', $roles):
+                return redirect()->route('admin.business-dev');
+            case in_array('marketing', $roles):
+            case in_array('marketing_officer', $roles):
+            case in_array('marketing_manager', $roles):
+                return redirect()->route('admin.marketing');
             case in_array('supervisor', $roles):
                 return redirect()->route('supervisor.dashboard');
             case in_array('sergeant', $roles):

@@ -10,6 +10,24 @@ Route::middleware(['auth', 'role:client'])
         Route::get('/dashboard', [\App\Http\Controllers\Client\DashboardController::class, 'index'])->name('dashboard');
     });
 
+Route::middleware(['auth', 'role:admin,super_admin,marketing,marketing_officer,marketing_manager'])
+    ->prefix('admin')
+    ->name('admin.')
+    ->group(function () {
+        Route::get('/marketing', [\App\Http\Controllers\Admin\MarketingController::class, 'index'])->name('marketing');
+
+        Route::prefix('marketing')->name('marketing.')->group(function () {
+            Route::get('/campaigns/{campaign}/json', [\App\Http\Controllers\Admin\MarketingCampaignController::class, 'showJson'])->name('campaigns.json');
+            Route::resource('campaigns', \App\Http\Controllers\Admin\MarketingCampaignController::class)->except(['show', 'create', 'edit']);
+            Route::get('/leads', [\App\Http\Controllers\Admin\LeadController::class, 'index'])->name('leads.index');
+            Route::get('/leads/{lead}/json', [\App\Http\Controllers\Admin\LeadController::class, 'showJson'])->name('leads.json');
+            Route::resource('leads', \App\Http\Controllers\Admin\LeadController::class)->except(['show', 'create', 'edit', 'index']);
+            Route::get('/analytics', [\App\Http\Controllers\Admin\MarketingAnalyticsController::class, 'index'])->name('analytics');
+            Route::get('/settings', [\App\Http\Controllers\Admin\MarketingSettingController::class, 'index'])->name('settings');
+            Route::post('/settings', [\App\Http\Controllers\Admin\MarketingSettingController::class, 'update'])->name('settings.update');
+        });
+    });
+
 Route::middleware(['auth', 'role:manager,admin,super_admin'])
     ->prefix('manager')
     ->name('manager.')
@@ -76,31 +94,9 @@ Route::middleware(['auth', 'role:admin,super_admin'])
         // Admin Finance landing (module-level admin page)
         Route::get('/finance', [\App\Http\Controllers\Admin\FinanceController::class, 'index'])->name('finance');
 
-        // Marketing landing (module-level admin page)
-        Route::get('/marketing', [\App\Http\Controllers\Admin\MarketingController::class, 'index'])->name('marketing');
+        
 
-        // Marketing Campaigns CRUD (modal-driven from Admin/Marketing index)
-        Route::prefix('marketing')->name('marketing.')->group(function () {
-            Route::get('/campaigns/{campaign}/json', [\App\Http\Controllers\Admin\MarketingCampaignController::class, 'showJson'])
-                ->name('campaigns.json');
-
-            Route::resource('campaigns', \App\Http\Controllers\Admin\MarketingCampaignController::class)
-                ->except(['show', 'create', 'edit']);
-        });
-
-        // Business Development Officer (BDO) dashboard & per-event management
-        Route::get('/business-dev', [\App\Http\Controllers\Admin\BusinessDevController::class, 'index'])->name('business-dev');
-
-        Route::prefix('business-dev')->name('business-dev.')->group(function () {
-            Route::get('/events/{event}/json', [\App\Http\Controllers\Admin\BusinessDevEventController::class, 'showJson'])
-                ->name('events.json');
-
-            Route::resource('events', \App\Http\Controllers\Admin\BusinessDevEventController::class)
-                ->except(['show', 'create', 'edit']);
-
-            Route::post('/events/{event}/invoice', [\App\Http\Controllers\Admin\BusinessDevEventController::class, 'createInvoice'])
-                ->name('events.invoice');
-        });
+        
 
         // Payments checker
         Route::get('/payments', [\App\Http\Controllers\Admin\PaymentController::class, 'index'])->name('payments.index');
@@ -125,5 +121,32 @@ Route::middleware(['auth', 'role:admin,super_admin'])
 
         // Zone Commander mini dashboard (admin window)
         Route::get('/zone-commander/window', [\App\Http\Controllers\Admin\ZoneCommanderWindowController::class, 'index'])->name('zone-commander.window');
+    });
+
+Route::middleware(['auth', 'role:admin,super_admin,business_dev,business_development,bdo'])
+    ->prefix('admin')
+    ->name('admin.')
+    ->group(function () {
+        Route::get('/business-dev', [\App\Http\Controllers\Admin\BusinessDevController::class, 'index'])->name('business-dev');
+
+        Route::prefix('business-dev')->name('business-dev.')->group(function () {
+            Route::get('/events/{event}/json', [\App\Http\Controllers\Admin\BusinessDevEventController::class, 'showJson'])
+                ->name('events.json');
+
+            Route::resource('events', \App\Http\Controllers\Admin\BusinessDevEventController::class)
+                ->except(['show', 'create', 'edit']);
+
+            Route::post('/events/{event}/invoice', [\App\Http\Controllers\Admin\BusinessDevEventController::class, 'createInvoice'])
+                ->name('events.invoice');
+
+            // Contracts management
+            Route::get('/contracts/{contract}/json', [\App\Http\Controllers\Admin\ContractController::class, 'showJson'])
+                ->name('contracts.json');
+            Route::resource('contracts', \App\Http\Controllers\Admin\ContractController::class)
+                ->except(['show', 'create', 'edit']);
+
+            Route::get('/settings', [\App\Http\Controllers\Admin\BusinessDevSettingController::class, 'index'])->name('settings');
+            Route::post('/settings', [\App\Http\Controllers\Admin\BusinessDevSettingController::class, 'update'])->name('settings.update');
+        });
     });
 

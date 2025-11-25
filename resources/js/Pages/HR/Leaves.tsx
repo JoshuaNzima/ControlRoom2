@@ -1,16 +1,17 @@
 import React from 'react';
-import { Head } from '@inertiajs/react';
-import SupervisorLayout from '@/Layouts/SupervisorLayout';
+import { Head, usePage } from '@inertiajs/react';
+import AdminLayout from '@/Layouts/AdminLayout';
 import ComingSoon from '@/Components/Shared/ComingSoon';
 
 export default function Leaves() {
+  const { auth } = (usePage().props as any);
   return (
-    <SupervisorLayout title="Leave Management">
+    <AdminLayout title="Leave Management" user={auth?.user as any}>
       <Head title="Leave Management" />
       <ComingSoon 
         title="Leave Management" 
         description="Manage guard leave requests, track absences, and monitor leave balances."
       />
-    </SupervisorLayout>
+    </AdminLayout>
   );
 }

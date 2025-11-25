@@ -6,7 +6,9 @@ use Inertia\Inertia;
 Route::middleware(['auth'])->group(function () {
 	Route::middleware(['permission:hr.employees.view'])->prefix('hr')->name('hr.')->group(function () {
 		Route::get('/dashboard', fn() => Inertia::render('HR/Dashboard'))->name('dashboard');
-	
+		Route::get('/leaves', fn() => Inertia::render('HR/Leaves'))->name('leaves');
+		Route::get('/archived', fn() => Inertia::render('HR/Archived'))->name('archived');
+		
 		// Downs for HR visibility
 		Route::get('/downs', [\App\Http\Controllers\ControlRoom\DownController::class, 'index'])->name('downs.index');
 

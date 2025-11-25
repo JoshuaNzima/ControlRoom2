@@ -68,6 +68,24 @@ class AuthenticatedSessionController extends Controller
             return route('manager.dashboard', absolute: false);
         }
         
+        // Business Development - Marketing/BDO module
+        if (
+            $user->hasRole('business_dev') ||
+            $user->hasRole('business_development') ||
+            $user->hasRole('bdo')
+        ) {
+            return route('admin.business-dev', absolute: false);
+        }
+
+        // Marketing - Marketing module access
+        if (
+            $user->hasRole('marketing') ||
+            $user->hasRole('marketing_officer') ||
+            $user->hasRole('marketing_manager')
+        ) {
+            return route('admin.marketing', absolute: false);
+        }
+
         // Supervisor - Oversees operations and personnel
         if ($user->hasRole('supervisor')) {
             return route('supervisor.dashboard', absolute: false);

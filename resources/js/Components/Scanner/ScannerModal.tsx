@@ -58,6 +58,13 @@ export default function ScannerModal({ open, onClose, activeScan }: Props) {
     }
   }, []);
 
+  // Auto-start scanner once modal opens and we have a location fix
+  useEffect(() => {
+    if (open && location && !scanning) {
+      setScanning(true);
+    }
+  }, [open, location]);
+
   useEffect(() => {
     if (scanning && open) {
       try {
@@ -129,15 +136,12 @@ export default function ScannerModal({ open, onClose, activeScan }: Props) {
       longitude: location?.lon,
     }, {
       preserveState: true,
-      onSuccess: (response: any) => {
+      onSuccess: () => {
         toast.dismiss(loadingToast);
         toast.success('Scan successful!');
         onClose();
-        
-        // Redirect to attendance page after a brief delay
-        setTimeout(() => {
-          window.location.href = response.redirect;
-        }, 1500);
+        // Navigate to attendance
+        router.visit(route('supervisor.attendance'));
       },
       onError: (errors) => {
         toast.dismiss(loadingToast);
@@ -227,7 +231,7 @@ export default function ScannerModal({ open, onClose, activeScan }: Props) {
     <>
     <Toaster position="top-right" />
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl w-11/12 max-w-2xl p-6 max-h-[90vh] overflow-y-auto">
+      <div className="bg-white dark:bg-gray-900 dark:text-gray-100 rounded-xl w-11/12 max-w-2xl p-6 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-bold text-gray-900">Scan Checkpoint</h2>
           <button
@@ -283,7 +287,7 @@ export default function ScannerModal({ open, onClose, activeScan }: Props) {
         )}
 
         {/* Scanner Card */}
-        <div className="bg-white rounded-xl shadow-lg p-6">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
           <h2 className="text-2xl font-bold text-gray-900 mb-4">Scan Checkpoint</h2>
           
           {cameraError && (
@@ -457,7 +461,7 @@ export default function ScannerModal({ open, onClose, activeScan }: Props) {
           </div>
 
           {/* Instructions */}
-          <div className="mt-6 pt-6 border-t bg-blue-50 border border-blue-200 rounded-xl p-6">
+          <div className="mt-6 pt-6 border-t bg-blue-50 border border-blue-200 dark:bg-gray-800 dark:border-gray-700 rounded-xl p-6">
             <h3 className="font-bold text-blue-900 mb-3">How It Works</h3>
             <ol className="space-y-2 text-sm text-blue-800">
               <li>1. Arrive at the client site</li>
@@ -472,7 +476,7 @@ export default function ScannerModal({ open, onClose, activeScan }: Props) {
         {/* Report Down Modal */}
         {downOpen && activeScan && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-xl w-11/12 md:w-1/2 p-6">
+            <div className="bg-white dark:bg-gray-900 dark:text-gray-100 rounded-xl w-11/12 md:w-1/2 p-6">
               <h3 className="text-lg font-bold mb-4">Report Down</h3>
               <form onSubmit={(e) => {
                 e.preventDefault();
