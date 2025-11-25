@@ -21,7 +21,7 @@ export default function PromoteGuardModal({
 
   useEffect(() => {
     if (open) {
-      reset({ role: 'sergeant'});
+      reset();
       clearErrors();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
