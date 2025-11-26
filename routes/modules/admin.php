@@ -97,7 +97,7 @@ Route::middleware(['auth', 'role:admin,super_admin'])
         Route::get('/guards/dashboard', [\App\Http\Controllers\Admin\GuardController::class, 'dashboard'])->name('guards.dashboard');
         // JSON API for fetching a single guard (used by modal pre-fill)
         Route::get('/guards/{guard}/json', [\App\Http\Controllers\Admin\GuardController::class, 'apiShow'])->name('guards.json');
-        Route::resource('guards', \App\Http\Controllers\Admin\GuardController::class);
+        Route::resource('guards', \App\Http\Controllers\Admin\GuardController::class)->except(['create','edit','show']);
         Route::get('/qr-codes', [\App\Http\Controllers\SupervisorQRCodesController::class, 'index'])->name('qr-codes');
         Route::get('/qr-codes/download-bulk', [\App\Http\Controllers\SupervisorQRCodesController::class, 'downloadBulk'])->name('qr-codes.download-bulk');
         // Admin Finance landing (module-level admin page)

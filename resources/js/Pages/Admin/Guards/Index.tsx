@@ -47,6 +47,8 @@ export default function GuardsIndex({ guards, filters, canAssignSupervisor, canV
   const [showDetails, setShowDetails] = React.useState(false);
   const [selectedGuard, setSelectedGuard] = React.useState<any | null>(null);
   const [saving, setSaving] = React.useState(false);
+  const [photoCreate, setPhotoCreate] = React.useState<File | null>(null);
+  const [photoEdit, setPhotoEdit] = React.useState<File | null>(null);
 
   const handleSearch = () => {
     router.get(route('admin.guards.index'), { search }, { preserveState: true });
@@ -79,19 +81,40 @@ export default function GuardsIndex({ guards, filters, canAssignSupervisor, canV
 
   const submitCreate = async (form: GuardFormData) => {
     setSaving(true);
-    router.post(route('admin.guards.store'), form as any, {
+    const fd = new FormData();
+    Object.entries(form as any).forEach(([k, v]) => {
+      if (v === undefined || v === null) return;
+      if (Array.isArray(v)) {
+        v.forEach((item) => fd.append(`${k}[]`, String(item)));
+      } else {
+        fd.append(k, String(v));
+      }
+    });
+    if (photoCreate) fd.append('photo', photoCreate);
+    router.post(route('admin.guards.store'), fd, {
       preserveScroll: true,
       onFinish: () => setSaving(false),
-      onSuccess: () => setShowAdd(false),
+      onSuccess: () => { setShowAdd(false); setPhotoCreate(null); },
     });
   };
   const submitUpdate = async (form: GuardFormData) => {
     if (!selectedGuard) return;
     setSaving(true);
-    router.post(route('admin.guards.update', { guard: selectedGuard.id }), { ...(form as any), _method: 'PUT' }, {
+    const fd = new FormData();
+    Object.entries(form as any).forEach(([k, v]) => {
+      if (v === undefined || v === null) return;
+      if (Array.isArray(v)) {
+        v.forEach((item) => fd.append(`${k}[]`, String(item)));
+      } else {
+        fd.append(k, String(v));
+      }
+    });
+    fd.append('_method', 'PUT');
+    if (photoEdit) fd.append('photo', photoEdit);
+    router.post(route('admin.guards.update', { guard: selectedGuard.id }), fd, {
       preserveScroll: true,
       onFinish: () => setSaving(false),
-      onSuccess: () => setShowEdit(false),
+      onSuccess: () => { setShowEdit(false); setPhotoEdit(null); },
     });
   };
 
@@ -272,6 +295,15 @@ export default function GuardsIndex({ guards, filters, canAssignSupervisor, canV
         <Modal show={showAdd} onClose={() => setShowAdd(false)} maxWidth="2xl">
           <div className="p-4 sm:p-6 bg-white dark:bg-gray-800">
             <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">Add Guard</h2>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Photo</label>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => setPhotoCreate(e.target.files?.[0] || null)}
+                className="w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-red-50 file:text-red-700 hover:file:bg-red-100 dark:file:bg-gray-800 dark:file:text-gray-100"
+              />
+            </div>
             <GuardForm
               initialData={{ status: 'active', guard_type: 'permanent' } as any}
               supervisors={supervisors}
@@ -290,6 +322,15 @@ export default function GuardsIndex({ guards, filters, canAssignSupervisor, canV
         <Modal show={showEdit} onClose={() => setShowEdit(false)} maxWidth="2xl">
           <div className="p-4 sm:p-6 bg-white dark:bg-gray-800">
             <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">Edit Guard</h2>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Photo</label>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => setPhotoEdit(e.target.files?.[0] || null)}
+                className="w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-red-50 file:text-red-700 hover:file:bg-red-100 dark:file:bg-gray-800 dark:file:text-gray-100"
+              />
+            </div>
             {selectedGuard && (
               <GuardForm
                 initialData={selectedGuard}
@@ -317,6 +358,22 @@ export default function GuardsIndex({ guards, filters, canAssignSupervisor, canV
               <div className="text-sm text-gray-500">Loading...</div>
             ) : (
               <div className="space-y-4">
+                {/* Photo Preview */}
+                {(() => {
+                  const p = (selectedGuard as any).photo as string | undefined;
+                  if (!p) return null;
+                  const url = p.startsWith('http') || p.startsWith('/storage') ? p : `/storage/${p}`;
+                  return (
+                    <div className="flex items-center gap-3">
+                      <img
+                        src={url}
+                        alt={selectedGuard.name}
+                        className="w-24 h-24 rounded-lg object-cover border border-gray-200 dark:border-gray-700"
+                      />
+                      <div className="text-sm text-gray-600 dark:text-gray-300">Profile photo</div>
+                    </div>
+                  );
+                })()}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div><span className="text-sm text-gray-500">Name</span><div className="font-medium">{selectedGuard.name}</div></div>
                   <div><span className="text-sm text-gray-500">Employee ID</span><div className="font-medium">{selectedGuard.employee_id}</div></div>
