@@ -1,7 +1,7 @@
 import React from 'react';
 import { Head, Link } from '@inertiajs/react';
 import IconMapper from '@/Components/IconMapper';
-import NotificationBell from '@/Components/ControlRoom/NotificationBell';
+import NotificationBell from '@/Components/Common/NotificationBell';
 import { User } from '@/types';
 import { useTheme } from '@/Providers/ThemeProvider';
 

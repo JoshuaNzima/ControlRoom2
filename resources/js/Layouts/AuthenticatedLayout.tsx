@@ -5,6 +5,7 @@ import ResponsiveNavLink from '@/Components/ResponsiveNavLink';
 import { Link, usePage } from '@inertiajs/react';
 import { PageProps, User } from '@/types';
 import { PropsWithChildren, ReactNode, useState } from 'react';
+import NotificationBell from '@/Components/Common/NotificationBell';
 
 export default function Authenticated({
     user,
@@ -44,7 +45,8 @@ export default function Authenticated({
                             </div>
                         </div>
 
-                        <div className="hidden sm:ms-6 sm:flex sm:items-center">
+                        <div className="hidden sm:ms-6 sm:flex sm:items-center gap-4">
+                            <NotificationBell />
                             <div className="relative ms-3">
                                 <Dropdown>
                                     <Dropdown.Trigger>

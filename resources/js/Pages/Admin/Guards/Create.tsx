@@ -11,16 +11,19 @@ interface Supervisor {
 
 interface ClientOption { id: number; name: string }
 
+interface GradeOption { id: number; code: string; name: string }
+
 interface CreateGuardProps {
   supervisors: Supervisor[];
   clients: ClientOption[];
+  grades?: GradeOption[];
   can: {
     assign_supervisor: boolean;
   };
 }
 
-export default function CreateGuard({ supervisors, clients, can }: CreateGuardProps) {
-  const { data, setData, post, processing, errors } = useForm<GuardFormData>({
+export default function CreateGuard({ supervisors, clients, grades = [], can }: CreateGuardProps) {
+  const { data, setData, post, processing, errors } = useForm<any>({
     employee_id: '',
     name: '',
     phone: '',
@@ -38,6 +41,7 @@ export default function CreateGuard({ supervisors, clients, can }: CreateGuardPr
     notes: '',
     status: 'active',
     client_id: '',
+    guard_grade_id: '',
   });
   const [photoFile, setPhotoFile] = React.useState<File | null>(null);
 
@@ -71,7 +75,7 @@ export default function CreateGuard({ supervisors, clients, can }: CreateGuardPr
               {(errors as any).photo && <p className="text-sm text-red-600 mt-1">{(errors as any).photo}</p>}
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Employee ID */}
+              {/* Employee ID (auto-generated) */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Employee ID
@@ -80,7 +84,9 @@ export default function CreateGuard({ supervisors, clients, can }: CreateGuardPr
                   type="text"
                   value={data.employee_id}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => setData('employee_id', e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                  placeholder="Auto-generated"
+                  disabled
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400 focus:ring-2 focus:ring-indigo-500"
                 />
                 {errors.employee_id && <p className="text-red-600 text-sm mt-1">{errors.employee_id}</p>}
               </div>
@@ -218,6 +224,23 @@ export default function CreateGuard({ supervisors, clients, can }: CreateGuardPr
                   <option value="permanent">Permanent</option>
                   <option value="standby">Standby</option>
                   <option value="reliever">Reliever</option>
+                </select>
+              </div>
+
+              {/* Guard Grade */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Guard Grade
+                </label>
+                <select
+                  value={data.guard_grade_id as any}
+                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setData('guard_grade_id', e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                >
+                  <option value="">No Grade</option>
+                  {grades.map((g) => (
+                    <option key={g.id} value={g.id}>{g.code} - {g.name}</option>
+                  ))}
                 </select>
               </div>
 

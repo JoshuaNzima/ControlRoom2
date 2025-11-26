@@ -9,15 +9,18 @@ interface Supervisor {
   name: string;
 }
 
+interface GradeOption { id: number; code: string; name: string }
+
 interface EditGuardProps {
   guard: any;
   supervisors: Supervisor[];
+  grades?: GradeOption[];
   can: {
     assign_supervisor: boolean;
   };
 }
 
-export default function EditGuard({ guard, supervisors, can }: EditGuardProps) {
+export default function EditGuard({ guard, supervisors, grades = [], can }: EditGuardProps) {
   const { data, setData, post, processing, errors } = useForm<GuardFormData>({
     employee_id: guard.employee_id || '',
     name: guard.name || '',
@@ -54,6 +57,7 @@ export default function EditGuard({ guard, supervisors, can }: EditGuardProps) {
           <GuardForm
             initialData={guard}
             supervisors={supervisors}
+            grades={grades}
             onSubmit={handleSubmit}
             canAssignSupervisor={can.assign_supervisor}
             processing={processing}

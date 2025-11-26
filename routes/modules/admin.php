@@ -51,6 +51,13 @@ Route::middleware(['auth', 'role:admin,super_admin'])
             ->name('settings.finance.pay-profiles.update');
         Route::delete('/settings/finance/pay-profiles/{payProfile}', [\App\Http\Controllers\Admin\FinanceSettingController::class, 'destroyPayProfile'])
             ->name('settings.finance.pay-profiles.destroy');
+        // HR Settings endpoints (Guard Grades)
+        Route::post('/settings/hr/guard-grades', [\App\Http\Controllers\Admin\GuardGradeController::class, 'store'])
+            ->name('settings.hr.guard-grades.store');
+        Route::put('/settings/hr/guard-grades/{guardGrade}', [\App\Http\Controllers\Admin\GuardGradeController::class, 'update'])
+            ->name('settings.hr.guard-grades.update');
+        Route::delete('/settings/hr/guard-grades/{guardGrade}', [\App\Http\Controllers\Admin\GuardGradeController::class, 'destroy'])
+            ->name('settings.hr.guard-grades.destroy');
         Route::get('/reports', [\App\Http\Controllers\Admin\ReportController::class, 'index'])->name('reports.index');
         Route::get('/modules', [\App\Http\Controllers\Admin\ModuleController::class, 'index'])->name('modules.index');
         Route::resource('users', \App\Http\Controllers\Admin\UserController::class);
@@ -88,6 +95,8 @@ Route::middleware(['auth', 'role:admin,super_admin'])
         // Client Sites nested routes
         // Client site routes moved into clients group above
         Route::get('/guards/dashboard', [\App\Http\Controllers\Admin\GuardController::class, 'dashboard'])->name('guards.dashboard');
+        // JSON API for fetching a single guard (used by modal pre-fill)
+        Route::get('/guards/{guard}/json', [\App\Http\Controllers\Admin\GuardController::class, 'apiShow'])->name('guards.json');
         Route::resource('guards', \App\Http\Controllers\Admin\GuardController::class);
         Route::get('/qr-codes', [\App\Http\Controllers\SupervisorQRCodesController::class, 'index'])->name('qr-codes');
         Route::get('/qr-codes/download-bulk', [\App\Http\Controllers\SupervisorQRCodesController::class, 'downloadBulk'])->name('qr-codes.download-bulk');

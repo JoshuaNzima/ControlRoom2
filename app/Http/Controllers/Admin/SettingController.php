@@ -42,6 +42,14 @@ class SettingController extends Controller
             $payProfiles = [];
         }
 
+        // HR: Guard Grades
+        $guardGrades = [];
+        try {
+            $guardGrades = \App\Models\Guards\GuardGrade::orderBy('name')->get();
+        } catch (\Throwable $e) {
+            $guardGrades = [];
+        }
+
         // Payee options for searchable selectors
         $guardOptions = [];
         $userOptions = [];
@@ -79,6 +87,9 @@ class SettingController extends Controller
                     'guards' => $guardOptions,
                     'users' => $userOptions,
                 ],
+            ],
+            'hr' => [
+                'guardGrades' => $guardGrades,
             ],
         ]);
     }

@@ -2,6 +2,7 @@ import React from 'react';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import BaseShell from './BaseShell';
 import IconMapper from '@/Components/IconMapper';
+import NotificationBell from '@/Components/Common/NotificationBell';
 import { User, PageProps } from '@/types';
 import { useTheme } from '@/Providers/ThemeProvider';
 
@@ -132,6 +133,7 @@ export default function FinanceLayout({ title, children, user }: Props) {
           <div className="flex-1 flex items-center justify-between px-4">
             <h1 className="text-lg font-semibold text-gray-900 dark:text-white">{title}</h1>
             <div className="flex items-center space-x-4">
+              <NotificationBell />
               <Link
                 href={route('finance.expenses.create')}
                 className="inline-flex items-center px-3 py-1.5 rounded-md bg-red-600 text-white hover:bg-red-700 text-sm"
