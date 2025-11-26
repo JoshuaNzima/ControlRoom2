@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Head, Link, router, useForm } from '@inertiajs/react';
-import AdminLayout from '@/Layouts/AdminLayout';
+import MarketingLayout from '@/Layouts/MarketingLayout';
 import { Card } from '@/Components/ui/card';
 import IconMapper from '@/Components/IconMapper';
 import Modal from '@/Components/Modal';
@@ -108,7 +108,7 @@ export default function MarketingPage({
   const totalBudget = summary.total_budget ?? 0;
 
   return (
-    <AdminLayout title="Marketing" user={auth?.user as any}>
+    <MarketingLayout title="Marketing" user={auth?.user as any}>
       <Head title="Marketing" />
       <div className="py-6">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
@@ -369,7 +369,7 @@ export default function MarketingPage({
           )}
         </div>
       </div>
-    </AdminLayout>
+    </MarketingLayout>
   );
 }
 

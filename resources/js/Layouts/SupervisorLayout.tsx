@@ -12,6 +12,7 @@ const navLinks = [
   { href: "/supervisor/dashboard", label: "Dashboard", icon: <IconMapper name="Grid" size={22} /> },
   { href: "/supervisor/attendance", label: "Attendance", icon: <IconMapper name="Clipboard" size={22} /> },
   { href: "/supervisor/guards", label: "Guards", icon: <IconMapper name="Users2" size={22} /> },
+  { href: "/supervisor/assignments", label: "Assignments", icon: <IconMapper name="Clipboard" size={22} /> },
 ];
 
 interface SupervisorLayoutProps {

@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { Head, router, usePage } from '@inertiajs/react';
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import AdminLayout from '@/Layouts/AdminLayout';
 import PromoteGuardModal from '@/Components/HR/PromoteGuardModal';
 
 export default function HREmployees() {
-  const { guards, filters, zones }: any = usePage().props;
+  const { guards, filters, zones, auth }: any = usePage().props;
   const [search, setSearch] = useState(filters?.search || '');
   const [status, setStatus] = useState(filters?.status || '');
   const [promoteOpen, setPromoteOpen] = useState(false);
@@ -20,7 +20,7 @@ export default function HREmployees() {
   };
 
   return (
-    <AuthenticatedLayout>
+    <AdminLayout title="Guards & Promotions" user={auth?.user as any}>
       <Head title="Guards & Promotions" />
       <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
@@ -105,6 +105,6 @@ export default function HREmployees() {
         onClose={() => { setPromoteOpen(false); setCurrentGuard(null); }}
         onSuccess={() => router.reload()}
       />
-    </AuthenticatedLayout>
+    </AdminLayout>
   );
 }

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Head, Link, router, useForm } from '@inertiajs/react';
-import AdminLayout from '@/Layouts/AdminLayout';
+import BusinessDevLayout from '@/Layouts/BusinessDevLayout';
 import { Card } from '@/Components/ui/card';
 import IconMapper from '@/Components/IconMapper';
 import Modal from '@/Components/Modal';
@@ -121,7 +121,7 @@ export default function BusinessDevPage({
   const monthRevenue = summary.month_event_revenue ?? 0;
 
   return (
-    <AdminLayout title="Business Development" user={auth?.user as any}>
+    <BusinessDevLayout title="Business Development" user={auth?.user as any}>
       <Head title="Business Development" />
       <div className="py-6">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
@@ -349,7 +349,7 @@ export default function BusinessDevPage({
           )}
         </div>
       </div>
-    </AdminLayout>
+    </BusinessDevLayout>
   );
 }
 

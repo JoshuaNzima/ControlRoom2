@@ -216,14 +216,14 @@ export default function Dashboard({
           </div>
         </div>
         <div className="flex gap-2">
-          <Link
-            href="/supervisor/scanner"
+          <button
+            onClick={() => setShowScannerModal(true)}
             className="px-6 py-3 bg-white/20 hover:bg-white/30 rounded-lg font-semibold transition"
           >
             View Details
-          </Link>
+          </button>
           <button
-            onClick={() => router.post('/supervisor/checkpoint/clear')}
+            onClick={() => router.post(route('supervisor.checkpoint.clear'))}
             className="px-6 py-3 bg-white text-green-600 hover:bg-gray-100 rounded-lg font-semibold transition"
           >
             Clear Lock
@@ -544,7 +544,7 @@ export default function Dashboard({
           </Modal>
         )}
         {/* Scanner & Camera overlays */}
-        <ScannerModal open={showScannerModal} onClose={() => setShowScannerModal(false)} />
+        <ScannerModal open={showScannerModal} onClose={() => setShowScannerModal(false)} activeScan={activeScan || null} />
         <CameraModal
           open={showCameraModal}
           onClose={() => setShowCameraModal(false)}

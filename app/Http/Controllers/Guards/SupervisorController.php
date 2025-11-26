@@ -265,6 +265,7 @@ class SupervisorController extends Controller
                 'late' => Attendance::whereDate('date', $date)->where('status', 'late')->count(),
                 'absent' => Guard::active()->count() - Attendance::whereDate('date', $date)->count(),
             ],
+            'activeScan' => session('active_checkpoint_scan'),
         ]);
     }
 

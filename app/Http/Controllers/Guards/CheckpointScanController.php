@@ -12,11 +12,11 @@ class CheckpointScanController extends Controller
 {
     public function scan(Request $request)
     {
+        $requireGps = config('scanner.require_gps', true);
         $validated = $request->validate([
             'code' => 'required|string',
-            // GPS is required for scans to ensure location tagging
-            'latitude' => 'required|numeric',
-            'longitude' => 'required|numeric',
+            'latitude' => ($requireGps ? 'required' : 'nullable') . '|numeric',
+            'longitude' => ($requireGps ? 'required' : 'nullable') . '|numeric',
         ]);
 
         $checkpoint = Checkpoint::where('code', $validated['code'])
@@ -60,7 +60,7 @@ class CheckpointScanController extends Controller
             'site_name' => $checkpoint->clientSite->name,
             'client_name' => $checkpoint->clientSite->client->name,
             'scanned_at' => now()->toIso8601String(),
-            'expires_at' => now()->addHours(2)->toIso8601String(),
+            'expires_at' => now()->addMinutes(config('scanner.lock_minutes', 120))->toIso8601String(),
         ];
 
         session(['active_checkpoint_scan' => $scanData]);
@@ -83,6 +83,11 @@ class CheckpointScanController extends Controller
                 'longitude' => $validated['longitude'] ?? null,
             ]
         ));
+
+        if ($request->header('X-Inertia')) {
+            return redirect()->route('supervisor.attendance')
+                ->with('success', 'Checkpoint scanned successfully');
+        }
 
         return response()->json([
             'success' => true,
