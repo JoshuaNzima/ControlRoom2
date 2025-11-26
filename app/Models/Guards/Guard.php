@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Models\ClientSite;
 use App\Models\Guards\{Attendance, Shift};
 use App\Models\Guards\GuardAssignment;
+use App\Models\Guards\GuardGrade;
 use App\Models\Flag;
 
 class Guard extends Model
@@ -34,6 +35,7 @@ class Guard extends Model
         'emergency_contact_phone',
         'status',
         'guard_type',
+        'guard_grade_id',
         'hire_date',
         'notes',
         'photo',
@@ -47,6 +49,23 @@ class Guard extends Model
 
     protected $appends = ['status_color', 'is_on_duty'];
 
+    protected static function booted(): void
+    {
+        static::creating(function (self $guard) {
+            if (empty($guard->employee_id)) {
+                $guard->employee_id = self::generateEmployeeId();
+            }
+        });
+    }
+
+    public static function generateEmployeeId(): string
+    {
+        do {
+            $candidate = 'G-' . now()->format('ym') . '-' . sprintf('%04d', random_int(0, 9999));
+        } while (self::where('employee_id', $candidate)->exists());
+        return $candidate;
+    }
+
     public function supervisor(): BelongsTo
     {
         return $this->belongsTo(User::class, 'supervisor_id');
@@ -55,6 +74,11 @@ class Guard extends Model
     public function zone(): BelongsTo
     {
         return $this->belongsTo(\App\Models\Zone::class, 'zone_id');
+    }
+
+    public function grade(): BelongsTo
+    {
+        return $this->belongsTo(GuardGrade::class, 'guard_grade_id');
     }
 
     public function scopeForSupervisor($query, $supervisorId)
