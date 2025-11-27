@@ -169,6 +169,44 @@ class ClientController extends Controller
         return response()->json($client);
     }
 
+    /**
+     * Lightweight JSON list of active client sites with client name, for assignment pickers.
+     */
+    public function sitesJson(Request $request)
+    {
+        $search = trim((string) $request->input('search', ''));
+        $zoneId = $request->input('zone_id');
+
+        $sites = \App\Models\Guards\ClientSite::query()
+            ->with(['client' => function ($q) { $q->select('id', 'name'); }])
+            ->where('status', 'active')
+            ->when($zoneId, function ($q) use ($zoneId) {
+                // zone_id may exist on client_sites
+                $q->where('zone_id', $zoneId);
+            })
+            ->when($search, function ($q) use ($search) {
+                $q->where(function ($qq) use ($search) {
+                    $qq->where('name', 'like', "%{$search}%")
+                       ->orWhereHas('client', function ($qc) use ($search) {
+                           $qc->where('name', 'like', "%{$search}%");
+                       });
+                });
+            })
+            ->orderBy('name')
+            ->limit(50)
+            ->get(['id', 'client_id', 'name', 'status']);
+
+        $payload = $sites->map(function ($site) {
+            return [
+                'id' => $site->id,
+                'name' => $site->name,
+                'client_name' => optional($site->client)->name,
+            ];
+        });
+
+        return response()->json($payload);
+    }
+
     public function edit(Client $client)
     {
         $client->load('services', 'sites');

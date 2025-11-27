@@ -60,7 +60,7 @@ Route::middleware(['auth', 'role:super_admin'])->prefix('superadmin')->name('sup
     Route::get('/users', fn() => Inertia::render('SuperAdmin/Users'))->name('users');
     
     // System Settings
-    Route::get('/settings', fn() => Inertia::render('SuperAdmin/Settings'))->name('settings');
+    Route::get('/settings', [\App\Http\Controllers\Admin\SettingController::class, 'superIndex'])->name('settings');
     Route::get('/security', fn() => Inertia::render('SuperAdmin/Security'))->name('security');
     Route::get('/backup', fn() => Inertia::render('SuperAdmin/Backup'))->name('backup');
     

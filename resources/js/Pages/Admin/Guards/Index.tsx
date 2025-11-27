@@ -6,6 +6,8 @@ import useNotification from '@/Providers/useNotifications';
 import Modal from '@/Components/Modal';
 import GuardForm from '@/Components/Guards/GuardForm';
 import { GuardFormData } from '@/types/guards';
+import AssignSiteModal from '@/Components/Guards/AssignSiteModal';
+import PromoteGuardModal from '@/Components/HR/PromoteGuardModal';
 
 interface Guard {
   id: number;
@@ -34,9 +36,10 @@ interface GuardsIndexProps {
   canViewSupervisor: boolean;
   supervisors?: Supervisor[];
   grades?: GradeOption[];
+  zones?: Array<{ id: number; name: string }>;
 }
 
-export default function GuardsIndex({ guards, filters, canAssignSupervisor, canViewSupervisor, supervisors = [], grades = [] }: GuardsIndexProps) {
+export default function GuardsIndex({ guards, filters, canAssignSupervisor, canViewSupervisor, supervisors = [], grades = [], zones = [] }: GuardsIndexProps) {
   const [search, setSearch] = React.useState(filters.search || '');
   const [loadingId, setLoadingId] = React.useState<number | null>(null);
   const { push } = useNotification();
@@ -45,6 +48,8 @@ export default function GuardsIndex({ guards, filters, canAssignSupervisor, canV
   const [showAdd, setShowAdd] = React.useState(false);
   const [showEdit, setShowEdit] = React.useState(false);
   const [showDetails, setShowDetails] = React.useState(false);
+  const [showAssign, setShowAssign] = React.useState(false);
+  const [showPromote, setShowPromote] = React.useState(false);
   const [selectedGuard, setSelectedGuard] = React.useState<any | null>(null);
   const [saving, setSaving] = React.useState(false);
   const [photoCreate, setPhotoCreate] = React.useState<File | null>(null);
@@ -76,6 +81,18 @@ export default function GuardsIndex({ guards, filters, canAssignSupervisor, canV
       const data = await res.json();
       setSelectedGuard(data);
       setShowDetails(true);
+    } catch {}
+  };
+  const openAssign = (guardId: number) => {
+    setSelectedGuard({ id: guardId });
+    setShowAssign(true);
+  };
+  const openPromote = async (guardId: number) => {
+    try {
+      const res = await fetch(route('admin.guards.json', guardId));
+      const data = await res.json();
+      setSelectedGuard(data);
+      setShowPromote(true);
     } catch {}
   };
 
@@ -253,6 +270,20 @@ export default function GuardsIndex({ guards, filters, canAssignSupervisor, canV
                         <IconMapper name="Pencil" size={18} />
                       </button>
                       <button
+                        onClick={() => openAssign(guard.id)}
+                        className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition"
+                        title="Assign to site"
+                      >
+                        Assign
+                      </button>
+                      <button
+                        onClick={() => openPromote(guard.id)}
+                        className="p-2 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-lg transition"
+                        title="Promote"
+                      >
+                        Promote
+                      </button>
+                      <button
                         onClick={() => {
                           if (confirm('Are you sure you want to delete this guard?')) {
                             router.delete(route('admin.guards.destroy', { guard: guard.id }));
@@ -424,6 +455,24 @@ export default function GuardsIndex({ guards, filters, canAssignSupervisor, canV
             )}
           </div>
         </Modal>
+
+        {/* Assign to Site Modal */}
+        <AssignSiteModal
+          open={showAssign}
+          onClose={() => setShowAssign(false)}
+          guardId={selectedGuard?.id ?? null}
+          zones={zones}
+          onSuccess={() => push('Guard assigned to site')}
+        />
+
+        {/* Promote Guard Modal */}
+        <PromoteGuardModal
+          open={showPromote}
+          guard={selectedGuard}
+          zones={zones}
+          onClose={() => setShowPromote(false)}
+          onSuccess={() => push('Guard promoted')}
+        />
       </div>
     </AdminLayout>
   );

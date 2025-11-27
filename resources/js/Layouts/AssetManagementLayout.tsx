@@ -1,0 +1,98 @@
+import React from 'react';
+import { Head, Link, usePage } from '@inertiajs/react';
+import BaseShell from './BaseShell';
+import IconMapper from '@/Components/IconMapper';
+import { User } from '@/types';
+import { useTheme } from '@/Providers/ThemeProvider';
+
+interface Props {
+  title: string;
+  children: React.ReactNode;
+  user?: User;
+}
+
+interface NavItem {
+  name: string;
+  href: string;
+  icon: React.ReactNode;
+  current: boolean;
+}
+
+export default function AssetManagementLayout({ title, children, user }: Props) {
+  const [sidebarOpen, setSidebarOpen] = React.useState(false);
+  const isCurrent = (href: string) => typeof window !== 'undefined' && window.location.pathname === href;
+  const { theme, toggle } = useTheme();
+  const { props } = usePage<any>();
+  const unread = Number(props?.notifications?.unread_count || 0);
+
+  const nav: NavItem[] = [
+    { name: 'Overview', href: route('admin.assets'), icon: <IconMapper name="package" className="h-6 w-6" />, current: isCurrent(route('admin.assets')) },
+    { name: 'Vehicles', href: route('admin.assets.vehicles.index'), icon: <IconMapper name="truck" className="h-6 w-6" />, current: isCurrent(route('admin.assets.vehicles.index')) },
+    { name: 'Equipment', href: route('admin.assets.equipment.index'), icon: <IconMapper name="wrench" className="h-6 w-6" />, current: isCurrent(route('admin.assets.equipment.index')) },
+    { name: 'Settings', href: route('admin.assets.settings'), icon: <IconMapper name="settings" className="h-6 w-6" />, current: isCurrent(route('admin.assets.settings')) },
+  ];
+
+  return (
+    <div className="min-h-screen bg-red-50 dark:bg-gray-900">
+      <Head title={title} />
+
+      <div className={`fixed inset-0 bg-red-800 bg-opacity-50 z-40 md:hidden ${sidebarOpen ? 'block' : 'hidden'}`} onClick={() => setSidebarOpen(false)} />
+
+      <div className={`fixed top-0 left-0 bottom-0 flex flex-col w-64 bg-red-900 dark:bg-gray-950 text-white transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 transition-transform duration-300 ease-in-out z-50`}>
+        <div className="flex-1 flex flex-col pt-5 pb-4 overflow-y-auto">
+          <div className="flex items-center flex-shrink-0 px-4">
+            <span className="ml-2 text-2xl font-bold text-white">Asset Management</span>
+          </div>
+          <nav className="mt-8 flex-1 px-2 space-y-1">
+            {nav.map((item) => (
+              <Link key={item.name} href={item.href} className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md ${item.current ? 'bg-red-800 text-white dark:bg-gray-800' : 'text-red-100 hover:bg-red-800 hover:text-white dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white'}`}>
+                {item.icon}
+                <span className="ml-3">{item.name}</span>
+              </Link>
+            ))}
+          </nav>
+        </div>
+        <div className="flex-shrink-0 flex border-t border-red-800 dark:border-gray-800 p-4">
+          <div className="flex items-center">
+            <div>
+              <div className="text-base font-medium text-white">{user?.name}</div>
+              <div className="text-sm font-medium text-red-200 dark:text-gray-400">Assets</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="md:pl-64">
+        <div className="sticky top-0 z-10 pl-1 pt-1 sm:pl-3 sm:pt-3 bg-red-50 dark:bg-gray-900 border-b border-red-100 dark:border-gray-800">
+          <button type="button" className="-ml-0.5 -mt-0.5 h-12 w-12 inline-flex items-center justify-center rounded-md text-red-700 hover:text-red-900 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-red-500 md:hidden" onClick={() => setSidebarOpen(true)}>
+            <span className="sr-only">Open sidebar</span>
+            <IconMapper name="menu" className="h-6 w-6" />
+          </button>
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 pb-3">
+            <div className="flex items-center justify-between">
+              <h1 className="text-xl font-semibold text-red-900 dark:text-gray-100">{title}</h1>
+              <div className="flex items-center gap-4">
+                <button type="button" className="relative inline-flex items-center justify-center h-9 w-9 rounded-md text-red-700 hover:text-red-900 dark:text-gray-200 dark:hover:text-gray-100 hover:bg-red-100 dark:hover:bg-gray-800">
+                  <IconMapper name="bell" className="h-5 w-5" />
+                  {unread > 0 && (
+                    <span className="absolute -top-1 -right-1 inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-bold leading-none rounded-full bg-red-600 text-white">{unread > 99 ? '99+' : unread}</span>
+                  )}
+                </button>
+                <button onClick={toggle} className="text-sm px-3 py-1 rounded-md bg-red-100 text-red-800 hover:bg-red-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700">
+                  {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
+                </button>
+                <div className="text-sm text-red-700 dark:text-gray-300">{user?.name}</div>
+                <Link href={route('logout')} method="post" as="button" className="text-sm px-3 py-1 rounded-md bg-white text-red-700 hover:bg-red-50 border border-red-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700">
+                  Logout
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+        <BaseShell noHeader fullScreen={false}>
+          {children}
+        </BaseShell>
+      </div>
+    </div>
+  );
+}

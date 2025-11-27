@@ -75,6 +75,8 @@ Route::middleware(['auth', 'role:admin,super_admin'])
             // Standalone show page removed; use modal instead. Keep JSON and edit routes.
             // JSON API for fetching a single client (used by modal pre-fill)
             Route::get('/{client}/json', [\App\Http\Controllers\Admin\ClientController::class, 'apiShow'])->name('json');
+            // JSON API for listing all client sites (active), supports optional search and zone filter
+            Route::get('/sites/json', [\App\Http\Controllers\Admin\ClientController::class, 'sitesJson'])->name('sites.json');
             Route::get('/{client}/edit', [\App\Http\Controllers\Admin\ClientController::class, 'edit'])->name('edit');
             Route::put('/{client}', [\App\Http\Controllers\Admin\ClientController::class, 'update'])->name('update');
             Route::delete('/{client}', [\App\Http\Controllers\Admin\ClientController::class, 'destroy'])->name('destroy');
@@ -98,6 +100,11 @@ Route::middleware(['auth', 'role:admin,super_admin'])
         // JSON API for fetching a single guard (used by modal pre-fill)
         Route::get('/guards/{guard}/json', [\App\Http\Controllers\Admin\GuardController::class, 'apiShow'])->name('guards.json');
         Route::resource('guards', \App\Http\Controllers\Admin\GuardController::class)->except(['create','edit','show']);
+        // Guard assignment to client site
+        Route::post('/guards/assign-site', [\App\Http\Controllers\Admin\GuardAssignmentController::class, 'assignToSite'])->name('guards.assign-site');
+        Route::post('/guards/unassign-site', [\App\Http\Controllers\Admin\GuardAssignmentController::class, 'unassignFromSite'])->name('guards.unassign-site');
+        // Guard promotion (admin access)
+        Route::post('/guards/{guard}/promote', [\App\Http\Controllers\HR\EmployeeController::class, 'promote'])->name('guards.promote');
         Route::get('/qr-codes', [\App\Http\Controllers\SupervisorQRCodesController::class, 'index'])->name('qr-codes');
         Route::get('/qr-codes/download-bulk', [\App\Http\Controllers\SupervisorQRCodesController::class, 'downloadBulk'])->name('qr-codes.download-bulk');
         // Admin Finance landing (module-level admin page)

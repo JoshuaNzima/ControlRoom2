@@ -8,6 +8,7 @@ use App\Models\Guards\GuardAssignment;
 use App\Models\Guards\ClientSite;
 use App\Models\Guards\Client;
 use App\Models\Guards\GuardGrade;
+use App\Models\Zone;
 use App\Models\PayProfile;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -58,6 +59,7 @@ class GuardController extends Controller
                 ->get(['id','name']);
         }
         $grades = GuardGrade::orderBy('name')->get(['id','code','name']);
+        $zones = Zone::orderBy('name')->get(['id','name']);
 
         return Inertia::render('Admin/Guards/Index', [
             'guards' => $guards,
@@ -66,6 +68,7 @@ class GuardController extends Controller
             'canViewSupervisor' => $canViewSupervisor,
             'supervisors' => $supervisors,
             'grades' => $grades,
+            'zones' => $zones,
         ]);
     }
 
