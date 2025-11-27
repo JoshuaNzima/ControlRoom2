@@ -1,8 +1,9 @@
 import React from 'react';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
 import BaseShell from './BaseShell';
 import IconMapper from '@/Components/IconMapper';
 import { User } from '@/types';
+import NotificationBell from '@/Components/Common/NotificationBell';
 import { useTheme } from '@/Providers/ThemeProvider';
 
 interface Props {
@@ -23,8 +24,17 @@ export default function AdminLayout({ title, children, user }: Props) {
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
   const [logoOk, setLogoOk] = React.useState<boolean>(true);
   const { theme, toggle } = useTheme();
+  const { props } = usePage<any>();
+  const effectiveUser: User | undefined = (user as any) ?? (props?.auth?.user as any) ?? undefined;
 
-  const isCurrent = (href: string) => window.location.pathname === href;
+  const isCurrent = (href: string) => {
+    try {
+      const hrefPath = new URL(href, window.location.origin).pathname;
+      return window.location.pathname === hrefPath;
+    } catch {
+      return window.location.pathname === href;
+    }
+  };
 
   const adminLinks: ModuleNavItem[] = [
      { name: 'Admin Dashboard', href: route('admin.dashboard'), icon: <IconMapper name="home" className="h-6 w-6" />, current: isCurrent(route('admin.dashboard')) },
@@ -38,12 +48,12 @@ export default function AdminLayout({ title, children, user }: Props) {
   ];
 
   const canSeeFinance = (() => {
-    if (!user) return false;
+    if (!effectiveUser) return false;
     const allowedRoles = ['admin', 'super_admin', 'finance_officer', 'accountant'];
-    const roles = (user as any).roles ?? [];
+    const roles = (effectiveUser as any).roles ?? [];
     if (Array.isArray(roles) && roles.some((r) => allowedRoles.includes(String(r)))) return true;
     if (typeof roles === 'string' && allowedRoles.includes(roles)) return true;
-    const perms = (user as any).permissions ?? [];
+    const perms = (effectiveUser as any).permissions ?? [];
     if (Array.isArray(perms) && perms.includes('finance.access')) return true;
     if (typeof perms === 'string' && perms === 'finance.access') return true;
     return false;
@@ -52,7 +62,7 @@ export default function AdminLayout({ title, children, user }: Props) {
   const moduleLinks: ModuleNavItem[] = [
   { name: 'Control Room', href: route('admin.control-room.dashboard'), icon: <IconMapper name="briefcase" className="h-6 w-6" />, current: isCurrent(route('admin.control-room.dashboard')) },
   { name: 'Clients', href: route('admin.clients.index'), icon: <IconMapper name="building-2" className="h-6 w-6" />, current: false },
-  { name: 'Guards', href: route('admin.guards.dashboard'), icon: <IconMapper name="shield-check" className="h-6 w-6" />, current: false },
+  { name: 'Guards', href: route('admin.guards.index'), icon: <IconMapper name="shield-check" className="h-6 w-6" />, current: isCurrent(route('admin.guards.index')) },
   { name: 'HR', href: route('hr.dashboard'), icon: <IconMapper name="users-2" className="h-6 w-6" />, current: false },
   { name: 'K9', href: route('k9.dashboard'), icon: <IconMapper name="shield" className="h-6 w-6" />, current: false },
   { name: 'Business Dev', href: route('admin.business-dev'), icon: <IconMapper name="handshake" className="h-6 w-6" />, current: isCurrent(route('admin.business-dev')) },
@@ -112,7 +122,7 @@ export default function AdminLayout({ title, children, user }: Props) {
         <div className="flex-shrink-0 flex border-t border-red-800 dark:border-gray-800 p-4">
           <div className="flex items-center">
             <div>
-              <div className="text-base font-medium text-white">{user?.name}</div>
+              <div className="text-base font-medium text-white">{effectiveUser?.name}</div>
               <div className="text-sm font-medium text-red-200 dark:text-gray-400">Admin</div>
             </div>
           </div>
@@ -129,10 +139,11 @@ export default function AdminLayout({ title, children, user }: Props) {
             <div className="flex items-center justify-between">
               <h1 className="text-xl font-semibold text-red-900 dark:text-gray-100">{title}</h1>
               <div className="flex items-center gap-4">
+                <NotificationBell />
                 <button onClick={toggle} className="text-sm px-3 py-1 rounded-md bg-red-100 text-red-800 hover:bg-red-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700">
                   {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
                 </button>
-                <div className="text-sm text-red-700 dark:text-gray-300">{user?.name}</div>
+                <div className="text-sm text-red-700 dark:text-gray-300">{effectiveUser?.name}</div>
                 <Link
                   href={route('logout')}
                   method="post"

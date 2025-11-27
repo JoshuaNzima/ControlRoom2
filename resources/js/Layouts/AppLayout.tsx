@@ -1,4 +1,5 @@
 import React from 'react';
+import NotificationBell from '@/Components/Common/NotificationBell';
 
 type Props = {
   children: React.ReactNode;
@@ -11,7 +12,10 @@ export default function AppLayout({ children, title }: Props) {
       {title && (
         <header className="bg-white dark:bg-gray-800 border-b border-red-100 dark:border-gray-800 sticky top-0 z-30">
           <div className="max-w-7xl mx-auto px-6 py-4">
-            <h1 className="text-xl font-bold text-red-900 dark:text-gray-100">{title}</h1>
+            <div className="flex items-center justify-between">
+              <h1 className="text-xl font-bold text-red-900 dark:text-gray-100">{title}</h1>
+              <NotificationBell />
+            </div>
           </div>
         </header>
       )}

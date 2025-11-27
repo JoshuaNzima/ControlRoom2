@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from '@inertiajs/react';
 import IconMapper from '@/Components/IconMapper';
 import { User } from '@/types';
+import NotificationBell from '@/Components/Common/NotificationBell';
 import BaseShell from './BaseShell';
 
 interface Props {
@@ -201,7 +202,12 @@ export default function SuperAdminLayout({ title, children, user }: Props) {
                 <BaseShell title={title} fullScreen={false} noHeader>
                     <header className="hidden md:block bg-white dark:bg-gray-800 border-b border-red-100 dark:border-gray-800 sticky top-0 z-30">
                         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-                            <h1 className="text-xl font-bold text-red-900 dark:text-gray-100">{title}</h1>
+                            <div className="flex items-center justify-between">
+                                <h1 className="text-xl font-bold text-red-900 dark:text-gray-100">{title}</h1>
+                                <div className="flex items-center gap-4">
+                                    <NotificationBell />
+                                </div>
+                            </div>
                         </div>
                     </header>
                     {children}

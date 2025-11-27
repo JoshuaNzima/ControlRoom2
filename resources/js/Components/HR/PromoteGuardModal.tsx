@@ -32,7 +32,8 @@ export default function PromoteGuardModal({
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!guard) return;
-    post(route('hr.guards.promote', guard.id), {
+    const promoteRoute = (route().has('admin.guards.promote') ? 'admin.guards.promote' : 'hr.guards.promote') as any;
+    post(route(promoteRoute, guard.id), {
       onSuccess: () => {
         onSuccess();
         onClose();

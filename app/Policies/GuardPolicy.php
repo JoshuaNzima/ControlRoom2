@@ -42,8 +42,7 @@ class GuardPolicy
      */
     public function update(User $user, Guard $guard): bool
     {
-        // supervisors may update guards they supervise; managers/zone commanders may update any
-        if ($user->hasRole('manager') || $user->hasRole('zone_commander')) return true;
+        if ($user->hasAnyRole(['admin', 'super_admin', 'manager', 'zone_commander'])) return true;
         if ($user->hasRole('supervisor') && $guard->supervisor_id === $user->id) return true;
 
         return false;

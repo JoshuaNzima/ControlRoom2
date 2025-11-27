@@ -30,7 +30,7 @@ export default function GuardsDashboard({ kpis = {}, recentGuards = [] as Guard[
                 <a href={route('admin.guards.index')}>Manage Guards</a>
               </Button>
               <Button asChild variant="outline">
-                <a href={route('admin.guards.create')}>Add Guard</a>
+                <a href={route('admin.guards.index')}>Add Guard</a>
               </Button>
               {route().has('admin.guard-assignments.index') && (
                 <Button asChild variant="ghost">

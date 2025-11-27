@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Guards\{Guard, Attendance, Client, ClientSite, Shift};
 use App\Models\User;
 use App\Models\Core\Module;
+use App\Models\Approval;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Carbon\Carbon;
@@ -192,7 +193,10 @@ class DashboardController extends Controller
         $kpis['finance']['requisitions_mtd_total'] = (float) \App\Models\Expense::whereYear('expense_date', now()->year)
             ->whereMonth('expense_date', now()->month)
             ->sum('amount');
-        $kpis['finance']['pending_requisitions_count'] = (int) \App\Models\Expense::pending()->count();
+        // Show pending approvals assigned to the current user to avoid mismatch with Approvals list
+        $kpis['finance']['pending_requisitions_count'] = (int) Approval::where('status', 'pending')
+            ->where('approver_id', auth()->id())
+            ->count();
 
         return Inertia::render('Admin/Dashboard', [
             'stats' => $stats,

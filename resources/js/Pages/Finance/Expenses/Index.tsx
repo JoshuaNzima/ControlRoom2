@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Head, Link, router, useForm } from '@inertiajs/react';
+import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import FinanceLayout from '@/Layouts/FinanceLayout';
+import AdminLayout from '@/Layouts/AdminLayout';
 import Modal from '@/Components/Modal';
 import { formatCurrency, formatDate } from '@/utils/formatters';
 
@@ -88,10 +89,18 @@ export default function ExpenseIndex({ expenses, totals, filters }: Props) {
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
 
+  const { url } = usePage();
+  const isAdminRoute = typeof url === 'string' && url.startsWith('/admin/');
+  const Layout = isAdminRoute ? AdminLayout : FinanceLayout;
+  const listRouteName = isAdminRoute ? 'admin.requisitions.index' : 'finance.expenses.index';
+  const showRouteName = isAdminRoute ? 'admin.requisitions.show' : 'finance.expenses.show';
+  const updateRouteName = isAdminRoute ? 'admin.requisitions.update' : 'finance.expenses.update';
+  const storeRouteName = isAdminRoute ? 'admin.requisitions.store' : 'finance.expenses.store';
+
   const openViewModal = async (id: number) => {
     setLoadingId(id);
     try {
-      const response = await fetch(route('finance.expenses.show', id), {
+      const response = await fetch(route(showRouteName, id), {
         headers: {
           Accept: 'application/json',
           'X-Requested-With': 'XMLHttpRequest',
@@ -106,7 +115,7 @@ export default function ExpenseIndex({ expenses, totals, filters }: Props) {
       setViewingExpense(json);
       setViewModalOpen(true);
     } catch (e) {
-      router.visit(route('finance.expenses.show', id));
+      router.visit(route(showRouteName, id));
     } finally {
       setLoadingId(null);
     }
@@ -139,7 +148,7 @@ export default function ExpenseIndex({ expenses, totals, filters }: Props) {
     if (startDate) params.start_date = startDate;
     if (endDate) params.end_date = endDate;
 
-    router.get(route('finance.expenses.index'), params);
+    router.get(route(listRouteName), params);
   };
 
   const handleClearFilters = () => {
@@ -148,7 +157,7 @@ export default function ExpenseIndex({ expenses, totals, filters }: Props) {
     setFilterPaymentMethod('');
     setStartDate('');
     setEndDate('');
-    router.get(route('finance.expenses.index'));
+    router.get(route(listRouteName));
   };
 
   const getStatusBadge = (status: string) => {
@@ -161,7 +170,7 @@ export default function ExpenseIndex({ expenses, totals, filters }: Props) {
   };
 
   return (
-    <FinanceLayout title="Requisitions">
+    <Layout title="Requisitions">
       <Head title="Requisitions" />
       
       <div className="py-6">
@@ -422,6 +431,7 @@ export default function ExpenseIndex({ expenses, totals, filters }: Props) {
             onClose={() => setCreateModalOpen(false)}
             categories={categories}
             paymentMethods={paymentMethods}
+            storeRouteName={storeRouteName}
           />
 
           {editingExpense && (
@@ -435,6 +445,8 @@ export default function ExpenseIndex({ expenses, totals, filters }: Props) {
               expense={editingExpense}
               categories={categories}
               paymentMethods={paymentMethods}
+              updateRouteName={updateRouteName}
+              showRouteName={showRouteName}
             />
           )}
 
@@ -553,7 +565,7 @@ export default function ExpenseIndex({ expenses, totals, filters }: Props) {
           )}
         </div>
       </div>
-    </FinanceLayout>
+    </Layout>
   );
 }
 
@@ -562,9 +574,10 @@ interface CreateExpenseModalProps {
   onClose: () => void;
   categories: string[];
   paymentMethods: string[];
+  storeRouteName: string;
 }
 
-function CreateExpenseModal({ open, onClose, categories, paymentMethods }: CreateExpenseModalProps) {
+function CreateExpenseModal({ open, onClose, categories, paymentMethods, storeRouteName }: CreateExpenseModalProps) {
   const { data, setData, post, processing, errors, reset } = useForm({
     amount: '',
     category: categories[0] || 'general',
@@ -577,7 +590,7 @@ function CreateExpenseModal({ open, onClose, categories, paymentMethods }: Creat
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    post(route('finance.expenses.store'), {
+    post(route(storeRouteName), {
       onSuccess: () => {
         reset();
         onClose();
@@ -760,9 +773,11 @@ interface EditExpenseModalProps {
   expense: Expense;
   categories: string[];
   paymentMethods: string[];
+  updateRouteName: string;
+  showRouteName: string;
 }
 
-function EditExpenseModal({ open, onClose, expense, categories, paymentMethods }: EditExpenseModalProps) {
+function EditExpenseModal({ open, onClose, expense, categories, paymentMethods, updateRouteName, showRouteName }: EditExpenseModalProps) {
   const { data, setData, put, processing, errors, reset } = useForm({
     amount: expense.amount.toString(),
     category: expense.category,
@@ -775,7 +790,7 @@ function EditExpenseModal({ open, onClose, expense, categories, paymentMethods }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    put(route('finance.expenses.update', expense.id), {
+    put(route(updateRouteName, expense.id), {
       onSuccess: () => {
         reset();
         onClose();

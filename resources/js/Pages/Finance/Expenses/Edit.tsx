@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Head, useForm } from '@inertiajs/react';
+import { Head, useForm, usePage } from '@inertiajs/react';
 import FinanceLayout from '@/Layouts/FinanceLayout';
+import AdminLayout from '@/Layouts/AdminLayout';
 
 interface Expense {
   id: number;
@@ -20,6 +21,11 @@ interface Props {
 }
 
 export default function EditExpense({ expense, categories, paymentMethods }: Props) {
+  const { url } = usePage();
+  const isAdminRoute = typeof url === 'string' && url.startsWith('/admin/');
+  const Layout = isAdminRoute ? AdminLayout : FinanceLayout;
+  const updateRouteName = isAdminRoute ? 'admin.requisitions.update' : 'finance.expenses.update';
+  const showRouteName = isAdminRoute ? 'admin.requisitions.show' : 'finance.expenses.show';
   const { data, setData, put, processing, errors } = useForm({
     amount: expense.amount.toString(),
     category: expense.category,
@@ -32,11 +38,11 @@ export default function EditExpense({ expense, categories, paymentMethods }: Pro
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    put(route('finance.expenses.update', expense.id));
+    put(route(updateRouteName, expense.id));
   };
 
   return (
-    <FinanceLayout title="Edit Requisition">
+    <Layout title="Edit Requisition">
       <Head title="Edit Requisition" />
       
       <div className="py-6">
@@ -176,7 +182,7 @@ export default function EditExpense({ expense, categories, paymentMethods }: Pro
                   {processing ? 'Saving...' : 'Save Changes'}
                 </button>
                 <a
-                  href={route('finance.expenses.show', expense.id)}
+                  href={route(showRouteName, expense.id)}
                   className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition font-medium text-center"
                 >
                   Cancel
@@ -186,6 +192,6 @@ export default function EditExpense({ expense, categories, paymentMethods }: Pro
           </div>
         </div>
       </div>
-    </FinanceLayout>
+    </Layout>
   );
 }

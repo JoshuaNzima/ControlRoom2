@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Models\ClientSite;
 use App\Models\Guards\{Attendance, Shift};
 use App\Models\Guards\GuardAssignment;
+use App\Models\Guards\GuardGrade;
 use App\Models\Flag;
 
 class Guard extends Model
@@ -27,13 +28,30 @@ class Guard extends Model
         'phone',
         'email',
         'address',
+        'residence_address',
+        'residence_city',
+        'residence_district',
         'id_number',
         'date_of_birth',
         'gender',
+        'marital_status',
+        'spouse_name',
+        'spouse_phone',
         'emergency_contact_name',
         'emergency_contact_phone',
+        'next_of_kin_name',
+        'next_of_kin_relationship',
+        'next_of_kin_phone',
         'status',
         'guard_type',
+        'guard_grade_id',
+        'home_village',
+        'home_ta',
+        'home_district',
+        'education_level',
+        'qualifications',
+        'languages',
+        'dependents_count',
         'hire_date',
         'notes',
         'photo',
@@ -43,9 +61,35 @@ class Guard extends Model
     protected $casts = [
         'date_of_birth' => 'date',
         'hire_date' => 'date',
+        'qualifications' => 'array',
+        'languages' => 'array',
+        'dependents_count' => 'integer',
     ];
 
-    protected $appends = ['status_color', 'is_on_duty'];
+    protected $appends = ['status_color', 'is_on_duty', 'photo_url'];
+
+    protected static function booted(): void
+    {
+        static::creating(function (self $guard) {
+            if (empty($guard->employee_id)) {
+                $guard->employee_id = self::generateEmployeeId();
+            }
+        });
+    }
+
+    public static function generateEmployeeId(): string
+    {
+        do {
+            $candidate = 'G-' . now()->format('ym') . '-' . sprintf('%04d', random_int(0, 9999));
+        } while (self::where('employee_id', $candidate)->exists());
+        return $candidate;
+    }
+
+    public function getPhotoUrlAttribute(): ?string
+    {
+        if (empty($this->photo)) return null;
+        return asset('storage/' . ltrim($this->photo, '/'));
+    }
 
     public function supervisor(): BelongsTo
     {
@@ -55,6 +99,11 @@ class Guard extends Model
     public function zone(): BelongsTo
     {
         return $this->belongsTo(\App\Models\Zone::class, 'zone_id');
+    }
+
+    public function grade(): BelongsTo
+    {
+        return $this->belongsTo(GuardGrade::class, 'guard_grade_id');
     }
 
     public function scopeForSupervisor($query, $supervisorId)

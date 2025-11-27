@@ -51,6 +51,13 @@ Route::middleware(['auth', 'role:admin,super_admin'])
             ->name('settings.finance.pay-profiles.update');
         Route::delete('/settings/finance/pay-profiles/{payProfile}', [\App\Http\Controllers\Admin\FinanceSettingController::class, 'destroyPayProfile'])
             ->name('settings.finance.pay-profiles.destroy');
+        // HR Settings endpoints (Guard Grades)
+        Route::post('/settings/hr/guard-grades', [\App\Http\Controllers\Admin\GuardGradeController::class, 'store'])
+            ->name('settings.hr.guard-grades.store');
+        Route::put('/settings/hr/guard-grades/{guardGrade}', [\App\Http\Controllers\Admin\GuardGradeController::class, 'update'])
+            ->name('settings.hr.guard-grades.update');
+        Route::delete('/settings/hr/guard-grades/{guardGrade}', [\App\Http\Controllers\Admin\GuardGradeController::class, 'destroy'])
+            ->name('settings.hr.guard-grades.destroy');
         Route::get('/reports', [\App\Http\Controllers\Admin\ReportController::class, 'index'])->name('reports.index');
         Route::get('/modules', [\App\Http\Controllers\Admin\ModuleController::class, 'index'])->name('modules.index');
         Route::resource('users', \App\Http\Controllers\Admin\UserController::class);
@@ -68,6 +75,8 @@ Route::middleware(['auth', 'role:admin,super_admin'])
             // Standalone show page removed; use modal instead. Keep JSON and edit routes.
             // JSON API for fetching a single client (used by modal pre-fill)
             Route::get('/{client}/json', [\App\Http\Controllers\Admin\ClientController::class, 'apiShow'])->name('json');
+            // JSON API for listing all client sites (active), supports optional search and zone filter
+            Route::get('/sites/json', [\App\Http\Controllers\Admin\ClientController::class, 'sitesJson'])->name('sites.json');
             Route::get('/{client}/edit', [\App\Http\Controllers\Admin\ClientController::class, 'edit'])->name('edit');
             Route::put('/{client}', [\App\Http\Controllers\Admin\ClientController::class, 'update'])->name('update');
             Route::delete('/{client}', [\App\Http\Controllers\Admin\ClientController::class, 'destroy'])->name('destroy');
@@ -88,7 +97,14 @@ Route::middleware(['auth', 'role:admin,super_admin'])
         // Client Sites nested routes
         // Client site routes moved into clients group above
         Route::get('/guards/dashboard', [\App\Http\Controllers\Admin\GuardController::class, 'dashboard'])->name('guards.dashboard');
-        Route::resource('guards', \App\Http\Controllers\Admin\GuardController::class);
+        // JSON API for fetching a single guard (used by modal pre-fill)
+        Route::get('/guards/{guard}/json', [\App\Http\Controllers\Admin\GuardController::class, 'apiShow'])->name('guards.json');
+        Route::resource('guards', \App\Http\Controllers\Admin\GuardController::class)->except(['create','edit','show']);
+        // Guard assignment to client site
+        Route::post('/guards/assign-site', [\App\Http\Controllers\Admin\GuardAssignmentController::class, 'assignToSite'])->name('guards.assign-site');
+        Route::post('/guards/unassign-site', [\App\Http\Controllers\Admin\GuardAssignmentController::class, 'unassignFromSite'])->name('guards.unassign-site');
+        // Guard promotion (admin access)
+        Route::post('/guards/{guard}/promote', [\App\Http\Controllers\HR\EmployeeController::class, 'promote'])->name('guards.promote');
         Route::get('/qr-codes', [\App\Http\Controllers\SupervisorQRCodesController::class, 'index'])->name('qr-codes');
         Route::get('/qr-codes/download-bulk', [\App\Http\Controllers\SupervisorQRCodesController::class, 'downloadBulk'])->name('qr-codes.download-bulk');
         // Admin Finance landing (module-level admin page)
@@ -109,6 +125,14 @@ Route::middleware(['auth', 'role:admin,super_admin'])
             Route::post('/{approval}/approve', [\App\Http\Controllers\Finance\ApprovalController::class, 'approve'])->name('approve');
             Route::post('/{approval}/reject', [\App\Http\Controllers\Finance\ApprovalController::class, 'reject'])->name('reject');
         });
+
+        // Requisitions (admin aliases to Finance ExpenseController) for consistent Admin layout
+        Route::get('/requisitions', [\App\Http\Controllers\Finance\ExpenseController::class, 'index'])->name('requisitions.index');
+        Route::post('/requisitions', [\App\Http\Controllers\Finance\ExpenseController::class, 'store'])->name('requisitions.store');
+        Route::get('/requisitions/{expense}', [\App\Http\Controllers\Finance\ExpenseController::class, 'show'])->name('requisitions.show');
+        Route::get('/requisitions/{expense}/edit', [\App\Http\Controllers\Finance\ExpenseController::class, 'edit'])->name('requisitions.edit');
+        Route::put('/requisitions/{expense}', [\App\Http\Controllers\Finance\ExpenseController::class, 'update'])->name('requisitions.update');
+        Route::delete('/requisitions/{expense}', [\App\Http\Controllers\Finance\ExpenseController::class, 'destroy'])->name('requisitions.destroy');
 
         // Downs (admin can view same control-room UI for now)
         Route::get('/downs', [\App\Http\Controllers\ControlRoom\DownController::class, 'index'])->name('downs.index');

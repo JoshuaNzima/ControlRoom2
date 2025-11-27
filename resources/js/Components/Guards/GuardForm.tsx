@@ -1,6 +1,13 @@
-import React from 'react';
+import React, { ChangeEvent, FormEvent } from 'react';
 import { useForm } from '@inertiajs/react';
 import { GuardFormData } from '@/types/guards';
+
+const MALAWI_DISTRICTS = [
+  'Balaka', 'Blantyre', 'Chikwawa', 'Chiradzulu', 'Chitipa', 'Dedza', 'Dowa',
+  'Karonga', 'Kasungu', 'Likoma', 'Lilongwe', 'Machinga', 'Mangochi',
+  'Mchinji', 'Mulanje', 'Mwanza', 'Mzimba', 'Neno', 'Nkhata Bay', 'Nkhotakota',
+  'Nsanje', 'Ntcheu', 'Ntchisi', 'Phalombe', 'Rumphi', 'Salima', 'Thyolo', 'Zomba',
+];
 
 interface Supervisor {
   id: number;
@@ -10,41 +17,84 @@ interface Supervisor {
 interface GuardFormProps {
   initialData: Partial<GuardFormData>;
   supervisors: Supervisor[];
+  grades?: { id: number; code: string; name: string }[];
   onSubmit: (data: GuardFormData) => void;
   canAssignSupervisor: boolean;
   processing?: boolean;
   errors?: Record<string, string>;
+  hideCancel?: boolean;
+  onCancel?: () => void;
 }
 
 export default function GuardForm({
   initialData,
   supervisors,
+  grades = [],
   onSubmit,
   canAssignSupervisor,
   processing = false,
-  errors = {}
+  errors = {},
+  hideCancel = false,
+  onCancel,
 }: GuardFormProps) {
-  const { data, setData } = useForm<GuardFormData>({
+  const { data, setData } = useForm<any>({
+    ...initialData,
     employee_id: initialData.employee_id || '',
     name: initialData.name || '',
     phone: initialData.phone || '',
     email: initialData.email || '',
     address: initialData.address || '',
+    residence_address: (initialData as any).residence_address || '',
+    residence_city: (initialData as any).residence_city || '',
+    residence_district: (initialData as any).residence_district || '',
     id_number: initialData.id_number || '',
     date_of_birth: initialData.date_of_birth || '',
     gender: initialData.gender || '',
+    marital_status: (initialData as any).marital_status || '',
+    spouse_name: (initialData as any).spouse_name || '',
+    spouse_phone: (initialData as any).spouse_phone || '',
     emergency_contact_name: initialData.emergency_contact_name || '',
     emergency_contact_phone: initialData.emergency_contact_phone || '',
+    next_of_kin_name: (initialData as any).next_of_kin_name || '',
+    next_of_kin_relationship: (initialData as any).next_of_kin_relationship || '',
+    next_of_kin_phone: (initialData as any).next_of_kin_phone || '',
     supervisor_id: initialData.supervisor_id || '',
     hire_date: initialData.hire_date || '',
     guard_type: (initialData as any).guard_type || 'permanent',
+    guard_grade_id: (initialData as any).guard_grade_id || '',
+    home_village: (initialData as any).home_village || '',
+    home_ta: (initialData as any).home_ta || '',
+    home_district: (initialData as any).home_district || '',
+    education_level: (initialData as any).education_level || '',
+    qualifications: (initialData as any).qualifications || '',
+    languages: (initialData as any).languages || '',
+    dependents_count: (initialData as any).dependents_count || '',
     notes: initialData.notes || '',
     status: initialData.status || 'active',
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const set = (field: string, value: any) => (setData as any)(field as any, value);
+  const handleChange = (field: string) => (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    set(field, e.target.value);
+  };
+
+  const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
-    onSubmit(data);
+    const payload = { ...data };
+    const toArray = (val: any) => {
+      if (Array.isArray(val)) return val;
+      if (typeof val === 'string') {
+        try {
+          const parsed = JSON.parse(val);
+          if (Array.isArray(parsed)) return parsed;
+        } catch {}
+        return val.split(',').map((s) => s.trim()).filter(Boolean);
+      }
+      return [];
+    };
+    if (payload.qualifications) payload.qualifications = toArray(payload.qualifications);
+    if (payload.languages) payload.languages = toArray(payload.languages);
+    onSubmit(payload as GuardFormData);
   };
 
   return (
@@ -55,8 +105,9 @@ export default function GuardForm({
           <input
             type="text"
             value={data.employee_id}
-            onChange={(e) => setData('employee_id', e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
+            placeholder="Auto-generated"
+            disabled
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400 focus:ring-2 focus:ring-red-500"
           />
           {errors.employee_id && <p className="text-red-600 text-sm mt-1">{errors.employee_id}</p>}
         </div>
@@ -66,7 +117,7 @@ export default function GuardForm({
           <input
             type="text"
             value={data.name}
-            onChange={(e) => setData('name', e.target.value)}
+            onChange={handleChange('name')}
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
             required
           />
@@ -78,7 +129,7 @@ export default function GuardForm({
             <label className="block text-sm font-medium text-gray-700 mb-2">Supervisor</label>
             <select
               value={data.supervisor_id}
-              onChange={(e) => setData('supervisor_id', e.target.value)}
+              onChange={handleChange('supervisor_id')}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
             >
               <option value="">Select a Supervisor</option>
@@ -97,7 +148,7 @@ export default function GuardForm({
           <input
             type="tel"
             value={data.phone}
-            onChange={(e) => setData('phone', e.target.value)}
+            onChange={handleChange('phone')}
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
           />
           {errors.phone && <p className="text-red-600 text-sm mt-1">{errors.phone}</p>}
@@ -108,7 +159,7 @@ export default function GuardForm({
           <input
             type="email"
             value={data.email}
-            onChange={(e) => setData('email', e.target.value)}
+            onChange={handleChange('email')}
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
           />
           {errors.email && <p className="text-red-600 text-sm mt-1">{errors.email}</p>}
@@ -119,7 +170,7 @@ export default function GuardForm({
           <input
             type="text"
             value={data.id_number}
-            onChange={(e) => setData('id_number', e.target.value)}
+            onChange={handleChange('id_number')}
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
           />
           {errors.id_number && <p className="text-red-600 text-sm mt-1">{errors.id_number}</p>}
@@ -130,7 +181,7 @@ export default function GuardForm({
           <input
             type="date"
             value={data.date_of_birth}
-            onChange={(e) => setData('date_of_birth', e.target.value)}
+            onChange={handleChange('date_of_birth')}
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
           />
           {errors.date_of_birth && <p className="text-red-600 text-sm mt-1">{errors.date_of_birth}</p>}
@@ -140,7 +191,7 @@ export default function GuardForm({
           <label className="block text-sm font-medium text-gray-700 mb-2">Gender</label>
           <select
             value={data.gender}
-            onChange={(e) => setData('gender', e.target.value)}
+            onChange={handleChange('gender')}
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
           >
             <option value="">Select Gender</option>
@@ -155,11 +206,178 @@ export default function GuardForm({
           <label className="block text-sm font-medium text-gray-700 mb-2">Address</label>
           <textarea
             value={data.address}
-            onChange={(e) => setData('address', e.target.value)}
+            onChange={handleChange('address')}
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
             rows={3}
           />
           {errors.address && <p className="text-red-600 text-sm mt-1">{errors.address}</p>}
+        </div>
+
+        {/* Residence Information */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Residence Address</label>
+          <input
+            type="text"
+            value={data.residence_address as any}
+            onChange={handleChange('residence_address')}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Residence City</label>
+          <input
+            type="text"
+            value={data.residence_city as any}
+            onChange={handleChange('residence_city')}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Residence District</label>
+          <select
+            value={data.residence_district as any}
+            onChange={handleChange('residence_district')}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
+          >
+            <option value="">Select district</option>
+            {MALAWI_DISTRICTS.map((d) => (
+              <option key={d} value={d}>{d}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Marital Information */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Marital Status</label>
+          <select
+            value={(data.marital_status as any) || ''}
+            onChange={handleChange('marital_status')}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
+          >
+            <option value="">Select</option>
+            <option value="single">Single</option>
+            <option value="married">Married</option>
+            <option value="divorced">Divorced</option>
+            <option value="widowed">Widowed</option>
+          </select>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Spouse Name</label>
+          <input
+            type="text"
+            value={(data.spouse_name as any) || ''}
+            onChange={handleChange('spouse_name')}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Spouse Phone</label>
+          <input
+            type="text"
+            value={(data.spouse_phone as any) || ''}
+            onChange={handleChange('spouse_phone')}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
+          />
+        </div>
+
+        {/* Next of Kin */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Next of Kin Name</label>
+          <input
+            type="text"
+            value={(data.next_of_kin_name as any) || ''}
+            onChange={handleChange('next_of_kin_name')}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Relationship</label>
+          <input
+            type="text"
+            value={(data.next_of_kin_relationship as any) || ''}
+            onChange={handleChange('next_of_kin_relationship')}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Next of Kin Phone</label>
+          <input
+            type="text"
+            value={(data.next_of_kin_phone as any) || ''}
+            onChange={handleChange('next_of_kin_phone')}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
+          />
+        </div>
+
+        {/* Home Information */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Home Village</label>
+          <input
+            type="text"
+            value={(data.home_village as any) || ''}
+            onChange={handleChange('home_village')}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Home T/A</label>
+          <input
+            type="text"
+            value={(data.home_ta as any) || ''}
+            onChange={handleChange('home_ta')}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Home District</label>
+          <select
+            value={(data.home_district as any) || ''}
+            onChange={handleChange('home_district')}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
+          >
+            <option value="">Select district</option>
+            {MALAWI_DISTRICTS.map((d) => (
+              <option key={d} value={d}>{d}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Education & Qualifications */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Education Level</label>
+          <input
+            type="text"
+            value={(data.education_level as any) || ''}
+            onChange={handleChange('education_level')}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Qualifications (JSON or comma list)</label>
+          <textarea
+            value={Array.isArray(data.qualifications) ? JSON.stringify(data.qualifications) : (data.qualifications as any) || ''}
+            onChange={(e) => set('qualifications', e.target.value as any)}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
+            rows={2}
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Languages (JSON or comma list)</label>
+          <textarea
+            value={Array.isArray(data.languages) ? JSON.stringify(data.languages) : (data.languages as any) || ''}
+            onChange={(e) => set('languages', e.target.value as any)}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
+            rows={2}
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Dependents</label>
+          <input
+            type="number"
+            value={Number(data.dependents_count || 0)}
+            onChange={(e) => set('dependents_count', Number(e.target.value))}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
+          />
         </div>
 
         <div>
@@ -167,7 +385,7 @@ export default function GuardForm({
           <input
             type="text"
             value={data.emergency_contact_name}
-            onChange={(e) => setData('emergency_contact_name', e.target.value)}
+            onChange={handleChange('emergency_contact_name')}
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
           />
           {errors.emergency_contact_name && <p className="text-red-600 text-sm mt-1">{errors.emergency_contact_name}</p>}
@@ -178,7 +396,7 @@ export default function GuardForm({
           <input
             type="tel"
             value={data.emergency_contact_phone}
-            onChange={(e) => setData('emergency_contact_phone', e.target.value)}
+            onChange={handleChange('emergency_contact_phone')}
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
           />
           {errors.emergency_contact_phone && <p className="text-red-600 text-sm mt-1">{errors.emergency_contact_phone}</p>}
@@ -189,7 +407,7 @@ export default function GuardForm({
           <input
             type="date"
             value={data.hire_date}
-            onChange={(e) => setData('hire_date', e.target.value)}
+            onChange={handleChange('hire_date')}
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
           />
           {errors.hire_date && <p className="text-red-600 text-sm mt-1">{errors.hire_date}</p>}
@@ -199,7 +417,7 @@ export default function GuardForm({
           <label className="block text-sm font-medium text-gray-700 mb-2">Guard Type</label>
           <select
             value={data.guard_type}
-            onChange={(e) => setData('guard_type', e.target.value as any)}
+            onChange={handleChange('guard_type')}
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
           >
             <option value="permanent">Permanent</option>
@@ -210,10 +428,25 @@ export default function GuardForm({
         </div>
 
         <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Guard Grade</label>
+          <select
+            value={data.guard_grade_id as any}
+            onChange={(e) => set('guard_grade_id', e.target.value as any)}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
+          >
+            <option value="">No Grade</option>
+            {grades.map((g) => (
+              <option key={g.id} value={g.id}>{g.code} - {g.name}</option>
+            ))}
+          </select>
+          {errors.guard_grade_id && <p className="text-red-600 text-sm mt-1">{errors.guard_grade_id}</p>}
+        </div>
+
+        <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
           <select
             value={data.status}
-            onChange={(e) => setData('status', e.target.value as GuardFormData['status'])}
+            onChange={handleChange('status')}
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
           >
             <option value="active">Active</option>
@@ -227,7 +460,7 @@ export default function GuardForm({
           <label className="block text-sm font-medium text-gray-700 mb-2">Notes</label>
           <textarea
             value={data.notes}
-            onChange={(e) => setData('notes', e.target.value)}
+            onChange={handleChange('notes')}
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
             rows={4}
           />
@@ -243,13 +476,15 @@ export default function GuardForm({
         >
           {processing ? 'Saving...' : 'Save'}
         </button>
-        <button
-          type="button"
-          onClick={() => window.history.back()}
-          className="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg font-bold"
-        >
-          Cancel
-        </button>
+        {!hideCancel && (
+          <button
+            type="button"
+            onClick={() => (onCancel ? onCancel() : window.history.back())}
+            className="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg font-bold"
+          >
+            Cancel
+          </button>
+        )}
       </div>
     </form>
   );

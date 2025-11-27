@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link, usePage } from '@inertiajs/react';
 import IconMapper from '@/Components/IconMapper';
+import NotificationBell from '@/Components/Common/NotificationBell';
 import BaseShell from './BaseShell';
 
 type Props = {
@@ -47,12 +48,15 @@ export default function ZoneCommanderLayout({ title, children }: Props) {
 						header={
 							<div className="flex items-center justify-between">
 								<h1 className="text-xl font-bold text-red-900 dark:text-gray-100">{title}</h1>
-								<Link
-									href={route('expense.request.create')}
-									className="inline-flex items-center px-3 py-1.5 rounded-md bg-red-600 text-white hover:bg-red-700 text-sm"
-								>
-									Request Requisition
-								</Link>
+								<div className="flex items-center gap-3">
+									<NotificationBell />
+									<Link
+										href={route('expense.request.create')}
+										className="inline-flex items-center px-3 py-1.5 rounded-md bg-red-600 text-white hover:bg-red-700 text-sm"
+									>
+										Request Requisition
+									</Link>
+								</div>
 							</div>
 						}
 					>

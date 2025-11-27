@@ -7,6 +7,7 @@ import { motion } from "framer-motion";
 import { useTheme } from '@/Providers/ThemeProvider';
 import useNotifications from '@/Hooks/useNotifications';
 import { Toaster } from 'react-hot-toast';
+import NotificationBell from '@/Components/Common/NotificationBell';
 
 const navLinks = [
   { href: "/supervisor/dashboard", label: "Dashboard", icon: <IconMapper name="Grid" size={22} /> },
@@ -89,10 +90,7 @@ export default function SupervisorLayout({ children, title }: SupervisorLayoutPr
         </button>
         <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-100 truncate">{title || "CoinSec"}</h1>
         <div className="flex items-center gap-2">
-          <button className="p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 relative" onClick={() => setNotificationsOpen(!notificationsOpen)}>
-            <IconMapper name="Bell" size={22} />
-            {unreadCount > 0 && <span className="absolute top-0 right-0 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold">{unreadCount}</span>}
-          </button>
+          <NotificationBell />
           <button className="p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800" onClick={() => setSettingsOpen(!settingsOpen)}>
             <IconMapper name="Settings" size={22} />
           </button>
@@ -159,10 +157,7 @@ export default function SupervisorLayout({ children, title }: SupervisorLayoutPr
             >
               Request Requisition
             </Link>
-            <button className="p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 relative" onClick={() => setNotificationsOpen(!notificationsOpen)}>
-              <IconMapper name="Bell" size={22} />
-              {unreadCount > 0 && <span className="absolute top-0 right-0 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold">{unreadCount}</span>}
-            </button>
+            <NotificationBell />
             <button className="p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800" onClick={() => setSettingsOpen(!settingsOpen)}>
               <IconMapper name="Settings" size={22} />
             </button>

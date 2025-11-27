@@ -13,6 +13,8 @@ export default function ApprovalsIndex({ approvals }: Props) {
   const isAdminRoute = typeof url === 'string' && url.startsWith('/admin/');
   const prefix = isAdminRoute ? 'admin' : 'finance';
   const Layout = isAdminRoute ? AdminLayout : FinanceLayout;
+  const expenseShowRoute = isAdminRoute ? 'admin.requisitions.show' : 'finance.expenses.show';
+  const requisitionsIndexRoute = isAdminRoute ? 'admin.requisitions.index' : 'finance.expenses.index';
 
   const handleApprove = (id: number) => {
     router.post(route(`${prefix}.approvals.approve`, { approval: id }), {});
@@ -47,7 +49,7 @@ export default function ApprovalsIndex({ approvals }: Props) {
                   There are currently no requisitions waiting for your approval.
                 </p>
                 <Link
-                  href={route('finance.expenses.index')}
+                  href={route(requisitionsIndexRoute)}
                   className="inline-flex items-center px-4 py-2 text-sm font-medium rounded-lg bg-emerald-600 text-white hover:bg-emerald-700"
                 >
                   View all requisitions
@@ -82,7 +84,7 @@ export default function ApprovalsIndex({ approvals }: Props) {
                     <tr key={a.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition">
                       <td className="px-6 py-4 text-sm">
                         <Link
-                          href={route('finance.expenses.show', a.expense.id)}
+                          href={route(expenseShowRoute, a.expense.id)}
                           className="font-medium text-red-600 hover:text-red-800"
                         >
                           {a.expense.description || `Requisition #${a.expense.id}`}

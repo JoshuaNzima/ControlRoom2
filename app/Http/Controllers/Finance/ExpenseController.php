@@ -145,7 +145,9 @@ class ExpenseController extends Controller
             'status' => 'pending', // Expenses start as pending and need approval
         ]);
 
-        return redirect()->route('finance.expenses.index')
+        $routeName = request()->route() ? request()->route()->getName() : '';
+        $isAdminAlias = is_string($routeName) && str_starts_with($routeName, 'admin.requisitions');
+        return redirect()->route($isAdminAlias ? 'admin.requisitions.index' : 'finance.expenses.index')
             ->withSuccess('Expense created successfully. Awaiting approval.');
     }
 
@@ -229,7 +231,9 @@ class ExpenseController extends Controller
 
         $expense->update($validated);
 
-        return redirect()->route('finance.expenses.index')
+        $routeName = request()->route() ? request()->route()->getName() : '';
+        $isAdminAlias = is_string($routeName) && str_starts_with($routeName, 'admin.requisitions');
+        return redirect()->route($isAdminAlias ? 'admin.requisitions.index' : 'finance.expenses.index')
             ->withSuccess('Expense updated successfully.');
     }
 
@@ -242,7 +246,9 @@ class ExpenseController extends Controller
 
         $expense->delete();
 
-        return redirect()->route('finance.expenses.index')
+        $routeName = request()->route() ? request()->route()->getName() : '';
+        $isAdminAlias = is_string($routeName) && str_starts_with($routeName, 'admin.requisitions');
+        return redirect()->route($isAdminAlias ? 'admin.requisitions.index' : 'finance.expenses.index')
             ->withSuccess('Expense deleted successfully.');
     }
 

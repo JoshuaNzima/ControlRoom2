@@ -64,4 +64,47 @@ class GuardAssignmentController extends Controller
         
         return back()->with('success', "{$count} guard(s) unassigned from supervisor.");
     }
+
+    public function assignToSite(Request $request)
+    {
+        $validated = $request->validate([
+            'guard_id' => 'required|exists:guards,id',
+            'client_site_id' => 'required|exists:client_sites,id',
+            'start_date' => 'nullable|date',
+            'assignment_type' => 'nullable|in:permanent,temporary',
+            'notes' => 'nullable|string',
+        ]);
+
+        $startDate = $validated['start_date'] ?? now()->toDateString();
+
+        \App\Models\Guards\GuardAssignment::where('guard_id', $validated['guard_id'])
+            ->whereNull('end_date')
+            ->update(['end_date' => now()->toDateString(), 'is_active' => false]);
+
+        \App\Models\Guards\GuardAssignment::create([
+            'guard_id' => $validated['guard_id'],
+            'client_site_id' => $validated['client_site_id'],
+            'assigned_by' => auth()->id(),
+            'start_date' => $startDate,
+            'end_date' => null,
+            'assignment_type' => $validated['assignment_type'] ?? 'permanent',
+            'notes' => $validated['notes'] ?? null,
+            'is_active' => true,
+        ]);
+
+        return back()->with('success', 'Guard assigned to site.');
+    }
+
+    public function unassignFromSite(Request $request)
+    {
+        $validated = $request->validate([
+            'guard_id' => 'required|exists:guards,id',
+        ]);
+
+        \App\Models\Guards\GuardAssignment::where('guard_id', $validated['guard_id'])
+            ->whereNull('end_date')
+            ->update(['end_date' => now()->toDateString(), 'is_active' => false]);
+
+        return back()->with('success', 'Guard unassigned from site.');
+    }
 }
