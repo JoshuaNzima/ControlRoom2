@@ -19,6 +19,20 @@ export default function HREmployees() {
     setPromoteOpen(true);
   };
 
+  const doSuspend = (guard: any) => {
+    if (!confirm(`Suspend ${guard.name}?`)) return;
+    router.post(route('hr.guards.suspend', { guard: guard.id }), {}, { preserveScroll: true });
+  };
+  const doReinstate = (guard: any) => {
+    if (!confirm(`Reinstate ${guard.name}?`)) return;
+    router.post(route('hr.guards.reinstate', { guard: guard.id }), {}, { preserveScroll: true });
+  };
+  const doDismiss = (guard: any) => {
+    const reason = prompt('Dismissal reason (optional)');
+    if (!confirm(`Dismiss ${guard.name}?`)) return;
+    router.post(route('hr.guards.dismiss', { guard: guard.id }), { reason }, { preserveScroll: true });
+  };
+
   return (
     <HRLayout title="Guards & Promotions" user={auth?.user as any}>
       <Head title="Guards & Promotions" />
@@ -84,12 +98,35 @@ export default function HREmployees() {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      <button
-                        onClick={() => openPromote(g)}
-                        className="text-indigo-600 hover:text-indigo-900"
-                      >
-                        Promote
-                      </button>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <button
+                          onClick={() => openPromote(g)}
+                          className="px-3 py-1 rounded bg-indigo-600 hover:bg-indigo-700 text-white"
+                        >
+                          Promote
+                        </button>
+                        {g.status === 'active' ? (
+                          <button
+                            onClick={() => doSuspend(g)}
+                            className="px-3 py-1 rounded bg-yellow-600 hover:bg-yellow-700 text-white"
+                          >
+                            Suspend
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => doReinstate(g)}
+                            className="px-3 py-1 rounded bg-emerald-600 hover:bg-emerald-700 text-white"
+                          >
+                            Reinstate
+                          </button>
+                        )}
+                        <button
+                          onClick={() => doDismiss(g)}
+                          className="px-3 py-1 rounded bg-rose-600 hover:bg-rose-700 text-white"
+                        >
+                          Dismiss
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}

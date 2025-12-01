@@ -196,6 +196,37 @@ class GuardManageController extends Controller
         return back()->with('success', 'Guard unassigned from site.');
     }
 
+    public function suspend(Guard $guard)
+    {
+        $this->authorizeOps();
+        $guard->update(['status' => 'suspended']);
+        return back()->with('success', 'Guard suspended.');
+    }
+
+    public function reinstate(Guard $guard)
+    {
+        $this->authorizeOps();
+        $guard->update(['status' => 'active']);
+        return back()->with('success', 'Guard reinstated.');
+    }
+
+    public function dismiss(Request $request, Guard $guard)
+    {
+        $this->authorizeOps();
+        $request->validate(['reason' => 'nullable|string|max:500']);
+        $guard->update([
+            'status' => 'inactive',
+            'notes' => trim(($guard->notes ? ($guard->notes."\n") : '') . 'Dismissed: ' . ($request->input('reason') ?? '')),
+        ]);
+        return back()->with('success', 'Guard dismissed.');
+    }
+
+    protected function authorizeOps(): void
+    {
+        if (!auth()->check()) abort(403);
+        if (!auth()->user()->hasAnyRole(['operations_officer','manager','super_admin'])) abort(403);
+    }
+
     private function generateGuardEmployeeId(): string
     {
         do {

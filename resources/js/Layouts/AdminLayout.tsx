@@ -90,7 +90,7 @@ export default function AdminLayout({ title, children, user }: Props) {
   const canAccessClients = hasAnyRole(['super_admin','client_manager']) || hasPerm('clients.access');
   const canAccessGuards = hasAnyRole(['super_admin','guards','guard_manager']) || hasPerm('guards.access');
   const canAccessBusinessDev = hasAnyRole(['super_admin','business_dev','business_development','bdo']) || hasPerm('business_dev.access');
-  const canAccessControlRoom = hasAnyRole(['super_admin','control_room','dispatcher']) || hasPerm('control_room.access');
+  const canAccessControlRoom = hasAnyRole(['super_admin','control_room','dispatcher','operations_officer']) || hasPerm('control_room.access');
   const canAccessReports = hasAnyRole(['super_admin','supervisor','reports']) || hasPerm('reports.access');
 
   const marketingHref = canAccessMarketing ? route('admin.marketing') : route('admin.modules.summary', 'marketing');

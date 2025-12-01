@@ -103,17 +103,14 @@ Route::middleware(['auth', 'role:admin,super_admin'])
         Route::get('/guards/dashboard', [\App\Http\Controllers\Admin\GuardController::class, 'dashboard'])
             ->middleware(['permission:guards.view'])
             ->name('guards.dashboard');
-        // JSON API for fetching a single guard (used by modal pre-fill)
-        Route::get('/guards/{guard}/json', [\App\Http\Controllers\Admin\GuardController::class, 'apiShow'])->name('guards.json');
-        // Restrict Guards management to permission (not plain admin)
+        // JSON API for fetching a single guard (used by legacy modal pre-fill)
+        Route::get('/guards/{guard}/json', [\App\Http\Controllers\Admin\GuardController::class, 'apiShow'])
+            ->middleware(['permission:guards.view'])
+            ->name('guards.json');
+        // Read-only listing in Admin; all CRUD moved to Control Room/HR
         Route::resource('guards', \App\Http\Controllers\Admin\GuardController::class)
-            ->except(['create','edit','show'])
+            ->only(['index'])
             ->middleware(['permission:guards.view']);
-        // Guard assignment to client site
-        Route::post('/guards/assign-site', [\App\Http\Controllers\Admin\GuardAssignmentController::class, 'assignToSite'])->name('guards.assign-site');
-        Route::post('/guards/unassign-site', [\App\Http\Controllers\Admin\GuardAssignmentController::class, 'unassignFromSite'])->name('guards.unassign-site');
-        // Guard promotion (admin access)
-        Route::post('/guards/{guard}/promote', [\App\Http\Controllers\HR\EmployeeController::class, 'promote'])->name('guards.promote');
         Route::get('/qr-codes', [\App\Http\Controllers\SupervisorQRCodesController::class, 'index'])->name('qr-codes');
         Route::get('/qr-codes/download-bulk', [\App\Http\Controllers\SupervisorQRCodesController::class, 'downloadBulk'])->name('qr-codes.download-bulk');
         // Admin Finance landing (restrict to finance roles/perms)

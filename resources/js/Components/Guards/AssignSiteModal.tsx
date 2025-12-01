@@ -10,12 +10,18 @@ export default function AssignSiteModal({
   zones = [],
   onClose,
   onSuccess,
+  fetchSitesRouteName = 'admin.clients.sites.json',
+  assignRouteName = 'admin.guards.assign-site',
+  unassignRouteName = 'admin.guards.unassign-site',
 }: {
   open: boolean;
   guardId: number | null;
   zones: Array<{ id: number; name: string }>;
   onClose: () => void;
   onSuccess: () => void;
+  fetchSitesRouteName?: string;
+  assignRouteName?: string;
+  unassignRouteName?: string;
 }) {
   const [search, setSearch] = React.useState('');
   const [zoneId, setZoneId] = React.useState<string>('');
@@ -30,7 +36,7 @@ export default function AssignSiteModal({
       const params = new URLSearchParams();
       if (search) params.set('search', search);
       if (zoneId) params.set('zone_id', zoneId);
-      const url = `${route('admin.clients.sites.json')}?${params.toString()}`;
+      const url = `${route(fetchSitesRouteName as any)}?${params.toString()}`;
       const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
       const data: any = await res.json();
       setSites(Array.isArray(data) ? (data as Site[]) : []);
@@ -47,7 +53,7 @@ export default function AssignSiteModal({
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!guardId || !selectedSite) return;
-    router.post(route('admin.guards.assign-site'), {
+    router.post(route(assignRouteName as any), {
       guard_id: guardId,
       client_site_id: selectedSite,
     }, {
@@ -59,7 +65,7 @@ export default function AssignSiteModal({
   const unassign = () => {
     if (!guardId) return;
     if (!confirm('Unassign guard from current site?')) return;
-    router.post(route('admin.guards.unassign-site'), { guard_id: guardId }, {
+    router.post(route(unassignRouteName as any), { guard_id: guardId }, {
       preserveScroll: true,
       onSuccess: () => { onSuccess(); onClose(); },
     });

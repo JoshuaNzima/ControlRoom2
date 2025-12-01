@@ -26,6 +26,8 @@ Route::middleware(['auth'])->group(function () {
 		Route::get('/clients/{client}', [\App\Http\Controllers\ControlRoom\ClientsController::class, 'show'])->name('clients.show');
 		Route::post('/clients/{client}/assign-guard', [\App\Http\Controllers\ControlRoom\ClientsController::class, 'assignGuard'])->name('clients.assign-guard');
 		Route::post('/clients/{client}/assign-supervisor', [\App\Http\Controllers\ControlRoom\ClientsController::class, 'assignSupervisor'])->name('clients.assign-supervisor');
+		// Lightweight JSON for active client sites (for assignment pickers)
+		Route::get('/clients/sites/json', [\App\Http\Controllers\ControlRoom\ClientsController::class, 'sitesJson'])->name('clients.sites.json');
 
 		// Incidents Management
 		Route::resource('incidents', \App\Http\Controllers\ControlRoom\IncidentController::class);
@@ -70,6 +72,17 @@ Route::middleware(['auth'])->group(function () {
             Route::post('/unassign-site', [\App\Http\Controllers\ControlRoom\GuardManageController::class, 'unassignFromSite'])
                 ->middleware(['role_or_permission:operations_officer|manager|control_room_operator'])
                 ->name('unassign-site');
+
+            // Status actions
+            Route::post('/{guard}/suspend', [\App\Http\Controllers\ControlRoom\GuardManageController::class, 'suspend'])
+                ->middleware(['role_or_permission:operations_officer|manager'])
+                ->name('suspend');
+            Route::post('/{guard}/reinstate', [\App\Http\Controllers\ControlRoom\GuardManageController::class, 'reinstate'])
+                ->middleware(['role_or_permission:operations_officer|manager'])
+                ->name('reinstate');
+            Route::post('/{guard}/dismiss', [\App\Http\Controllers\ControlRoom\GuardManageController::class, 'dismiss'])
+                ->middleware(['role_or_permission:operations_officer|manager'])
+                ->name('dismiss');
         });
 		Route::get('/assignments', [\App\Http\Controllers\ControlRoom\AssignmentsController::class, 'index'])->name('assignments.index');
 		Route::get('/reports', [\App\Http\Controllers\ControlRoom\ReportsController::class, 'index'])->name('reports');

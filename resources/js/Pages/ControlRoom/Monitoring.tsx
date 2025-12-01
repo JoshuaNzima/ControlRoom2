@@ -65,9 +65,17 @@ interface MonitoringProps {
   recentActivity?: { id: string | number; type: string; guard: string; site: string; time: string; status: 'success' | 'warning' | 'info' | 'danger' }[];
   guards?: Guard[];
   events?: Event[];
+  sla?: {
+    averageResponseMinutes: number | null;
+    medianResponseMinutes: number | null;
+    breachedCount: number;
+    totalResolved: number;
+    onTimePercent: number | null;
+  };
+  activeRange?: string;
 }
 
-const Monitoring = ({ auth, metrics, liveStatus: initialLiveStatus = [], recentActivity: initialRecent = [] }: MonitoringProps) => {
+const Monitoring = ({ auth, metrics, liveStatus: initialLiveStatus = [], recentActivity: initialRecent = [], sla: initialSla, activeRange = '1h' }: MonitoringProps) => {
   const [currentMetrics, setCurrentMetrics] = React.useState(metrics || { 
     activeSites: 0, 
     guardsOnDuty: 0, 
@@ -80,16 +88,21 @@ const Monitoring = ({ auth, metrics, liveStatus: initialLiveStatus = [], recentA
   const [recentActivity, setRecentActivity] = React.useState(initialRecent);
   const [guards, setGuards] = React.useState<Guard[]>([]);
   const [events, setEvents] = React.useState<Event[]>([]);
+  const [sla, setSla] = React.useState(initialSla || null as MonitoringProps['sla'] | null);
+  const [range, setRange] = React.useState<string>(activeRange || '1h');
+  const [refreshMs, setRefreshMs] = React.useState<number>(30000);
+  const [lastUpdated, setLastUpdated] = React.useState<Date | null>(null);
 
   React.useEffect(() => {
     let isMounted = true;
-    
-    async function fetchData() {
+
+    async function fetchData(withRange: string) {
       try {
+        const qs = withRange ? `?range=${encodeURIComponent(withRange)}` : '';
         const [dataRes, guardsRes, eventsRes] = await Promise.all([
-          fetch(route('control-room.monitoring.data'), { headers: { 'Accept': 'application/json' } }),
-          fetch(route('control-room.monitoring.guards'), { headers: { 'Accept': 'application/json' } }),
-          fetch(route('control-room.monitoring.events'), { headers: { 'Accept': 'application/json' } })
+          fetch(route('control-room.monitoring.data') + qs, { headers: { 'Accept': 'application/json' } }),
+          fetch(route('control-room.monitoring.guards') + qs, { headers: { 'Accept': 'application/json' } }),
+          fetch(route('control-room.monitoring.events') + qs, { headers: { 'Accept': 'application/json' } })
         ]);
 
         if (!dataRes.ok || !guardsRes.ok || !eventsRes.ok) return;
@@ -105,8 +118,10 @@ const Monitoring = ({ auth, metrics, liveStatus: initialLiveStatus = [], recentA
         setCurrentMetrics(data.metrics || {});
         setLiveStatus(data.liveStatus || []);
         setRecentActivity(data.recentActivity || []);
+        setSla(data.sla || null);
         setGuards(guardsData || []);
         setEvents(eventsData || []);
+        setLastUpdated(new Date());
 
       } catch (_) {
         // no-op
@@ -114,20 +129,78 @@ const Monitoring = ({ auth, metrics, liveStatus: initialLiveStatus = [], recentA
     }
 
     // initial refresh in case page props were stale
-    fetchData();
-    const id = setInterval(fetchData, 30000);
+    fetchData(range);
+    const id = refreshMs > 0 ? setInterval(() => fetchData(range), refreshMs) : null;
     
     return () => {
       isMounted = false;
-      clearInterval(id);
+      if (id) clearInterval(id);
     };
-  }, []);
+  }, [range, refreshMs]);
 
   return (
     <ControlRoomLayout title="Live Monitoring" user={auth?.user as User | undefined}>
       <Head title="Live Monitoring" />
 
       <div className="space-y-6">
+        {/* Controls: Time range & Refresh */}
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-300 mr-1">Time range:</span>
+            {[
+              { key: '15m', label: 'Last 15m' },
+              { key: '1h', label: 'Last 1h' },
+              { key: '4h', label: 'Last 4h' },
+              { key: '24h', label: 'Last 24h' },
+              { key: 'today', label: 'Today' },
+            ].map(opt => (
+              <button
+                key={opt.key}
+                type="button"
+                onClick={() => setRange(opt.key)}
+                className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors
+                  ${range === opt.key
+                    ? 'bg-coin-600 border-coin-600 text-white'
+                    : 'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300'}`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3 justify-between md:justify-end">
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-600 dark:text-gray-400">Refresh:</span>
+              <select
+                value={String(refreshMs)}
+                onChange={(e) => setRefreshMs(Number(e.target.value))}
+                className="text-sm rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100 px-2 py-1"
+              >
+                <option value="0">Manual</option>
+                <option value="15000">15s</option>
+                <option value="30000">30s</option>
+                <option value="60000">60s</option>
+              </select>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="h-8 px-3 dark:border-gray-600 dark:text-gray-200"
+                onClick={() => setRange((r) => r)}
+              >
+                Refresh now
+              </Button>
+              {lastUpdated && (
+                <span className="text-xs text-gray-500 dark:text-gray-400">
+                  Updated {lastUpdated.toLocaleTimeString()}
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+
         {/* Status Overview */}
         <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
           <Card className="dark:bg-gray-800 dark:border-gray-700">
@@ -211,6 +284,57 @@ const Monitoring = ({ auth, metrics, liveStatus: initialLiveStatus = [], recentA
                 </div>
                 <div className="h-8 w-8 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center">
                   <span className="text-green-600 dark:text-green-400">🟢</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          {/* SLA: Average Response */}
+          <Card className="dark:bg-gray-800 dark:border-gray-700">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Avg Response (min)</p>
+                  <p className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">
+                    {sla?.averageResponseMinutes != null ? sla.averageResponseMinutes : '--'}
+                  </p>
+                </div>
+                <div className="h-8 w-8 bg-indigo-100 dark:bg-indigo-900/20 rounded-full flex items-center justify-center">
+                  <span className="text-indigo-600 dark:text-indigo-400">⏱</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* SLA: On-time % */}
+          <Card className="dark:bg-gray-800 dark:border-gray-700">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">On-time Incidents</p>
+                  <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
+                    {sla?.onTimePercent != null ? `${sla.onTimePercent}%` : '--'}
+                  </p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    Resolved: {sla?.totalResolved ?? 0}
+                  </p>
+                </div>
+                <div className="h-8 w-8 bg-emerald-100 dark:bg-emerald-900/20 rounded-full flex items-center justify-center">
+                  <span className="text-emerald-600 dark:text-emerald-400">✅</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* SLA: Breaches */}
+          <Card className="dark:bg-gray-800 dark:border-gray-700">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">SLA Breaches</p>
+                  <p className="text-2xl font-bold text-rose-600 dark:text-rose-400">{sla?.breachedCount ?? 0}</p>
+                </div>
+                <div className="h-8 w-8 bg-rose-100 dark:bg-rose-900/20 rounded-full flex items-center justify-center">
+                  <span className="text-rose-600 dark:text-rose-400">⚡</span>
                 </div>
               </div>
             </CardContent>

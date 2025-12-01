@@ -5,7 +5,9 @@ namespace App\Http\Controllers\ControlRoom;
 use App\Http\Controllers\Controller;
 use App\Models\Guards\Guard;
 use App\Models\Guards\Client;
+use App\Models\Guards\GuardGrade;
 use App\Models\User;
+use App\Models\Zone;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -39,6 +41,9 @@ class GuardsController extends Controller
 			'filters' => request()->only(['search']),
 			'supervisors' => User::role(['supervisor','manager','operations_officer'])->orderBy('name')->get(['id','name']),
 			'clients' => Client::orderBy('name')->get(['id','name']),
+			'grades' => GuardGrade::orderBy('name')->get(['id','code','name']),
+			'zones' => Zone::orderBy('name')->get(['id','name']),
+			'canAssignSupervisor' => auth()->user()?->hasAnyRole(['operations_officer','manager','super_admin']) ?? false,
 		]);
 	}
 }
