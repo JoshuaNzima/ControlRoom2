@@ -39,17 +39,17 @@ export default function AdminLayout({ title, children, user }: Props) {
   const adminLinks: ModuleNavItem[] = [
      { name: 'Admin Dashboard', href: route('admin.dashboard'), icon: <IconMapper name="home" className="h-6 w-6" />, current: isCurrent(route('admin.dashboard')) },
      { name: 'Services', href: route('admin.services.index'), icon: <IconMapper name="package" className="h-6 w-6" />, current: isCurrent(route('admin.services.index')) },
-     { name: 'Users', href: route('admin.users.index'), icon: <IconMapper name="users-2" className="h-6 w-6" />, current: false },
-     { name: 'Approvals', href: route('admin.approvals.index'), icon: <IconMapper name="check-circle" className="h-6 w-6" />, current: false },
-     { name: 'Messaging', href: route('control-room.messaging.index'), icon: <IconMapper name="message-square-text" className="h-6 w-6" />, current: false },
-    { name: 'Reports', href: route('admin.reports.index'), icon: <IconMapper name="bar-chart-2" className="h-6 w-6" />, current: false },
-    { name: 'Payments Checker', href: route('admin.payments.index'), icon: <IconMapper name="wallet" className="h-6 w-6" />, current: false },
-    { name: 'Settings', href: route('admin.settings.index'), icon: <IconMapper name="settings" className="h-6 w-6" />, current: false },
+     { name: 'Users', href: route('admin.users.index'), icon: <IconMapper name="users-2" className="h-6 w-6" />, current: isCurrent(route('admin.users.index')) },
+     { name: 'Approvals', href: route('admin.approvals.index'), icon: <IconMapper name="check-circle" className="h-6 w-6" />, current: isCurrent(route('admin.approvals.index')) },
+     { name: 'Messaging', href: route('control-room.messaging.index'), icon: <IconMapper name="message-square-text" className="h-6 w-6" />, current: isCurrent(route('control-room.messaging.index')) },
+    { name: 'Reports', href: route('admin.reports.index'), icon: <IconMapper name="bar-chart-2" className="h-6 w-6" />, current: isCurrent(route('admin.reports.index')) },
+    { name: 'Payments Checker', href: route('admin.payments.index'), icon: <IconMapper name="wallet" className="h-6 w-6" />, current: isCurrent(route('admin.payments.index')) },
+    { name: 'Settings', href: route('admin.settings.index'), icon: <IconMapper name="settings" className="h-6 w-6" />, current: isCurrent(route('admin.settings.index')) },
   ];
 
   const canSeeFinance = (() => {
     if (!effectiveUser) return false;
-    const allowedRoles = ['admin', 'super_admin', 'finance_officer', 'accountant'];
+    const allowedRoles = ['super_admin', 'finance_officer', 'accountant'];
     const roles = (effectiveUser as any).roles ?? [];
     if (Array.isArray(roles) && roles.some((r) => allowedRoles.includes(String(r)))) return true;
     if (typeof roles === 'string' && allowedRoles.includes(roles)) return true;
@@ -59,15 +59,61 @@ export default function AdminLayout({ title, children, user }: Props) {
     return false;
   })();
 
+  const canAccessMarketing = (() => {
+    if (!effectiveUser) return false;
+    const allowedRoles = ['super_admin', 'marketing', 'marketing_officer', 'marketing_manager'];
+    const roles = (effectiveUser as any).roles ?? [];
+    if (Array.isArray(roles) && roles.some((r) => allowedRoles.includes(String(r)))) return true;
+    if (typeof roles === 'string' && allowedRoles.includes(roles)) return true;
+    const perms = (effectiveUser as any).permissions ?? [];
+    if (Array.isArray(perms) && perms.includes('marketing.access')) return true;
+    if (typeof perms === 'string' && perms === 'marketing.access') return true;
+    return false;
+  })();
+
+  const hasAnyRole = (list: string[]) => {
+    const roles = (effectiveUser as any)?.roles ?? [];
+    if (Array.isArray(roles)) return roles.some((r) => list.includes(String(r)));
+    if (typeof roles === 'string') return list.includes(roles);
+    return false;
+  };
+  const hasPerm = (perm: string) => {
+    const perms = (effectiveUser as any)?.permissions ?? [];
+    if (Array.isArray(perms)) return perms.includes(perm);
+    if (typeof perms === 'string') return perms === perm;
+    return false;
+  };
+
+  const canAccessHR = hasAnyRole(['super_admin','hr','hr_manager']) || hasPerm('hr.employees.view') || hasPerm('hr.careers.manage');
+  const canAccessK9 = hasAnyRole(['super_admin','k9','k9_manager']) || hasPerm('k9.view');
+  const canAccessAssets = hasAnyRole(['super_admin','assets_manager']) || hasPerm('assets.access');
+  const canAccessClients = hasAnyRole(['super_admin','client_manager']) || hasPerm('clients.access');
+  const canAccessGuards = hasAnyRole(['super_admin','guards','guard_manager']) || hasPerm('guards.access');
+  const canAccessBusinessDev = hasAnyRole(['super_admin','business_dev','business_development','bdo']) || hasPerm('business_dev.access');
+  const canAccessControlRoom = hasAnyRole(['super_admin','control_room','dispatcher']) || hasPerm('control_room.access');
+  const canAccessReports = hasAnyRole(['super_admin','supervisor','reports']) || hasPerm('reports.access');
+
+  const marketingHref = canAccessMarketing ? route('admin.marketing') : route('admin.modules.summary', 'marketing');
+  const controlRoomHref = canAccessControlRoom ? route('control-room.dashboard') : route('admin.modules.summary', 'control_room');
+  const clientsHref = canAccessClients ? route('admin.clients.index') : route('admin.modules.summary', 'clients');
+  const guardsHref = canAccessHR
+    ? route('hr.employees.index')
+    : (canAccessControlRoom ? route('control-room.guards') : route('admin.modules.summary', 'guards'));
+  const hrHref = canAccessHR ? route('hr.dashboard') : route('admin.modules.summary', 'hr');
+  const k9Href = canAccessK9 ? route('k9.dashboard') : route('admin.modules.summary', 'k9');
+  const bizDevHref = canAccessBusinessDev ? route('admin.business-dev') : route('admin.modules.summary', 'business_dev');
+  const assetsHref = canAccessAssets ? route('admin.assets.index') : route('admin.modules.summary', 'assets');
+  const financeHref = canSeeFinance ? route('admin.finance') : route('admin.modules.summary', 'finance');
   const moduleLinks: ModuleNavItem[] = [
-  { name: 'Control Room', href: route('admin.control-room.dashboard'), icon: <IconMapper name="briefcase" className="h-6 w-6" />, current: isCurrent(route('admin.control-room.dashboard')) },
-  { name: 'Clients', href: route('admin.clients.index'), icon: <IconMapper name="building-2" className="h-6 w-6" />, current: false },
-  { name: 'Guards', href: route('admin.guards.index'), icon: <IconMapper name="shield-check" className="h-6 w-6" />, current: isCurrent(route('admin.guards.index')) },
-  { name: 'HR', href: route('hr.dashboard'), icon: <IconMapper name="users-2" className="h-6 w-6" />, current: false },
-  { name: 'K9', href: route('k9.dashboard'), icon: <IconMapper name="shield" className="h-6 w-6" />, current: false },
-  { name: 'Business Dev', href: route('admin.business-dev'), icon: <IconMapper name="handshake" className="h-6 w-6" />, current: isCurrent(route('admin.business-dev')) },
-  ...(canSeeFinance ? [{ name: 'Finance', href: route('admin.finance'), icon: <IconMapper name="wallet" className="h-6 w-6" />, current: isCurrent(route('admin.finance')) }] : []),
-  { name: 'Marketing', href: route('admin.marketing'), icon: <IconMapper name="megaphone" className="h-6 w-6" />, current: false },
+  { name: 'Control Room', href: controlRoomHref, icon: <IconMapper name="briefcase" className="h-6 w-6" />, current: isCurrent(controlRoomHref) },
+  { name: 'Clients', href: clientsHref, icon: <IconMapper name="building-2" className="h-6 w-6" />, current: isCurrent(clientsHref) },
+  { name: 'Guards', href: guardsHref, icon: <IconMapper name="shield-check" className="h-6 w-6" />, current: isCurrent(guardsHref) },
+  { name: 'HR', href: hrHref, icon: <IconMapper name="users-2" className="h-6 w-6" />, current: isCurrent(hrHref) },
+  { name: 'K9', href: k9Href, icon: <IconMapper name="shield" className="h-6 w-6" />, current: isCurrent(k9Href) },
+  { name: 'Business Dev', href: bizDevHref, icon: <IconMapper name="handshake" className="h-6 w-6" />, current: isCurrent(bizDevHref) },
+  { name: 'Assets', href: assetsHref, icon: <IconMapper name="boxes" className="h-6 w-6" />, current: isCurrent(assetsHref) },
+  { name: 'Finance', href: financeHref, icon: <IconMapper name="wallet" className="h-6 w-6" />, current: isCurrent(financeHref) },
+  { name: 'Marketing', href: marketingHref, icon: <IconMapper name="megaphone" className="h-6 w-6" />, current: isCurrent(marketingHref) },
   ];
 
   return (

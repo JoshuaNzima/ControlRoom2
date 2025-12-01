@@ -183,6 +183,18 @@ export default function Dashboard({
                     </a>
                   </Button>
                   <Button variant="outline" asChild className="h-auto py-3 flex flex-col items-center justify-center gap-2">
+                    <a href={route('admin.assets.index')}>
+                      <IconMapper name="Boxes" className="w-5 h-5" />
+                      <span>Assets</span>
+                    </a>
+                  </Button>
+                  <Button variant="outline" asChild className="h-auto py-3 flex flex-col items-center justify-center gap-2">
+                    <a href={route('control-room.messaging.index')}>
+                      <IconMapper name="MessageSquareText" className="w-5 h-5" />
+                      <span>Messaging</span>
+                    </a>
+                  </Button>
+                  <Button variant="outline" asChild className="h-auto py-3 flex flex-col items-center justify-center gap-2">
                     <a href={route('admin.reports.index')}>
                       <IconMapper name="FileText" className="w-5 h-5" />
                       <span>View Reports</span>

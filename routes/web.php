@@ -24,6 +24,13 @@ Route::get('/', [\App\Http\Controllers\Public\LandingController::class, 'index']
 Route::get('/contact', [\App\Http\Controllers\Public\ContactController::class, 'index'])->name('public.contact');
 Route::post('/contact', [\App\Http\Controllers\Public\ContactController::class, 'store'])->name('public.contact.store');
 
+// Public marketing pages
+Route::get('/services', [\App\Http\Controllers\Public\PageController::class, 'services'])->name('public.services');
+Route::get('/services/{slug}', [\App\Http\Controllers\Public\PageController::class, 'service'])->name('public.services.show');
+Route::get('/about', [\App\Http\Controllers\Public\PageController::class, 'about'])->name('public.about');
+Route::get('/careers', [\App\Http\Controllers\Public\PageController::class, 'careers'])->name('public.careers');
+Route::get('/privacy', [\App\Http\Controllers\Public\PageController::class, 'privacy'])->name('public.privacy');
+
 // Guest routes
 Route::middleware('guest')->group(function () {
     Route::get('login', [\App\Http\Controllers\Auth\AuthenticatedSessionController::class, 'create'])->name('login');
@@ -61,6 +68,8 @@ Route::middleware(['auth', 'role:super_admin'])->prefix('superadmin')->name('sup
     
     // System Settings
     Route::get('/settings', [\App\Http\Controllers\Admin\SettingController::class, 'superIndex'])->name('settings');
+    Route::post('/settings/mail', [\App\Http\Controllers\Admin\SettingController::class, 'updateMail'])->name('settings.mail.update');
+    Route::post('/settings/mail/test', [\App\Http\Controllers\Admin\SettingController::class, 'testMail'])->name('settings.mail.test');
     Route::get('/security', fn() => Inertia::render('SuperAdmin/Security'))->name('security');
     Route::get('/backup', fn() => Inertia::render('SuperAdmin/Backup'))->name('backup');
     

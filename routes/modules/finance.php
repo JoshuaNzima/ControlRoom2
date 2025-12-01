@@ -4,7 +4,7 @@ use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
 // Finance module routes
-Route::middleware(['auth', 'role:admin|super_admin|finance_officer|accountant|finance|accounting'])
+Route::middleware(['auth', 'role:super_admin|finance_officer|accountant|finance|accounting'])
     ->prefix('finance')
     ->name('finance.')
     ->group(function () {

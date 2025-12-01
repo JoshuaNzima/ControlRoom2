@@ -10,7 +10,7 @@ Route::middleware(['auth', 'role:client'])
         Route::get('/dashboard', [\App\Http\Controllers\Client\DashboardController::class, 'index'])->name('dashboard');
     });
 
-Route::middleware(['auth', 'role:admin,super_admin,marketing,marketing_officer,marketing_manager'])
+Route::middleware(['auth', 'role:super_admin,marketing,marketing_officer,marketing_manager'])
     ->prefix('admin')
     ->name('admin.')
     ->group(function () {
@@ -60,10 +60,14 @@ Route::middleware(['auth', 'role:admin,super_admin'])
             ->name('settings.hr.guard-grades.destroy');
         Route::get('/reports', [\App\Http\Controllers\Admin\ReportController::class, 'index'])->name('reports.index');
         Route::get('/modules', [\App\Http\Controllers\Admin\ModuleController::class, 'index'])->name('modules.index');
+        Route::get('/modules/{module}', [\App\Http\Controllers\Admin\ModuleSummaryController::class, 'show'])->name('modules.summary');
         Route::resource('users', \App\Http\Controllers\Admin\UserController::class);
-        Route::get('/clients/dashboard', [\App\Http\Controllers\Admin\ClientController::class, 'dashboard'])->name('clients.dashboard');
+        Route::get('/clients/dashboard', [\App\Http\Controllers\Admin\ClientController::class, 'dashboard'])
+            ->middleware(['permission:clients.view'])
+            ->name('clients.dashboard');
         // Clients Management
-        Route::prefix('clients')->name('clients.')->group(function () {
+        // Restrict Clients management to appropriate permission (not plain admin)
+        Route::prefix('clients')->name('clients.')->middleware(['permission:clients.view'])->group(function () {
             Route::get('/', [\App\Http\Controllers\Admin\ClientController::class, 'index'])->name('index');
             Route::post('/', [\App\Http\Controllers\Admin\ClientController::class, 'store'])->name('store');
             
@@ -96,10 +100,15 @@ Route::middleware(['auth', 'role:admin,super_admin'])
         });
         // Client Sites nested routes
         // Client site routes moved into clients group above
-        Route::get('/guards/dashboard', [\App\Http\Controllers\Admin\GuardController::class, 'dashboard'])->name('guards.dashboard');
+        Route::get('/guards/dashboard', [\App\Http\Controllers\Admin\GuardController::class, 'dashboard'])
+            ->middleware(['permission:guards.view'])
+            ->name('guards.dashboard');
         // JSON API for fetching a single guard (used by modal pre-fill)
         Route::get('/guards/{guard}/json', [\App\Http\Controllers\Admin\GuardController::class, 'apiShow'])->name('guards.json');
-        Route::resource('guards', \App\Http\Controllers\Admin\GuardController::class)->except(['create','edit','show']);
+        // Restrict Guards management to permission (not plain admin)
+        Route::resource('guards', \App\Http\Controllers\Admin\GuardController::class)
+            ->except(['create','edit','show'])
+            ->middleware(['permission:guards.view']);
         // Guard assignment to client site
         Route::post('/guards/assign-site', [\App\Http\Controllers\Admin\GuardAssignmentController::class, 'assignToSite'])->name('guards.assign-site');
         Route::post('/guards/unassign-site', [\App\Http\Controllers\Admin\GuardAssignmentController::class, 'unassignFromSite'])->name('guards.unassign-site');
@@ -107,16 +116,20 @@ Route::middleware(['auth', 'role:admin,super_admin'])
         Route::post('/guards/{guard}/promote', [\App\Http\Controllers\HR\EmployeeController::class, 'promote'])->name('guards.promote');
         Route::get('/qr-codes', [\App\Http\Controllers\SupervisorQRCodesController::class, 'index'])->name('qr-codes');
         Route::get('/qr-codes/download-bulk', [\App\Http\Controllers\SupervisorQRCodesController::class, 'downloadBulk'])->name('qr-codes.download-bulk');
-        // Admin Finance landing (module-level admin page)
-        Route::get('/finance', [\App\Http\Controllers\Admin\FinanceController::class, 'index'])->name('finance');
+        // Admin Finance landing (restrict to finance roles/perms)
+        Route::get('/finance', [\App\Http\Controllers\Admin\FinanceController::class, 'index'])
+            ->middleware(['role:super_admin|finance_officer|accountant|finance|accounting'])
+            ->name('finance');
 
         
 
         
 
-        // Payments checker
-        Route::get('/payments', [\App\Http\Controllers\Admin\PaymentController::class, 'index'])->name('payments.index');
-        Route::post('/payments/toggle', [\App\Http\Controllers\Admin\PaymentController::class, 'toggle'])->name('payments.toggle');
+        // Payments checker (restrict to finance roles)
+        Route::middleware(['role:super_admin|finance_officer|accountant|finance|accounting'])->group(function () {
+            Route::get('/payments', [\App\Http\Controllers\Admin\PaymentController::class, 'index'])->name('payments.index');
+            Route::post('/payments/toggle', [\App\Http\Controllers\Admin\PaymentController::class, 'toggle'])->name('payments.toggle');
+        });
 
         // Approvals (admin managing finance approvals)
         Route::prefix('approvals')->name('approvals.')->group(function () {
@@ -126,28 +139,34 @@ Route::middleware(['auth', 'role:admin,super_admin'])
             Route::post('/{approval}/reject', [\App\Http\Controllers\Finance\ApprovalController::class, 'reject'])->name('reject');
         });
 
-        // Requisitions (admin aliases to Finance ExpenseController) for consistent Admin layout
-        Route::get('/requisitions', [\App\Http\Controllers\Finance\ExpenseController::class, 'index'])->name('requisitions.index');
-        Route::post('/requisitions', [\App\Http\Controllers\Finance\ExpenseController::class, 'store'])->name('requisitions.store');
-        Route::get('/requisitions/{expense}', [\App\Http\Controllers\Finance\ExpenseController::class, 'show'])->name('requisitions.show');
-        Route::get('/requisitions/{expense}/edit', [\App\Http\Controllers\Finance\ExpenseController::class, 'edit'])->name('requisitions.edit');
-        Route::put('/requisitions/{expense}', [\App\Http\Controllers\Finance\ExpenseController::class, 'update'])->name('requisitions.update');
-        Route::delete('/requisitions/{expense}', [\App\Http\Controllers\Finance\ExpenseController::class, 'destroy'])->name('requisitions.destroy');
+        // Requisitions (alias to Finance; restrict to finance roles)
+        Route::middleware(['role:super_admin|finance_officer|accountant|finance|accounting'])->group(function () {
+            Route::get('/requisitions', [\App\Http\Controllers\Finance\ExpenseController::class, 'index'])->name('requisitions.index');
+            Route::post('/requisitions', [\App\Http\Controllers\Finance\ExpenseController::class, 'store'])->name('requisitions.store');
+            Route::get('/requisitions/{expense}', [\App\Http\Controllers\Finance\ExpenseController::class, 'show'])->name('requisitions.show');
+            Route::get('/requisitions/{expense}/edit', [\App\Http\Controllers\Finance\ExpenseController::class, 'edit'])->name('requisitions.edit');
+            Route::put('/requisitions/{expense}', [\App\Http\Controllers\Finance\ExpenseController::class, 'update'])->name('requisitions.update');
+            Route::delete('/requisitions/{expense}', [\App\Http\Controllers\Finance\ExpenseController::class, 'destroy'])->name('requisitions.destroy');
+        });
 
-        // Downs (admin can view same control-room UI for now)
-        Route::get('/downs', [\App\Http\Controllers\ControlRoom\DownController::class, 'index'])->name('downs.index');
-        Route::post('/downs', [\App\Http\Controllers\ControlRoom\DownController::class, 'store'])->name('downs.store');
-        Route::post('/downs/{down}/escalate', [\App\Http\Controllers\ControlRoom\DownController::class, 'escalate'])->name('downs.escalate');
-        Route::post('/downs/{down}/resolve', [\App\Http\Controllers\ControlRoom\DownController::class, 'resolve'])->name('downs.resolve');
+        // Downs (align with control-room permissions; exclude plain admin)
+        Route::middleware(['role_or_permission:super_admin|control_room_operator|operations_officer|supervisor|manager|control.dashboard.view'])->group(function () {
+            Route::get('/downs', [\App\Http\Controllers\ControlRoom\DownController::class, 'index'])->name('downs.index');
+            Route::post('/downs', [\App\Http\Controllers\ControlRoom\DownController::class, 'store'])->name('downs.store');
+            Route::post('/downs/{down}/escalate', [\App\Http\Controllers\ControlRoom\DownController::class, 'escalate'])->name('downs.escalate');
+            Route::post('/downs/{down}/resolve', [\App\Http\Controllers\ControlRoom\DownController::class, 'resolve'])->name('downs.resolve');
+        });
 
-        // Admin Control Room dashboard
-        Route::get('/control-room', [\App\Http\Controllers\Admin\ControlRoomController::class, 'dashboard'])->name('control-room.dashboard');
+        // Admin Control Room dashboard (restrict to control-room roles/perms)
+        Route::get('/control-room', [\App\Http\Controllers\Admin\ControlRoomController::class, 'dashboard'])
+            ->middleware(['role_or_permission:super_admin|control_room_operator|operations_officer|supervisor|manager|control.dashboard.view'])
+            ->name('control-room.dashboard');
 
         // Zone Commander mini dashboard (admin window)
         Route::get('/zone-commander/window', [\App\Http\Controllers\Admin\ZoneCommanderWindowController::class, 'index'])->name('zone-commander.window');
     });
 
-Route::middleware(['auth', 'role:admin,super_admin,business_dev,business_development,bdo'])
+Route::middleware(['auth', 'role:super_admin,business_dev,business_development,bdo'])
     ->prefix('admin')
     ->name('admin.')
     ->group(function () {

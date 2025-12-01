@@ -72,8 +72,10 @@ class SystemHealthService
     public function getUptime()
     {
         if (function_exists('sys_getloadavg')) {
-            $load = sys_getloadavg();
-            return number_format($load[0], 2);
+            $load = @sys_getloadavg();
+            if (is_array($load) && isset($load[0])) {
+                return number_format((float) $load[0], 2);
+            }
         }
         return 'N/A';
     }

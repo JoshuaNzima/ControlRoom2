@@ -58,10 +58,18 @@ type PageProps = {
       absence_deduction_per_day?: number | string | null;
     }>;
   };
+  mail?: {
+    host?: string;
+    port?: number;
+    encryption?: 'tls' | 'ssl' | 'none' | null;
+    username?: string;
+    from_email?: string;
+    from_name?: string;
+  };
 };
 
 export default function SuperAdminSettings() {
-  const { auth, system, finance, hr } = usePage<PageProps>().props as any;
+  const { auth, system, finance, hr, mail } = usePage<PageProps>().props as any;
   const { theme, toggle } = useTheme();
   const [tab, setTab] = React.useState<'user' | 'finance' | 'hr' | 'system'>('finance');
 
@@ -72,52 +80,30 @@ export default function SuperAdminSettings() {
     overtime_multiplier_default: Number(finance?.payrollDefaults?.overtime_multiplier_default ?? 1.5),
   }));
 
-  // Pay Profiles state
-  const [profiles, setProfiles] = React.useState<PayProfile[]>(() => (finance?.payProfiles ?? []));
-  const [newProfile, setNewProfile] = React.useState<PayProfile>({
-    id: 0,
-    payee_type: 'guard',
-    payee_id: 0,
-    monthly_salary: 0,
-    overtime_multiplier: 1.5,
-    advance_amount: 0,
-    allowances: [],
-    absence_deduction_per_day: 0,
-  });
-
   const submitDefaults = (e: React.FormEvent) => {
     e.preventDefault();
     router.post(route('admin.settings.finance.payroll-defaults'), defaults, { preserveScroll: true });
   };
 
-  const submitNewProfile = (e: React.FormEvent) => {
+  // SMTP Settings state & handlers (SuperAdmin only UI)
+  const [smtp, setSmtp] = React.useState(() => ({
+    host: mail?.host ?? '',
+    port: Number(mail?.port ?? 587),
+    encryption: (mail?.encryption ?? 'tls') as 'tls' | 'ssl' | 'none',
+    username: mail?.username ?? '',
+    password: '',
+    from_email: mail?.from_email ?? '',
+    from_name: mail?.from_name ?? '',
+  }));
+  const [testTo, setTestTo] = React.useState('');
+
+  const submitMail = (e: React.FormEvent) => {
     e.preventDefault();
-    const payload: any = {
-      ...newProfile,
-      allowances: typeof newProfile.allowances === 'string' ? newProfile.allowances : JSON.stringify(newProfile.allowances ?? []),
-    };
-    router.post(route('admin.settings.finance.pay-profiles.store'), payload, {
-      preserveScroll: true,
-      onSuccess: () => {
-        setNewProfile({ id: 0, payee_type: 'guard', payee_id: 0, monthly_salary: 0, overtime_multiplier: 1.5, advance_amount: 0, allowances: [], absence_deduction_per_day: 0 });
-      },
-    });
+    router.post(route('superadmin.settings.mail.update'), smtp as any, { preserveScroll: true });
   };
-
-  const updateProfile = (p: PayProfile) => {
-    const payload: any = {
-      monthly_salary: p.monthly_salary,
-      overtime_multiplier: p.overtime_multiplier,
-      advance_amount: p.advance_amount,
-      allowances: typeof p.allowances === 'string' ? p.allowances : JSON.stringify(p.allowances ?? []),
-      absence_deduction_per_day: p.absence_deduction_per_day,
-    };
-    router.put(route('admin.settings.finance.pay-profiles.update', p.id), payload, { preserveScroll: true });
-  };
-
-  const deleteProfile = (id: number) => {
-    if (!confirm('Remove this pay profile?')) return;
-    router.delete(route('admin.settings.finance.pay-profiles.destroy', id), { preserveScroll: true });
+  const sendTestMail = () => {
+    if (!testTo) return;
+    router.post(route('superadmin.settings.mail.test'), { to: testTo }, { preserveScroll: true });
   };
 
   // HR: Guard Grades state & handlers
@@ -294,117 +280,15 @@ export default function SuperAdminSettings() {
                 </div>
               </form>
             </div>
-
-            {/* Pay Profiles */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-6">
-              <h2 className="text-lg font-semibold mb-4">Pay Profiles</h2>
-              <form onSubmit={submitNewProfile} className="grid grid-cols-1 md:grid-cols-6 gap-3 mb-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Type</label>
-                  <select value={newProfile.payee_type} onChange={(e)=>setNewProfile(p=>({...p, payee_type: e.target.value as any}))}
-                    className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100">
-                    <option value="guard">Guard</option>
-                    <option value="user">Staff</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Payee</label>
-                  <input
-                    list={newProfile.payee_type === 'guard' ? 'guards-list' : 'users-list'}
-                    placeholder={newProfile.payee_type === 'guard' ? 'Search guard by name or ID' : 'Search staff by name or ID'}
-                    onChange={(e)=>setNewProfile(p=>({...p, payee_id: Number(e.target.value || 0)}))}
-                    className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
-                  />
-                  <datalist id="guards-list">
-                    {(finance?.payeeOptions?.guards ?? []).map((g: { id: number; label: string }) => (
-                      <option key={g.id} value={g.id} label={g.label} />
-                    ))}
-                  </datalist>
-                  <datalist id="users-list">
-                    {(finance?.payeeOptions?.users ?? []).map((u: { id: number; label: string }) => (
-                      <option key={u.id} value={u.id} label={u.label} />
-                    ))}
-                  </datalist>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Monthly Salary</label>
-                  <input type="number" step="0.01" value={newProfile.monthly_salary as number}
-                    onChange={(e)=>setNewProfile(p=>({...p, monthly_salary: Number(e.target.value)}))}
-                    className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">OT Multiplier</label>
-                  <input type="number" step="0.01" value={Number(newProfile.overtime_multiplier ?? 1.5)}
-                    onChange={(e)=>setNewProfile(p=>({...p, overtime_multiplier: Number(e.target.value)}))}
-                    className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Advance</label>
-                  <input type="number" step="0.01" value={Number(newProfile.advance_amount ?? 0)}
-                    onChange={(e)=>setNewProfile(p=>({...p, advance_amount: Number(e.target.value)}))}
-                    className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Absence Deduction/Day</label>
-                  <input type="number" step="0.01" value={Number(newProfile.absence_deduction_per_day ?? 0)}
-                    onChange={(e)=>setNewProfile(p=>({...p, absence_deduction_per_day: Number(e.target.value)}))}
-                    className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100" />
-                </div>
-                <div className="md:col-span-6">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Allowances (JSON)</label>
-                  <textarea value={typeof newProfile.allowances === 'string' ? newProfile.allowances : JSON.stringify(newProfile.allowances ?? [])}
-                    onChange={(e)=>setNewProfile(p=>({...p, allowances: e.target.value}))}
-                    className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100" rows={2} />
-                </div>
-                <div className="md:col-span-6 pt-2">
-                  <button type="submit" className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700">Add Profile</button>
-                </div>
-              </form>
-
-              <div className="overflow-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="text-left text-gray-600 dark:text-gray-300">
-                      <th className="px-2 py-2">ID</th>
-                      <th className="px-2 py-2">Type</th>
-                      <th className="px-2 py-2">Payee</th>
-                      <th className="px-2 py-2">Salary</th>
-                      <th className="px-2 py-2">OT</th>
-                      <th className="px-2 py-2">Advance</th>
-                      <th className="px-2 py-2">Absence</th>
-                      <th className="px-2 py-2">Allowances (JSON)</th>
-                      <th className="px-2 py-2">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                    {profiles.map((p) => (
-                      <tr key={p.id} className="text-gray-900 dark:text-gray-100">
-                        <td className="px-2 py-2">{p.id}</td>
-                        <td className="px-2 py-2 capitalize">{p.payee_type}</td>
-                        <td className="px-2 py-2">#{p.payee_id}</td>
-                        <td className="px-2 py-2"><input type="number" step="0.01" value={Number(p.monthly_salary)} onChange={(e)=>setProfiles(prev=>prev.map(x=>x.id===p.id?{...x, monthly_salary: Number(e.target.value)}:x))} className="w-32 rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900" /></td>
-                        <td className="px-2 py-2"><input type="number" step="0.01" value={Number(p.overtime_multiplier ?? 1.5)} onChange={(e)=>setProfiles(prev=>prev.map(x=>x.id===p.id?{...x, overtime_multiplier: Number(e.target.value)}:x))} className="w-24 rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900" /></td>
-                        <td className="px-2 py-2"><input type="number" step="0.01" value={Number(p.advance_amount ?? 0)} onChange={(e)=>setProfiles(prev=>prev.map(x=>x.id===p.id?{...x, advance_amount: Number(e.target.value)}:x))} className="w-28 rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900" /></td>
-                        <td className="px-2 py-2"><input type="number" step="0.01" value={Number(p.absence_deduction_per_day ?? 0)} onChange={(e)=>setProfiles(prev=>prev.map(x=>x.id===p.id?{...x, absence_deduction_per_day: Number(e.target.value)}:x))} className="w-28 rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900" /></td>
-                        <td className="px-2 py-2"><textarea value={typeof p.allowances === 'string' ? p.allowances : JSON.stringify(p.allowances ?? [])} onChange={(e)=>setProfiles(prev=>prev.map(x=>x.id===p.id?{...x, allowances: e.target.value}:x))} className="w-80 h-16 rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900" /></td>
-                        <td className="px-2 py-2 space-x-2">
-                          <button onClick={()=>updateProfile(p)} className="px-3 py-1 rounded bg-emerald-600 text-white hover:bg-emerald-700">Save</button>
-                          <button onClick={()=>deleteProfile(p.id)} className="px-3 py-1 rounded bg-red-600 text-white hover:bg-red-700">Delete</button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
           </section>
         )}
 
         {/* System */}
         {tab === 'system' && (
-          <section className="bg-white dark:bg-gray-800 rounded-xl shadow p-6">
-            <h2 className="text-lg font-semibold mb-4">System Status</h2>
-            <dl className="space-y-3">
+          <section className="space-y-6">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-6">
+              <h2 className="text-lg font-semibold mb-4">System Status</h2>
+              <dl className="space-y-3">
               <div className="flex items-center justify-between">
                 <dt className="text-sm text-gray-600 dark:text-gray-300">Database</dt>
                 <dd className="text-sm font-medium text-gray-900 dark:text-gray-100">{system.database_status}</dd>
@@ -429,7 +313,63 @@ export default function SuperAdminSettings() {
                 <dt className="text-sm text-gray-600 dark:text-gray-300">Uptime (1m load)</dt>
                 <dd className="text-sm font-medium text-gray-900 dark:text-gray-100">{system.uptime}</dd>
               </div>
-            </dl>
+              </dl>
+            </div>
+
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-6">
+              <h2 className="text-lg font-semibold mb-4">SMTP Settings</h2>
+              <form onSubmit={submitMail} className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Host</label>
+                  <input value={smtp.host} onChange={(e)=>setSmtp(s=>({...s, host: e.target.value}))}
+                    className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100" placeholder="smtp.example.com" required />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Port</label>
+                  <input type="number" value={smtp.port} onChange={(e)=>setSmtp(s=>({...s, port: Number(e.target.value)}))}
+                    className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100" required />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Encryption</label>
+                  <select value={smtp.encryption} onChange={(e)=>setSmtp(s=>({...s, encryption: e.target.value as any}))}
+                    className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100">
+                    <option value="tls">TLS</option>
+                    <option value="ssl">SSL</option>
+                    <option value="none">None</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Username</label>
+                  <input value={smtp.username} onChange={(e)=>setSmtp(s=>({...s, username: e.target.value}))}
+                    className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Password</label>
+                  <input type="password" value={smtp.password} onChange={(e)=>setSmtp(s=>({...s, password: e.target.value}))}
+                    className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100" placeholder="••••••" />
+                </div>
+                <div className="md:col-span-1"></div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">From Email</label>
+                  <input type="email" value={smtp.from_email} onChange={(e)=>setSmtp(s=>({...s, from_email: e.target.value}))}
+                    className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">From Name</label>
+                  <input value={smtp.from_name} onChange={(e)=>setSmtp(s=>({...s, from_name: e.target.value}))}
+                    className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100" />
+                </div>
+                <div className="md:col-span-3 pt-2 flex items-center gap-3 flex-wrap">
+                  <button type="submit" className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700">Save SMTP</button>
+                  <div className="flex items-center gap-2">
+                    <input type="email" placeholder="test@example.com" value={testTo} onChange={(e)=>setTestTo(e.target.value)}
+                      className="rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 px-3 py-2" />
+                    <button type="button" onClick={sendTestMail} className="px-3 py-2 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700">Send Test</button>
+                  </div>
+                </div>
+              </form>
+            </div>
           </section>
         )}
       </div>

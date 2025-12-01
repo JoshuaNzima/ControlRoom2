@@ -4,8 +4,8 @@ use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
 Route::middleware(['auth'])->group(function () {
-    // Allow admins by role OR users with the specific permission
-    Route::middleware(['role_or_permission:admin|control_room_operator|operations_officer|supervisor|manager|control.dashboard.view'])->prefix('control-room')->name('control-room.')->group(function () {
+    // Allow specific roles or users with permission (admins excluded)
+    Route::middleware(['role_or_permission:control_room_operator|operations_officer|supervisor|manager|control.dashboard.view'])->prefix('control-room')->name('control-room.')->group(function () {
 		Route::get('/dashboard', [\App\Http\Controllers\ControlRoomDashboardController::class, 'index'])->name('dashboard');
 		Route::get('/monitoring', [\App\Http\Controllers\ControlRoom\MonitoringController::class, 'index'])->name('monitoring');
 		Route::get('/monitoring/data', [\App\Http\Controllers\ControlRoom\MonitoringController::class, 'data'])->name('monitoring.data');
@@ -45,8 +45,32 @@ Route::middleware(['auth'])->group(function () {
 		Route::delete('shifts/{shift}/unassign-guard/{guard}', [\App\Http\Controllers\ControlRoom\ShiftController::class, 'unassignGuard'])->name('shifts.unassign-guard');
 		Route::get('shifts/{shift}/schedule', [\App\Http\Controllers\ControlRoom\ShiftController::class, 'schedule'])->name('shifts.schedule');
 		
-		// Control Room specific management routes (decoupled from Supervisor controllers)
-		Route::get('/guards', [\App\Http\Controllers\ControlRoom\GuardsController::class, 'index'])->name('guards');
+		        // Control Room specific management routes (decoupled from Supervisor controllers)
+        Route::get('/guards', [\App\Http\Controllers\ControlRoom\GuardsController::class, 'index'])->name('guards');
+        // Guard management (create/update/delete) and assignments in Control Room
+        Route::prefix('guards')->name('guards.')->group(function () {
+            Route::post('/', [\App\Http\Controllers\ControlRoom\GuardManageController::class, 'store'])
+                ->middleware(['role_or_permission:operations_officer|manager|control_room_operator'])
+                ->name('store');
+            Route::put('/{guard}', [\App\Http\Controllers\ControlRoom\GuardManageController::class, 'update'])
+                ->middleware(['role_or_permission:operations_officer|manager|control_room_operator'])
+                ->name('update');
+            Route::delete('/{guard}', [\App\Http\Controllers\ControlRoom\GuardManageController::class, 'destroy'])
+                ->middleware(['role_or_permission:operations_officer|manager'])
+                ->name('destroy');
+            Route::post('/assign-supervisor', [\App\Http\Controllers\ControlRoom\GuardManageController::class, 'assignSupervisor'])
+                ->middleware(['role_or_permission:operations_officer|manager|control_room_operator'])
+                ->name('assign-supervisor');
+            Route::post('/unassign-supervisor', [\App\Http\Controllers\ControlRoom\GuardManageController::class, 'unassignSupervisor'])
+                ->middleware(['role_or_permission:operations_officer|manager|control_room_operator'])
+                ->name('unassign-supervisor');
+            Route::post('/assign-site', [\App\Http\Controllers\ControlRoom\GuardManageController::class, 'assignToSite'])
+                ->middleware(['role_or_permission:operations_officer|manager|control_room_operator'])
+                ->name('assign-site');
+            Route::post('/unassign-site', [\App\Http\Controllers\ControlRoom\GuardManageController::class, 'unassignFromSite'])
+                ->middleware(['role_or_permission:operations_officer|manager|control_room_operator'])
+                ->name('unassign-site');
+        });
 		Route::get('/assignments', [\App\Http\Controllers\ControlRoom\AssignmentsController::class, 'index'])->name('assignments.index');
 		Route::get('/reports', [\App\Http\Controllers\ControlRoom\ReportsController::class, 'index'])->name('reports');
 		Route::get('/clients', [\App\Http\Controllers\ControlRoom\ClientsController::class, 'index'])->name('clients');

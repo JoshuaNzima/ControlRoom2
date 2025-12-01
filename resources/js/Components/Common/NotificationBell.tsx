@@ -53,8 +53,22 @@ export default function NotificationBell({ className = '' }: { className?: strin
         credentials: 'same-origin',
       });
       setUnread(0);
-      // Optimistically mark local items as read
       setItems((prev) => prev.map(i => ({ ...i, read_at: i.read_at || new Date().toISOString() })));
+    } catch {}
+  };
+
+  const markOneRead = async (id: string) => {
+    try {
+      await fetch(`/notifications/${id}/read`, {
+        method: 'POST',
+        headers: {
+          'X-CSRF-TOKEN': getCsrfToken(),
+          'Accept': 'application/json'
+        },
+        credentials: 'same-origin',
+      });
+      setItems((prev) => prev.map(i => i.id === id ? ({ ...i, read_at: i.read_at || new Date().toISOString() }) : i));
+      setUnread((prev) => (prev > 0 ? prev - 1 : 0));
     } catch {}
   };
 
@@ -69,7 +83,9 @@ export default function NotificationBell({ className = '' }: { className?: strin
     const next = !open;
     setOpen(next);
     if (next) {
-      await markAllRead();
+      // Refresh items/unread when opening, but don't auto-mark all as read
+      await fetchUnread();
+      await fetchItems();
     }
   };
 
@@ -102,7 +118,8 @@ export default function NotificationBell({ className = '' }: { className?: strin
             ) : (
               <ul className="divide-y divide-red-100 dark:divide-gray-800">
                 {items.map((n) => (
-                  <li key={n.id} className={`p-3 ${!n.read_at ? 'bg-red-50/40 dark:bg-gray-800/40' : ''}`}>
+                  <li key={n.id} className={`p-3 cursor-pointer ${!n.read_at ? 'bg-red-50/40 dark:bg-gray-800/40' : ''}`}
+                    onClick={() => markOneRead(n.id)}>
                     <div className="flex items-start gap-2">
                       <span className="mt-0.5 text-red-600 dark:text-red-400">
                         <IconMapper name="bell" className="h-4 w-4" />

@@ -26,7 +26,7 @@ export default function AssetManagementLayout({ title, children, user }: Props) 
   const unread = Number(props?.notifications?.unread_count || 0);
 
   const nav: NavItem[] = [
-    { name: 'Overview', href: route('admin.assets'), icon: <IconMapper name="package" className="h-6 w-6" />, current: isCurrent(route('admin.assets')) },
+    { name: 'Overview', href: route('admin.assets.index'), icon: <IconMapper name="package" className="h-6 w-6" />, current: isCurrent(route('admin.assets.index')) },
     { name: 'Vehicles', href: route('admin.assets.vehicles.index'), icon: <IconMapper name="truck" className="h-6 w-6" />, current: isCurrent(route('admin.assets.vehicles.index')) },
     { name: 'Equipment', href: route('admin.assets.equipment.index'), icon: <IconMapper name="wrench" className="h-6 w-6" />, current: isCurrent(route('admin.assets.equipment.index')) },
     { name: 'Settings', href: route('admin.assets.settings'), icon: <IconMapper name="settings" className="h-6 w-6" />, current: isCurrent(route('admin.assets.settings')) },

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Head, router, usePage } from '@inertiajs/react';
-import AdminLayout from '@/Layouts/AdminLayout';
+import HRLayout from '@/Layouts/HRLayout';
 import PromoteGuardModal from '@/Components/HR/PromoteGuardModal';
 
 export default function HREmployees() {
@@ -20,7 +20,7 @@ export default function HREmployees() {
   };
 
   return (
-    <AdminLayout title="Guards & Promotions" user={auth?.user as any}>
+    <HRLayout title="Guards & Promotions" user={auth?.user as any}>
       <Head title="Guards & Promotions" />
       <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
@@ -105,6 +105,6 @@ export default function HREmployees() {
         onClose={() => { setPromoteOpen(false); setCurrentGuard(null); }}
         onSuccess={() => router.reload()}
       />
-    </AdminLayout>
+    </HRLayout>
   );
 }

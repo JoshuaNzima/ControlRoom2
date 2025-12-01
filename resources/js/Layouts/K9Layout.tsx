@@ -18,17 +18,15 @@ interface NavItem {
   current: boolean;
 }
 
-export default function HRLayout({ title, children, user }: Props) {
+export default function K9Layout({ title, children, user }: Props) {
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
   const isCurrent = (href: string) => typeof window !== 'undefined' && window.location.pathname === href;
   const { theme, toggle } = useTheme();
 
   const nav: NavItem[] = [
-    { name: 'Overview', href: route('hr.dashboard'), icon: <IconMapper name="layout-dashboard" className="h-6 w-6" />, current: isCurrent(route('hr.dashboard')) },
-    { name: 'Employees', href: route('hr.employees.index'), icon: <IconMapper name="users" className="h-6 w-6" />, current: isCurrent(route('hr.employees.index')) },
-    { name: 'Leaves', href: route('hr.leaves'), icon: <IconMapper name="calendar" className="h-6 w-6" />, current: isCurrent(route('hr.leaves')) },
-    { name: 'Training', href: route('hr.training'), icon: <IconMapper name="graduation-cap" className="h-6 w-6" />, current: isCurrent(route('hr.training')) },
-    { name: 'Careers', href: route('hr.jobs.index'), icon: <IconMapper name="megaphone" className="h-6 w-6" />, current: isCurrent(route('hr.jobs.index')) },
+    { name: 'Overview', href: route('k9.dashboard'), icon: <IconMapper name="layout-dashboard" className="h-6 w-6" />, current: isCurrent(route('k9.dashboard')) },
+    { name: 'Dogs', href: route('k9.dogs'), icon: <IconMapper name="dog" className="h-6 w-6" />, current: isCurrent(route('k9.dogs')) },
+    { name: 'Handlers', href: route('k9.handlers'), icon: <IconMapper name="user" className="h-6 w-6" />, current: isCurrent(route('k9.handlers')) },
   ];
 
   return (
@@ -38,7 +36,7 @@ export default function HRLayout({ title, children, user }: Props) {
       <div className={`fixed top-0 left-0 bottom-0 flex flex-col w-64 bg-red-900 dark:bg-gray-950 text-white transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 transition-transform duration-300 ease-in-out z-50`}>
         <div className="flex-1 flex flex-col pt-5 pb-4 overflow-y-auto">
           <div className="flex items-center flex-shrink-0 px-4">
-            <span className="ml-2 text-2xl font-bold text-white">Human Resources</span>
+            <span className="ml-2 text-2xl font-bold text-white">K9 Unit</span>
           </div>
           <nav className="mt-8 flex-1 px-2 space-y-1">
             {nav.map((item) => (
@@ -53,7 +51,7 @@ export default function HRLayout({ title, children, user }: Props) {
           <div className="flex items-center">
             <div>
               <div className="text-base font-medium text-white">{user?.name}</div>
-              <div className="text-sm font-medium text-red-200 dark:text-gray-400">HR</div>
+              <div className="text-sm font-medium text-red-200 dark:text-gray-400">K9</div>
             </div>
           </div>
         </div>

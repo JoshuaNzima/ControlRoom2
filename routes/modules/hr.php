@@ -17,4 +17,14 @@ Route::middleware(['auth'])->group(function () {
 		Route::post('/guards/{guard}/promote', [\App\Http\Controllers\HR\EmployeeController::class, 'promote'])->name('guards.promote');
 		Route::get('/training', [\App\Http\Controllers\HR\TrainingController::class, 'index'])->name('training');
 	});
+
+	// HR Careers Management (separate permission)
+	Route::middleware(['permission:hr.careers.manage'])->prefix('hr')->name('hr.')->group(function () {
+		Route::get('/jobs', [\App\Http\Controllers\HR\JobPostingController::class, 'index'])->name('jobs.index');
+		Route::post('/jobs', [\App\Http\Controllers\HR\JobPostingController::class, 'store'])->name('jobs.store');
+		Route::put('/jobs/{jobPosting}', [\App\Http\Controllers\HR\JobPostingController::class, 'update'])->name('jobs.update');
+		Route::delete('/jobs/{jobPosting}', [\App\Http\Controllers\HR\JobPostingController::class, 'destroy'])->name('jobs.destroy');
+		Route::post('/jobs/{jobPosting}/publish', [\App\Http\Controllers\HR\JobPostingController::class, 'publish'])->name('jobs.publish');
+		Route::post('/jobs/{jobPosting}/unpublish', [\App\Http\Controllers\HR\JobPostingController::class, 'unpublish'])->name('jobs.unpublish');
+	});
 });
