@@ -1,5 +1,5 @@
 import React from 'react';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
 import BaseShell from './BaseShell';
 import IconMapper from '@/Components/IconMapper';
 import { User } from '@/types';
@@ -24,41 +24,96 @@ export default function AdminLayout({ title, children, user }: Props) {
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
   const [logoOk, setLogoOk] = React.useState<boolean>(true);
   const { theme, toggle } = useTheme();
+  const { props } = usePage<any>();
+  const effectiveUser: User | undefined = (user as any) ?? (props?.auth?.user as any) ?? undefined;
 
-  const isCurrent = (href: string) => window.location.pathname === href;
+  const isCurrent = (href: string) => {
+    try {
+      const hrefPath = new URL(href, window.location.origin).pathname;
+      return window.location.pathname === hrefPath;
+    } catch {
+      return window.location.pathname === href;
+    }
+  };
 
   const adminLinks: ModuleNavItem[] = [
      { name: 'Admin Dashboard', href: route('admin.dashboard'), icon: <IconMapper name="home" className="h-6 w-6" />, current: isCurrent(route('admin.dashboard')) },
      { name: 'Services', href: route('admin.services.index'), icon: <IconMapper name="package" className="h-6 w-6" />, current: isCurrent(route('admin.services.index')) },
-     { name: 'Users', href: route('admin.users.index'), icon: <IconMapper name="users-2" className="h-6 w-6" />, current: false },
-     { name: 'Approvals', href: route('admin.approvals.index'), icon: <IconMapper name="check-circle" className="h-6 w-6" />, current: false },
-     { name: 'Messaging', href: route('control-room.messaging.index'), icon: <IconMapper name="message-square-text" className="h-6 w-6" />, current: false },
-    { name: 'Reports', href: route('admin.reports.index'), icon: <IconMapper name="bar-chart-2" className="h-6 w-6" />, current: false },
-    { name: 'Payments Checker', href: route('admin.payments.index'), icon: <IconMapper name="wallet" className="h-6 w-6" />, current: false },
-    { name: 'Settings', href: route('admin.settings.index'), icon: <IconMapper name="settings" className="h-6 w-6" />, current: false },
+     { name: 'Users', href: route('admin.users.index'), icon: <IconMapper name="users-2" className="h-6 w-6" />, current: isCurrent(route('admin.users.index')) },
+     { name: 'Approvals', href: route('admin.approvals.index'), icon: <IconMapper name="check-circle" className="h-6 w-6" />, current: isCurrent(route('admin.approvals.index')) },
+     { name: 'Messaging', href: route('control-room.messaging.index'), icon: <IconMapper name="message-square-text" className="h-6 w-6" />, current: isCurrent(route('control-room.messaging.index')) },
+    { name: 'Reports', href: route('admin.reports.index'), icon: <IconMapper name="bar-chart-2" className="h-6 w-6" />, current: isCurrent(route('admin.reports.index')) },
+    { name: 'Payments Checker', href: route('admin.payments.index'), icon: <IconMapper name="wallet" className="h-6 w-6" />, current: isCurrent(route('admin.payments.index')) },
+    { name: 'Settings', href: route('admin.settings.index'), icon: <IconMapper name="settings" className="h-6 w-6" />, current: isCurrent(route('admin.settings.index')) },
   ];
 
   const canSeeFinance = (() => {
-    if (!user) return false;
-    const allowedRoles = ['admin', 'super_admin', 'finance_officer', 'accountant'];
-    const roles = (user as any).roles ?? [];
+    if (!effectiveUser) return false;
+    const allowedRoles = ['super_admin', 'finance_officer', 'accountant'];
+    const roles = (effectiveUser as any).roles ?? [];
     if (Array.isArray(roles) && roles.some((r) => allowedRoles.includes(String(r)))) return true;
     if (typeof roles === 'string' && allowedRoles.includes(roles)) return true;
-    const perms = (user as any).permissions ?? [];
+    const perms = (effectiveUser as any).permissions ?? [];
     if (Array.isArray(perms) && perms.includes('finance.access')) return true;
     if (typeof perms === 'string' && perms === 'finance.access') return true;
     return false;
   })();
 
+  const canAccessMarketing = (() => {
+    if (!effectiveUser) return false;
+    const allowedRoles = ['super_admin', 'marketing', 'marketing_officer', 'marketing_manager'];
+    const roles = (effectiveUser as any).roles ?? [];
+    if (Array.isArray(roles) && roles.some((r) => allowedRoles.includes(String(r)))) return true;
+    if (typeof roles === 'string' && allowedRoles.includes(roles)) return true;
+    const perms = (effectiveUser as any).permissions ?? [];
+    if (Array.isArray(perms) && perms.includes('marketing.access')) return true;
+    if (typeof perms === 'string' && perms === 'marketing.access') return true;
+    return false;
+  })();
+
+  const hasAnyRole = (list: string[]) => {
+    const roles = (effectiveUser as any)?.roles ?? [];
+    if (Array.isArray(roles)) return roles.some((r) => list.includes(String(r)));
+    if (typeof roles === 'string') return list.includes(roles);
+    return false;
+  };
+  const hasPerm = (perm: string) => {
+    const perms = (effectiveUser as any)?.permissions ?? [];
+    if (Array.isArray(perms)) return perms.includes(perm);
+    if (typeof perms === 'string') return perms === perm;
+    return false;
+  };
+
+  const canAccessHR = hasAnyRole(['super_admin','hr','hr_manager']) || hasPerm('hr.employees.view') || hasPerm('hr.careers.manage');
+  const canAccessK9 = hasAnyRole(['super_admin','k9','k9_manager']) || hasPerm('k9.view');
+  const canAccessAssets = hasAnyRole(['super_admin','assets_manager']) || hasPerm('assets.access');
+  const canAccessClients = hasAnyRole(['super_admin','client_manager']) || hasPerm('clients.access');
+  const canAccessGuards = hasAnyRole(['super_admin','guards','guard_manager']) || hasPerm('guards.access');
+  const canAccessBusinessDev = hasAnyRole(['super_admin','business_dev','business_development','bdo']) || hasPerm('business_dev.access');
+  const canAccessControlRoom = hasAnyRole(['super_admin','control_room','dispatcher','operations_officer']) || hasPerm('control_room.access');
+  const canAccessReports = hasAnyRole(['super_admin','supervisor','reports']) || hasPerm('reports.access');
+
+  const marketingHref = canAccessMarketing ? route('admin.marketing') : route('admin.modules.summary', 'marketing');
+  const controlRoomHref = canAccessControlRoom ? route('control-room.dashboard') : route('admin.modules.summary', 'control_room');
+  const clientsHref = canAccessClients ? route('admin.clients.index') : route('admin.modules.summary', 'clients');
+  const guardsHref = canAccessHR
+    ? route('hr.employees.index')
+    : (canAccessControlRoom ? route('control-room.guards') : route('admin.modules.summary', 'guards'));
+  const hrHref = canAccessHR ? route('hr.dashboard') : route('admin.modules.summary', 'hr');
+  const k9Href = canAccessK9 ? route('k9.dashboard') : route('admin.modules.summary', 'k9');
+  const bizDevHref = canAccessBusinessDev ? route('admin.business-dev') : route('admin.modules.summary', 'business_dev');
+  const assetsHref = canAccessAssets ? route('admin.assets.index') : route('admin.modules.summary', 'assets');
+  const financeHref = canSeeFinance ? route('admin.finance') : route('admin.modules.summary', 'finance');
   const moduleLinks: ModuleNavItem[] = [
-  { name: 'Control Room', href: route('admin.control-room.dashboard'), icon: <IconMapper name="briefcase" className="h-6 w-6" />, current: isCurrent(route('admin.control-room.dashboard')) },
-  { name: 'Clients', href: route('admin.clients.index'), icon: <IconMapper name="building-2" className="h-6 w-6" />, current: false },
-  { name: 'Guards', href: route('admin.guards.dashboard'), icon: <IconMapper name="shield-check" className="h-6 w-6" />, current: false },
-  { name: 'HR', href: route('hr.dashboard'), icon: <IconMapper name="users-2" className="h-6 w-6" />, current: false },
-  { name: 'K9', href: route('k9.dashboard'), icon: <IconMapper name="shield" className="h-6 w-6" />, current: false },
-  { name: 'Business Dev', href: route('admin.business-dev'), icon: <IconMapper name="handshake" className="h-6 w-6" />, current: isCurrent(route('admin.business-dev')) },
-  ...(canSeeFinance ? [{ name: 'Finance', href: route('admin.finance'), icon: <IconMapper name="wallet" className="h-6 w-6" />, current: isCurrent(route('admin.finance')) }] : []),
-  { name: 'Marketing', href: route('admin.marketing'), icon: <IconMapper name="megaphone" className="h-6 w-6" />, current: false },
+  { name: 'Control Room', href: controlRoomHref, icon: <IconMapper name="briefcase" className="h-6 w-6" />, current: isCurrent(controlRoomHref) },
+  { name: 'Clients', href: clientsHref, icon: <IconMapper name="building-2" className="h-6 w-6" />, current: isCurrent(clientsHref) },
+  { name: 'Guards', href: guardsHref, icon: <IconMapper name="shield-check" className="h-6 w-6" />, current: isCurrent(guardsHref) },
+  { name: 'HR', href: hrHref, icon: <IconMapper name="users-2" className="h-6 w-6" />, current: isCurrent(hrHref) },
+  { name: 'K9', href: k9Href, icon: <IconMapper name="shield" className="h-6 w-6" />, current: isCurrent(k9Href) },
+  { name: 'Business Dev', href: bizDevHref, icon: <IconMapper name="handshake" className="h-6 w-6" />, current: isCurrent(bizDevHref) },
+  { name: 'Assets', href: assetsHref, icon: <IconMapper name="boxes" className="h-6 w-6" />, current: isCurrent(assetsHref) },
+  { name: 'Finance', href: financeHref, icon: <IconMapper name="wallet" className="h-6 w-6" />, current: isCurrent(financeHref) },
+  { name: 'Marketing', href: marketingHref, icon: <IconMapper name="megaphone" className="h-6 w-6" />, current: isCurrent(marketingHref) },
   ];
 
   return (
@@ -113,7 +168,7 @@ export default function AdminLayout({ title, children, user }: Props) {
         <div className="flex-shrink-0 flex border-t border-red-800 dark:border-gray-800 p-4">
           <div className="flex items-center">
             <div>
-              <div className="text-base font-medium text-white">{user?.name}</div>
+              <div className="text-base font-medium text-white">{effectiveUser?.name}</div>
               <div className="text-sm font-medium text-red-200 dark:text-gray-400">Admin</div>
             </div>
           </div>
@@ -134,7 +189,7 @@ export default function AdminLayout({ title, children, user }: Props) {
                 <button onClick={toggle} className="text-sm px-3 py-1 rounded-md bg-red-100 text-red-800 hover:bg-red-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700">
                   {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
                 </button>
-                <div className="text-sm text-red-700 dark:text-gray-300">{user?.name}</div>
+                <div className="text-sm text-red-700 dark:text-gray-300">{effectiveUser?.name}</div>
                 <Link
                   href={route('logout')}
                   method="post"

@@ -32,7 +32,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         {notifications.map((n) => (
           <div
             key={n.id}
-            className={`px-4 py-2 rounded shadow-lg text-white ${
+            className={`px-4 py-2 rounded shadow-lg text-white flex items-center justify-between gap-3 ${
               n.type === 'error'
                 ? 'bg-red-600'
                 : n.type === 'warning'
@@ -41,7 +41,8 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
                 ? 'bg-emerald-600'
                 : 'bg-gray-900'
             }`}>
-            {n.message}
+            <span className="text-sm">{n.message}</span>
+            <button onClick={() => remove(n.id)} className="text-white/80 hover:text-white focus:outline-none" aria-label="Dismiss notification">×</button>
           </div>
         ))}
       </div>

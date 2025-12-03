@@ -115,7 +115,7 @@ class AttendanceController extends Controller
                 'site_name' => $site?->name ?? 'Unknown',
                 'client_name' => $site?->client?->name ?? 'Unknown',
                 'action' => $checkOutDateTime ? 'check_out' : 'check_in',
-                'timestamp' => ($checkOutDateTime ?? $checkInDateTime)->toISOString(),
+                'timestamp' => ($checkOutDateTime ?? $checkInDateTime)->toIso8601String(),
                 'status' => $validated['status'],
                 'supervisor_id' => Auth::id(),
             ]

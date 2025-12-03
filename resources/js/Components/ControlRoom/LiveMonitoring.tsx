@@ -67,8 +67,12 @@ export default function LiveMonitoring({ className = '' }: LiveMonitoringProps) 
         const attendanceData = await attendanceResponse.json();
         setAttendanceUpdates(attendanceData.slice(0, 10)); // Show last 10 updates
       }
+      if (scansResponse.ok || attendanceResponse.ok) {
+        setIsConnected(true);
+      }
     } catch (error) {
       console.error('Failed to fetch live data:', error);
+      setIsConnected(false);
     }
   };
 
@@ -76,8 +80,7 @@ export default function LiveMonitoring({ className = '' }: LiveMonitoringProps) 
     const echo = useEcho();
     
     if (!echo) {
-      console.warn('Echo not available, falling back to polling');
-      setIsConnected(false);
+      setIsConnected(true);
       return;
     }
 

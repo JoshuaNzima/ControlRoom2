@@ -2,11 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { Head, useForm, usePage } from '@inertiajs/react';
 import PublicLayout from '@/Layouts/PublicLayout';
 import IconMapper from '@/Components/IconMapper';
+import Modal from '@/Components/Modal';
 
 export default function Home() {
   const [currentStat, setCurrentStat] = useState(0);
   const [activeIntake, setActiveIntake] = useState<'ticket' | 'down' | 'incident'>('ticket');
-  const { flash, metrics }: any = usePage().props;
+  const { flash, metrics, team = [] }: any = usePage().props;
   const { data, setData, post, processing, reset, errors, progress, transform } = useForm({
     type: 'ticket' as 'ticket' | 'down' | 'incident',
     name: '',
@@ -23,6 +24,15 @@ export default function Home() {
     website: ''
   });
 
+  const [showQuote, setShowQuote] = useState(false);
+  const { data: qData, setData: setQData, post: postQuote, processing: qProcessing, reset: qReset, errors: qErrors } = useForm({
+    name: '',
+    email: '',
+    subject: 'Request a Quote',
+    message: '',
+    website: ''
+  });
+
   useEffect(() => {
     setData('type', activeIntake);
   }, [activeIntake]);
@@ -34,6 +44,16 @@ export default function Home() {
       forceFormData: true,
       onSuccess: () => {
         reset('title', 'description', 'attachments');
+      }
+    });
+  };
+
+  const submitQuote = (e: React.FormEvent) => {
+    e.preventDefault();
+    postQuote(route('public.contact.store'), {
+      onSuccess: () => {
+        qReset();
+        setShowQuote(false);
       }
     });
   };
@@ -117,7 +137,7 @@ export default function Home() {
       <Head title="Home" />
 
       {/* Hero Section */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 text-white">
+      <section className="relative overflow-hidden bg-gradient-to-br from-slate-900 via-red-900 to-slate-900 text-white">
         <div className="absolute inset-0 bg-black/20"></div>
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
@@ -143,13 +163,14 @@ export default function Home() {
                   <IconMapper name="Send" className="w-5 h-5" />
                   Report an Issue
                 </a>
-                <a 
-                  href="/contact" 
+                <button 
+                  type="button"
+                  onClick={() => setShowQuote(true)}
                   className="inline-flex items-center justify-center gap-3 px-8 py-4 bg-white/10 backdrop-blur-sm text-white font-semibold rounded-xl border border-white/20 hover:bg-white/20 transition-all duration-300"
                 >
                   <IconMapper name="Phone" className="w-5 h-5" />
                   Get Quote
-                </a>
+                </button>
               </div>
 
               {/* Animated Stats */}
@@ -209,25 +230,28 @@ export default function Home() {
         </div>
       </section>
 
-      <section id="intake" className="py-16 bg-white">
+      <section id="intake" className="py-16 bg-white dark:bg-gray-900">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
           {flash?.success && (
-            <div className="mb-6 rounded-xl border border-green-200 bg-green-50 text-green-800 px-4 py-3">
+            <div className="mb-6 rounded-xl border border-green-200 bg-green-50 text-green-800 px-4 py-3 dark:border-green-900 dark:bg-green-900/30 dark:text-green-300">
               {flash.success}
             </div>
           )}
-          <div className="mb-8 grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <button type="button" onClick={() => setActiveIntake('ticket')} className={`w-full px-4 py-3 rounded-xl border transition ${activeIntake === 'ticket' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-200 hover:border-gray-300'}`}>
-              Raise Ticket
-            </button>
-            <button type="button" onClick={() => setActiveIntake('down')} className={`w-full px-4 py-3 rounded-xl border transition ${activeIntake === 'down' ? 'bg-purple-600 text-white border-purple-600' : 'bg-white text-gray-700 border-gray-200 hover:border-gray-300'}`}>
-              Report Down
-            </button>
-            <button type="button" onClick={() => setActiveIntake('incident')} className={`w-full px-4 py-3 rounded-xl border transition ${activeIntake === 'incident' ? 'bg-rose-600 text-white border-rose-600' : 'bg-white text-gray-700 border-gray-200 hover:border-gray-300'}`}>
-              Report Incident
-            </button>
+          <div className="mb-8">
+            <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">Tell us what you need help with:</div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <button type="button" onClick={() => setActiveIntake('ticket')} className={`w-full px-4 py-3 rounded-xl border transition ${activeIntake === 'ticket' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-200 hover:border-gray-300'}`}>
+                Service Request
+              </button>
+              <button type="button" onClick={() => setActiveIntake('down')} className={`w-full px-4 py-3 rounded-xl border transition ${activeIntake === 'down' ? 'bg-purple-600 text-white border-purple-600' : 'bg-white text-gray-700 border-gray-200 hover:border-gray-300'}`}>
+                Site Uncovered
+              </button>
+              <button type="button" onClick={() => setActiveIntake('incident')} className={`w-full px-4 py-3 rounded-xl border transition ${activeIntake === 'incident' ? 'bg-rose-600 text-white border-rose-600' : 'bg-white text-gray-700 border-gray-200 hover:border-gray-300'}`}>
+                Incident / Emergency
+              </button>
+            </div>
           </div>
-          <form onSubmit={submit} className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 md:p-8 space-y-6">
+          <form onSubmit={submit} className="bg-white dark:bg-gray-950 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-800 p-6 md:p-8 space-y-6">
             <input
               type="text"
               name="website"
@@ -240,13 +264,13 @@ export default function Home() {
             />
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1">
-                <label className="text-sm font-medium text-gray-700">Your Name</label>
-                <input value={data.name} onChange={(e) => setData('name', e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" required />
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Your Name</label>
+                <input value={data.name} onChange={(e) => setData('name', e.target.value)} className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" required />
                 {errors.name && <div className="text-sm text-red-600">{errors.name}</div>}
               </div>
               <div className="space-y-1">
-                <label className="text-sm font-medium text-gray-700">Email</label>
-                <input type="email" value={data.email} onChange={(e) => setData('email', e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" required />
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Email</label>
+                <input type="email" value={data.email} onChange={(e) => setData('email', e.target.value)} className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" required />
                 {errors.email && <div className="text-sm text-red-600">{errors.email}</div>}
               </div>
             </div>
@@ -261,18 +285,18 @@ export default function Home() {
               <div className="px-4 pb-4">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="space-y-1">
-                    <label className="text-sm font-medium text-gray-700">Phone</label>
-                    <input value={data.phone} onChange={(e) => setData('phone', e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Phone</label>
+                    <input value={data.phone} onChange={(e) => setData('phone', e.target.value)} className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
                     {errors.phone && <div className="text-sm text-red-600">{errors.phone}</div>}
                   </div>
                   <div className="space-y-1">
-                    <label className="text-sm font-medium text-gray-700">Client Name</label>
-                    <input value={data.client_name} onChange={(e) => setData('client_name', e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Client Name</label>
+                    <input value={data.client_name} onChange={(e) => setData('client_name', e.target.value)} className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
                     {errors.client_name && <div className="text-sm text-red-600">{errors.client_name}</div>}
                   </div>
                   <div className="space-y-1">
-                    <label className="text-sm font-medium text-gray-700">Site</label>
-                    <input value={data.client_site} onChange={(e) => setData('client_site', e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Site</label>
+                    <input value={data.client_site} onChange={(e) => setData('client_site', e.target.value)} className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
                     {errors.client_site && <div className="text-sm text-red-600">{errors.client_site}</div>}
                   </div>
                 </div>
@@ -280,14 +304,14 @@ export default function Home() {
             </details>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="md:col-span-2 space-y-1">
-                <label className="text-sm font-medium text-gray-700">Title</label>
-                <input value={data.title} onChange={(e) => setData('title', e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" required />
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">What happened?</label>
+                <input value={data.title} onChange={(e) => setData('title', e.target.value)} placeholder="Briefly describe the issue" className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" required />
                 {errors.title && <div className="text-sm text-red-600">{errors.title}</div>}
               </div>
               {activeIntake === 'ticket' && (
                 <div className="space-y-1">
-                  <label className="text-sm font-medium text-gray-700">Priority</label>
-                  <select value={data.priority} onChange={(e) => setData('priority', e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Urgency</label>
+                  <select value={data.priority} onChange={(e) => setData('priority', e.target.value)} className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
                     <option value="low">Low</option>
                     <option value="medium">Medium</option>
                     <option value="high">High</option>
@@ -298,8 +322,8 @@ export default function Home() {
               )}
               {activeIntake === 'down' && (
                 <div className="space-y-1">
-                  <label className="text-sm font-medium text-gray-700">Down Type</label>
-                  <select value={data.down_type} onChange={(e) => setData('down_type', e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">What seems to be the issue?</label>
+                  <select value={data.down_type} onChange={(e) => setData('down_type', e.target.value)} className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
                     <option value="guard_absent">Guard Absent</option>
                     <option value="site_unmanned">Site Unmanned</option>
                     <option value="other">Other</option>
@@ -309,8 +333,8 @@ export default function Home() {
               )}
               {activeIntake === 'ticket' && (
                 <div className="space-y-1">
-                  <label className="text-sm font-medium text-gray-700">Category</label>
-                  <select value={data.category} onChange={(e) => setData('category', e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Type of request</label>
+                  <select value={data.category} onChange={(e) => setData('category', e.target.value)} className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
                     <option value="complaint">Complaint</option>
                     <option value="incident">Incident</option>
                     <option value="request">Request</option>
@@ -322,8 +346,8 @@ export default function Home() {
               )}
             </div>
             <div className="space-y-1">
-              <label className="text-sm font-medium text-gray-700">Description</label>
-              <textarea value={data.description} onChange={(e) => setData('description', e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[120px]" required />
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Tell us more</label>
+              <textarea value={data.description} onChange={(e) => setData('description', e.target.value)} placeholder="Add any details that can help us respond quickly" className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[120px]" required />
               {errors.description && <div className="text-sm text-red-600">{errors.description}</div>}
             </div>  
             <details className="rounded-xl border border-gray-200 bg-gray-50 open:bg-white">
@@ -340,7 +364,7 @@ export default function Home() {
             <div className="flex items-center justify-end gap-3">
               <button type="submit" disabled={processing} className={`inline-flex items-center gap-2 px-6 py-3 rounded-xl text-white font-semibold shadow ${activeIntake === 'ticket' ? 'bg-blue-600 hover:bg-blue-700' : activeIntake === 'down' ? 'bg-purple-600 hover:bg-purple-700' : 'bg-rose-600 hover:bg-rose-700'} disabled:opacity-60`}>
                 <IconMapper name="Send" className="w-5 h-5" />
-                Submit
+                Send
               </button>
             </div>
           </form>
@@ -348,13 +372,13 @@ export default function Home() {
       </section>
 
       {/* Features Section */}
-      <section className="py-20 bg-gray-50">
+      <section className="py-20 bg-gray-50 dark:bg-gray-900">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-gray-900 mb-4">
+            <h2 className="text-4xl font-bold text-gray-900 dark:text-gray-100 mb-4">
               Comprehensive Security Solutions
             </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+            <p className="text-xl text-gray-600 dark:text-gray-400 max-w-3xl mx-auto">
               From professional guards to advanced technology, we provide everything you need to secure your business.
             </p>
           </div>
@@ -363,13 +387,13 @@ export default function Home() {
             {features.map((feature, index) => (
               <div 
                 key={index}
-                className="group bg-white rounded-2xl p-8 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2"
+                className="group bg-white dark:bg-gray-950 rounded-2xl p-8 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2 border border-gray-100 dark:border-gray-800"
               >
                 <div className={`w-16 h-16 bg-gradient-to-r ${feature.color} rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300`}>
                   <IconMapper name={feature.icon} className="w-8 h-8 text-white" />
                 </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-4">{feature.title}</h3>
-                <p className="text-gray-600 leading-relaxed">{feature.description}</p>
+                <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">{feature.title}</h3>
+                <p className="text-gray-600 dark:text-gray-400 leading-relaxed">{feature.description}</p>
               </div>
             ))}
           </div>
@@ -377,29 +401,29 @@ export default function Home() {
       </section>
 
       {/* Testimonials Section */}
-      <section className="py-20 bg-white">
+      <section className="py-20 bg-white dark:bg-gray-900">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-gray-900 mb-4">
+            <h2 className="text-4xl font-bold text-gray-900 dark:text-gray-100 mb-4">
               Trusted by Leading Businesses
             </h2>
-            <p className="text-xl text-gray-600">
+            <p className="text-xl text-gray-600 dark:text-gray-400">
               See what our clients say about our security services
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {testimonials.map((testimonial, index) => (
-              <div key={index} className="bg-gray-50 rounded-2xl p-8 hover:shadow-lg transition-shadow duration-300">
+              <div key={index} className="bg-gray-50 dark:bg-gray-950 rounded-2xl p-8 hover:shadow-lg transition-shadow duration-300 border border-gray-100 dark:border-gray-800">
                 <div className="flex mb-4">
                   {[...Array(testimonial.rating)].map((_, i) => (
                     <IconMapper key={i} name="Star" className="w-5 h-5 text-yellow-400 fill-current" />
                   ))}
                 </div>
-                <p className="text-gray-700 mb-6 italic">"{testimonial.content}"</p>
+                <p className="text-gray-700 dark:text-gray-300 mb-6 italic">"{testimonial.content}"</p>
                 <div>
-                  <div className="font-semibold text-gray-900">{testimonial.name}</div>
-                  <div className="text-sm text-gray-600">{testimonial.company}</div>
+                  <div className="font-semibold text-gray-900 dark:text-gray-100">{testimonial.name}</div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">{testimonial.company}</div>
                 </div>
               </div>
             ))}
@@ -407,8 +431,28 @@ export default function Home() {
         </div>
       </section>
 
+      <section className="py-16 bg-white dark:bg-gray-900">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-10">
+            <h2 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-3">Our Team & Portfolio</h2>
+            <p className="text-gray-600 dark:text-gray-400">A glimpse of the people and moments behind our service</p>
+          </div>
+          {Array.isArray(team) && team.length > 0 ? (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {team.map((src: string, i: number) => (
+                <div key={i} className="relative overflow-hidden rounded-2xl border border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-950">
+                  <img src={src} alt={`Team ${i + 1}`} className="w-full h-40 md:h-44 object-cover" loading="lazy" />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center text-gray-500 dark:text-gray-400">Team images coming soon.</div>
+          )}
+        </div>
+      </section>
+
       {/* CTA Section */}
-      <section className="py-20 bg-gradient-to-r from-blue-600 to-purple-600 text-white">
+      <section className="py-20 bg-gradient-to-r from-red-600 to-red-500 text-white">
         <div className="max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8">
           <h2 className="text-4xl font-bold mb-6">
             Ready to Secure Your Business?
@@ -424,16 +468,70 @@ export default function Home() {
               <IconMapper name="Shield" className="w-5 h-5" />
               Report an Issue
             </a>
-            <a
-              href="/contact"
+            <button
+              type="button"
+              onClick={() => setShowQuote(true)}
               className="inline-flex items-center justify-center gap-3 px-8 py-4 bg-white/20 backdrop-blur-sm text-white font-semibold rounded-xl border border-white/30 hover:bg-white/30 transition-all duration-300"
             >
               <IconMapper name="Phone" className="w-5 h-5" />
               Contact Sales Team
-            </a>
+            </button>
           </div>
         </div>
       </section>
+
+      <section className="py-10 bg-white dark:bg-gray-900">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center text-gray-500 dark:text-gray-400 mb-6">Trusted by teams like</div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 items-center opacity-80">
+            {['TechCorp','Metro Mall','City Bank','GlobalWare'].map((n, i) => (
+              <div key={i} className="text-center text-gray-400 dark:text-gray-500 text-sm">{n}</div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <Modal show={showQuote} onClose={() => setShowQuote(false)} maxWidth="xl">
+        <div className="p-6">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Request a Quote</h3>
+            <button onClick={() => setShowQuote(false)} className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
+              <IconMapper name="X" className="w-5 h-5" />
+            </button>
+          </div>
+          <form onSubmit={submitQuote} className="mt-4 space-y-4">
+            <input type="text" name="website" value={qData.website} onChange={(e) => setQData('website', e.target.value)} className="hidden" />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm text-gray-700 dark:text-gray-300">Full Name *</label>
+                <input value={qData.name} onChange={(e) => setQData('name', e.target.value)} required className="w-full mt-1 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-3 py-2" />
+                {qErrors.name && <div className="text-sm text-red-600">{qErrors.name}</div>}
+              </div>
+              <div>
+                <label className="text-sm text-gray-700 dark:text-gray-300">Email *</label>
+                <input type="email" value={qData.email} onChange={(e) => setQData('email', e.target.value)} required className="w-full mt-1 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-3 py-2" />
+                {qErrors.email && <div className="text-sm text-red-600">{qErrors.email}</div>}
+              </div>
+            </div>
+            <div>
+              <label className="text-sm text-gray-700 dark:text-gray-300">Subject *</label>
+              <input value={qData.subject} onChange={(e) => setQData('subject', e.target.value)} required className="w-full mt-1 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-3 py-2" />
+              {qErrors.subject && <div className="text-sm text-red-600">{qErrors.subject}</div>}
+            </div>
+            <div>
+              <label className="text-sm text-gray-700 dark:text-gray-300">Message *</label>
+              <textarea value={qData.message} onChange={(e) => setQData('message', e.target.value)} required className="w-full mt-1 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-3 py-2 min-h-[120px]" />
+              {qErrors.message && <div className="text-sm text-red-600">{qErrors.message}</div>}
+            </div>
+            <div className="flex justify-end">
+              <button type="submit" disabled={qProcessing} className="inline-flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-red-600 to-red-500 text-white rounded-lg font-medium disabled:opacity-60">
+                <IconMapper name="Send" className="w-5 h-5" />
+                Send
+              </button>
+            </div>
+          </form>
+        </div>
+      </Modal>
     </PublicLayout>
   );
 }

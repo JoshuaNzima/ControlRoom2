@@ -17,12 +17,15 @@ class ClientsController extends Controller
 			->when(request('search'), function($q, $search) {
 				$q->where('name', 'like', "%{$search}%");
 			})
+			->when(request('status'), function($q, $status){
+				$q->where('status', $status);
+			})
 			->orderBy('name')
 			->paginate(20);
 
 		return Inertia::render('ControlRoom/Clients/Index', [
 			'clients' => $clients,
-			'filters' => request()->only(['search']),
+			'filters' => request()->only(['search','status']),
 		]);
 	}
 
@@ -86,5 +89,39 @@ class ClientsController extends Controller
 		$client->save();
 
 		return back()->with('success', 'Supervisor assigned to client');
+	}
+
+	public function sitesJson(Request $request)
+	{
+		$search = trim((string) $request->input('search', ''));
+		$zoneId = $request->input('zone_id');
+
+		$sites = \App\Models\Guards\ClientSite::query()
+			->with(['client' => function ($q) { $q->select('id', 'name'); }])
+			->where('status', 'active')
+			->when($zoneId, function ($q) use ($zoneId) {
+				$q->where('zone_id', $zoneId);
+			})
+			->when($search, function ($q) use ($search) {
+				$q->where(function ($qq) use ($search) {
+					$qq->where('name', 'like', "%{$search}%")
+					   ->orWhereHas('client', function ($qc) use ($search) {
+						   $qc->where('name', 'like', "%{$search}%");
+					   });
+				});
+			})
+			->orderBy('name')
+			->limit(50)
+			->get(['id', 'client_id', 'name', 'status']);
+
+		$payload = $sites->map(function ($site) {
+			return [
+				'id' => $site->id,
+				'name' => $site->name,
+				'client_name' => optional($site->client)->name,
+			];
+		});
+
+		return response()->json($payload);
 	}
 }

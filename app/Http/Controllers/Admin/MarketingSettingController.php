@@ -18,6 +18,15 @@ class MarketingSettingController extends Controller
             'notify_on_new_lead' => false,
             'auto_assign_user_id' => null,
             'lead_sources' => ['referral','website','email','call','event','other'],
+            'social_links' => [
+                'facebook' => null,
+                'instagram' => null,
+                'linkedin' => null,
+                'x' => null,
+                'youtube' => null,
+            ],
+            'show_social_on_public' => false,
+            'show_social_in_email_footer' => false,
         ];
 
         $row = Setting::where('key', 'marketing.settings')->first();
@@ -49,6 +58,14 @@ class MarketingSettingController extends Controller
             'auto_assign_user_id' => ['nullable','integer','exists:users,id'],
             'lead_sources' => ['nullable','array'],
             'lead_sources.*' => ['string','max:100'],
+            'social_links' => ['nullable','array'],
+            'social_links.facebook' => ['nullable','string','max:255'],
+            'social_links.instagram' => ['nullable','string','max:255'],
+            'social_links.linkedin' => ['nullable','string','max:255'],
+            'social_links.x' => ['nullable','string','max:255'],
+            'social_links.youtube' => ['nullable','string','max:255'],
+            'show_social_on_public' => ['required','boolean'],
+            'show_social_in_email_footer' => ['required','boolean'],
         ]);
 
         $row = Setting::firstOrNew(['key' => 'marketing.settings']);

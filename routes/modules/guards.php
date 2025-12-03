@@ -9,6 +9,7 @@ use App\Http\Controllers\Guards\IncidentController;
 use App\Http\Controllers\Guards\OperationsController;
 use App\Http\Controllers\Guards\SergeantController;
 use App\Http\Controllers\Guards\SupervisorController;
+use App\Http\Controllers\Guards\SupervisorAssignmentController;
 use App\Http\Controllers\Guards\DownReportController;
 use App\Http\Controllers\HR\ArchivedController;
 use App\Http\Controllers\HR\LeaveController;
@@ -26,6 +27,11 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/reports', [SupervisorController::class, 'reports'])->name('reports');
 
         Route::get('guards/{guard}', [SupervisorController::class, 'showGuard'])->name('guards.show');
+
+        // Assignments management (Supervisor)
+        Route::get('/assignments', [SupervisorAssignmentController::class, 'index'])->name('assignments');
+        Route::post('/assignments/assign', [SupervisorAssignmentController::class, 'assign'])->name('assignments.assign');
+        Route::delete('/assignments/unassign/{id}', [SupervisorAssignmentController::class, 'unassign'])->name('assignments.unassign');
 
         // Attendance management
         Route::middleware(['permission:attendance.manage'])->group(function () {

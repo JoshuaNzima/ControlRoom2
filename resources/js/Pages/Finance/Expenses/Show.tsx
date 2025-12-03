@@ -1,6 +1,7 @@
 import React from 'react';
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import FinanceLayout from '@/Layouts/FinanceLayout';
+import AdminLayout from '@/Layouts/AdminLayout';
 import { formatCurrency, formatDate } from '@/utils/formatters';
 
 interface Expense {
@@ -29,6 +30,12 @@ interface Props {
 }
 
 export default function ShowExpense({ expense }: Props) {
+  const { url } = usePage();
+  const isAdminRoute = typeof url === 'string' && url.startsWith('/admin/');
+  const Layout = isAdminRoute ? AdminLayout : FinanceLayout;
+  const listRouteName = isAdminRoute ? 'admin.requisitions.index' : 'finance.expenses.index';
+  const editRouteName = isAdminRoute ? 'admin.requisitions.edit' : 'finance.expenses.edit';
+  const destroyRouteName = isAdminRoute ? 'admin.requisitions.destroy' : 'finance.expenses.destroy';
   const getStatusColor = (status: string) => {
     const colors: Record<string, { bg: string; text: string }> = {
       pending: { bg: 'bg-yellow-100', text: 'text-yellow-800' },
@@ -47,7 +54,7 @@ export default function ShowExpense({ expense }: Props) {
   const canModify = expense.status === 'pending';
 
   return (
-    <FinanceLayout title={`Requisition #${expense.id}`}>
+    <Layout title={`Requisition #${expense.id}`}>
       <Head title={`Requisition #${expense.id}`} />
       
       <div className="py-6">
@@ -63,7 +70,7 @@ export default function ShowExpense({ expense }: Props) {
               </p>
             </div>
             <Link
-              href={route('finance.expenses.index')}
+              href={route(listRouteName)}
               className="text-indigo-600 hover:text-indigo-900 font-medium"
             >
               ← Back to Requisitions
@@ -184,7 +191,7 @@ export default function ShowExpense({ expense }: Props) {
               {canModify && (
                 <div className="flex gap-3">
                   <Link
-                    href={route('finance.expenses.edit', expense.id)}
+                    href={route(editRouteName, expense.id)}
                     className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition font-medium text-sm"
                   >
                     Edit
@@ -196,7 +203,7 @@ export default function ShowExpense({ expense }: Props) {
                           'Are you sure you want to delete this expense? This action cannot be undone.'
                         )
                       ) {
-                        router.delete(route('finance.expenses.destroy', expense.id));
+                        router.delete(route(destroyRouteName, expense.id));
                       }
                     }}
                     className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-medium text-sm"
@@ -209,6 +216,6 @@ export default function ShowExpense({ expense }: Props) {
           </div>
         </div>
       </div>
-    </FinanceLayout>
+    </Layout>
   );
 }

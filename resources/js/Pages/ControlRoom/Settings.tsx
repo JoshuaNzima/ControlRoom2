@@ -1,5 +1,5 @@
 import React from 'react';
-import { Head } from '@inertiajs/react';
+import { Head, useForm, usePage } from '@inertiajs/react';
 import ControlRoomLayout from '@/Layouts/ControlRoomLayout';
 import { Card, CardContent, CardHeader } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
@@ -8,9 +8,19 @@ import { User } from '@/types';
 
 interface SettingsProps {
   auth?: { user?: { name?: string } };
+  settings?: { showCountsOverlay: boolean; scaleByRequired: boolean };
 }
 
-const Settings = ({ auth }: SettingsProps) => {
+const Settings = ({ auth, settings }: SettingsProps) => {
+  const { flash }: any = usePage().props;
+  const { data, setData, post, processing, errors } = useForm({
+    showCountsOverlay: settings?.showCountsOverlay ?? true,
+    scaleByRequired: settings?.scaleByRequired ?? true,
+  });
+
+  const handleSave = () => {
+    post(route('control-room.settings.update'));
+  };
   // Mock data for settings
   const systemSettings = [
     {
@@ -54,6 +64,11 @@ const Settings = ({ auth }: SettingsProps) => {
   return (
     <ControlRoomLayout title="Control Room Settings" user={auth?.user as User | undefined}>
       <Head title="Control Room Settings" />
+      {flash?.success && (
+        <div className="mb-4 rounded-lg border border-green-200 bg-green-50 text-green-800 px-4 py-3 dark:border-green-900 dark:bg-green-900/30 dark:text-green-300">
+          {flash.success}
+        </div>
+      )}
 
       <div className="space-y-6">
         {/* Settings Overview */}
@@ -71,6 +86,42 @@ const Settings = ({ auth }: SettingsProps) => {
               </div>
             </CardContent>
           </Card>
+
+        {/* Map Preferences */}
+        <Card className="dark:bg-gray-800 dark:border-gray-700">
+          <CardHeader>
+            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Map Preferences</h3>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600">
+                <div>
+                  <div className="font-medium text-gray-900 dark:text-gray-100">Show counts overlay on site pins</div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">Display onDuty/required label over each pin</div>
+                </div>
+                <label className="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                  <input type="checkbox" className="h-4 w-4" checked={data.showCountsOverlay} onChange={(e) => setData('showCountsOverlay', e.target.checked)} />
+                  <span>{data.showCountsOverlay ? 'On' : 'Off'}</span>
+                </label>
+              </div>
+              <div className="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600">
+                <div>
+                  <div className="font-medium text-gray-900 dark:text-gray-100">Scale pin size by required guards</div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">Larger pins for sites with higher requirements</div>
+                </div>
+                <label className="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                  <input type="checkbox" className="h-4 w-4" checked={data.scaleByRequired} onChange={(e) => setData('scaleByRequired', e.target.checked)} />
+                  <span>{data.scaleByRequired ? 'On' : 'Off'}</span>
+                </label>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <button type="button" onClick={handleSave} disabled={processing} className="px-3 py-2 rounded-md border dark:border-gray-600 dark:text-gray-100 dark:hover:bg-gray-700 disabled:opacity-60">Save</button>
+                <button type="button" onClick={() => { setData('showCountsOverlay', true); setData('scaleByRequired', true); }} className="px-3 py-2 text-sm text-gray-600 dark:text-gray-400">Reset defaults</button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
           <Card className="dark:bg-gray-800 dark:border-gray-700">
             <CardContent className="p-4">

@@ -5,6 +5,7 @@ import { Card } from '@/Components/ui/card';
 import { useForm } from '@inertiajs/react';
 import axios from 'axios';
 import IconMapper from '@/Components/IconMapper';
+import LocationPicker from '@/Components/Map/LocationPicker';
 import { formatCurrencyMWK } from '@/Components/format';
 
 interface Site {
@@ -60,6 +61,8 @@ export default function ClientDetailsModal({ client, open, onClose, services = [
     services_requested: '',
     special_instructions: '',
     status: 'active',
+    latitude: '',
+    longitude: '',
   });
 
   const handleAddSite = async (e: React.FormEvent) => {
@@ -76,7 +79,9 @@ export default function ClientDetailsModal({ client, open, onClose, services = [
         required_guards: 1,
         services_requested: '',
         special_instructions: '',
-        status: 'active'
+        status: 'active',
+        latitude: '',
+        longitude: '',
       });
       // ask parent to refresh client details if callback provided
       try {
@@ -281,6 +286,17 @@ export default function ClientDetailsModal({ client, open, onClose, services = [
                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                         placeholder="Enter requested services"
                       />
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-gray-700">Location</label>
+                      <div className="mt-1">
+                        <LocationPicker
+                          value={data.latitude && data.longitude ? { lat: Number(data.latitude), lng: Number(data.longitude) } : null}
+                          onChange={(coords) => setData({ ...data, latitude: coords.lat.toFixed(6), longitude: coords.lng.toFixed(6) } as any)}
+                          heightClassName="h-56"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">Tap the map to set exact coordinates. Dark mode supported.</p>
+                      </div>
                     </div>
                     <div className="md:col-span-2">
                       <label className="block text-sm font-medium text-gray-700">Special Instructions</label>

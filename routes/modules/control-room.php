@@ -4,14 +4,15 @@ use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
 Route::middleware(['auth'])->group(function () {
-    // Allow admins by role OR users with the specific permission
-    Route::middleware(['role_or_permission:admin|control_room_operator|operations_officer|supervisor|manager|control.dashboard.view'])->prefix('control-room')->name('control-room.')->group(function () {
+    // Allow specific roles or users with permission (admins excluded)
+    Route::middleware(['role_or_permission:control_room_operator|operations_officer|supervisor|manager|control.dashboard.view'])->prefix('control-room')->name('control-room.')->group(function () {
 		Route::get('/dashboard', [\App\Http\Controllers\ControlRoomDashboardController::class, 'index'])->name('dashboard');
 		Route::get('/monitoring', [\App\Http\Controllers\ControlRoom\MonitoringController::class, 'index'])->name('monitoring');
 		Route::get('/monitoring/data', [\App\Http\Controllers\ControlRoom\MonitoringController::class, 'data'])->name('monitoring.data');
 		Route::get('/monitoring/events', [\App\Http\Controllers\ControlRoom\MonitoringController::class, 'events'])->name('monitoring.events');
 		Route::get('/monitoring/guards', [\App\Http\Controllers\ControlRoom\MonitoringController::class, 'guards'])->name('monitoring.guards');
 		Route::get('/monitoring/incidents', [\App\Http\Controllers\ControlRoom\MonitoringController::class, 'incidents'])->name('monitoring.incidents');
+		Route::get('/monitoring/site/{site}', [\App\Http\Controllers\ControlRoom\MonitoringController::class, 'siteDetails'])->name('monitoring.site');
 		// Zones Management
         Route::resource('zones', \App\Http\Controllers\ControlRoom\ZoneController::class)->only(['index','store','update','destroy']);
         Route::get('zones/{zone}/assign', [\App\Http\Controllers\ControlRoom\ZoneController::class, 'assign'])->name('zones.assign');
@@ -19,13 +20,16 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('zones/{zone}/assignments/{assignment}', [\App\Http\Controllers\ControlRoom\ZoneController::class, 'unassign'])->name('zones.assignments.destroy');
         Route::get('zones/{zone}/reports', [\App\Http\Controllers\ControlRoom\ZoneController::class, 'reports'])->name('zones.reports');
         Route::get('zones/{zone}/map', [\App\Http\Controllers\ControlRoom\ZoneController::class, 'map'])->name('zones.map');
-		Route::get('/settings', fn() => Inertia::render('ControlRoom/Settings'))->name('settings');
+		Route::get('/settings', [\App\Http\Controllers\ControlRoom\SettingsController::class, 'index'])->name('settings');
+		Route::post('/settings', [\App\Http\Controllers\ControlRoom\SettingsController::class, 'update'])->name('settings.update');
 		
 		// Clients Management (view-only, assignments)
 		Route::get('/clients', [\App\Http\Controllers\ControlRoom\ClientsController::class, 'index'])->name('clients');
 		Route::get('/clients/{client}', [\App\Http\Controllers\ControlRoom\ClientsController::class, 'show'])->name('clients.show');
 		Route::post('/clients/{client}/assign-guard', [\App\Http\Controllers\ControlRoom\ClientsController::class, 'assignGuard'])->name('clients.assign-guard');
 		Route::post('/clients/{client}/assign-supervisor', [\App\Http\Controllers\ControlRoom\ClientsController::class, 'assignSupervisor'])->name('clients.assign-supervisor');
+		// Lightweight JSON for active client sites (for assignment pickers)
+		Route::get('/clients/sites/json', [\App\Http\Controllers\ControlRoom\ClientsController::class, 'sitesJson'])->name('clients.sites.json');
 
 		// Incidents Management
 		Route::resource('incidents', \App\Http\Controllers\ControlRoom\IncidentController::class);
@@ -45,8 +49,44 @@ Route::middleware(['auth'])->group(function () {
 		Route::delete('shifts/{shift}/unassign-guard/{guard}', [\App\Http\Controllers\ControlRoom\ShiftController::class, 'unassignGuard'])->name('shifts.unassign-guard');
 		Route::get('shifts/{shift}/schedule', [\App\Http\Controllers\ControlRoom\ShiftController::class, 'schedule'])->name('shifts.schedule');
 		
-		// Control Room specific management routes (decoupled from Supervisor controllers)
-		Route::get('/guards', [\App\Http\Controllers\ControlRoom\GuardsController::class, 'index'])->name('guards');
+		        // Control Room specific management routes (decoupled from Supervisor controllers)
+        Route::get('/guards', [\App\Http\Controllers\ControlRoom\GuardsController::class, 'index'])->name('guards');
+        // Guard management (create/update/delete), assignments and exports in Control Room
+        Route::prefix('guards')->name('guards.')->group(function () {
+            Route::get('/export', [\App\Http\Controllers\ControlRoom\GuardsController::class, 'export'])->name('export');
+            Route::post('/', [\App\Http\Controllers\ControlRoom\GuardManageController::class, 'store'])
+                ->middleware(['role_or_permission:operations_officer|manager|control_room_operator'])
+                ->name('store');
+            Route::put('/{guard}', [\App\Http\Controllers\ControlRoom\GuardManageController::class, 'update'])
+                ->middleware(['role_or_permission:operations_officer|manager|control_room_operator'])
+                ->name('update');
+            Route::delete('/{guard}', [\App\Http\Controllers\ControlRoom\GuardManageController::class, 'destroy'])
+                ->middleware(['role_or_permission:operations_officer|manager'])
+                ->name('destroy');
+            Route::post('/assign-supervisor', [\App\Http\Controllers\ControlRoom\GuardManageController::class, 'assignSupervisor'])
+                ->middleware(['role_or_permission:operations_officer|manager|control_room_operator'])
+                ->name('assign-supervisor');
+            Route::post('/unassign-supervisor', [\App\Http\Controllers\ControlRoom\GuardManageController::class, 'unassignSupervisor'])
+                ->middleware(['role_or_permission:operations_officer|manager|control_room_operator'])
+                ->name('unassign-supervisor');
+            Route::post('/assign-site', [\App\Http\Controllers\ControlRoom\GuardManageController::class, 'assignToSite'])
+                ->middleware(['role_or_permission:operations_officer|manager|control_room_operator'])
+                ->name('assign-site');
+            Route::post('/unassign-site', [\App\Http\Controllers\ControlRoom\GuardManageController::class, 'unassignFromSite'])
+                ->middleware(['role_or_permission:operations_officer|manager|control_room_operator'])
+                ->name('unassign-site');
+
+            // Status actions
+            Route::post('/{guard}/suspend', [\App\Http\Controllers\ControlRoom\GuardManageController::class, 'suspend'])
+                ->middleware(['role_or_permission:operations_officer|manager|hr|hr_manager'])
+                ->name('suspend');
+            Route::post('/{guard}/reinstate', [\App\Http\Controllers\ControlRoom\GuardManageController::class, 'reinstate'])
+                ->middleware(['role_or_permission:operations_officer|manager|hr|hr_manager'])
+                ->name('reinstate');
+            Route::post('/{guard}/dismiss', [\App\Http\Controllers\ControlRoom\GuardManageController::class, 'dismiss'])
+                ->middleware(['role_or_permission:operations_officer|manager|hr|hr_manager'])
+                ->name('dismiss');
+        });
 		Route::get('/assignments', [\App\Http\Controllers\ControlRoom\AssignmentsController::class, 'index'])->name('assignments.index');
 		Route::get('/reports', [\App\Http\Controllers\ControlRoom\ReportsController::class, 'index'])->name('reports');
 		Route::get('/clients', [\App\Http\Controllers\ControlRoom\ClientsController::class, 'index'])->name('clients');

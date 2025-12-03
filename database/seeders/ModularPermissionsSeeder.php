@@ -35,7 +35,7 @@ class ModularPermissionsSeeder extends Seeder
             
             'hr' => [
                 'hr.employees.view',
-                'hr.employees.create',
+                'hr.employees.create', 
                 'hr.employees.edit',
                 'hr.employees.delete',
                 'hr.payroll.view',
@@ -48,6 +48,7 @@ class ModularPermissionsSeeder extends Seeder
                 'hr.training.manage',
                 'hr.reports.view',
                 'hr.reports.generate',
+                'hr.careers.manage',
             ],
             
             'finance' => [

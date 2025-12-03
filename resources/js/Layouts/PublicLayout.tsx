@@ -29,6 +29,12 @@ export default function PublicLayout({ title = 'Coin Security', children }: Prop
                 Home
               </Link>
               <Link 
+                href={route('public.services')} 
+                className="text-sm font-medium text-gray-700 hover:text-red-600 transition-colors duration-200"
+              >
+                Services
+              </Link>
+              <Link 
                 href={route('login')} 
                 className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-red-600 to-red-500 text-white text-sm font-medium rounded-lg hover:shadow-lg transform hover:scale-105 transition-all duration-200"
               >
@@ -37,12 +43,12 @@ export default function PublicLayout({ title = 'Coin Security', children }: Prop
                 </svg>
                 Client Login
               </Link>
-              <a 
-                href="/contact" 
+              <Link 
+                href={route('public.contact')} 
                 className="text-sm font-medium text-gray-700 hover:text-red-600 transition-colors duration-200"
               >
                 Contact
-              </a>
+              </Link>
             </nav>
           </div>
         </div>
@@ -86,20 +92,20 @@ export default function PublicLayout({ title = 'Coin Security', children }: Prop
             <div>
               <h3 className="text-lg font-semibold mb-4">Services</h3>
               <ul className="space-y-2 text-gray-300">
-                <li><a href="#" className="hover:text-white transition-colors">Security Guards</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Live Monitoring</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Patrol Services</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Emergency Response</a></li>
+                <li><Link href={route('public.services.show', 'security-guards')} className="hover:text-white transition-colors">Security Guards</Link></li>
+                <li><Link href={route('public.services.show', 'cctv-surveillance')} className="hover:text-white transition-colors">Live Monitoring</Link></li>
+                <li><Link href={route('public.services.show', 'mobile-patrol')} className="hover:text-white transition-colors">Patrol Services</Link></li>
+                <li><Link href={route('public.services')} className="hover:text-white transition-colors">Emergency Response</Link></li>
               </ul>
             </div>
             
             <div>
               <h3 className="text-lg font-semibold mb-4">Company</h3>
               <ul className="space-y-2 text-gray-300">
-                <li><a href="#" className="hover:text-white transition-colors">About Us</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Careers</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Contact</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Privacy Policy</a></li>
+                <li><Link href={route('public.about')} className="hover:text-white transition-colors">About Us</Link></li>
+                <li><Link href={route('public.careers')} className="hover:text-white transition-colors">Careers</Link></li>
+                <li><Link href={route('public.contact')} className="hover:text-white transition-colors">Contact</Link></li>
+                <li><Link href={route('public.privacy')} className="hover:text-white transition-colors">Privacy Policy</Link></li>
               </ul>
             </div>
           </div>

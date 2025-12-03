@@ -1,12 +1,12 @@
 import React from 'react';
 import { Head, usePage } from '@inertiajs/react';
-import AdminLayout from '@/Layouts/AdminLayout';
+import HRLayout from '@/Layouts/HRLayout';
 import IconMapper from '@/Components/IconMapper';
 
 export default function HRDashboard() {
   const { auth } = (usePage().props as any);
   return (
-    <AdminLayout title="HR" user={auth?.user as any}>
+    <HRLayout title="HR" user={auth?.user as any}>
       <Head title="HR Dashboard" />
       <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
@@ -24,6 +24,18 @@ export default function HRDashboard() {
                 <div>
                   <div className="font-semibold text-gray-900 dark:text-gray-100">Leave Management</div>
                   <div className="text-sm text-gray-600 dark:text-gray-400">Review and manage guard leaves</div>
+                </div>
+              </div>
+            </a>
+
+            <a href={route('hr.jobs.index')} className="group block rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-6 shadow hover:shadow-md transition">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-r from-red-600 to-red-500 flex items-center justify-center text-white">
+                  <IconMapper name="Megaphone" className="w-6 h-6" />
+                </div>
+                <div>
+                  <div className="font-semibold text-gray-900 dark:text-gray-100">Careers</div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">Manage public job postings</div>
                 </div>
               </div>
             </a>
@@ -54,6 +66,6 @@ export default function HRDashboard() {
           </div>
         </div>
       </div>
-    </AdminLayout>
+    </HRLayout>
   );
 }

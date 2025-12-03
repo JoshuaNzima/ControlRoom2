@@ -2,6 +2,7 @@ declare module 'leaflet' {
     export interface Map {
         setView(center: LatLngExpression, zoom: number): this;
         getZoom(): number;
+        fitBounds(bounds: LatLngTuple[] | any, options?: any): this;
     }
 
     export type LatLngExpression = L.LatLngExpression | [number, number] | { lat: number; lng: number };
@@ -9,6 +10,10 @@ declare module 'leaflet' {
 
     export class Icon {
         constructor(options: IconOptions);
+    }
+
+    export class DivIcon extends Icon {
+        constructor(options?: DivIconOptions);
     }
 
     export interface IconOptions {
@@ -22,9 +27,18 @@ declare module 'leaflet' {
         className?: string;
     }
 
+    export interface DivIconOptions {
+        html?: string | HTMLElement;
+        className?: string;
+        iconSize?: [number, number];
+        iconAnchor?: [number, number];
+        popupAnchor?: [number, number];
+    }
+
     export function map(id: string, options?: MapOptions): Map;
     export function tileLayer(urlTemplate: string, options?: TileLayerOptions): TileLayer;
     export function circleMarker(latlng: LatLngExpression, options?: CircleMarkerOptions): CircleMarker;
+    export function divIcon(options?: DivIconOptions): DivIcon;
 
     export interface MapOptions {
         center?: LatLngExpression;
