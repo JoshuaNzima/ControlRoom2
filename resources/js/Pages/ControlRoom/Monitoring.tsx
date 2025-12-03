@@ -6,6 +6,7 @@ import { Button } from '@/Components/ui/button';
 import { Badge } from '@/Components/ui/badge';
 import { User } from '@/types';
 import GuardLocationMap from '@/Components/Map/GuardLocationMap';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/Components/ui/dialog';
 
 interface Location {
   lat: number;
@@ -45,7 +46,9 @@ interface SiteStatus {
   id: number;
   name: string;
   status: 'active' | 'inactive';
-  guards: number;
+  required?: number;
+  onDuty?: number;
+  coverageStatus?: 'full' | 'partial' | 'none' | 'unknown';
   lastUpdate: string;
   alerts: number;
   location: Location;
@@ -92,6 +95,19 @@ const Monitoring = ({ auth, metrics, liveStatus: initialLiveStatus = [], recentA
   const [range, setRange] = React.useState<string>(activeRange || '1h');
   const [refreshMs, setRefreshMs] = React.useState<number>(30000);
   const [lastUpdated, setLastUpdated] = React.useState<Date | null>(null);
+  const [siteModalOpen, setSiteModalOpen] = React.useState(false);
+  const [siteDetails, setSiteDetails] = React.useState<any | null>(null);
+  const [siteLoading, setSiteLoading] = React.useState(false);
+  const [showCountsOverlay, setShowCountsOverlay] = React.useState<boolean>(() => {
+    if (typeof window === 'undefined') return true;
+    const v = localStorage.getItem('monitor.map.showCountsOverlay');
+    return v == null ? true : v === 'true';
+  });
+  const [scaleByRequired, setScaleByRequired] = React.useState<boolean>(() => {
+    if (typeof window === 'undefined') return true;
+    const v = localStorage.getItem('monitor.map.scaleByRequired');
+    return v == null ? true : v === 'true';
+  });
 
   React.useEffect(() => {
     let isMounted = true;
@@ -138,6 +154,21 @@ const Monitoring = ({ auth, metrics, liveStatus: initialLiveStatus = [], recentA
     };
   }, [range, refreshMs]);
 
+  async function handleSiteClick(site: any) {
+    try {
+      setSiteLoading(true);
+      setSiteModalOpen(true);
+      setSiteDetails(null);
+      const res = await fetch(route('control-room.monitoring.site', site.id), { headers: { 'Accept': 'application/json' } });
+      if (res.ok) {
+        const data = await res.json();
+        setSiteDetails(data);
+      }
+    } finally {
+      setSiteLoading(false);
+    }
+  }
+
   return (
     <ControlRoomLayout title="Live Monitoring" user={auth?.user as User | undefined}>
       <Head title="Live Monitoring" />
@@ -167,6 +198,47 @@ const Monitoring = ({ auth, metrics, liveStatus: initialLiveStatus = [], recentA
               </button>
             ))}
           </div>
+
+        {/* Site Drilldown Modal */}
+        <Dialog open={siteModalOpen} onOpenChange={setSiteModalOpen}>
+          <DialogContent className="w-full max-w-lg dark:bg-gray-800 dark:text-gray-100">
+            <DialogHeader>
+              <DialogTitle>{siteDetails?.name || 'Site details'}</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-3">
+              {siteLoading && <div className="text-sm text-gray-500 dark:text-gray-400">Loading...</div>}
+              {siteDetails && (
+                <>
+                  <div className="text-sm text-gray-700 dark:text-gray-300">
+                    <div>Client: {siteDetails.client || '-'}</div>
+                    <div>Address: {siteDetails.address || '-'}</div>
+                    <div>Status: {siteDetails.status}</div>
+                    <div>Coverage: {siteDetails.coverageStatus} • On duty: {siteDetails.onDuty} / Required: {siteDetails.required}</div>
+                    <div>Location: {siteDetails.latitude?.toFixed ? siteDetails.latitude.toFixed(6) : siteDetails.latitude}, {siteDetails.longitude?.toFixed ? siteDetails.longitude.toFixed(6) : siteDetails.longitude}</div>
+                  </div>
+                  <div className="border-t pt-3">
+                    <div className="text-sm font-medium mb-1">Attendance Today</div>
+                    <div className="text-xs text-gray-600 dark:text-gray-400">Present: {siteDetails.attendanceSummary?.present ?? 0} • Late: {siteDetails.attendanceSummary?.late ?? 0} • Absent: {siteDetails.attendanceSummary?.absent ?? 0} • On duty: {siteDetails.attendanceSummary?.on_duty ?? 0}</div>
+                  </div>
+                  <div className="border-t pt-3">
+                    <div className="text-sm font-medium mb-1">Assigned Guards</div>
+                    <div className="max-h-40 overflow-y-auto space-y-1">
+                      {(siteDetails.assignedGuards || []).map((g: any) => (
+                        <div key={g.id} className="text-sm flex items-center justify-between p-2 rounded-md bg-gray-50 dark:bg-gray-700">
+                          <span>{g.name}</span>
+                          <span className="text-xs text-gray-500 dark:text-gray-400">{g.status}</span>
+                        </div>
+                      ))}
+                      {(!siteDetails.assignedGuards || siteDetails.assignedGuards.length === 0) && (
+                        <div className="text-xs text-gray-500 dark:text-gray-400">No assigned guards</div>
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
 
           <div className="flex flex-wrap items-center gap-3 justify-between md:justify-end">
             <div className="flex items-center gap-2">
@@ -345,7 +417,13 @@ const Monitoring = ({ auth, metrics, liveStatus: initialLiveStatus = [], recentA
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
           <Card className="dark:bg-gray-800 dark:border-gray-700 xl:col-span-2">
             <CardHeader>
-              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Live Guard Tracking</h3>
+              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Live Site Coverage</h3>
+              <div className="mt-1 text-xs text-gray-600 dark:text-gray-400 flex flex-wrap gap-3">
+                <span className="flex items-center gap-1"><span className="inline-block w-2 h-2 rounded-full bg-green-500" /> Full</span>
+                <span className="flex items-center gap-1"><span className="inline-block w-2 h-2 rounded-full bg-amber-500" /> Partial</span>
+                <span className="flex items-center gap-1"><span className="inline-block w-2 h-2 rounded-full bg-red-500" /> None</span>
+                <span className="flex items-center gap-1"><span className="inline-block w-2 h-2 rounded-full bg-gray-500" /> Unknown</span>
+              </div>
             </CardHeader>
             <CardContent>
               <div className="h-[500px] relative">
@@ -355,6 +433,9 @@ const Monitoring = ({ auth, metrics, liveStatus: initialLiveStatus = [], recentA
                     ...site,
                     location: site.location || { lat: 0, lng: 0 } // Add proper location from your data
                   }))}
+                  onSiteClick={handleSiteClick}
+                  showCountsOverlay={showCountsOverlay}
+                  scaleByRequired={scaleByRequired}
                 />
               </div>
             </CardContent>
@@ -423,7 +504,7 @@ const Monitoring = ({ auth, metrics, liveStatus: initialLiveStatus = [], recentA
                   <div className="flex-1">
                     <div className="font-medium text-gray-900 dark:text-gray-100">{site.name}</div>
                     <div className="text-sm text-gray-600 dark:text-gray-400">
-                      {site.guards} Guards • Last update: {site.lastUpdate}
+                      On duty: {site.onDuty ?? 0} / Required: {site.required ?? 0} • Last update: {site.lastUpdate}
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
@@ -432,6 +513,20 @@ const Monitoring = ({ auth, metrics, liveStatus: initialLiveStatus = [], recentA
                         {site.alerts} Alert{site.alerts > 1 ? 's' : ''}
                       </Badge>
                     )}
+                    <Badge
+                      variant={site.coverageStatus === 'full' ? 'default' : site.coverageStatus === 'partial' ? 'warning' : site.coverageStatus === 'none' ? 'destructive' : 'secondary'}
+                      className={`text-xs capitalize ${
+                        site.coverageStatus === 'full'
+                          ? 'bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100'
+                          : site.coverageStatus === 'partial'
+                          ? 'bg-amber-100 text-amber-800 dark:bg-amber-800 dark:text-amber-100'
+                          : site.coverageStatus === 'none'
+                          ? 'bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100'
+                          : 'bg-gray-100 text-gray-800 dark:bg-gray-600 dark:text-gray-100'
+                      }`}
+                    >
+                      {site.coverageStatus || 'unknown'}
+                    </Badge>
                     <Badge 
                       variant={site.status === 'active' ? 'default' : 'secondary'}
                       className={`text-xs ${

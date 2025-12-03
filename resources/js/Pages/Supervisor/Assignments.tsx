@@ -21,7 +21,7 @@ interface Assignment {
   client_name: string;
   start_date: string;
   end_date?: string;
-  assignment_type: 'permanent' | 'temporary';
+  assignment_type: 'permanent' | 'temporary' | 'relief';
 }
 
 interface Guard {
@@ -44,7 +44,7 @@ export default function Assignments({ guards, sites }: AssignmentsProps) {
     client_site_id: string;
     start_date: string;
     end_date: string;
-    assignment_type: 'permanent' | 'temporary';
+    assignment_type: 'permanent' | 'temporary' | 'relief';
     notes: string;
   }>({
     client_site_id: '',
@@ -200,7 +200,7 @@ export default function Assignments({ guards, sites }: AssignmentsProps) {
                 </label>
                 <select
                   value={formData.assignment_type}
-                  onChange={(e) => setFormData({...formData, assignment_type: e.target.value as 'permanent' | 'temporary'})}
+                  onChange={(e) => setFormData({...formData, assignment_type: e.target.value as 'permanent' | 'temporary' | 'relief'})}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg"
                 >
                   <option value="permanent">Permanent</option>

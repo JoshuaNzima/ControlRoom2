@@ -12,6 +12,7 @@ Route::middleware(['auth'])->group(function () {
 		Route::get('/monitoring/events', [\App\Http\Controllers\ControlRoom\MonitoringController::class, 'events'])->name('monitoring.events');
 		Route::get('/monitoring/guards', [\App\Http\Controllers\ControlRoom\MonitoringController::class, 'guards'])->name('monitoring.guards');
 		Route::get('/monitoring/incidents', [\App\Http\Controllers\ControlRoom\MonitoringController::class, 'incidents'])->name('monitoring.incidents');
+		Route::get('/monitoring/site/{site}', [\App\Http\Controllers\ControlRoom\MonitoringController::class, 'siteDetails'])->name('monitoring.site');
 		// Zones Management
         Route::resource('zones', \App\Http\Controllers\ControlRoom\ZoneController::class)->only(['index','store','update','destroy']);
         Route::get('zones/{zone}/assign', [\App\Http\Controllers\ControlRoom\ZoneController::class, 'assign'])->name('zones.assign');
@@ -49,8 +50,9 @@ Route::middleware(['auth'])->group(function () {
 		
 		        // Control Room specific management routes (decoupled from Supervisor controllers)
         Route::get('/guards', [\App\Http\Controllers\ControlRoom\GuardsController::class, 'index'])->name('guards');
-        // Guard management (create/update/delete) and assignments in Control Room
+        // Guard management (create/update/delete), assignments and exports in Control Room
         Route::prefix('guards')->name('guards.')->group(function () {
+            Route::get('/export', [\App\Http\Controllers\ControlRoom\GuardsController::class, 'export'])->name('export');
             Route::post('/', [\App\Http\Controllers\ControlRoom\GuardManageController::class, 'store'])
                 ->middleware(['role_or_permission:operations_officer|manager|control_room_operator'])
                 ->name('store');
@@ -75,13 +77,13 @@ Route::middleware(['auth'])->group(function () {
 
             // Status actions
             Route::post('/{guard}/suspend', [\App\Http\Controllers\ControlRoom\GuardManageController::class, 'suspend'])
-                ->middleware(['role_or_permission:operations_officer|manager'])
+                ->middleware(['role_or_permission:operations_officer|manager|hr|hr_manager'])
                 ->name('suspend');
             Route::post('/{guard}/reinstate', [\App\Http\Controllers\ControlRoom\GuardManageController::class, 'reinstate'])
-                ->middleware(['role_or_permission:operations_officer|manager'])
+                ->middleware(['role_or_permission:operations_officer|manager|hr|hr_manager'])
                 ->name('reinstate');
             Route::post('/{guard}/dismiss', [\App\Http\Controllers\ControlRoom\GuardManageController::class, 'dismiss'])
-                ->middleware(['role_or_permission:operations_officer|manager'])
+                ->middleware(['role_or_permission:operations_officer|manager|hr|hr_manager'])
                 ->name('dismiss');
         });
 		Route::get('/assignments', [\App\Http\Controllers\ControlRoom\AssignmentsController::class, 'index'])->name('assignments.index');

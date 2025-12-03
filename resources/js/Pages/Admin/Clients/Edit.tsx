@@ -1,10 +1,14 @@
 import React from 'react';
 import { router, useForm } from '@inertiajs/react';
 import AdminLayout from '@/Layouts/AdminLayout';
+import { Button } from '@/Components/ui/button';
+import EditSiteModal from '@/Components/Clients/EditSiteModal';
+import AddSiteModal from '@/Components/Clients/AddSiteModal';
 
 type Service = { id: number; name: string; monthly_price: number };
+type Zone = { id: number; name: string };
 
-export default function Edit({ client, services }: { client: any; services?: Service[] }) {
+export default function Edit({ client, services, zones = [] }: { client: any; services?: Service[]; zones?: Zone[] }) {
   const { data, setData, put, processing, errors } = useForm({
     name: client.name || '',
     contact_person: client.contact_person || '',
@@ -24,6 +28,14 @@ export default function Edit({ client, services }: { client: any; services?: Ser
     e.preventDefault();
     put(route('admin.clients.update', client.id));
   }
+
+  const [addSiteOpen, setAddSiteOpen] = React.useState(false);
+  const [editSiteOpen, setEditSiteOpen] = React.useState(false);
+  const [selectedSiteId, setSelectedSiteId] = React.useState<number | null>(null);
+
+  const refreshClient = React.useCallback(() => {
+    router.reload({ only: ['client'] });
+  }, []);
 
   return (
     <AdminLayout title="Edit Client">
@@ -99,6 +111,48 @@ export default function Edit({ client, services }: { client: any; services?: Ser
             <a href={route('admin.clients.index')} className="btn">Cancel</a>
           </div>
         </form>
+
+        {/* Sites Management */}
+        <div className="mt-10">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-xl font-semibold">Sites</h2>
+            <Button size="sm" onClick={() => setAddSiteOpen(true)}>Add Site</Button>
+          </div>
+          <div className="space-y-2">
+            {(client.sites || []).length === 0 && (
+              <div className="text-sm text-gray-600">No sites yet.</div>
+            )}
+            {(client.sites || []).map((s: any) => (
+              <div key={s.id} className="p-3 border rounded-md flex items-center justify-between dark:border-gray-700">
+                <div className="min-w-0">
+                  <div className="font-medium truncate">{s.name}</div>
+                  <div className="text-xs text-gray-500 truncate">{s.address}</div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className={`px-2 py-1 text-xs rounded-full ${s.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>{s.status}</span>
+                  <Button size="sm" variant="outline" onClick={() => { setSelectedSiteId(s.id); setEditSiteOpen(true); }} className="dark:border-gray-600">Edit</Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Modals */}
+        <AddSiteModal
+          open={addSiteOpen}
+          onClose={() => setAddSiteOpen(false)}
+          clientId={client.id}
+          onAdded={refreshClient}
+          zones={zones}
+        />
+        <EditSiteModal
+          open={editSiteOpen}
+          onClose={() => setEditSiteOpen(false)}
+          clientId={client.id}
+          siteId={selectedSiteId}
+          onSaved={refreshClient}
+          zones={zones}
+        />
       </div>
     </AdminLayout>
   );

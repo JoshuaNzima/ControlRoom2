@@ -71,6 +71,9 @@ export default function Dashboard({
   const [sortField, setSortField] = useState<'name' | 'employee_id' | 'status'>('name');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [filterStatus, setFilterStatus] = useState<'all' | 'on_duty' | 'off_duty'>('all');
+  const [submitting, setSubmitting] = useState<boolean>(false);
+  const [checkInTimeInput, setCheckInTimeInput] = useState<string>(new Date().toTimeString().slice(0, 5));
+  const [checkOutTimeInput, setCheckOutTimeInput] = useState<string>(new Date().toTimeString().slice(0, 5));
   
 
   useEffect(() => {
@@ -123,12 +126,15 @@ export default function Dashboard({
     setSelectedGuard(guard);
     setAction('checkin');
     setNotes('');
+    setSelectedSite(activeScan?.site_id ?? null);
+    setCheckInTimeInput(new Date().toTimeString().slice(0, 5));
   };
 
   const handleCheckOut = (guard: Guard) => {
     setSelectedGuard(guard);
     setAction('checkout');
     setNotes('');
+    setCheckOutTimeInput(new Date().toTimeString().slice(0, 5));
   };
 
   const submitCheckIn = () => {
@@ -138,6 +144,8 @@ export default function Dashboard({
     formData.append('client_site_id', String(selectedSite));
     if (notes) formData.append('notes', notes);
     if (photoFile) formData.append('photo', photoFile);
+    if (checkInTimeInput) formData.append('time', checkInTimeInput);
+    setSubmitting(true);
     router.post(route('supervisor.attendance.check-in'), formData, {
       forceFormData: true,
       onSuccess: () => {
@@ -147,6 +155,7 @@ export default function Dashboard({
         setPhotoFile(null);
         setAction(null);
       },
+      onFinish: () => setSubmitting(false),
     });
   };
 
@@ -156,6 +165,8 @@ export default function Dashboard({
     formData.append('guard_id', String(selectedGuard.id));
     if (notes) formData.append('notes', notes);
     if (photoFile) formData.append('photo', photoFile);
+    if (checkOutTimeInput) formData.append('time', checkOutTimeInput);
+    setSubmitting(true);
     router.post(route('supervisor.attendance.check-out'), formData, {
       forceFormData: true,
       onSuccess: () => {
@@ -164,6 +175,7 @@ export default function Dashboard({
         setPhotoFile(null);
         setAction(null);
       },
+      onFinish: () => setSubmitting(false),
     });
   };
 
@@ -442,6 +454,7 @@ export default function Dashboard({
                   onChange={(e) => setSelectedSite(Number(e.target.value))}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
                   required
+                  disabled={!!activeScan}
                 >
                   <option value="">Choose a site...</option>
                   {sites.map((site) => (
@@ -450,6 +463,16 @@ export default function Dashboard({
                     </option>
                   ))}
                 </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Time *</label>
+                <input
+                  type="time"
+                  value={checkInTimeInput}
+                  onChange={(e) => setCheckInTimeInput(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                  required
+                />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Photo *</label>
@@ -480,10 +503,10 @@ export default function Dashboard({
               <div className="flex gap-3">
                 <button
                   onClick={submitCheckIn}
-                  disabled={!selectedSite}
+                  disabled={!selectedSite || submitting}
                   className="flex-1 px-4 py-3 bg-green-600 hover:bg-green-700 disabled:bg-gray-300 text-white rounded-lg font-bold transition"
                 >
-                  Confirm Check In
+                  {submitting ? 'Processing…' : 'Confirm Check In'}
                 </button>
                 <button onClick={() => setAction(null)} className="px-4 py-3 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-bold transition">
                   Cancel
@@ -505,6 +528,16 @@ export default function Dashboard({
                     <span className="font-semibold">Site:</span> {selectedGuard.attendance.site}
                   </p>
                 )}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Time *</label>
+                <input
+                  type="time"
+                  value={checkOutTimeInput}
+                  onChange={(e) => setCheckOutTimeInput(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                  required
+                />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Photo *</label>
@@ -533,8 +566,8 @@ export default function Dashboard({
                 />
               </div>
               <div className="flex gap-3">
-                <button onClick={submitCheckOut} className="flex-1 px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-bold transition">
-                  Confirm Check Out
+                <button onClick={submitCheckOut} disabled={submitting} className="flex-1 px-4 py-3 bg-red-600 hover:bg-red-700 disabled:bg-gray-300 text-white rounded-lg font-bold transition">
+                  {submitting ? 'Processing…' : 'Confirm Check Out'}
                 </button>
                 <button onClick={() => setAction(null)} className="px-4 py-3 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-bold transition">
                   Cancel

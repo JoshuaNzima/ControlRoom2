@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/Components/u
 import { Button } from '@/Components/ui/button';
 import { useForm } from '@inertiajs/react';
 import IconMapper from '@/Components/IconMapper';
+import LocationPicker from '@/Components/Map/LocationPicker';
 
 interface Service {
   id: number;
@@ -292,6 +293,15 @@ export default function AddClientModal({ open, onClose, services = [], zones = [
                   onChange={(e) => setData('site', { ...data.site, address: e.target.value })} 
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg" 
                 />
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Location</label>
+                <LocationPicker
+                  value={data.site.latitude && data.site.longitude ? { lat: Number(data.site.latitude), lng: Number(data.site.longitude) } : null}
+                  onChange={(coords) => setData('site', { ...data.site, latitude: coords.lat.toFixed(6), longitude: coords.lng.toFixed(6) })}
+                  heightClassName="h-64"
+                />
+                <p className="text-xs text-gray-500 mt-1">Tap the map to set exact coordinates. Keeps consistency with dark mode.</p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Zone</label>

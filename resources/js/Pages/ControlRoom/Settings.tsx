@@ -11,6 +11,19 @@ interface SettingsProps {
 }
 
 const Settings = ({ auth }: SettingsProps) => {
+  const [showCountsOverlay, setShowCountsOverlay] = React.useState<boolean>(() => {
+    const v = localStorage.getItem('monitor.map.showCountsOverlay');
+    return v == null ? true : v === 'true';
+  });
+  const [scaleByRequired, setScaleByRequired] = React.useState<boolean>(() => {
+    const v = localStorage.getItem('monitor.map.scaleByRequired');
+    return v == null ? true : v === 'true';
+  });
+
+  const saveMapPrefs = () => {
+    localStorage.setItem('monitor.map.showCountsOverlay', String(showCountsOverlay));
+    localStorage.setItem('monitor.map.scaleByRequired', String(scaleByRequired));
+  };
   // Mock data for settings
   const systemSettings = [
     {
@@ -71,6 +84,42 @@ const Settings = ({ auth }: SettingsProps) => {
               </div>
             </CardContent>
           </Card>
+
+        {/* Map Preferences */}
+        <Card className="dark:bg-gray-800 dark:border-gray-700">
+          <CardHeader>
+            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Map Preferences</h3>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600">
+                <div>
+                  <div className="font-medium text-gray-900 dark:text-gray-100">Show counts overlay on site pins</div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">Display onDuty/required label over each pin</div>
+                </div>
+                <label className="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                  <input type="checkbox" className="h-4 w-4" checked={showCountsOverlay} onChange={(e) => setShowCountsOverlay(e.target.checked)} />
+                  <span>{showCountsOverlay ? 'On' : 'Off'}</span>
+                </label>
+              </div>
+              <div className="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600">
+                <div>
+                  <div className="font-medium text-gray-900 dark:text-gray-100">Scale pin size by required guards</div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">Larger pins for sites with higher requirements</div>
+                </div>
+                <label className="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                  <input type="checkbox" className="h-4 w-4" checked={scaleByRequired} onChange={(e) => setScaleByRequired(e.target.checked)} />
+                  <span>{scaleByRequired ? 'On' : 'Off'}</span>
+                </label>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <button type="button" onClick={saveMapPrefs} className="px-3 py-2 rounded-md border dark:border-gray-600 dark:text-gray-100 dark:hover:bg-gray-700">Save</button>
+                <button type="button" onClick={() => { setShowCountsOverlay(true); setScaleByRequired(true); }} className="px-3 py-2 text-sm text-gray-600 dark:text-gray-400">Reset defaults</button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
           <Card className="dark:bg-gray-800 dark:border-gray-700">
             <CardContent className="p-4">

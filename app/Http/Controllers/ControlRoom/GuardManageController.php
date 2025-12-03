@@ -224,7 +224,10 @@ class GuardManageController extends Controller
     protected function authorizeOps(): void
     {
         if (!auth()->check()) abort(403);
-        if (!auth()->user()->hasAnyRole(['operations_officer','manager','super_admin'])) abort(403);
+        $u = auth()->user();
+        if (!$u->hasAnyRole(['operations_officer','manager','super_admin','hr','hr_manager']) && !$u->can('hr.employees.manage')) {
+            abort(403);
+        }
     }
 
     private function generateGuardEmployeeId(): string

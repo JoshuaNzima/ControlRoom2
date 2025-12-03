@@ -77,7 +77,7 @@ class CheckpointScanController extends Controller
                 'supervisor_name' => auth()->user()->name,
                 'site_name' => $checkpoint->clientSite->name,
                 'client_name' => $checkpoint->clientSite->client->name,
-                'scanned_at' => $scan->scanned_at->toISOString(),
+                'scanned_at' => $scan->scanned_at ? $scan->scanned_at->toIso8601String() : now()->toIso8601String(),
                 'location_verified' => $locationVerified,
                 'latitude' => $validated['latitude'] ?? null,
                 'longitude' => $validated['longitude'] ?? null,

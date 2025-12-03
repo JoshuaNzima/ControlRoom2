@@ -91,6 +91,62 @@ class MonitoringController extends Controller
         return response()->json($incidents);
     }
 
+    public function siteDetails(ClientSite $site)
+    {
+        $site->load([
+            'client:id,name',
+            'guards:id,name,status',
+            'attendance' => function ($q) {
+                $q->whereDate('date', today());
+            },
+        ]);
+
+        $required = (int) ($site->required_guards ?? 0);
+        $onDuty = (int) $site->getCurrentGuardsCount();
+        $coverageStatus = $required > 0
+            ? ($onDuty >= $required ? 'full' : ($onDuty > 0 ? 'partial' : 'none'))
+            : ($onDuty > 0 ? 'partial' : 'unknown');
+
+        $attendanceSummary = [
+            'present' => $site->attendance->where('status', 'present')->count(),
+            'late' => $site->attendance->where('status', 'late')->count(),
+            'absent' => $site->attendance->where('status', 'absent')->count(),
+            'on_duty' => $onDuty,
+        ];
+
+        $assignedGuards = $site->guards->map(function ($g) {
+            return [
+                'id' => $g->id,
+                'name' => $g->name,
+                'status' => $g->status,
+            ];
+        })->values();
+
+        return response()->json([
+            'id' => $site->id,
+            'name' => $site->name,
+            'client' => $site->client?->name,
+            'address' => $site->address,
+            'status' => $site->status,
+            'required' => $required,
+            'onDuty' => $onDuty,
+            'coverageStatus' => $coverageStatus,
+            'latitude' => $site->latitude,
+            'longitude' => $site->longitude,
+            'assignedGuards' => $assignedGuards,
+            'attendanceToday' => $site->attendance->map(function ($a) {
+                return [
+                    'id' => $a->id,
+                    'guard_id' => $a->guard_id,
+                    'status' => $a->status,
+                    'check_in_time' => $a->check_in_time,
+                    'check_out_time' => $a->check_out_time,
+                ];
+            })->values(),
+            'attendanceSummary' => $attendanceSummary,
+        ]);
+    }
+
     private function getLiveSiteStatus()
     {
         return Cache::remember('monitoring.live_status', 60, function () {
@@ -101,11 +157,19 @@ class MonitoringController extends Controller
             }])
             ->get()
             ->map(function ($site) {
+                $required = (int) ($site->required_guards ?? 0);
+                $onDuty = (int) $site->getCurrentGuardsCount();
+                $coverageStatus = $required > 0
+                    ? ($onDuty >= $required ? 'full' : ($onDuty > 0 ? 'partial' : 'none'))
+                    : ($onDuty > 0 ? 'partial' : 'unknown');
+
                 return [
                     'id' => $site->id,
                     'name' => $site->name,
                     'status' => $site->status,
-                    'guards' => $site->guards->count(),
+                    'required' => $required,
+                    'onDuty' => $onDuty,
+                    'coverageStatus' => $coverageStatus,
                     'lastUpdate' => $site->updated_at->diffForHumans(),
                     'alerts' => $site->cameraAlerts->count(),
                     'location' => [
@@ -126,12 +190,21 @@ class MonitoringController extends Controller
             
             // Get recent events and format for activity feed
             $this->getRecentEvents($rangeMinutes)->take(10)->each(function ($event) use ($activity) {
+                $id = data_get($event, 'id');
+                $type = data_get($event, 'type');
+                $guardName = data_get($event, 'guard.name') ?? data_get($event, 'reporter') ?? 'System';
+                $site = data_get($event, 'site', 'Unknown');
+                $timestamp = data_get($event, 'timestamp');
+                $time = is_object($timestamp) && method_exists($timestamp, 'diffForHumans')
+                    ? $timestamp->diffForHumans()
+                    : (string) $timestamp;
+
                 $activity->push([
-                    'id' => $event->id ?? uniqid(),
-                    'type' => $event->type,
-                    'guard' => $event->guard['name'] ?? $event->reporter ?? 'System',
-                    'site' => $event->site ?? 'Unknown',
-                    'time' => $event->timestamp->diffForHumans(),
+                    'id' => $id ?? uniqid(),
+                    'type' => $type,
+                    'guard' => $guardName,
+                    'site' => $site,
+                    'time' => $time,
                     'status' => $this->getEventStatus($event)
                 ]);
             });
@@ -150,7 +223,8 @@ class MonitoringController extends Controller
             'info' => 'success'
         ];
         
-        return $severityMap[$event->severity] ?? 'info';
+        $sev = data_get($event, 'severity');
+        return $severityMap[$sev] ?? 'info';
     }
 
     private function getMetrics()
@@ -221,7 +295,7 @@ class MonitoringController extends Controller
                         'title' => $incident->type,
                         'description' => $incident->description,
                         'location' => $incident->location,
-                        'reporter' => $incident->reporter->name,
+                        'reporter' => $incident->reporter?->name,
                         'site' => $incident->clientSite?->name,
                         'timestamp' => $incident->created_at,
                     ]);
@@ -264,10 +338,10 @@ class MonitoringController extends Controller
                         'title' => 'Camera Alert',
                         'description' => $alert->description,
                         'location' => [
-                            'lat' => $alert->camera->latitude,
-                            'lng' => $alert->camera->longitude,
+                            'lat' => $alert->camera?->latitude,
+                            'lng' => $alert->camera?->longitude,
                         ],
-                        'site' => $alert->camera->site->name,
+                        'site' => $alert->camera?->site?->name,
                         'timestamp' => $alert->created_at,
                     ]);
                 });

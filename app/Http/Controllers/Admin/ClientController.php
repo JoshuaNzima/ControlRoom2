@@ -19,6 +19,40 @@ class ClientController extends Controller
         // Simply redirect to clients index - the dashboard page is now just a redirect component
         return redirect()->route('admin.clients.index');
     }
+
+    public function siteJson(Client $client, \App\Models\Guards\ClientSite $site)
+    {
+        abort_unless($site->client_id === $client->id, 404);
+        return response()->json($site);
+    }
+
+    public function updateSite(Request $request, Client $client, \App\Models\Guards\ClientSite $site)
+    {
+        abort_unless($site->client_id === $client->id, 404);
+
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'address' => 'required|string',
+            'contact_person' => 'nullable|string|max:255',
+            'phone' => 'nullable|string|max:20',
+            'latitude' => 'nullable|numeric|between:-90,90',
+            'longitude' => 'nullable|numeric|between:-180,180',
+            'special_instructions' => 'nullable|string',
+            'required_guards' => 'required|integer|min:1',
+            'services_requested' => 'nullable|string',
+            'status' => 'required|in:active,inactive',
+            'zone_id' => 'nullable|integer|exists:zones,id',
+        ]);
+
+        $site->update($validated);
+
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json(['success' => true]);
+        }
+
+        return redirect()->route('admin.clients.edit', $client)
+            ->withSuccess('Site updated successfully.');
+    }
     public function index(Request $request)
     {
         $perPage = (int) ($request->input('per_page') ?: 20);
@@ -90,8 +124,8 @@ class ClientController extends Controller
             'site.contact_person' => 'nullable|string|max:255',
             'site.phone' => 'nullable|string|max:20',
             'site.special_instructions' => 'nullable|string',
-            'site.latitude' => 'nullable|numeric',
-            'site.longitude' => 'nullable|numeric',
+            'site.latitude' => 'nullable|numeric|between:-90,90',
+            'site.longitude' => 'nullable|numeric|between:-180,180',
             'site.zone_id' => 'nullable|integer|exists:zones,id',
         ]);
 
@@ -211,9 +245,11 @@ class ClientController extends Controller
     {
         $client->load('services', 'sites');
         $services = \App\Models\Service::where('active', true)->orderBy('name')->get(['id','name','monthly_price']);
+        $zones = Zone::orderBy('name')->get(['id','name']);
         return Inertia::render('Admin/Clients/Edit', [
             'client' => $client,
             'services' => $services,
+            'zones' => $zones,
         ]);
     }
 
@@ -303,12 +339,13 @@ class ClientController extends Controller
             'address' => 'required|string',
             'contact_person' => 'nullable|string|max:255',
             'phone' => 'nullable|string|max:20',
-            'latitude' => 'nullable|numeric',
-            'longitude' => 'nullable|numeric',
+            'latitude' => 'nullable|numeric|between:-90,90',
+            'longitude' => 'nullable|numeric|between:-180,180',
             'special_instructions' => 'nullable|string',
             'required_guards' => 'required|integer|min:1',
             'services_requested' => 'nullable|string',
             'status' => 'required|in:active,inactive',
+            'zone_id' => 'nullable|integer|exists:zones,id',
         ]);
 
         $client->sites()->create($validated);

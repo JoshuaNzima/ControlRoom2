@@ -27,7 +27,7 @@ class LiveMonitoringController extends Controller
                     'supervisor_name' => $scan->supervisor?->name ?? 'Unknown',
                     'site_name' => $scan->checkpoint?->clientSite?->name ?? 'Unknown',
                     'client_name' => $scan->checkpoint?->clientSite?->client?->name ?? 'Unknown',
-                    'scanned_at' => $scan->scanned_at->toISOString(),
+                    'scanned_at' => $scan->scanned_at ? $scan->scanned_at->toIso8601String() : $scan->updated_at?->toIso8601String(),
                     'location_verified' => $scan->location_verified,
                 ];
             });
@@ -47,12 +47,12 @@ class LiveMonitoringController extends Controller
             ->get()
             ->map(function ($attendance) {
                 $action = 'check_in';
-                $timestamp = $attendance->check_in_time?->toISOString();
+                $timestamp = $attendance->check_in_time ? $attendance->check_in_time->toIso8601String() : $attendance->updated_at?->toIso8601String();
 
-                // If there's a check out time, that's the most recent action
-                if ($attendance->check_out_time && $attendance->check_out_time->gt($attendance->check_in_time)) {
+                // If there's a check out time and a check in baseline, prefer the later event
+                if ($attendance->check_out_time && $attendance->check_in_time && $attendance->check_out_time->gt($attendance->check_in_time)) {
                     $action = 'check_out';
-                    $timestamp = $attendance->check_out_time->toISOString();
+                    $timestamp = $attendance->check_out_time->toIso8601String();
                 }
 
                 return [
@@ -115,7 +115,7 @@ class LiveMonitoringController extends Controller
                     'latitude' => $scan->latitude,
                     'longitude' => $scan->longitude,
                     'location_verified' => $scan->location_verified,
-                    'scanned_at' => $scan->scanned_at->toISOString(),
+                    'scanned_at' => $scan->scanned_at ? $scan->scanned_at->toIso8601String() : $scan->updated_at?->toIso8601String(),
                 ];
             });
 
@@ -142,7 +142,7 @@ class LiveMonitoringController extends Controller
                     'guard_name' => $attendance->guardRelation?->name ?? 'Unknown',
                     'site_name' => $attendance->clientSite?->name ?? 'Unknown',
                     'client_name' => $attendance->clientSite?->client?->name ?? 'Unknown',
-                    'check_in_time' => $attendance->check_in_time->toISOString(),
+                    'check_in_time' => $attendance->check_in_time ? $attendance->check_in_time->toIso8601String() : null,
                     'hours_on_duty' => $attendance->check_in_time->diffInHours(Carbon::now()),
                 ];
             });

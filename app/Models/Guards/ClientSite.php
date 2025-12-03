@@ -28,6 +28,7 @@ class ClientSite extends Model
         'services_requested',
         'status',
         'site_type',
+        'zone_id',
     ];
 
     protected $casts = [

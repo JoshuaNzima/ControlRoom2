@@ -1,5 +1,5 @@
 import React from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMap, CircleMarker } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import type { LatLngExpression, LatLngTuple } from 'leaflet';
@@ -24,8 +24,10 @@ interface Site {
   name: string;
   status: string;
   location: Location;
-  guards: number;
   alerts: number;
+  required?: number;
+  onDuty?: number;
+  coverageStatus?: 'full' | 'partial' | 'none' | 'unknown';
 }
 
 interface GuardLocationMapProps {
@@ -33,6 +35,9 @@ interface GuardLocationMapProps {
   sites: Site[];
   center?: LatLngExpression;
   zoom?: number;
+  onSiteClick?: (site: Site) => void;
+  showCountsOverlay?: boolean;
+  scaleByRequired?: boolean;
 }
 
 // Create custom guard icon using default Leaflet icon
@@ -68,7 +73,51 @@ function MapUpdater({ center, zoom }: { center?: LatLngExpression; zoom?: number
   return null;
 }
 
-export default function GuardLocationMap({ guards, sites, center = [-26.2041, 28.0473], zoom = 13 }: GuardLocationMapProps) {
+function BoundsUpdater({ points }: { points: LatLngTuple[] }) {
+  const map = useMap();
+  React.useEffect(() => {
+    if (points.length >= 2) {
+      map.fitBounds(points, { padding: [24, 24] as any });
+    } else if (points.length === 1) {
+      map.setView(points[0], Math.max(map.getZoom(), 14));
+    }
+  }, [JSON.stringify(points)]);
+  return null;
+}
+
+export default function GuardLocationMap({ guards, sites, center = [-26.2041, 28.0473], zoom = 13, onSiteClick, showCountsOverlay = true, scaleByRequired = true }: GuardLocationMapProps) {
+  const [isDark, setIsDark] = React.useState(false);
+  React.useEffect(() => {
+    setIsDark(document.documentElement.classList.contains('dark'));
+  }, []);
+  const statusColor = (status?: Site['coverageStatus']) => {
+    switch (status) {
+      case 'full':
+        return '#16a34a'; // green-600
+      case 'partial':
+        return '#f59e0b'; // amber-500
+      case 'none':
+        return '#ef4444'; // red-500
+      default:
+        return '#6b7280'; // gray-500
+    }
+  };
+  const markerRadius = (site: Site) => {
+    const req = Math.max(0, site.required ?? 0);
+    const base = 8;
+    const extra = Math.min(req, 12); // cap growth
+    return base + extra * 0.8; // max ~17.6
+  };
+  const siteCountIcon = (site: Site) => {
+    const onDuty = site.onDuty ?? 0;
+    const required = site.required ?? 0;
+    return L.divIcon({
+      className: 'site-count-label',
+      html: `<span>${onDuty}/${required}</span>`,
+      iconSize: [0, 0],
+      iconAnchor: [0, 0],
+    });
+  };
   return (
     <MapContainer
       center={center}
@@ -77,51 +126,36 @@ export default function GuardLocationMap({ guards, sites, center = [-26.2041, 28
       style={{ zIndex: 1 }}
     >
       <TileLayer
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        url={isDark ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" : "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"}
+        attribution='&copy; OpenStreetMap contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
       />
       <MapUpdater center={center} zoom={zoom} />
-      
-      {/* Render Guards */}
-      {guards.map((guard) => (
-        <Marker
-          key={`guard-${guard.id}`}
-          position={[guard.location.lat, guard.location.lng]}
-          icon={guardIcon}
-        >
-          <Popup>
-            <div className="p-2">
-              <h3 className="font-medium">{guard.name}</h3>
-              <p className="text-sm text-gray-600">Status: {guard.status}</p>
-              {guard.currentSite && (
-                <p className="text-sm text-gray-600">Site: {guard.currentSite}</p>
-              )}
-              <p className="text-sm text-gray-600">
-                Last Activity: {new Date(guard.lastActivity).toLocaleTimeString()}
-              </p>
-            </div>
-          </Popup>
-        </Marker>
-      ))}
+      <BoundsUpdater points={sites.map(s => [s.location.lat, s.location.lng] as LatLngTuple)} />
 
       {/* Render Sites */}
       {sites.map((site) => (
-        <Marker
-          key={`site-${site.id}`}
-          position={[site.location.lat, site.location.lng]}
-          icon={siteIcon}
-        >
-          <Popup>
-            <div className="p-2">
-              <h3 className="font-medium">{site.name}</h3>
-              <p className="text-sm text-gray-600">Status: {site.status}</p>
-              <p className="text-sm text-gray-600">Guards: {site.guards}</p>
-              {site.alerts > 0 && (
-                <p className="text-sm text-red-600">Active Alerts: {site.alerts}</p>
-              )}
-            </div>
-          </Popup>
-        </Marker>
+        <React.Fragment key={`site-${site.id}`}>
+          <CircleMarker
+            center={[site.location.lat, site.location.lng]}
+            radius={scaleByRequired ? markerRadius(site) : 10}
+            pathOptions={{ color: statusColor(site.coverageStatus), fillColor: statusColor(site.coverageStatus), fillOpacity: 0.85, weight: 2 }}
+            eventHandlers={{ click: () => onSiteClick?.(site) }}
+          >
+            <Popup>
+              <div className="p-2">
+                <h3 className="font-medium">{site.name}</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-300">Coverage: {site.coverageStatus || 'unknown'}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-300">On duty: {site.onDuty ?? 0} / Required: {site.required ?? 0}</p>
+                {site.alerts > 0 && (
+                  <p className="text-sm text-red-600 dark:text-red-400">Active Alerts: {site.alerts}</p>
+                )}
+              </div>
+            </Popup>
+          </CircleMarker>
+          {showCountsOverlay && (
+            <Marker position={[site.location.lat, site.location.lng]} icon={siteCountIcon(site)} />
+          )}
+        </React.Fragment>
       ))}
     </MapContainer>
   );
