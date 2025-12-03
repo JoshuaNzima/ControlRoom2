@@ -11,9 +11,24 @@ class AssignmentsController extends Controller
 {
 	public function index()
 	{
-		$guards = Guard::with(['supervisor', 'assignments.clientSite.client'])
-			->orderBy('name')
+		$filter = request('filter');
+
+		$query = Guard::with(['supervisor', 'assignments.clientSite.client'])
+			->orderBy('name');
+
+		if ($filter === 'unassigned') {
+			$query->whereDoesntHave('assignments', function ($qa) {
+				$qa->whereNull('end_date')->where('is_active', true);
+			});
+		} elseif ($filter === 'assigned') {
+			$query->whereHas('assignments', function ($qa) {
+				$qa->whereNull('end_date')->where('is_active', true);
+			});
+		}
+
+		$guards = $query
 			->paginate(20)
+			->withQueryString()
 			->through(function ($g) {
 				$current = $g->currentAssignment();
 				return [
@@ -32,6 +47,7 @@ class AssignmentsController extends Controller
 
 		return Inertia::render('ControlRoom/Assignments/Index', [
 			'guards' => $guards,
+			'filters' => request()->only('filter'),
 		]);
 	}
 }

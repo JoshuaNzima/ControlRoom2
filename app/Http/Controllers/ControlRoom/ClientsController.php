@@ -17,12 +17,15 @@ class ClientsController extends Controller
 			->when(request('search'), function($q, $search) {
 				$q->where('name', 'like', "%{$search}%");
 			})
+			->when(request('status'), function($q, $status){
+				$q->where('status', $status);
+			})
 			->orderBy('name')
 			->paginate(20);
 
 		return Inertia::render('ControlRoom/Clients/Index', [
 			'clients' => $clients,
-			'filters' => request()->only(['search']),
+			'filters' => request()->only(['search','status']),
 		]);
 	}
 

@@ -19,8 +19,17 @@ class ApprovalController extends Controller
             ->orderBy('stage')
             ->get();
 
+        $budgets = \App\Models\Budget::query()
+            ->with('user')
+            ->orderBy('fiscal_year', 'desc')
+            ->orderBy('fiscal_month', 'desc')
+            ->paginate(10)
+            ->withQueryString();
+
         return Inertia::render('Finance/Approvals/Index', [
             'approvals' => $approvals,
+            'budgets' => $budgets,
+            'selectedTab' => request()->input('tab', 'requisitions'),
         ]);
     }
 

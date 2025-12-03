@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\ControlRoom;
 
 use App\Http\Controllers\Controller;
+use App\Models\ControlRoomSetting;
 use App\Models\Camera;
 use App\Models\CameraAlert;
 use App\Models\ClientSite;
@@ -22,6 +23,22 @@ class MonitoringController extends Controller
         // Default view uses the last 1 hour window for SLA-related metrics
         $defaultRangeMinutes = 60;
 
+        // Load user map preferences (fallback to defaults)
+        $defaults = [
+            'monitor.map.showCountsOverlay' => true,
+            'monitor.map.scaleByRequired' => true,
+        ];
+        $settings = ControlRoomSetting::query()
+            ->where('user_id', $user?->id)
+            ->whereIn('key', array_keys($defaults))
+            ->get()
+            ->pluck('value', 'key')
+            ->toArray();
+        $mapped = [
+            'showCountsOverlay' => (bool)($settings['monitor.map.showCountsOverlay'] ?? $defaults['monitor.map.showCountsOverlay']),
+            'scaleByRequired' => (bool)($settings['monitor.map.scaleByRequired'] ?? $defaults['monitor.map.scaleByRequired']),
+        ];
+
         return Inertia::render('ControlRoom/Monitoring', [
             'auth' => [
                 'user' => [
@@ -35,6 +52,7 @@ class MonitoringController extends Controller
             'events' => $this->getRecentEvents($defaultRangeMinutes),
             'sla' => $this->getSlaStats($defaultRangeMinutes),
             'activeRange' => '1h',
+            'settings' => $mapped,
         ]);
     }
 
@@ -262,8 +280,8 @@ class MonitoringController extends Controller
                     'lastCheckIn' => $guard->last_check_in ?? $guard->updated_at,
                     'currentSite' => $guard->currentSite?->name,
                     'currentShift' => [
-                        'started_at' => $guard->currentShift?->started_at,
-                        'ends_at' => $guard->currentShift?->ends_at,
+                        'started_at' => $guard->currentShift?->actual_start_time ?? $guard->currentShift?->start_time,
+                        'ends_at' => $guard->currentShift?->actual_end_time ?? $guard->currentShift?->end_time,
                     ],
                     'lastActivity' => $guard->updated_at
                 ];

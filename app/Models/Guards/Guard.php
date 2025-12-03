@@ -55,6 +55,7 @@ class Guard extends Model
         'hire_date',
         'notes',
         'photo',
+        'last_known_location',
         'supervisor_id',
     ];
 
@@ -64,6 +65,7 @@ class Guard extends Model
         'qualifications' => 'array',
         'languages' => 'array',
         'dependents_count' => 'integer',
+        'last_known_location' => 'array',
     ];
 
     protected $appends = ['status_color', 'is_on_duty', 'photo_url'];
@@ -184,7 +186,9 @@ class Guard extends Model
 
     public function currentShift()
     {
-        return $this->hasOne(Shift::class)->where('is_active', true);
+        return $this->hasOne(Shift::class)
+            ->where('status', 'in_progress')
+            ->whereDate('date', today());
     }
 
     public function currentSite()

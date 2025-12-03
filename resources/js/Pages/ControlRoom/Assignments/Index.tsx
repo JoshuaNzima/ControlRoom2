@@ -1,5 +1,5 @@
 import React from 'react';
-import { Head, usePage } from '@inertiajs/react';
+import { Head, router, usePage } from '@inertiajs/react';
 import ControlRoomLayout from '@/Layouts/ControlRoomLayout';
 import { Card } from '@/Components/ui/card';
 
@@ -13,11 +13,18 @@ type Guard = {
 };
 
 type PageProps = {
-  guards?: { data: Guard[] };
+  guards?: { data: Guard[]; links?: any[]; meta?: any };
+  filters?: { filter?: 'assigned' | 'unassigned' };
 };
 
 export default function AssignmentsIndex() {
-  const { guards = { data: [] } } = usePage<PageProps>().props as any;
+  const { guards = { data: [], links: [], meta: {} }, filters = {} } = usePage<PageProps>().props as any;
+  const [filter, setFilter] = React.useState<string>(filters.filter || '');
+
+  const gotoTab = (next: string) => {
+    setFilter(next);
+    router.get(route('control-room.assignments.index'), { filter: next || undefined }, { preserveState: true, preserveScroll: true });
+  };
 
   return (
     <ControlRoomLayout title="Assignments">
@@ -35,7 +42,14 @@ export default function AssignmentsIndex() {
           </div>
         </div>
 
-        <Card className="bg-white rounded-xl shadow">
+        <Card className="bg-white dark:bg-gray-800 dark:border-gray-700 rounded-xl shadow">
+          <div className="px-4 pt-4 border-b dark:border-gray-700">
+            <div className="flex gap-4">
+              <button className={`px-3 py-2 text-sm font-medium border-b-2 ${!filter ? 'border-coin-600 text-coin-700 dark:text-coin-400' : 'border-transparent text-gray-600 dark:text-gray-300'}`} onClick={() => gotoTab('')}>All</button>
+              <button className={`px-3 py-2 text-sm font-medium border-b-2 ${filter === 'assigned' ? 'border-coin-600 text-coin-700 dark:text-coin-400' : 'border-transparent text-gray-600 dark:text-gray-300'}`} onClick={() => gotoTab('assigned')}>Assigned</button>
+              <button className={`px-3 py-2 text-sm font-medium border-b-2 ${filter === 'unassigned' ? 'border-coin-600 text-coin-700 dark:text-coin-400' : 'border-transparent text-gray-600 dark:text-gray-300'}`} onClick={() => gotoTab('unassigned')}>Unassigned</button>
+            </div>
+          </div>
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
@@ -67,6 +81,23 @@ export default function AssignmentsIndex() {
               </tbody>
             </table>
           </div>
+          {guards?.links && (
+            <div className="p-4 border-t dark:border-gray-700 flex flex-col md:flex-row items-center justify-between gap-3">
+              <div className="text-sm text-gray-600 dark:text-gray-300">
+                Page {guards?.meta?.current_page ?? ''} of {guards?.meta?.last_page ?? ''}
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                {guards.links.filter((l: any) => l.url !== null).map((l: any, idx: number) => (
+                  <button
+                    key={idx}
+                    className={`px-3 py-1 rounded border dark:border-gray-700 ${l.active ? 'bg-coin-600 text-white' : 'bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200'}`}
+                    onClick={() => router.get(l.url, { filter: filter || undefined }, { preserveScroll: true, preserveState: true })}
+                    dangerouslySetInnerHTML={{ __html: l.label }}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
         </Card>
       </div>
     </ControlRoomLayout>

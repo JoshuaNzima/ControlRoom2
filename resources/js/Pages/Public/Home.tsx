@@ -237,16 +237,19 @@ export default function Home() {
               {flash.success}
             </div>
           )}
-          <div className="mb-8 grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <button type="button" onClick={() => setActiveIntake('ticket')} className={`w-full px-4 py-3 rounded-xl border transition ${activeIntake === 'ticket' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-200 hover:border-gray-300'}`}>
-              Raise Ticket
-            </button>
-            <button type="button" onClick={() => setActiveIntake('down')} className={`w-full px-4 py-3 rounded-xl border transition ${activeIntake === 'down' ? 'bg-purple-600 text-white border-purple-600' : 'bg-white text-gray-700 border-gray-200 hover:border-gray-300'}`}>
-              Report Down
-            </button>
-            <button type="button" onClick={() => setActiveIntake('incident')} className={`w-full px-4 py-3 rounded-xl border transition ${activeIntake === 'incident' ? 'bg-rose-600 text-white border-rose-600' : 'bg-white text-gray-700 border-gray-200 hover:border-gray-300'}`}>
-              Report Incident
-            </button>
+          <div className="mb-8">
+            <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">Tell us what you need help with:</div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <button type="button" onClick={() => setActiveIntake('ticket')} className={`w-full px-4 py-3 rounded-xl border transition ${activeIntake === 'ticket' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-200 hover:border-gray-300'}`}>
+                Service Request
+              </button>
+              <button type="button" onClick={() => setActiveIntake('down')} className={`w-full px-4 py-3 rounded-xl border transition ${activeIntake === 'down' ? 'bg-purple-600 text-white border-purple-600' : 'bg-white text-gray-700 border-gray-200 hover:border-gray-300'}`}>
+                Site Uncovered
+              </button>
+              <button type="button" onClick={() => setActiveIntake('incident')} className={`w-full px-4 py-3 rounded-xl border transition ${activeIntake === 'incident' ? 'bg-rose-600 text-white border-rose-600' : 'bg-white text-gray-700 border-gray-200 hover:border-gray-300'}`}>
+                Incident / Emergency
+              </button>
+            </div>
           </div>
           <form onSubmit={submit} className="bg-white dark:bg-gray-950 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-800 p-6 md:p-8 space-y-6">
             <input
@@ -301,13 +304,13 @@ export default function Home() {
             </details>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="md:col-span-2 space-y-1">
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Title</label>
-                <input value={data.title} onChange={(e) => setData('title', e.target.value)} className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" required />
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">What happened?</label>
+                <input value={data.title} onChange={(e) => setData('title', e.target.value)} placeholder="Briefly describe the issue" className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" required />
                 {errors.title && <div className="text-sm text-red-600">{errors.title}</div>}
               </div>
               {activeIntake === 'ticket' && (
                 <div className="space-y-1">
-                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Priority</label>
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Urgency</label>
                   <select value={data.priority} onChange={(e) => setData('priority', e.target.value)} className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
                     <option value="low">Low</option>
                     <option value="medium">Medium</option>
@@ -319,7 +322,7 @@ export default function Home() {
               )}
               {activeIntake === 'down' && (
                 <div className="space-y-1">
-                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Down Type</label>
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">What seems to be the issue?</label>
                   <select value={data.down_type} onChange={(e) => setData('down_type', e.target.value)} className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
                     <option value="guard_absent">Guard Absent</option>
                     <option value="site_unmanned">Site Unmanned</option>
@@ -330,7 +333,7 @@ export default function Home() {
               )}
               {activeIntake === 'ticket' && (
                 <div className="space-y-1">
-                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Category</label>
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Type of request</label>
                   <select value={data.category} onChange={(e) => setData('category', e.target.value)} className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
                     <option value="complaint">Complaint</option>
                     <option value="incident">Incident</option>
@@ -343,8 +346,8 @@ export default function Home() {
               )}
             </div>
             <div className="space-y-1">
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Description</label>
-              <textarea value={data.description} onChange={(e) => setData('description', e.target.value)} className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[120px]" required />
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Tell us more</label>
+              <textarea value={data.description} onChange={(e) => setData('description', e.target.value)} placeholder="Add any details that can help us respond quickly" className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[120px]" required />
               {errors.description && <div className="text-sm text-red-600">{errors.description}</div>}
             </div>  
             <details className="rounded-xl border border-gray-200 bg-gray-50 open:bg-white">
@@ -361,7 +364,7 @@ export default function Home() {
             <div className="flex items-center justify-end gap-3">
               <button type="submit" disabled={processing} className={`inline-flex items-center gap-2 px-6 py-3 rounded-xl text-white font-semibold shadow ${activeIntake === 'ticket' ? 'bg-blue-600 hover:bg-blue-700' : activeIntake === 'down' ? 'bg-purple-600 hover:bg-purple-700' : 'bg-rose-600 hover:bg-rose-700'} disabled:opacity-60`}>
                 <IconMapper name="Send" className="w-5 h-5" />
-                Submit
+                Send
               </button>
             </div>
           </form>

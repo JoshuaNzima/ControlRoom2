@@ -1,5 +1,5 @@
 import React from 'react';
-import { Head } from '@inertiajs/react';
+import { Head, useForm, usePage } from '@inertiajs/react';
 import ControlRoomLayout from '@/Layouts/ControlRoomLayout';
 import { Card, CardContent, CardHeader } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
@@ -8,21 +8,18 @@ import { User } from '@/types';
 
 interface SettingsProps {
   auth?: { user?: { name?: string } };
+  settings?: { showCountsOverlay: boolean; scaleByRequired: boolean };
 }
 
-const Settings = ({ auth }: SettingsProps) => {
-  const [showCountsOverlay, setShowCountsOverlay] = React.useState<boolean>(() => {
-    const v = localStorage.getItem('monitor.map.showCountsOverlay');
-    return v == null ? true : v === 'true';
-  });
-  const [scaleByRequired, setScaleByRequired] = React.useState<boolean>(() => {
-    const v = localStorage.getItem('monitor.map.scaleByRequired');
-    return v == null ? true : v === 'true';
+const Settings = ({ auth, settings }: SettingsProps) => {
+  const { flash }: any = usePage().props;
+  const { data, setData, post, processing, errors } = useForm({
+    showCountsOverlay: settings?.showCountsOverlay ?? true,
+    scaleByRequired: settings?.scaleByRequired ?? true,
   });
 
-  const saveMapPrefs = () => {
-    localStorage.setItem('monitor.map.showCountsOverlay', String(showCountsOverlay));
-    localStorage.setItem('monitor.map.scaleByRequired', String(scaleByRequired));
+  const handleSave = () => {
+    post(route('control-room.settings.update'));
   };
   // Mock data for settings
   const systemSettings = [
@@ -67,6 +64,11 @@ const Settings = ({ auth }: SettingsProps) => {
   return (
     <ControlRoomLayout title="Control Room Settings" user={auth?.user as User | undefined}>
       <Head title="Control Room Settings" />
+      {flash?.success && (
+        <div className="mb-4 rounded-lg border border-green-200 bg-green-50 text-green-800 px-4 py-3 dark:border-green-900 dark:bg-green-900/30 dark:text-green-300">
+          {flash.success}
+        </div>
+      )}
 
       <div className="space-y-6">
         {/* Settings Overview */}
@@ -98,8 +100,8 @@ const Settings = ({ auth }: SettingsProps) => {
                   <div className="text-sm text-gray-600 dark:text-gray-400">Display onDuty/required label over each pin</div>
                 </div>
                 <label className="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
-                  <input type="checkbox" className="h-4 w-4" checked={showCountsOverlay} onChange={(e) => setShowCountsOverlay(e.target.checked)} />
-                  <span>{showCountsOverlay ? 'On' : 'Off'}</span>
+                  <input type="checkbox" className="h-4 w-4" checked={data.showCountsOverlay} onChange={(e) => setData('showCountsOverlay', e.target.checked)} />
+                  <span>{data.showCountsOverlay ? 'On' : 'Off'}</span>
                 </label>
               </div>
               <div className="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600">
@@ -108,14 +110,14 @@ const Settings = ({ auth }: SettingsProps) => {
                   <div className="text-sm text-gray-600 dark:text-gray-400">Larger pins for sites with higher requirements</div>
                 </div>
                 <label className="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
-                  <input type="checkbox" className="h-4 w-4" checked={scaleByRequired} onChange={(e) => setScaleByRequired(e.target.checked)} />
-                  <span>{scaleByRequired ? 'On' : 'Off'}</span>
+                  <input type="checkbox" className="h-4 w-4" checked={data.scaleByRequired} onChange={(e) => setData('scaleByRequired', e.target.checked)} />
+                  <span>{data.scaleByRequired ? 'On' : 'Off'}</span>
                 </label>
               </div>
 
               <div className="flex items-center gap-3">
-                <button type="button" onClick={saveMapPrefs} className="px-3 py-2 rounded-md border dark:border-gray-600 dark:text-gray-100 dark:hover:bg-gray-700">Save</button>
-                <button type="button" onClick={() => { setShowCountsOverlay(true); setScaleByRequired(true); }} className="px-3 py-2 text-sm text-gray-600 dark:text-gray-400">Reset defaults</button>
+                <button type="button" onClick={handleSave} disabled={processing} className="px-3 py-2 rounded-md border dark:border-gray-600 dark:text-gray-100 dark:hover:bg-gray-700 disabled:opacity-60">Save</button>
+                <button type="button" onClick={() => { setData('showCountsOverlay', true); setData('scaleByRequired', true); }} className="px-3 py-2 text-sm text-gray-600 dark:text-gray-400">Reset defaults</button>
               </div>
             </div>
           </CardContent>

@@ -10,6 +10,14 @@ Route::middleware(['auth', 'role:client'])
         Route::get('/dashboard', [\App\Http\Controllers\Client\DashboardController::class, 'index'])->name('dashboard');
     });
 
+Route::middleware(['auth', 'role:super_admin,asset_manager,admin'])
+    ->prefix('admin')
+    ->name('admin.')
+    ->group(function () {
+        Route::get('/assets/settings', [\App\Http\Controllers\Admin\AssetSettingController::class, 'index'])->name('assets.settings');
+        Route::post('/assets/settings', [\App\Http\Controllers\Admin\AssetSettingController::class, 'update'])->name('assets.settings.update');
+    });
+
 Route::middleware(['auth', 'role:super_admin,marketing,marketing_officer,marketing_manager'])
     ->prefix('admin')
     ->name('admin.')

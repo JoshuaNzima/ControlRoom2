@@ -76,9 +76,10 @@ interface MonitoringProps {
     onTimePercent: number | null;
   };
   activeRange?: string;
+  settings?: { showCountsOverlay: boolean; scaleByRequired: boolean };
 }
 
-const Monitoring = ({ auth, metrics, liveStatus: initialLiveStatus = [], recentActivity: initialRecent = [], sla: initialSla, activeRange = '1h' }: MonitoringProps) => {
+const Monitoring = ({ auth, metrics, liveStatus: initialLiveStatus = [], recentActivity: initialRecent = [], sla: initialSla, activeRange = '1h', settings }: MonitoringProps) => {
   const [currentMetrics, setCurrentMetrics] = React.useState(metrics || { 
     activeSites: 0, 
     guardsOnDuty: 0, 
@@ -98,16 +99,8 @@ const Monitoring = ({ auth, metrics, liveStatus: initialLiveStatus = [], recentA
   const [siteModalOpen, setSiteModalOpen] = React.useState(false);
   const [siteDetails, setSiteDetails] = React.useState<any | null>(null);
   const [siteLoading, setSiteLoading] = React.useState(false);
-  const [showCountsOverlay, setShowCountsOverlay] = React.useState<boolean>(() => {
-    if (typeof window === 'undefined') return true;
-    const v = localStorage.getItem('monitor.map.showCountsOverlay');
-    return v == null ? true : v === 'true';
-  });
-  const [scaleByRequired, setScaleByRequired] = React.useState<boolean>(() => {
-    if (typeof window === 'undefined') return true;
-    const v = localStorage.getItem('monitor.map.scaleByRequired');
-    return v == null ? true : v === 'true';
-  });
+  const [showCountsOverlay, setShowCountsOverlay] = React.useState<boolean>(settings?.showCountsOverlay ?? true);
+  const [scaleByRequired, setScaleByRequired] = React.useState<boolean>(settings?.scaleByRequired ?? true);
 
   React.useEffect(() => {
     let isMounted = true;
