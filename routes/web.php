@@ -61,8 +61,100 @@ Route::middleware(['auth', 'role:super_admin'])->prefix('superadmin')->name('sup
     Route::get('/modules', fn() => Inertia::render('SuperAdmin/Modules'))->name('modules');
     Route::get('/modules/{category}', fn($category) => Inertia::render('SuperAdmin/Modules', ['category' => $category]))->name('modules.category');
     
-    // User Management
-    Route::get('/users', fn() => Inertia::render('SuperAdmin/Users'))->name('users');
+    // User Management (SuperAdmin UI, uses Admin endpoints under the hood)
+    Route::get('/users', function () {
+        $users = \App\Models\User::with('roles')
+            ->when(request('search'), function($q, $search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('email', 'like', "%{$search}%");
+            })
+            ->orderBy('name')
+            ->paginate(20);
+        $roles = \Spatie\Permission\Models\Role::all();
+        $zones = \App\Models\Zone::orderBy('name')->get(['id','name']);
+        return Inertia::render('SuperAdmin/Users', [
+            'users' => $users,
+            'filters' => request()->only('search'),
+            'roles' => $roles,
+            'zones' => $zones,
+        ]);
+    })->name('users');
+
+    // Guards Management (SuperAdmin UI)
+    Route::get('/guards', function () {
+        $perPage = (int) request('per_page', 20);
+        $sort = in_array(request('sort'), ['name','employee_id','status','supervisor_id']) ? request('sort') : 'name';
+        $dir = request('dir') === 'desc' ? 'desc' : 'asc';
+        $guards = \App\Models\Guards\Guard::with('supervisor')
+            ->when(request('search'), function($q, $search) {
+                $q->where(function($qq) use ($search) {
+                    $qq->where('name', 'like', "%{$search}%")
+                       ->orWhere('employee_id', 'like', "%{$search}%");
+                });
+            })
+            ->when(request('status'), function($q, $status) {
+                $q->where('status', $status);
+            })
+            ->when(request('zone_id'), function($q, $zoneId) {
+                $q->where('zone_id', $zoneId);
+            })
+            ->when(request('grade_id'), function($q, $gradeId) {
+                $q->where('guard_grade_id', $gradeId);
+            })
+            ->orderBy($sort, $dir)
+            ->paginate($perPage)
+            ->withQueryString();
+        $supervisors = \App\Models\User::role(['supervisor', 'manager'])
+            ->where('status', 'active')
+            ->orderBy('name')
+            ->get(['id','name']);
+        $grades = \App\Models\Guards\GuardGrade::orderBy('name')->get(['id','code','name']);
+        $zones = \App\Models\Zone::orderBy('name')->get(['id','name']);
+        return Inertia::render('SuperAdmin/Guards', [
+            'guards' => $guards,
+            'filters' => request()->only(['search','status','zone_id','grade_id','sort','dir','per_page']),
+            'supervisors' => $supervisors,
+            'grades' => $grades,
+            'zones' => $zones,
+        ]);
+    })->name('guards');
+
+    // Drivers Management (subset of Guards with employee_role=driver)
+    Route::get('/drivers', function () {
+        $perPage = (int) request('per_page', 20);
+        $sort = in_array(request('sort'), ['name','employee_id','status','supervisor_id']) ? request('sort') : 'name';
+        $dir = request('dir') === 'desc' ? 'desc' : 'asc';
+        $guards = \App\Models\Guards\Guard::with('supervisor')
+            ->where('employee_role', 'driver')
+            ->when(request('search'), function($q, $search) {
+                $q->where(function($qq) use ($search) {
+                    $qq->where('name', 'like', "%{$search}%")
+                       ->orWhere('employee_id', 'like', "%{$search}%");
+                });
+            })
+            ->when(request('status'), function($q, $status) {
+                $q->where('status', $status);
+            })
+            ->when(request('zone_id'), function($q, $zoneId) {
+                $q->where('zone_id', $zoneId);
+            })
+            ->orderBy($sort, $dir)
+            ->paginate($perPage)
+            ->withQueryString();
+        $supervisors = \App\Models\User::role(['supervisor', 'manager'])
+            ->where('status', 'active')
+            ->orderBy('name')
+            ->get(['id','name']);
+        $grades = \App\Models\Guards\GuardGrade::orderBy('name')->get(['id','code','name']);
+        $zones = \App\Models\Zone::orderBy('name')->get(['id','name']);
+        return Inertia::render('SuperAdmin/Drivers', [
+            'guards' => $guards,
+            'filters' => request()->only(['search','status','zone_id','sort','dir','per_page']),
+            'supervisors' => $supervisors,
+            'grades' => $grades,
+            'zones' => $zones,
+        ]);
+    })->name('drivers');
     
     // System Settings
     Route::get('/settings', [\App\Http\Controllers\Admin\SettingController::class, 'superIndex'])->name('settings');

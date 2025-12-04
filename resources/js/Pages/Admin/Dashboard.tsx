@@ -78,6 +78,9 @@ interface Props {
     outstanding_value?: number;
     total_clients?: number;
   };
+  modules?: { name: string; display_name?: string; is_active?: boolean; color?: string; icon?: string }[];
+  systemHealth?: { database?: string; cache?: string; queue?: string; storage?: number };
+  approvalsPending?: number;
   // financeOverview removed; metrics merged into kpis.finance
 }
 
@@ -92,6 +95,9 @@ export default function Dashboard({
   coverageSummary = {},
   auth = {},
   paymentsSummary = undefined,
+  modules = [],
+  systemHealth = {},
+  approvalsPending = 0,
 }: Props) {
   const [showClientManagement, setShowClientManagement] = React.useState(true);
   const [showZoneHero, setShowZoneHero] = React.useState(true);
@@ -293,6 +299,77 @@ export default function Dashboard({
                 </div>
               </>
             )}
+          </Card>
+
+          {/* Admin Snapshot: Approvals & System Health */}
+          <Card className="p-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-lg font-semibold text-gray-900">Approvals</h3>
+                  <Button size="sm" variant="outline" asChild>
+                    <a href={route('admin.approvals.index')}>Open Approvals</a>
+                  </Button>
+                </div>
+                <div className="p-4 rounded-lg border bg-white">
+                  <div className="text-sm text-gray-600">Pending Approvals</div>
+                  <div className="text-3xl font-bold text-gray-900 mt-1">{approvalsPending ?? 0}</div>
+                </div>
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-3">System Health</h3>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <Health name="Database" status={systemHealth?.database} />
+                  <Health name="Cache" status={systemHealth?.cache} />
+                  <div className={`p-4 rounded-lg border bg-white`}>
+                    <div className="text-xs text-gray-500">Queue Driver</div>
+                    <div className="text-sm font-semibold text-gray-900">{systemHealth?.queue || 'default'}</div>
+                  </div>
+                  <Health name="Storage Used" status={systemHealth?.storage} />
+                </div>
+              </div>
+            </div>
+          </Card>
+
+          {/* Modules Status */}
+          <Card className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-gray-900">Modules</h2>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+              {(modules || []).map((m, idx) => (
+                <div key={`${m.name}-${idx}`} className={`p-3 rounded-lg border bg-white flex items-center justify-between`}>
+                  <div className="text-sm font-medium text-gray-900">{m.display_name || m.name}</div>
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs ${m.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
+                    {m.is_active ? 'Active' : 'Disabled'}
+                  </span>
+                </div>
+              ))}
+              {(modules || []).length === 0 && (
+                <div className="text-sm text-gray-500">No modules information</div>
+              )}
+            </div>
+          </Card>
+
+          {/* Top Guards */}
+          <Card className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-gray-900">Top Guards</h2>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              {(topGuards || []).slice(0, 6).map((g, i) => (
+                <div key={`${g.employee_id}-${i}`} className="p-3 rounded-lg border bg-white flex items-center justify-between">
+                  <div>
+                    <div className="font-medium text-gray-900">{g.name}</div>
+                    <div className="text-xs text-gray-500">{g.employee_id}</div>
+                  </div>
+                  <div className="text-sm font-semibold text-gray-900">{g.attendance_rate}%</div>
+                </div>
+              ))}
+              {(topGuards || []).length === 0 && (
+                <div className="text-sm text-gray-500">No top guard data</div>
+              )}
+            </div>
           </Card>
 
           {/* Coverage Summary Cards (collapsible) */}

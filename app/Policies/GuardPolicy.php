@@ -34,7 +34,8 @@ class GuardPolicy
      */
     public function create(User $user): bool
     {
-        return $user->hasAnyRole(['supervisor', 'manager', 'zone_commander']) || $user->hasPermissionTo('guards.create');
+        return $user->hasAnyRole(['super_admin', 'admin', 'supervisor', 'manager', 'zone_commander'])
+            || $user->hasPermissionTo('guards.create');
     }
 
     /**
@@ -53,6 +54,6 @@ class GuardPolicy
      */
     public function delete(User $user, Guard $guard): bool
     {
-        return $user->hasAnyRole(['manager', 'zone_commander']);
+        return $user->hasAnyRole(['super_admin', 'admin', 'manager', 'zone_commander']);
     }
 }

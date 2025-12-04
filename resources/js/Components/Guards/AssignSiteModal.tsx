@@ -10,12 +10,14 @@ export default function AssignSiteModal({
   zones = [],
   onClose,
   onSuccess,
+  scope = 'control-room',
 }: {
   open: boolean;
   guardId: number | null;
   zones: Array<{ id: number; name: string }>;
   onClose: () => void;
   onSuccess: () => void;
+  scope?: 'control-room' | 'admin';
 }) {
   const [search, setSearch] = React.useState('');
   const [zoneId, setZoneId] = React.useState<string>('');
@@ -29,13 +31,14 @@ export default function AssignSiteModal({
       const params = new URLSearchParams();
       if (search) params.set('search', search);
       if (zoneId) params.set('zone_id', zoneId);
-      const url = `${route('control-room.clients.sites.json')}?${params.toString()}`;
+      const listRoute = scope === 'admin' ? 'admin.clients.sites.json' : 'control-room.clients.sites.json';
+      const url = `${route(listRoute)}?${params.toString()}`;
       const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
       const data: Site[] = await res.json();
       setSites(data);
     } catch {}
     finally { setLoading(false); }
-  }, [search, zoneId]);
+  }, [search, zoneId, scope]);
 
   React.useEffect(() => {
     if (open) {
@@ -46,7 +49,8 @@ export default function AssignSiteModal({
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!guardId || !selectedSite) return;
-    router.post(route('control-room.guards.assign-site'), {
+    const assignRoute = scope === 'admin' ? 'admin.guards.assign-site' : 'control-room.guards.assign-site';
+    router.post(route(assignRoute), {
       guard_id: guardId,
       client_site_id: selectedSite,
     }, {
@@ -58,7 +62,8 @@ export default function AssignSiteModal({
   const unassign = () => {
     if (!guardId) return;
     if (!confirm('Unassign guard from current site?')) return;
-    router.post(route('control-room.guards.unassign-site'), { guard_id: guardId }, {
+    const unassignRoute = scope === 'admin' ? 'admin.guards.unassign-site' : 'control-room.guards.unassign-site';
+    router.post(route(unassignRoute), { guard_id: guardId }, {
       preserveScroll: true,
       onSuccess: () => { onSuccess(); onClose(); },
     });

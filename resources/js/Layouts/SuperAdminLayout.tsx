@@ -78,6 +78,24 @@ export default function SuperAdminLayout({ title, children, user }: Props) {
             icon: <IconMapper name="Users2" size={24} />,
             current: window.location.pathname === route('superadmin.roles.index')
         },
+        {
+            name: 'Users',
+            href: route('superadmin.users'),
+            icon: <IconMapper name="Users2" size={24} />,
+            current: window.location.pathname === route('superadmin.users')
+        },
+        {
+            name: 'Guards',
+            href: route('superadmin.guards'),
+            icon: <IconMapper name="ShieldCheck" size={24} />,
+            current: window.location.pathname === route('superadmin.guards')
+        },
+        {
+            name: 'Drivers',
+            href: route('superadmin.drivers'),
+            icon: <IconMapper name="Truck" size={24} />,
+            current: window.location.pathname === route('superadmin.drivers')
+        },
         { 
             name: 'Settings', 
             href: route('superadmin.settings'), 

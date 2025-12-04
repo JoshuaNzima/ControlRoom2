@@ -4,6 +4,7 @@ namespace App\Http\Controllers\ControlRoom;
 
 use App\Http\Controllers\Controller;
 use App\Models\Guards\Client;
+use App\Models\Guards\ClientSite;
 use App\Models\Guards\Guard;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -123,5 +124,28 @@ class ClientsController extends Controller
 		});
 
 		return response()->json($payload);
+	}
+
+	public function siteQr(ClientSite $site)
+	{
+		$site->load(['client:id,name']);
+		$payload = [
+			'issuer' => 'CoinSecurity',
+			'type' => 'site',
+			'site_id' => $site->id,
+			'site_name' => $site->name,
+			'client' => optional($site->client)->name,
+			'lat' => $site->latitude !== null ? (float) $site->latitude : null,
+			'lng' => $site->longitude !== null ? (float) $site->longitude : null,
+			'ver' => 'v2',
+		];
+
+		$url = 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=' . urlencode(json_encode($payload));
+		$png = @file_get_contents($url);
+		if ($png === false) {
+			return response('QR generation failed', 502);
+		}
+
+		return response($png, 200, ['Content-Type' => 'image/png']);
 	}
 }

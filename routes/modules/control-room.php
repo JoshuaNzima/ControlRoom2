@@ -30,6 +30,10 @@ Route::middleware(['auth'])->group(function () {
 		Route::post('/clients/{client}/assign-supervisor', [\App\Http\Controllers\ControlRoom\ClientsController::class, 'assignSupervisor'])->name('clients.assign-supervisor');
 		// Lightweight JSON for active client sites (for assignment pickers)
 		Route::get('/clients/sites/json', [\App\Http\Controllers\ControlRoom\ClientsController::class, 'sitesJson'])->name('clients.sites.json');
+		// Generate QR code for a specific client site (includes client name and GPS coords)
+		Route::get('/clients/sites/{site}/qr-code', [\App\Http\Controllers\ControlRoom\ClientsController::class, 'siteQr'])
+			->middleware(['role_or_permission:control_room_operator|operations_officer|manager|super_admin'])
+			->name('clients.sites.qr');
 
 		// Incidents Management
 		Route::resource('incidents', \App\Http\Controllers\ControlRoom\IncidentController::class);

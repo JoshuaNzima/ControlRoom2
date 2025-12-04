@@ -3,11 +3,21 @@ import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import ControlRoomLayout from '@/Layouts/ControlRoomLayout';
 import { Card, CardContent, CardHeader } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/Components/ui/dialog';
 
 export default function ClientShow() {
   const { client, guards = [], supervisors = [], assignmentsBySite = {} } = usePage().props as any;
   const guardForm = useForm({ guard_id: '' });
   const supervisorForm = useForm({ supervisor_id: '' });
+  const [qrOpen, setQrOpen] = React.useState(false);
+  const [qrUrl, setQrUrl] = React.useState<string | null>(null);
+  const [qrSiteName, setQrSiteName] = React.useState<string>('');
+
+  const openQr = (site: any) => {
+    setQrUrl(route('control-room.clients.sites.qr', site.id));
+    setQrSiteName(site.name || 'Site');
+    setQrOpen(true);
+  };
 
   return (
     <ControlRoomLayout title={`Client • ${client.name}`}>
@@ -48,6 +58,14 @@ export default function ClientShow() {
                         <span key={a.id} className="inline-block mr-2">{a.guard?.name}</span>
                       ))}
                     </div>
+                  </div>
+                  <div className="mt-3 flex items-center gap-2">
+                    <Button variant="outline" className="h-8 px-3 text-xs dark:border-gray-600 dark:text-gray-200" onClick={() => openQr(s)}>
+                      Generate QR
+                    </Button>
+                    <a href={route('control-room.clients.sites.qr', s.id)} target="_blank" rel="noreferrer" className="h-8 px-3 text-xs inline-flex items-center rounded-md border dark:border-gray-600 dark:text-gray-200">
+                      Open in new tab
+                    </a>
                   </div>
                 </div>
               ))}
@@ -93,6 +111,26 @@ export default function ClientShow() {
           </Card>
         </div>
       </div>
+      <Dialog open={qrOpen} onOpenChange={setQrOpen}>
+        <DialogContent className="w-full max-w-sm dark:bg-gray-800 dark:text-gray-100">
+          <DialogHeader>
+            <DialogTitle>{qrSiteName} • QR Code</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            {qrUrl && (
+              <img src={qrUrl} alt={`${qrSiteName} QR`} className="mx-auto max-w-full h-auto" />
+            )}
+            <div className="flex justify-end gap-2">
+              {qrUrl && (
+                <a href={qrUrl} download className="px-3 py-2 rounded-md border text-sm dark:border-gray-600 dark:text-gray-100 dark:hover:bg-gray-700">
+                  Download PNG
+                </a>
+              )}
+              <Button variant="outline" className="px-3 py-2 text-sm dark:border-gray-600 dark:text-gray-100" onClick={() => setQrOpen(false)}>Close</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </ControlRoomLayout>
   );
 }

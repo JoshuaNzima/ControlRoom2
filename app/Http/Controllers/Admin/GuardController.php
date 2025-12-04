@@ -12,6 +12,7 @@ use App\Models\Zone;
 use App\Models\PayProfile;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
 class GuardController extends Controller
@@ -129,11 +130,13 @@ class GuardController extends Controller
             'home_ta' => 'nullable|string|max:255',
             'home_district' => 'nullable|string|max:255',
             'education_level' => 'nullable|string|max:255',
-            'qualifications' => 'nullable',
-            'languages' => 'nullable',
+            'qualifications' => 'nullable|array',
+            'languages' => 'nullable|array',
             'dependents_count' => 'nullable|integer|min:0',
+            'children_names' => 'nullable|string',
             'notes' => 'nullable|string',
             'status' => 'required|in:active,inactive,suspended',
+            'employee_role' => 'nullable|in:guard,driver',
             'photo' => 'nullable|image|max:5120',
             // Optional quick assignment by client only
             'client_id' => 'nullable|exists:clients,id',
@@ -256,14 +259,24 @@ class GuardController extends Controller
             'home_ta' => 'nullable|string|max:255',
             'home_district' => 'nullable|string|max:255',
             'education_level' => 'nullable|string|max:255',
-            'qualifications' => 'nullable',
-            'languages' => 'nullable',
+            'qualifications' => 'nullable|array',
+            'languages' => 'nullable|array',
             'dependents_count' => 'nullable|integer|min:0',
+            'children_names' => 'nullable|string',
             'notes' => 'nullable|string',
             'status' => 'required|in:active,inactive,suspended',
+            'employee_role' => 'nullable|in:guard,driver',
+            'photo' => 'nullable|image|max:5120',
         ];
 
         $validated = $request->validate($rules);
+        
+        if ($request->hasFile('photo')) {
+            if ($guard->photo) {
+                Storage::disk('public')->delete($guard->photo);
+            }
+            $validated['photo'] = $request->file('photo')->store('guards', 'public');
+        }
         
         if (!auth()->user()->can('assign_guard_supervisor')) {
             unset($validated['supervisor_id']);

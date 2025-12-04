@@ -101,6 +101,9 @@ class GuardsController extends Controller
             ->when($request->input('status'), function ($q, $status) {
                 $q->where('status', $status);
             })
+            ->when($request->input('employee_role'), function ($q, $role) {
+                $q->where('employee_role', $role);
+            })
             ->when($request->input('zone_id'), function ($q, $zoneId) {
                 $q->where('zone_id', (int) $zoneId);
             })

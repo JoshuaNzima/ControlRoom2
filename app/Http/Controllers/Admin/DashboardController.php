@@ -7,9 +7,13 @@ use App\Models\Guards\{Guard, Attendance, Client, ClientSite, Shift};
 use App\Models\User;
 use App\Models\Core\Module;
 use App\Models\Approval;
+use App\Models\Incident;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Storage;
 
 class DashboardController extends Controller
 {
@@ -198,6 +202,79 @@ class DashboardController extends Controller
             ->where('approver_id', auth()->id())
             ->count();
 
+        // System health snapshot
+        $systemHealth = [
+            'database' => 'unavailable',
+            'cache' => 'unavailable',
+            'queue' => config('queue.default') ?: 'default',
+            'storage' => null,
+        ];
+        try {
+            DB::connection()->getPdo();
+            $systemHealth['database'] = 'healthy';
+        } catch (\Throwable $e) {
+            $systemHealth['database'] = 'error';
+        }
+        try {
+            $key = 'health_ping_' . uniqid();
+            Cache::put($key, 'ok', 5);
+            $systemHealth['cache'] = Cache::get($key) === 'ok' ? 'healthy' : 'error';
+            Cache::forget($key);
+        } catch (\Throwable $e) {
+            $systemHealth['cache'] = 'error';
+        }
+        try {
+            $root = base_path();
+            $free = @disk_free_space($root);
+            $total = @disk_total_space($root);
+            $systemHealth['storage'] = ($free !== false && $total !== false && $total > 0)
+                ? (int) round((($total - $free) / $total) * 100)
+                : null;
+        } catch (\Throwable $e) {
+            $systemHealth['storage'] = null;
+        }
+
+        $approvalsPending = (int) Approval::where('status', 'pending')->count();
+
+        // Approvals detail
+        $approvalsDetail = [
+            'mine_pending' => (int) Approval::where('status', 'pending')->where('approver_id', auth()->id())->count(),
+            'all_pending' => (int) $approvalsPending,
+            'approved' => (int) Approval::where('status', 'approved')->count(),
+            'rejected' => (int) Approval::where('status', 'rejected')->count(),
+        ];
+
+        // Incidents overview
+        $statusCounts = [
+            'open' => (int) Incident::where('status', 'open')->count(),
+            'in_progress' => (int) Incident::where('status', 'in_progress')->count(),
+            'resolved' => (int) Incident::where('status', 'resolved')->count(),
+            'closed' => (int) Incident::where('status', 'closed')->count(),
+            'escalated' => (int) Incident::where('status', 'escalated')->count(),
+        ];
+        $severityCounts = [
+            'low' => (int) Incident::where('severity', 'low')->count(),
+            'medium' => (int) Incident::where('severity', 'medium')->count(),
+            'high' => (int) Incident::where('severity', 'high')->count(),
+            'critical' => (int) Incident::where('severity', 'critical')->count(),
+        ];
+        $latestIncidents = Incident::select('id','title','severity','status','created_at')
+            ->latest()
+            ->take(6)
+            ->get()
+            ->map(fn($i) => [
+                'id' => $i->id,
+                'title' => $i->title,
+                'severity' => $i->severity,
+                'status' => $i->status,
+                'time' => optional($i->created_at)->diffForHumans(),
+            ]);
+        $incidentsOverview = [
+            'status' => $statusCounts,
+            'severity' => $severityCounts,
+            'latest' => $latestIncidents,
+        ];
+
         return Inertia::render('Admin/Dashboard', [
             'stats' => $stats,
             'modules' => $modules,
@@ -209,6 +286,10 @@ class DashboardController extends Controller
             'coverageSummary' => $coverageSummary,
             'kpis' => $kpis,
             'paymentsSummary' => $paymentsSummary,
+            'systemHealth' => $systemHealth,
+            'approvalsPending' => $approvalsPending,
+            'approvalsDetail' => $approvalsDetail,
+            'incidentsOverview' => $incidentsOverview,
             'auth' => [
             'user' => [
                 'name' => auth()->user()->name,

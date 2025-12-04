@@ -29,7 +29,9 @@ export interface GuardFormData {
     qualifications?: any;
     languages?: any;
     dependents_count?: string | number;
+    children_names?: string;
     notes: string;
     status: 'active' | 'inactive' | 'suspended';
+    employee_role?: 'guard' | 'driver';
     client_id?: string;
 }

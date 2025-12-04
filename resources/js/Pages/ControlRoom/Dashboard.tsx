@@ -203,148 +203,212 @@ const Dashboard = ({ stats, recentIncidents, activeAlerts, coverageData, attenda
     ];
 
     return (
-    <ControlRoomLayout title="Control Room Dashboard" user={auth?.user as User | undefined}>
+        <ControlRoomLayout
+            title="Control Room Dashboard"
+            user={auth?.user as User | undefined}
+        >
             <Head title="Control Room Dashboard" />
 
             <div className="space-y-6">
-
-                    {/* Key Metrics */}
+                {/* Key Metrics */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
-                        {metricsData.map((metric, index) => (
-                            <Card key={index} className={`border-l-4 ${
-                            metric.status === 'success' ? 'border-green-500 bg-green-50 dark:bg-green-900/20' :
-                            metric.status === 'warning' ? 'border-yellow-500 bg-yellow-50 dark:bg-yellow-900/20' :
-                            metric.status === 'danger' ? 'border-red-500 bg-red-50 dark:bg-red-900/20' :
-                            'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                        } hover:shadow-md transition-shadow dark:bg-gray-800 dark:border-gray-700`}>
-                                <CardContent className="py-4">
-                                    <div className="flex items-center justify-between">
-                                        <div className="text-2xl">{metric.icon}</div>
-                                        <div className={`px-2 py-1 text-xs rounded-full ${
-                                        metric.status === 'success' ? 'bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100' :
-                                        metric.status === 'warning' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-100' :
-                                        metric.status === 'danger' ? 'bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100' :
-                                        'bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-100'
-                                        }`}>
-                                            {metric.status}
-                                        </div>
+                    {metricsData.map((metric, index) => (
+                        <Card
+                            key={index}
+                            className={`border-l-4 ${
+                                metric.status === 'success'
+                                    ? 'border-green-500 bg-green-50 dark:bg-green-900/20'
+                                    : metric.status === 'warning'
+                                    ? 'border-yellow-500 bg-yellow-50 dark:bg-yellow-900/20'
+                                    : metric.status === 'danger'
+                                    ? 'border-red-500 bg-red-50 dark:bg-red-900/20'
+                                    : 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                            } hover:shadow-md transition-shadow dark:bg-gray-800 dark:border-gray-700`}
+                        >
+                            <CardContent className="py-4">
+                                <div className="flex items-center justify-between">
+                                    <div className="text-2xl">{metric.icon}</div>
+                                    <div
+                                        className={`px-2 py-1 text-xs rounded-full ${
+                                            metric.status === 'success'
+                                                ? 'bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100'
+                                                : metric.status === 'warning'
+                                                ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-100'
+                                                : metric.status === 'danger'
+                                                ? 'bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100'
+                                                : 'bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-100'
+                                        }`}
+                                    >
+                                        {metric.status}
                                     </div>
-                                <div className="text-sm font-medium text-gray-500 dark:text-gray-400 mt-2">{metric.title}</div>
-                                <div className="mt-1 text-2xl font-bold text-gray-900 dark:text-gray-100">{metric.value}</div>
-                                <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">{metric.description}</div>
-                                </CardContent>
-                            </Card>
-                        ))}
-                    </div>
+                                </div>
+                                <div className="text-sm font-medium text-gray-500 dark:text-gray-400 mt-2">
+                                    {metric.title}
+                                </div>
+                                <div className="mt-1 text-2xl font-bold text-gray-900 dark:text-gray-100">
+                                    {metric.value}
+                                </div>
+                                <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                                    {metric.description}
+                                </div>
+                            </CardContent>
+                        </Card>
+                    ))}
+                </div>
 
-                    {/* Live Monitoring */}
-                    <LiveMonitoring />
+                {/* Live Monitoring */}
+                <LiveMonitoring />
 
-                    {/* Zone Coverage Overview */}
+                {/* Zone Coverage & Recent Incidents */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {/* Zone Coverage */}
                     <Card className="dark:bg-gray-800 dark:border-gray-700">
                         <CardHeader className="flex flex-row items-center justify-between">
-                            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Zone Coverage Status</h3>
+                            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
+                                Zone Coverage Status
+                            </h3>
                             <button
-                                className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm transition ${showZoneCoverage ? 'bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-800 dark:text-red-100 dark:hover:bg-red-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'}`}
+                                className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm transition ${
+                                    showZoneCoverage
+                                        ? 'bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-800 dark:text-red-100 dark:hover:bg-red-700'
+                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
+                                }`}
                                 onClick={() => setShowZoneCoverage(!showZoneCoverage)}
                                 aria-expanded={showZoneCoverage}
                             >
                                 {showZoneCoverage ? 'Hide' : 'Show'}
                             </button>
-                            </CardHeader>
+                        </CardHeader>
                         {showZoneCoverage && (
                             <CardContent>
                                 <div className="space-y-4">
-                                    {safeZones && safeZones.length > 0 ? safeZones.map((zone: Zone) => (
-                                    <div key={zone.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                                            <div className="flex-1">
-                                            <div className="font-medium text-gray-900 dark:text-gray-100">{zone.name}</div>
-                                            <div className="text-sm text-gray-500 dark:text-gray-400">
-                                                    {zone.guards}/{zone.required_guards} Guards • {zone.sites} Sites
+                                    {safeZones && safeZones.length > 0 ? (
+                                        safeZones.map((zone: Zone) => (
+                                            <div
+                                                key={zone.id}
+                                                className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg"
+                                            >
+                                                <div className="flex-1">
+                                                    <div className="font-medium text-gray-900 dark:text-gray-100">
+                                                        {zone.name}
+                                                    </div>
+                                                    <div className="text-sm text-gray-500 dark:text-gray-400">
+                                                        {zone.guards}/{zone.required_guards} Guards •{' '}
+                                                        {zone.sites} Sites
+                                                    </div>
+                                                    <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2 mt-2">
+                                                        <div
+                                                            className={`h-2 rounded-full ${
+                                                                zone.coverage >= 90
+                                                                    ? 'bg-green-500'
+                                                                    : zone.coverage >= 70
+                                                                    ? 'bg-yellow-500'
+                                                                    : 'bg-red-500'
+                                                            }`}
+                                                            style={{ width: `${Math.min(zone.coverage, 100)}%` }}
+                                                        ></div>
+                                                    </div>
                                                 </div>
-                                            <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2 mt-2">
-                                                    <div 
-                                                        className={`h-2 rounded-full ${
-                                                            zone.coverage >= 90 ? 'bg-green-500' :
-                                                            zone.coverage >= 70 ? 'bg-yellow-500' :
-                                                            'bg-red-500'
+                                                <div className="text-right ml-4">
+                                                    <div
+                                                        className={`text-2xl font-bold ${
+                                                            zone.coverage >= 90
+                                                                ? 'text-green-600 dark:text-green-400'
+                                                                : zone.coverage >= 70
+                                                                ? 'text-yellow-600 dark:text-yellow-400'
+                                                                : 'text-red-600 dark:text-red-400'
                                                         }`}
-                                                        style={{ width: `${Math.min(zone.coverage, 100)}%` }}
-                                                    ></div>
+                                                    >
+                                                        {zone.coverage.toFixed(1)}%
+                                                    </div>
+                                                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                                                        {zone.coverage >= 90
+                                                            ? 'Excellent'
+                                                            : zone.coverage >= 70
+                                                            ? 'Good'
+                                                            : zone.coverage >= 50
+                                                            ? 'Fair'
+                                                            : 'Poor'}
+                                                    </div>
                                                 </div>
                                             </div>
-                                            <div className="text-right ml-4">
-                                                <div className={`text-2xl font-bold ${
-                                                zone.coverage >= 90 ? 'text-green-600 dark:text-green-400' :
-                                                zone.coverage >= 70 ? 'text-yellow-600 dark:text-yellow-400' :
-                                                'text-red-600 dark:text-red-400'
-                                                }`}>
-                                                    {zone.coverage.toFixed(1)}%
-                                                </div>
-                                            <div className="text-xs text-gray-500 dark:text-gray-400">
-                                                    {zone.coverage >= 90 ? 'Excellent' :
-                                                     zone.coverage >= 70 ? 'Good' :
-                                                     zone.coverage >= 50 ? 'Fair' : 'Poor'}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    )) : (
-                                    <div className="text-center py-6 text-gray-500 dark:text-gray-400">
+                                        ))
+                                    ) : (
+                                        <div className="text-center py-6 text-gray-500 dark:text-gray-400">
                                             No zones data available
                                         </div>
                                     )}
                                 </div>
                             </CardContent>
                         )}
-                        </Card>
+                    </Card>
 
-                        {/* Recent Incidents */}
+                    {/* Recent Incidents */}
                     <Card className="dark:bg-gray-800 dark:border-gray-700">
                         <CardHeader className="flex flex-row items-center justify-between">
-                            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Recent Incidents</h3>
+                            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
+                                Recent Incidents
+                            </h3>
                             <button
-                                className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm transition ${showIncidents ? 'bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-800 dark:text-red-100 dark:hover:bg-red-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'}`}
+                                className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm transition ${
+                                    showIncidents
+                                        ? 'bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-800 dark:text-red-100 dark:hover:bg-red-700'
+                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
+                                }`}
                                 onClick={() => setShowIncidents(!showIncidents)}
                                 aria-expanded={showIncidents}
                             >
                                 {showIncidents ? 'Hide' : 'Show'}
                             </button>
-                            </CardHeader>
+                        </CardHeader>
                         {showIncidents && (
                             <CardContent>
                                 <div className="space-y-3">
                                     {safeRecentIncidents.length > 0 ? (
                                         safeRecentIncidents.map((incident) => (
-                                        <div key={incident.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                                            <div
+                                                key={incident.id}
+                                                className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg"
+                                            >
                                                 <div className="flex-1">
                                                     <div className="flex items-center space-x-2">
-                                                    <span className="font-medium text-gray-900 dark:text-gray-100">{incident.title}</span>
-                                                        <span className={`px-2 py-1 text-xs rounded-full ${
-                                                        incident.severity === 'high' ? 'bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100' :
-                                                        incident.severity === 'medium' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-100' :
-                                                        'bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100'
-                                                        }`}>
+                                                        <span className="font-medium text-gray-900 dark:text-gray-100">
+                                                            {incident.title}
+                                                        </span>
+                                                        <span
+                                                            className={`px-2 py-1 text-xs rounded-full ${
+                                                                incident.severity === 'high'
+                                                                    ? 'bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100'
+                                                                    : incident.severity === 'medium'
+                                                                    ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-100'
+                                                                    : 'bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100'
+                                                            }`}
+                                                        >
                                                             {incident.severity}
                                                         </span>
                                                     </div>
-                                                <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                                                        {incident.guard_name} • {incident.site_name} • {incident.client_name}
+                                                    <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                                                        {incident.guard_name} • {incident.site_name} •{' '}
+                                                        {incident.client_name}
                                                     </div>
-                                                <div className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                                                    <div className="text-xs text-gray-500 dark:text-gray-500 mt-1">
                                                         {incident.created_at}
-                                                </div>
+                                                    </div>
                                                 </div>
                                                 <div className="text-right">
-                                                    <div className={`px-2 py-1 text-xs rounded-full ${
-                                                    incident.status === 'open' ? 'bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100' :
-                                                    incident.status === 'pending' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-100' :
-                                                    'bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100'
-                                                    }`}>
+                                                    <div
+                                                        className={`px-2 py-1 text-xs rounded-full ${
+                                                            incident.status === 'open'
+                                                                ? 'bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100'
+                                                                : incident.status === 'pending'
+                                                                ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-100'
+                                                                : 'bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100'
+                                                        }`}
+                                                    >
                                                         {incident.status}
                                                     </div>
                                                     {incident.escalation_level > 0 && (
-                                                    <div className="text-xs text-red-600 dark:text-red-400 mt-1">
+                                                        <div className="text-xs text-red-600 dark:text-red-400 mt-1">
                                                             Escalation Level {incident.escalation_level}
                                                         </div>
                                                     )}
@@ -352,117 +416,180 @@ const Dashboard = ({ stats, recentIncidents, activeAlerts, coverageData, attenda
                                             </div>
                                         ))
                                     ) : (
-                                    <div className="text-center py-6 text-gray-500 dark:text-gray-400">
+                                        <div className="text-center py-6 text-gray-500 dark:text-gray-400">
                                             No recent incidents
                                         </div>
                                     )}
                                 </div>
                             </CardContent>
                         )}
-                        </Card>
+                    </Card>
                 </div>
 
                 {/* Active Alerts and Quick Actions */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        {/* Active Alerts */}
+                    {/* Active Alerts */}
                     <Card className="dark:bg-gray-800 dark:border-gray-700">
                         <CardHeader className="flex flex-row items-center justify-between">
-                            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Active Alerts</h3>
+                            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
+                                Active Alerts
+                            </h3>
                             <button
-                                className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm transition ${showAlerts ? 'bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-800 dark:text-red-100 dark:hover:bg-red-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'}`}
+                                className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm transition ${
+                                    showAlerts
+                                        ? 'bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-800 dark:text-red-100 dark:hover:bg-red-700'
+                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
+                                }`}
                                 onClick={() => setShowAlerts(!showAlerts)}
                                 aria-expanded={showAlerts}
                             >
                                 {showAlerts ? 'Hide' : 'Show'}
                             </button>
-                            </CardHeader>
+                        </CardHeader>
                         {showAlerts && (
                             <CardContent>
                                 <div className="grid grid-cols-2 gap-4">
-                                <div className="text-center p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
+                                    <div className="text-center p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
                                         <div className="text-3xl mb-2">🚨</div>
-                                    <div className="text-2xl font-bold text-red-600 dark:text-red-400">{safeActiveAlerts.high_priority}</div>
-                                    <div className="text-sm text-red-800 dark:text-red-200 font-medium">High Priority</div>
-                                    <div className="text-xs text-red-600 dark:text-red-400 mt-1">Critical incidents</div>
+                                        <div className="text-2xl font-bold text-red-600 dark:text-red-400">
+                                            {safeActiveAlerts.high_priority}
+                                        </div>
+                                        <div className="text-sm text-red-800 dark:text-red-200 font-medium">
+                                            High Priority
+                                        </div>
+                                        <div className="text-xs text-red-600 dark:text-red-400 mt-1">
+                                            Critical incidents
+                                        </div>
                                     </div>
-                                <div className="text-center p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
+                                    <div className="text-center p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
                                         <div className="text-3xl mb-2">⚠️</div>
-                                    <div className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">{safeActiveAlerts.medium_priority}</div>
-                                    <div className="text-sm text-yellow-800 dark:text-yellow-200 font-medium">Medium Priority</div>
-                                    <div className="text-xs text-yellow-600 dark:text-yellow-400 mt-1">Moderate incidents</div>
+                                        <div className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">
+                                            {safeActiveAlerts.medium_priority}
+                                        </div>
+                                        <div className="text-sm text-yellow-800 dark:text-yellow-200 font-medium">
+                                            Medium Priority
+                                        </div>
+                                        <div className="text-xs text-yellow-600 dark:text-yellow-400 mt-1">
+                                            Moderate incidents
+                                        </div>
                                     </div>
-                                <div className="text-center p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                                    <div className="text-center p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
                                         <div className="text-3xl mb-2">👥</div>
-                                    <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{safeActiveAlerts.attendance_alerts}</div>
-                                    <div className="text-sm text-blue-800 dark:text-blue-200 font-medium">Attendance Alerts</div>
-                                    <div className="text-xs text-blue-600 dark:text-blue-400 mt-1">Missing checkouts</div>
+                                        <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                                            {safeActiveAlerts.attendance_alerts}
+                                        </div>
+                                        <div className="text-sm text-blue-800 dark:text-blue-200 font-medium">
+                                            Attendance Alerts
+                                        </div>
+                                        <div className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                                            Missing checkouts
+                                        </div>
                                     </div>
-                                <div className="text-center p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-800">
+                                    <div className="text-center p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-800">
                                         <div className="text-3xl mb-2">📹</div>
-                                    <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">{safeActiveAlerts.camera_alerts}</div>
-                                    <div className="text-sm text-purple-800 dark:text-purple-200 font-medium">Camera Alerts</div>
-                                    <div className="text-xs text-purple-600 dark:text-purple-400 mt-1">System alerts</div>
+                                        <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
+                                            {safeActiveAlerts.camera_alerts}
+                                        </div>
+                                        <div className="text-sm text-purple-800 dark:text-purple-200 font-medium">
+                                            Camera Alerts
+                                        </div>
+                                        <div className="text-xs text-purple-600 dark:text-purple-400 mt-1">
+                                            System alerts
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
-                            <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                                <div className="text-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                                    <div className="text-sm text-gray-600 dark:text-gray-400">
-                                        Total Active Alerts: <span className="font-bold text-gray-900 dark:text-gray-100">
-                                                {safeActiveAlerts.high_priority + safeActiveAlerts.medium_priority + safeActiveAlerts.attendance_alerts + safeActiveAlerts.camera_alerts}
+                                <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                                    <div className="text-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                                        <div className="text-sm text-gray-600 dark:text-gray-400">
+                                            Total Active Alerts:{' '}
+                                            <span className="font-bold text-gray-900 dark:text-gray-100">
+                                                {safeActiveAlerts.high_priority +
+                                                    safeActiveAlerts.medium_priority +
+                                                    safeActiveAlerts.attendance_alerts +
+                                                    safeActiveAlerts.camera_alerts}
                                             </span>
                                         </div>
                                     </div>
                                 </div>
                             </CardContent>
                         )}
-                        </Card>
+                    </Card>
 
                     {/* Quick Actions */}
                     <Card className="dark:bg-gray-800 dark:border-gray-700">
-                            <CardHeader className="flex flex-row items-center justify-between">
-                            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Quick Actions</h3>
+                        <CardHeader className="flex flex-row items-center justify-between">
+                            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
+                                Quick Actions
+                            </h3>
                             <div className="flex gap-2">
-                                <Button variant="outline" size="sm" onClick={() => window.location.reload()} className="dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => window.location.reload()}
+                                    className="dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+                                >
                                     Refresh
                                 </Button>
                             </div>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="grid grid-cols-2 gap-3">
-                                <Button onClick={() => (window.location.href = route('control-room.tickets.create'))} variant="outline" className="h-12 flex flex-col items-center justify-center space-y-1 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
-                                        <span className="text-lg">🎫</span>
-                                        <span className="text-sm">Create Ticket</span>
-                                    </Button>
-                                <Button onClick={() => (window.location.href = route('control-room.flags.create'))} variant="outline" className="h-12 flex flex-col items-center justify-center space-y-1 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
-                                        <span className="text-lg">📝</span>
-                                        <span className="text-sm">Report Issue</span>
-                                    </Button>
-                                <Button onClick={() => (window.location.href = route('control-room.cameras.index'))} variant="outline" className="h-12 flex flex-col items-center justify-center space-y-1 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
-                                        <span className="text-lg">📹</span>
-                                        <span className="text-sm">View Cameras</span>
-                                    </Button>
-                                <Button onClick={() => (window.location.href = route('control-room.reports'))} variant="outline" className="h-12 flex flex-col items-center justify-center space-y-1 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
-                                        <span className="text-lg">📊</span>
-                                        <span className="text-sm">Generate Report</span>
-                                    </Button>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    </div>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="grid grid-cols-2 gap-3">
+                                <Button
+                                    onClick={() => (window.location.href = route('control-room.tickets.create'))}
+                                    variant="outline"
+                                    className="h-12 flex flex-col items-center justify-center space-y-1 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+                                >
+                                    <span className="text-lg">🎫</span>
+                                    <span className="text-sm">Create Ticket</span>
+                                </Button>
+                                <Button
+                                    onClick={() => (window.location.href = route('control-room.flags.create'))}
+                                    variant="outline"
+                                    className="h-12 flex flex-col items-center justify-center space-y-1 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+                                >
+                                    <span className="text-lg">📝</span>
+                                    <span className="text-sm">Report Issue</span>
+                                </Button>
+                                <Button
+                                    onClick={() => (window.location.href = route('control-room.cameras.index'))}
+                                    variant="outline"
+                                    className="h-12 flex flex-col items-center justify-center space-y-1 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+                                >
+                                    <span className="text-lg">📹</span>
+                                    <span className="text-sm">View Cameras</span>
+                                </Button>
+                                <Button
+                                    onClick={() => (window.location.href = route('control-room.reports'))}
+                                    variant="outline"
+                                    className="h-12 flex flex-col items-center justify-center space-y-1 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+                                >
+                                    <span className="text-lg">📊</span>
+                                    <span className="text-sm">Generate Report</span>
+                                </Button>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
 
-                    {/* Weekly Trends */}
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Weekly Trends */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <Card className="dark:bg-gray-800 dark:border-gray-700">
                         <CardHeader className="flex flex-row items-center justify-between">
-                            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Weekly Coverage Trends</h3>
+                            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
+                                Weekly Coverage Trends
+                            </h3>
                             <button
-                                className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm transition ${showTrends ? 'bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-800 dark:text-red-100 dark:hover:bg-red-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'}`}
+                                className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm transition ${
+                                    showTrends
+                                        ? 'bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-800 dark:text-red-100 dark:hover:bg-red-700'
+                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
+                                }`}
                                 onClick={() => setShowTrends(!showTrends)}
                                 aria-expanded={showTrends}
                             >
                                 {showTrends ? 'Hide' : 'Show'}
                             </button>
-                            </CardHeader>
+                        </CardHeader>
                         {showTrends && (
                             <CardContent>
                                 <Suspense fallback={<div className="h-48 flex items-center justify-center">Loading chart…</div>}>
@@ -470,19 +597,25 @@ const Dashboard = ({ stats, recentIncidents, activeAlerts, coverageData, attenda
                                 </Suspense>
                             </CardContent>
                         )}
-                        </Card>
+                    </Card>
 
                     <Card className="dark:bg-gray-800 dark:border-gray-700">
                         <CardHeader className="flex flex-row items-center justify-between">
-                            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Guard Attendance Overview</h3>
+                            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
+                                Guard Attendance Overview
+                            </h3>
                             <button
-                                className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm transition ${showTrends ? 'bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-800 dark:text-red-100 dark:hover:bg-red-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'}`}
+                                className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm transition ${
+                                    showTrends
+                                        ? 'bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-800 dark:text-red-100 dark:hover:bg-red-700'
+                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
+                                }`}
                                 onClick={() => setShowTrends(!showTrends)}
                                 aria-expanded={showTrends}
                             >
                                 {showTrends ? 'Hide' : 'Show'}
                             </button>
-                            </CardHeader>
+                        </CardHeader>
                         {showTrends && (
                             <CardContent>
                                 <Suspense fallback={<div className="h-48 flex items-center justify-center">Loading chart…</div>}>
@@ -490,10 +623,10 @@ const Dashboard = ({ stats, recentIncidents, activeAlerts, coverageData, attenda
                                 </Suspense>
                             </CardContent>
                         )}
-                        </Card>
-                    </div>
+                    </Card>
+                </div>
 
-                    {/* Additional Analytics */}
+                {/* Additional Analytics */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <Card className="dark:bg-gray-800 dark:border-gray-700">
                         <CardHeader className="flex flex-row items-center justify-between">
@@ -505,30 +638,30 @@ const Dashboard = ({ stats, recentIncidents, activeAlerts, coverageData, attenda
                             >
                                 {showAnalytics ? 'Hide' : 'Show'}
                             </button>
-                            </CardHeader>
+                        </CardHeader>
                         {showAnalytics && (
                             <CardContent>
                                 <div className="space-y-2">
                                     {safeCoverageData.length > 0 ? safeCoverageData.map((point, index) => (
                                         <div key={index} className="flex items-center justify-between">
-                                        <span className="text-sm text-gray-600 dark:text-gray-400">{point.date}</span>
+                                            <span className="text-sm text-gray-600 dark:text-gray-400">{point.date}</span>
                                             <div className="flex items-center space-x-2">
-                                            <div className="w-20 bg-gray-200 dark:bg-gray-600 rounded-full h-2">
+                                                <div className="w-20 bg-gray-200 dark:bg-gray-600 rounded-full h-2">
                                                     <div 
                                                         className="bg-blue-500 h-2 rounded-full"
                                                         style={{ width: `${Math.min(point.coverage, 100)}%` }}
                                                     ></div>
                                                 </div>
-                                            <span className="text-sm font-medium w-12 text-right text-gray-900 dark:text-gray-100">{point.coverage.toFixed(1)}%</span>
-                                        </div>
+                                                <span className="text-sm font-medium w-12 text-right text-gray-900 dark:text-gray-100">{point.coverage.toFixed(1)}%</span>
+                                            </div>
                                         </div>
                                     )) : (
-                                    <div className="text-center py-4 text-gray-500 dark:text-gray-400">No coverage data available</div>
+                                        <div className="text-center py-4 text-gray-500 dark:text-gray-400">No coverage data available</div>
                                     )}
                                 </div>
                             </CardContent>
                         )}
-                        </Card>
+                    </Card>
 
                     <Card className="dark:bg-gray-800 dark:border-gray-700">
                         <CardHeader className="flex flex-row items-center justify-between">
@@ -540,33 +673,30 @@ const Dashboard = ({ stats, recentIncidents, activeAlerts, coverageData, attenda
                             >
                                 {showAnalytics ? 'Hide' : 'Show'}
                             </button>
-                            </CardHeader>
+                        </CardHeader>
                         {showAnalytics && (
                             <CardContent>
                                 <div className="space-y-2">
                                     {safeAttendanceData.length > 0 ? safeAttendanceData.map((point, index) => (
                                         <div key={index} className="flex items-center justify-between">
-                                        <span className="text-sm text-gray-600 dark:text-gray-400">{point.date}</span>
+                                            <span className="text-sm text-gray-600 dark:text-gray-400">{point.date}</span>
                                             <div className="flex items-center space-x-2">
-                                            <div className="w-20 bg-gray-200 dark:bg-gray-600 rounded-full h-2">
+                                                <div className="w-20 bg-gray-200 dark:bg-gray-600 rounded-full h-2">
                                                     <div 
                                                         className="bg-green-500 h-2 rounded-full"
                                                         style={{ width: `${Math.min(safeAttendanceData.length > 0 ? (point.attendance / Math.max(...safeAttendanceData.map(d => d.attendance))) * 100 : 0, 100)}%` }}
                                                     ></div>
                                                 </div>
-                                            <span className="text-sm font-medium w-12 text-right text-gray-900 dark:text-gray-100">{point.attendance}</span>
-                                        </div>
+                                                <span className="text-sm font-medium w-12 text-right text-gray-900 dark:text-gray-100">{point.attendance}</span>
+                                            </div>
                                         </div>
                                     )) : (
-                                    <div className="text-center py-4 text-gray-500 dark:text-gray-400">No attendance data available</div>
+                                        <div className="text-center py-4 text-gray-500 dark:text-gray-400">No attendance data available</div>
                                     )}
                                 </div>
                             </CardContent>
                         )}
-                        </Card>
-                    </div>
-
-                    {/* QR Code Generator removed for Control Room */}
+                    </Card>
                 </div>
             </div>
         </ControlRoomLayout>

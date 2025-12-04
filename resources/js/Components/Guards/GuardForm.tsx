@@ -34,6 +34,22 @@ export default function GuardForm({
   hideCancel = false,
   onCancel,
 }: GuardFormProps) {
+  const normalizeDateInput = (input: any): string => {
+    if (!input) return '';
+    const s = String(input).trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+    const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (iso) return `${iso[1]}-${iso[2]}-${iso[3]}`;
+    const sl = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (sl) {
+      const dd = sl[1].padStart(2, '0');
+      const mm = sl[2].padStart(2, '0');
+      const yyyy = sl[3];
+      return `${yyyy}-${mm}-${dd}`;
+    }
+    return '';
+  };
+
   const { data, setData } = useForm<any>({
     ...initialData,
     employee_id: initialData.employee_id || '',
@@ -45,7 +61,7 @@ export default function GuardForm({
     residence_city: (initialData as any).residence_city || '',
     residence_district: (initialData as any).residence_district || '',
     id_number: initialData.id_number || '',
-    date_of_birth: initialData.date_of_birth || '',
+    date_of_birth: normalizeDateInput(initialData.date_of_birth || ''),
     gender: initialData.gender || '',
     marital_status: (initialData as any).marital_status || '',
     spouse_name: (initialData as any).spouse_name || '',
@@ -56,7 +72,7 @@ export default function GuardForm({
     next_of_kin_relationship: (initialData as any).next_of_kin_relationship || '',
     next_of_kin_phone: (initialData as any).next_of_kin_phone || '',
     supervisor_id: initialData.supervisor_id || '',
-    hire_date: initialData.hire_date || '',
+    hire_date: normalizeDateInput(initialData.hire_date || ''),
     guard_type: (initialData as any).guard_type || 'permanent',
     guard_grade_id: (initialData as any).guard_grade_id || '',
     home_village: (initialData as any).home_village || '',
@@ -69,6 +85,7 @@ export default function GuardForm({
     children_names: (initialData as any).children_names || '',
     notes: initialData.notes || '',
     status: initialData.status || 'active',
+    employee_role: (initialData as any).employee_role || 'guard',
   });
 
   const set = (field: string, value: any) => (setData as any)(field as any, value);
@@ -219,8 +236,7 @@ export default function GuardForm({
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">Date of Birth *</label>
           <input
-            type="text"
-            placeholder="DD/MM/YYYY"
+            type="date"
             value={data.date_of_birth}
             onChange={handleChange('date_of_birth')}
             className={`w-full px-4 py-2 border rounded-lg focus:ring-2 ${err('date_of_birth') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-red-500'}`}
@@ -455,13 +471,25 @@ export default function GuardForm({
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">Hire Date</label>
           <input
-            type="text"
-            placeholder="DD/MM/YYYY"
+            type="date"
             value={data.hire_date}
             onChange={handleChange('hire_date')}
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
           />
           {errors.hire_date && <p className="text-red-600 text-sm mt-1">{errors.hire_date}</p>}
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Employee Role</label>
+          <select
+            value={(data.employee_role as any) || 'guard'}
+            onChange={handleChange('employee_role')}
+            className={`w-full px-4 py-2 border rounded-lg focus:ring-2 ${err('employee_role') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-red-500'}`}
+          >
+            <option value="guard">Guard</option>
+            <option value="driver">Driver</option>
+          </select>
+          {err('employee_role') && <p className="text-red-600 text-sm mt-1">{err('employee_role')}</p>}
         </div>
 
         <div>

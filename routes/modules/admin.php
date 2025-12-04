@@ -60,6 +60,7 @@ Route::middleware(['auth', 'role:admin,super_admin'])
             ->name('settings.hr.guard-grades.destroy');
         Route::get('/reports', [\App\Http\Controllers\Admin\ReportController::class, 'index'])->name('reports.index');
         Route::get('/modules', [\App\Http\Controllers\Admin\ModuleController::class, 'index'])->name('modules.index');
+        Route::get('/modules/{module}', [\App\Http\Controllers\Admin\ModuleSummaryController::class, 'show'])->name('modules.summary');
         Route::resource('users', \App\Http\Controllers\Admin\UserController::class);
         Route::get('/clients/dashboard', [\App\Http\Controllers\Admin\ClientController::class, 'dashboard'])->name('clients.dashboard');
         // Clients Management
@@ -99,14 +100,20 @@ Route::middleware(['auth', 'role:admin,super_admin'])
         Route::get('/guards/dashboard', [\App\Http\Controllers\Admin\GuardController::class, 'dashboard'])->name('guards.dashboard');
         // JSON API for fetching a single guard (used by modal pre-fill)
         Route::get('/guards/{guard}/json', [\App\Http\Controllers\Admin\GuardController::class, 'apiShow'])->name('guards.json');
+        // CSV Export for guards (shared with Control Room export implementation)
+        Route::get('/guards/export', [\App\Http\Controllers\ControlRoom\GuardsController::class, 'export'])->name('guards.export');
         Route::resource('guards', \App\Http\Controllers\Admin\GuardController::class)->except(['create','edit','show']);
         // Guard assignment to client site
         Route::post('/guards/assign-site', [\App\Http\Controllers\Admin\GuardAssignmentController::class, 'assignToSite'])->name('guards.assign-site');
         Route::post('/guards/unassign-site', [\App\Http\Controllers\Admin\GuardAssignmentController::class, 'unassignFromSite'])->name('guards.unassign-site');
         // Guard promotion (admin access)
         Route::post('/guards/{guard}/promote', [\App\Http\Controllers\HR\EmployeeController::class, 'promote'])->name('guards.promote');
-        Route::get('/qr-codes', [\App\Http\Controllers\SupervisorQRCodesController::class, 'index'])->name('qr-codes');
-        Route::get('/qr-codes/download-bulk', [\App\Http\Controllers\SupervisorQRCodesController::class, 'downloadBulk'])->name('qr-codes.download-bulk');
+        Route::get('/qr-codes', [\App\Http\Controllers\SupervisorQRCodesController::class, 'index'])
+            ->middleware(['role:super_admin'])
+            ->name('qr-codes');
+        Route::get('/qr-codes/download-bulk', [\App\Http\Controllers\SupervisorQRCodesController::class, 'downloadBulk'])
+            ->middleware(['role:super_admin'])
+            ->name('qr-codes.download-bulk');
         // Admin Finance landing (module-level admin page)
         Route::get('/finance', [\App\Http\Controllers\Admin\FinanceController::class, 'index'])->name('finance');
 
