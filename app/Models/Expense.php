@@ -18,6 +18,14 @@ class Expense extends Model
         'payment_method',
         'notes',
         'status',
+        'approval_stage',
+        'admin_approved_by',
+        'admin_approved_at',
+        'asset_approved_by',
+        'asset_approved_at',
+        'rejected_by',
+        'rejected_at',
+        'rejection_reason',
     ];
 
     protected $casts = [
@@ -25,6 +33,9 @@ class Expense extends Model
         'expense_date' => 'datetime',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
+        'admin_approved_at' => 'datetime',
+        'asset_approved_at' => 'datetime',
+        'rejected_at' => 'datetime',
     ];
 
     /**

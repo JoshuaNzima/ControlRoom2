@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Zone;
 use App\Models\Guards\Checkpoint;
+use App\Models\Guards\ClientSite;
+use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
@@ -45,6 +47,28 @@ class SupervisorQRCodesController extends Controller
         $zip = new ZipArchive();
         if ($zip->open($tmpFile, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
             abort(500, 'Unable to create ZIP archive');
+        }
+
+        // Client Sites QR codes (embed JSON payload for in-app scanner)
+        $sites = ClientSite::with(['client:id,name'])->get(['id','name','client_id']);
+        foreach ($sites as $site) {
+            $payload = json_encode([
+                'issuer' => 'CoinSecurity',
+                'type' => 'site',
+                'site_id' => $site->id,
+                'site_name' => $site->name,
+                'client' => optional($site->client)->name,
+                'ver' => 'v1'
+            ]);
+            $url = 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=' . urlencode($payload);
+            $png = @file_get_contents($url);
+            if ($png !== false) {
+                $safeName = 'SITE_' . $site->id . '_' . Str::slug($site->name ?: ('site-'.$site->id));
+                $filename = 'sites/' . $safeName . '.png';
+                $withLogo = $this->overlayLogoOnPng($png);
+                $zip->addFromString($filename, $withLogo);
+                Storage::disk('public')->put('qr_codes/' . $filename, $withLogo);
+            }
         }
 
         // Zones QR codes (encode the zone code)
@@ -133,6 +157,7 @@ class SupervisorQRCodesController extends Controller
     {
         $files = collect(Storage::disk('public')->files('qr_codes/zones'))
             ->merge(Storage::disk('public')->files('qr_codes/checkpoints'))
+            ->merge(Storage::disk('public')->files('qr_codes/sites'))
             ->values();
 
         if ($files->isEmpty()) {
@@ -168,6 +193,7 @@ class SupervisorQRCodesController extends Controller
     {
         $zones = Storage::disk('public')->files('qr_codes/zones');
         $checkpoints = Storage::disk('public')->files('qr_codes/checkpoints');
+        $sites = Storage::disk('public')->files('qr_codes/sites');
 
         $toListing = function($paths) {
             return collect($paths)->map(function($p) {
@@ -182,6 +208,7 @@ class SupervisorQRCodesController extends Controller
         return response()->json([
             'zones' => $toListing($zones),
             'checkpoints' => $toListing($checkpoints),
+            'sites' => $toListing($sites),
         ]);
     }
 }

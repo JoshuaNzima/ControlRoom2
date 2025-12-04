@@ -18,22 +18,26 @@ class GuardManageController extends Controller
         $validated = $request->validate([
             'employee_id' => 'nullable|string|unique:guards,employee_id',
             'name' => 'required|string|max:255',
-            'phone' => 'nullable|string|max:20',
+            'phone' => 'required|string|max:20',
             'email' => 'nullable|email|unique:guards,email',
             'address' => 'nullable|string',
             'residence_address' => 'nullable|string',
             'residence_city' => 'nullable|string',
             'residence_district' => 'nullable|string',
-            'id_number' => 'nullable|string|unique:guards,id_number',
-            'date_of_birth' => 'nullable|date',
-            'gender' => 'nullable|in:male,female,other',
+            'id_number' => 'required|string|unique:guards,id_number',
+            'date_of_birth' => 'required|date',
+            'gender' => 'required|in:male,female,other',
             'marital_status' => 'nullable|in:single,married,divorced,widowed',
+            'emergency_contact_name' => 'required|string|max:255',
+            'emergency_contact_phone' => 'required|string|max:20',
             'supervisor_id' => 'nullable|exists:users,id',
             'hire_date' => 'nullable|date',
-            'guard_type' => 'nullable|in:permanent,standby,reliever',
+            'guard_type' => 'required|in:permanent,standby,reliever',
             'guard_grade_id' => 'nullable|exists:guard_grades,id',
             'status' => 'required|in:active,inactive,suspended',
             'notes' => 'nullable|string',
+            'children_names' => 'nullable|string',
+            'photo' => 'nullable|image|max:5120',
             // Optional quick assignment by client site
             'client_site_id' => 'nullable|exists:client_sites,id',
         ]);
@@ -48,6 +52,10 @@ class GuardManageController extends Controller
 
         if (empty($validated['employee_id'])) {
             $validated['employee_id'] = $this->generateGuardEmployeeId();
+        }
+
+        if ($request->hasFile('photo')) {
+            $validated['photo'] = $request->file('photo')->store('guards', 'public');
         }
 
         $guard = Guard::create($validated);
@@ -88,26 +96,34 @@ class GuardManageController extends Controller
         $validated = $request->validate([
             'employee_id' => 'nullable|string|unique:guards,employee_id,' . $guard->id,
             'name' => 'required|string|max:255',
-            'phone' => 'nullable|string|max:20',
+            'phone' => 'required|string|max:20',
             'email' => 'nullable|email|unique:guards,email,' . $guard->id,
             'address' => 'nullable|string',
             'residence_address' => 'nullable|string',
             'residence_city' => 'nullable|string',
             'residence_district' => 'nullable|string',
-            'id_number' => 'nullable|string|unique:guards,id_number,' . $guard->id,
-            'date_of_birth' => 'nullable|date',
-            'gender' => 'nullable|in:male,female,other',
+            'id_number' => 'required|string|unique:guards,id_number,' . $guard->id,
+            'date_of_birth' => 'required|date',
+            'gender' => 'required|in:male,female,other',
             'marital_status' => 'nullable|in:single,married,divorced,widowed',
+            'emergency_contact_name' => 'required|string|max:255',
+            'emergency_contact_phone' => 'required|string|max:20',
             'supervisor_id' => 'nullable|exists:users,id',
             'hire_date' => 'nullable|date',
-            'guard_type' => 'nullable|in:permanent,standby,reliever',
+            'guard_type' => 'required|in:permanent,standby,reliever',
             'guard_grade_id' => 'nullable|exists:guard_grades,id',
             'status' => 'required|in:active,inactive,suspended',
             'notes' => 'nullable|string',
+            'children_names' => 'nullable|string',
+            'photo' => 'nullable|image|max:5120',
         ]);
 
         if (!auth()->user()->hasAnyRole(['operations_officer','manager','super_admin'])) {
             unset($validated['supervisor_id']);
+        }
+
+        if ($request->hasFile('photo')) {
+            $validated['photo'] = $request->file('photo')->store('guards', 'public');
         }
 
         $guard->update($validated);

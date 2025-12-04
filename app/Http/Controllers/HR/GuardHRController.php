@@ -32,6 +32,16 @@ class GuardHRController extends Controller
         return back()->with('success', 'Guard dismissed.');
     }
 
+    public function setRole(Request $request, Guard $guard)
+    {
+        $this->authorizeAction();
+        $data = $request->validate([
+            'employee_role' => ['required','in:guard,driver'],
+        ]);
+        $guard->update(['employee_role' => $data['employee_role']]);
+        return back()->with('success', 'Role updated to ' . $data['employee_role'] . '.');
+    }
+
     protected function authorizeAction(): void
     {
         if (!auth()->check()) abort(403);

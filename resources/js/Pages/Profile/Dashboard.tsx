@@ -1,0 +1,163 @@
+import React from 'react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+
+interface Commission {
+  id: number;
+  source?: string | null;
+  client_id?: number | null;
+  amount: number;
+  status: 'pending' | 'claimed' | 'rejected';
+  created_at?: string;
+  claimed_at?: string | null;
+}
+
+interface PageProps {
+  [key: string]: any;
+  user: { id: number; name: string; email: string; phone?: string | null };
+  commissions: { pending: Commission[]; recent: Commission[] };
+  payroll: { totals: { salary_total: number; net_total: number; allowances_total: number; overtime_total: number } };
+}
+
+function currency(n: number | string) {
+  const num = typeof n === 'string' ? parseFloat(n) : n;
+  if (Number.isNaN(num)) return 'MWK 0.00';
+  return `MWK ${num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+export default function ProfileDashboard() {
+  const { user, commissions, payroll } = usePage<PageProps>().props as any;
+  const [tab, setTab] = React.useState<'profile' | 'commissions' | 'payroll'>('profile');
+
+  const claim = (id: number) => {
+    if (!confirm('Claim this commission?')) return;
+    router.post(route('profile.commissions.claim', { commission: id }), {}, { preserveScroll: true });
+  };
+
+  return (
+    <AuthenticatedLayout
+      header={<h2 className="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-100">My Dashboard</h2>}
+    >
+      <Head title="My Dashboard" />
+      <div className="py-6">
+        <div className="mx-auto max-w-7xl sm:px-6 lg:px-8 space-y-4">
+          {/* Tabs */}
+          <div className="flex gap-2 overflow-x-auto px-2">
+            <button
+              onClick={() => setTab('profile')}
+              className={`px-3 py-1.5 rounded-md text-sm ${tab === 'profile' ? 'bg-indigo-600 text-white' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border dark:border-gray-700'}`}
+            >
+              Profile
+            </button>
+            <button
+              onClick={() => setTab('commissions')}
+              className={`px-3 py-1.5 rounded-md text-sm ${tab === 'commissions' ? 'bg-indigo-600 text-white' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border dark:border-gray-700'}`}
+            >
+              Commissions
+            </button>
+            <button
+              onClick={() => setTab('payroll')}
+              className={`px-3 py-1.5 rounded-md text-sm ${tab === 'payroll' ? 'bg-indigo-600 text-white' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border dark:border-gray-700'}`}
+            >
+              Payroll
+            </button>
+          </div>
+
+          {/* Profile */}
+          {tab === 'profile' && (
+            <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4 sm:p-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <div className="text-sm text-gray-500 dark:text-gray-400">Name</div>
+                  <div className="text-gray-900 dark:text-gray-100 font-medium">{user?.name}</div>
+                </div>
+                <div>
+                  <div className="text-sm text-gray-500 dark:text-gray-400">Email</div>
+                  <div className="text-gray-900 dark:text-gray-100 font-medium">{user?.email}</div>
+                </div>
+                <div>
+                  <div className="text-sm text-gray-500 dark:text-gray-400">Phone</div>
+                  <div className="text-gray-900 dark:text-gray-100 font-medium">{user?.phone || '-'}</div>
+                </div>
+              </div>
+              <div className="mt-4">
+                <Link href={route('profile.edit')} className="inline-flex items-center px-4 py-2 rounded-md bg-indigo-600 hover:bg-indigo-700 text-white text-sm">Edit Profile</Link>
+              </div>
+            </div>
+          )}
+
+          {/* Commissions */}
+          {tab === 'commissions' && (
+            <div className="space-y-4">
+              <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800">
+                <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-800 font-semibold text-gray-900 dark:text-gray-100">Pending Commissions</div>
+                <div className="p-4 divide-y divide-gray-100 dark:divide-gray-800">
+                  {(commissions?.pending || []).length === 0 && (
+                    <div className="text-sm text-gray-500 dark:text-gray-400">No pending commissions.</div>
+                  )}
+                  {(commissions?.pending || []).map((c: Commission) => (
+                    <div key={c.id} className="py-3 flex items-center justify-between gap-3">
+                      <div>
+                        <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{c.source || 'Referral'} {c.client_id ? `• Client #${c.client_id}` : ''}</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">Created {c.created_at ? new Date(c.created_at).toLocaleString() : ''}</div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">{currency(c.amount)}</div>
+                        <button onClick={() => claim(c.id)} className="px-3 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white text-xs">Claim</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800">
+                <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-800 font-semibold text-gray-900 dark:text-gray-100">Recent Commissions</div>
+                <div className="p-4 divide-y divide-gray-100 dark:divide-gray-800">
+                  {(commissions?.recent || []).length === 0 && (
+                    <div className="text-sm text-gray-500 dark:text-gray-400">No recent commissions.</div>
+                  )}
+                  {(commissions?.recent || []).map((c: Commission) => (
+                    <div key={c.id} className="py-3 flex items-center justify-between gap-3">
+                      <div>
+                        <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{c.source || 'Referral'} {c.client_id ? `• Client #${c.client_id}` : ''}</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">{c.status === 'claimed' ? `Claimed ${c.claimed_at ? new Date(c.claimed_at).toLocaleString() : ''}` : 'Rejected'}</div>
+                      </div>
+                      <div className={`text-sm font-semibold ${c.status === 'claimed' ? 'text-emerald-600' : 'text-rose-600'}`}>{currency(c.amount)}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Payroll */}
+          {tab === 'payroll' && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4">
+                  <div className="text-xs text-gray-500 dark:text-gray-400">Total Salary</div>
+                  <div className="mt-2 text-2xl font-semibold text-gray-900 dark:text-gray-100">{currency(payroll?.totals?.salary_total || 0)}</div>
+                </div>
+                <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4">
+                  <div className="text-xs text-gray-500 dark:text-gray-400">Total Allowances</div>
+                  <div className="mt-2 text-2xl font-semibold text-gray-900 dark:text-gray-100">{currency(payroll?.totals?.allowances_total || 0)}</div>
+                </div>
+                <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4">
+                  <div className="text-xs text-gray-500 dark:text-gray-400">Overtime</div>
+                  <div className="mt-2 text-2xl font-semibold text-gray-900 dark:text-gray-100">{currency(payroll?.totals?.overtime_total || 0)}</div>
+                </div>
+                <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4">
+                  <div className="text-xs text-gray-500 dark:text-gray-400">Net Paid</div>
+                  <div className="mt-2 text-2xl font-semibold text-gray-900 dark:text-gray-100">{currency(payroll?.totals?.net_total || 0)}</div>
+                </div>
+              </div>
+              <div className="bg-blue-50 dark:bg-gray-800 rounded-xl border border-blue-200 dark:border-gray-700 p-4 text-sm text-blue-800 dark:text-gray-200">
+                Payroll figures reflect processed runs recorded in the system.
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </AuthenticatedLayout>
+  );
+}

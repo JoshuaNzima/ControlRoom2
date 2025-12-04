@@ -85,14 +85,14 @@ class CheckpointScanController extends Controller
         ));
 
         if ($request->header('X-Inertia')) {
-            return redirect()->route('supervisor.attendance')
+            return redirect()->route('supervisor.dashboard')
                 ->with('success', 'Checkpoint scanned successfully');
         }
 
         return response()->json([
             'success' => true,
             'message' => 'Checkpoint scanned successfully',
-            'redirect' => route('supervisor.attendance'),
+            'redirect' => route('supervisor.dashboard'),
             'scan' => $scanData,
         ]);
     }

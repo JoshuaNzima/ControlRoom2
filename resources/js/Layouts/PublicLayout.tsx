@@ -8,6 +8,13 @@ interface Props {
 }
 
 export default function PublicLayout({ title = 'Coin Security', children }: Props) {
+  const safeRoute = (name: string, params?: any, fallback: string = '#') => {
+    try {
+      return route(name, params);
+    } catch {
+      return fallback;
+    }
+  };
   return (
     <div className="min-h-screen bg-red-50 dark:bg-gray-900 text-gray-900">
       <Head title={title} />
@@ -23,19 +30,19 @@ export default function PublicLayout({ title = 'Coin Security', children }: Prop
             </div>
             <nav className="flex items-center gap-6">
               <Link 
-                href={route('public.home')} 
+                href={safeRoute('public.home', undefined, '/')} 
                 className="text-sm font-medium text-gray-700 hover:text-red-600 transition-colors duration-200"
               >
                 Home
               </Link>
               <Link 
-                href={route('public.services')} 
+                href={safeRoute('public.services', undefined, '/services')} 
                 className="text-sm font-medium text-gray-700 hover:text-red-600 transition-colors duration-200"
               >
                 Services
               </Link>
               <Link 
-                href={route('login')} 
+                href={safeRoute('login', undefined, '/login')} 
                 className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-red-600 to-red-500 text-white text-sm font-medium rounded-lg hover:shadow-lg transform hover:scale-105 transition-all duration-200"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -44,7 +51,7 @@ export default function PublicLayout({ title = 'Coin Security', children }: Prop
                 Client Login
               </Link>
               <Link 
-                href={route('public.contact')} 
+                href={safeRoute('public.contact', undefined, '/contact')} 
                 className="text-sm font-medium text-gray-700 hover:text-red-600 transition-colors duration-200"
               >
                 Contact
@@ -92,20 +99,20 @@ export default function PublicLayout({ title = 'Coin Security', children }: Prop
             <div>
               <h3 className="text-lg font-semibold mb-4">Services</h3>
               <ul className="space-y-2 text-gray-300">
-                <li><Link href={route('public.services.show', 'security-guards')} className="hover:text-white transition-colors">Security Guards</Link></li>
-                <li><Link href={route('public.services.show', 'cctv-surveillance')} className="hover:text-white transition-colors">Live Monitoring</Link></li>
-                <li><Link href={route('public.services.show', 'mobile-patrol')} className="hover:text-white transition-colors">Patrol Services</Link></li>
-                <li><Link href={route('public.services')} className="hover:text-white transition-colors">Emergency Response</Link></li>
+                <li><Link href={safeRoute('public.services.show', 'security-guards', '/services/security-guards')} className="hover:text-white transition-colors">Security Guards</Link></li>
+                <li><Link href={safeRoute('public.services.show', 'cctv-surveillance', '/services/cctv-surveillance')} className="hover:text-white transition-colors">Live Monitoring</Link></li>
+                <li><Link href={safeRoute('public.services.show', 'mobile-patrol', '/services/mobile-patrol')} className="hover:text-white transition-colors">Patrol Services</Link></li>
+                <li><Link href={safeRoute('public.services', undefined, '/services')} className="hover:text-white transition-colors">Emergency Response</Link></li>
               </ul>
             </div>
             
             <div>
               <h3 className="text-lg font-semibold mb-4">Company</h3>
               <ul className="space-y-2 text-gray-300">
-                <li><Link href={route('public.about')} className="hover:text-white transition-colors">About Us</Link></li>
-                <li><Link href={route('public.careers')} className="hover:text-white transition-colors">Careers</Link></li>
-                <li><Link href={route('public.contact')} className="hover:text-white transition-colors">Contact</Link></li>
-                <li><Link href={route('public.privacy')} className="hover:text-white transition-colors">Privacy Policy</Link></li>
+                <li><Link href={safeRoute('public.about', undefined, '/about')} className="hover:text-white transition-colors">About Us</Link></li>
+                <li><Link href={safeRoute('public.careers', undefined, '/careers')} className="hover:text-white transition-colors">Careers</Link></li>
+                <li><Link href={safeRoute('public.contact', undefined, '/contact')} className="hover:text-white transition-colors">Contact</Link></li>
+                <li><Link href={safeRoute('public.privacy', undefined, '/privacy')} className="hover:text-white transition-colors">Privacy Policy</Link></li>
               </ul>
             </div>
           </div>

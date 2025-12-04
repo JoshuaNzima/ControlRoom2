@@ -33,5 +33,6 @@ Route::middleware(['auth'])->group(function () {
 		Route::post('/guards/{guard}/suspend', [\App\Http\Controllers\HR\GuardHRController::class, 'suspend'])->name('guards.suspend');
 		Route::post('/guards/{guard}/reinstate', [\App\Http\Controllers\HR\GuardHRController::class, 'reinstate'])->name('guards.reinstate');
 		Route::post('/guards/{guard}/dismiss', [\App\Http\Controllers\HR\GuardHRController::class, 'dismiss'])->name('guards.dismiss');
+		Route::post('/guards/{guard}/set-role', [\App\Http\Controllers\HR\GuardHRController::class, 'setRole'])->name('guards.set-role');
 	});
 });

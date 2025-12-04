@@ -119,7 +119,10 @@ export default function ScannerModal({ open, onClose, activeScan }: Props) {
     const normalized = normalizeCode(code);
     
     try {
-      await submitScan(normalized);
+      const handled = await submitIfSiteScan(code);
+      if (!handled) {
+        await submitScan(normalized);
+      }
     } catch (error) {
       console.error('Scan submission error:', error);
     } finally {
@@ -140,8 +143,8 @@ export default function ScannerModal({ open, onClose, activeScan }: Props) {
         toast.dismiss(loadingToast);
         toast.success('Scan successful!');
         onClose();
-        // Navigate to attendance
-        router.visit(route('supervisor.attendance'));
+        // Navigate to dashboard (site lock is shown and quick actions available)
+        router.visit(route('supervisor.dashboard'));
       },
       onError: (errors) => {
         toast.dismiss(loadingToast);
@@ -149,6 +152,45 @@ export default function ScannerModal({ open, onClose, activeScan }: Props) {
         toast.error(message || 'Failed to process scan. Please try again.');
       }
     });
+  };
+
+  // Try to interpret the raw code as a site scan and visit the site scan endpoint (GET)
+  const submitIfSiteScan = async (raw: string): Promise<boolean> => {
+    try {
+      // JSON payload (our QR generation may embed type/site_id)
+      if (raw.trim().startsWith('{')) {
+        const obj = JSON.parse(raw);
+        const siteId = obj.site_id ?? obj.site ?? obj.id;
+        if ((obj.type === 'site' || obj.t === 'site') && siteId) {
+          router.visit(route('supervisor.site.scan', { site: siteId, latitude: location?.lat, longitude: location?.lon }));
+          return true;
+        }
+      }
+    } catch {}
+
+    // URL payload containing /site/scan/{id}
+    try {
+      if (raw.startsWith('http')) {
+        const url = new URL(raw);
+        const parts = url.pathname.split('/').filter(Boolean);
+        const siteIdx = parts.findIndex(p => p.toLowerCase() === 'site' && parts[parts.indexOf(p)+1]?.toLowerCase() === 'scan');
+        if (siteIdx !== -1) {
+          const idPart = parts[siteIdx + 2];
+          if (idPart) {
+            router.visit(route('supervisor.site.scan', { site: idPart, latitude: location?.lat, longitude: location?.lon }));
+            return true;
+          }
+        }
+        // query param ?site=<id>
+        const siteParam = url.searchParams.get('site');
+        if (siteParam) {
+          router.visit(route('supervisor.site.scan', { site: siteParam, latitude: location?.lat, longitude: location?.lon }));
+          return true;
+        }
+      }
+    } catch {}
+
+    return false;
   };
 
   const clearScan = () => {

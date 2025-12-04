@@ -43,7 +43,7 @@ class ExpenseController extends Controller
         $canApprove = false;
         if ($user) {
             try {
-                $canApprove = $user->hasAnyRole(['admin','super_admin','finance_officer','accountant'])
+                $canApprove = $user->hasAnyRole(['admin','super_admin','finance_officer','accountant','asset_manager'])
                     || $user->can('approve_expense')
                     || $user->can('manage_expense')
                     || $user->can('finance.approvals');
@@ -142,7 +142,8 @@ class ExpenseController extends Controller
         $expense = Expense::create([
             ...$validated,
             'user_id' => Auth::id(),
-            'status' => 'pending', // Expenses start as pending and need approval
+            'status' => 'pending', // start pending
+            'approval_stage' => 'admin_pending', // first stage: admin approval
         ]);
 
         $routeName = request()->route() ? request()->route()->getName() : '';
@@ -259,9 +260,27 @@ class ExpenseController extends Controller
     {
         $this->authorize('approve', $expense);
 
-        $expense->update(['status' => 'approved']);
+        $stage = $expense->approval_stage ?? 'admin_pending';
+        if ($stage === 'admin_pending') {
+            $expense->update([
+                'admin_approved_by' => Auth::id(),
+                'admin_approved_at' => now(),
+                'approval_stage' => 'asset_pending',
+                'status' => 'pending',
+            ]);
+            return back()->withSuccess('Requisition forwarded to Assets Manager for approval.');
+        }
+        if ($stage === 'asset_pending') {
+            $expense->update([
+                'asset_approved_by' => Auth::id(),
+                'asset_approved_at' => now(),
+                'approval_stage' => 'complete',
+                'status' => 'approved',
+            ]);
+            return back()->withSuccess('Requisition approved.');
+        }
 
-        return back()->withSuccess('Expense approved successfully.');
+        return back()->withErrors('Invalid approval stage.');
     }
 
     /**
@@ -275,11 +294,36 @@ class ExpenseController extends Controller
             'reason' => 'nullable|string',
         ]);
 
+        $reason = (string) ($request->reason ?? '');
         $expense->update([
             'status' => 'rejected',
-            'notes' => ($expense->notes ? $expense->notes . "\n" : '') . "Rejected: {$request->reason}",
+            'approval_stage' => 'rejected',
+            'rejected_by' => Auth::id(),
+            'rejected_at' => now(),
+            'rejection_reason' => $reason,
+            'notes' => ($expense->notes ? $expense->notes . "\n" : '') . (strlen($reason) ? ("Rejected: " . $reason) : 'Rejected'),
         ]);
 
-        return back()->withSuccess('Expense rejected.');
+        return back()->withSuccess('Requisition rejected.');
+    }
+
+    /**
+     * Resubmit a rejected expense (requisition) back to Admin stage
+     */
+    public function resubmit(Request $request, Expense $expense)
+    {
+        $this->authorize('resubmit', $expense);
+        $expense->update([
+            'status' => 'pending',
+            'approval_stage' => 'admin_pending',
+            'admin_approved_by' => null,
+            'admin_approved_at' => null,
+            'asset_approved_by' => null,
+            'asset_approved_at' => null,
+            'rejected_by' => null,
+            'rejected_at' => null,
+            'rejection_reason' => null,
+        ]);
+        return back()->withSuccess('Requisition resubmitted for approval.');
     }
 }

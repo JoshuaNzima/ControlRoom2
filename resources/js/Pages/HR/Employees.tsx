@@ -7,11 +7,12 @@ export default function HREmployees() {
   const { guards, filters, zones, auth }: any = usePage().props;
   const [search, setSearch] = useState(filters?.search || '');
   const [status, setStatus] = useState(filters?.status || '');
+  const [employeeRole, setEmployeeRole] = useState(filters?.employee_role || '');
   const [promoteOpen, setPromoteOpen] = useState(false);
   const [currentGuard, setCurrentGuard] = useState<any | null>(null);
 
   const onFilter = () => {
-    router.get(route('hr.employees.index'), { search, status }, { preserveState: true, replace: true });
+    router.get(route('hr.employees.index'), { search, status, employee_role: employeeRole }, { preserveState: true, replace: true });
   };
 
   const openPromote = (guard: any) => {
@@ -47,7 +48,7 @@ export default function HREmployees() {
           </div>
 
           <div className="rounded-2xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-4 md:p-6 mb-4">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -64,11 +65,20 @@ export default function HREmployees() {
                 <option value="inactive">Inactive</option>
                 <option value="suspended">Suspended</option>
               </select>
+              <select
+                value={employeeRole}
+                onChange={(e) => setEmployeeRole(e.target.value)}
+                className="w-full rounded-md border border-gray-300 dark:border-slate-700 px-3 py-2 bg-white dark:bg-slate-900 text-gray-900 dark:text-slate-100"
+              >
+                <option value="">All Types</option>
+                <option value="guard">Guards</option>
+                <option value="driver">Drivers</option>
+              </select>
               <div className="flex gap-3">
                 <button onClick={onFilter} className="px-4 py-2 rounded-md border dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-700 dark:text-slate-200">
                   Filter
                 </button>
-                <button onClick={() => { setSearch(''); setStatus(''); router.get(route('hr.employees.index'), {}, { preserveState: false }); }} className="px-4 py-2 rounded-md border dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-700 dark:text-slate-200">
+                <button onClick={() => { setSearch(''); setStatus(''); setEmployeeRole(''); router.get(route('hr.employees.index'), {}, { preserveState: false }); }} className="px-4 py-2 rounded-md border dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-700 dark:text-slate-200">
                   Reset
                 </button>
               </div>
@@ -82,6 +92,7 @@ export default function HREmployees() {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-slate-300 uppercase">Name</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-slate-300 uppercase">Email</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-slate-300 uppercase">Phone</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-slate-300 uppercase">Type</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-slate-300 uppercase">Status</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-slate-300 uppercase">Actions</th>
                 </tr>
@@ -92,6 +103,11 @@ export default function HREmployees() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-slate-100">{g.name}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-slate-100">{g.email || '-'}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-slate-100">{g.phone || '-'}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      <span className="px-2 py-1 rounded text-xs bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100">
+                        {(g.employee_role || 'guard').toString()}
+                      </span>
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                       <span className={`px-2 py-1 rounded text-xs ${g.status === 'active' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100' : g.status === 'inactive' ? 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-100' : 'bg-rose-100 text-rose-800 dark:bg-rose-900 dark:text-rose-100'}`}>
                         {g.status}
@@ -104,6 +120,12 @@ export default function HREmployees() {
                           className="px-3 py-1 rounded bg-indigo-600 hover:bg-indigo-700 text-white"
                         >
                           Promote
+                        </button>
+                        <button
+                          onClick={() => router.post(route('hr.guards.set-role', { guard: g.id }), { employee_role: (g.employee_role === 'driver' ? 'guard' : 'driver') }, { preserveScroll: true })}
+                          className="px-3 py-1 rounded bg-blue-600 hover:bg-blue-700 text-white"
+                        >
+                          {g.employee_role === 'driver' ? 'Set as Guard' : 'Set as Driver'}
                         </button>
                         {g.status === 'active' ? (
                           <button

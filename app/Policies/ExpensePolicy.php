@@ -55,8 +55,18 @@ class ExpensePolicy
      */
     public function approve(User $user, Expense $expense): bool
     {
-        return $user->hasAnyPermission(['finance.expenses.manage', 'finance.*'])
-            && $expense->status === 'pending';
+        if ($expense->status !== 'pending') {
+            return false;
+        }
+        // Stage: admin_pending -> admins (and finance roles) can approve
+        if (($expense->approval_stage ?? 'admin_pending') === 'admin_pending') {
+            return $user->hasAnyRole(['admin','super_admin','finance_officer','accountant']) || $user->hasAnyPermission(['finance.expenses.manage','finance.*']);
+        }
+        // Stage: asset_pending -> asset managers (and super_admin) can approve
+        if (($expense->approval_stage ?? '') === 'asset_pending') {
+            return $user->hasAnyRole(['asset_manager','super_admin']);
+        }
+        return false;
     }
 
     /**
@@ -64,8 +74,16 @@ class ExpensePolicy
      */
     public function reject(User $user, Expense $expense): bool
     {
-        return $user->hasAnyPermission(['finance.expenses.manage', 'finance.*'])
-            && $expense->status === 'pending';
+        if ($expense->status !== 'pending') {
+            return false;
+        }
+        if (($expense->approval_stage ?? 'admin_pending') === 'admin_pending') {
+            return $user->hasAnyRole(['admin','super_admin','finance_officer','accountant']) || $user->hasAnyPermission(['finance.expenses.manage','finance.*']);
+        }
+        if (($expense->approval_stage ?? '') === 'asset_pending') {
+            return $user->hasAnyRole(['asset_manager','super_admin']);
+        }
+        return false;
     }
 
     /**
@@ -74,5 +92,13 @@ class ExpensePolicy
     public function manage(User $user, Expense $expense): bool
     {
         return $user->hasAnyPermission(['finance.expenses.manage', 'finance.*']);
+    }
+
+    /**
+     * Allow requester to resubmit a rejected expense
+     */
+    public function resubmit(User $user, Expense $expense): bool
+    {
+        return $expense->status === 'rejected' && $expense->user_id === $user->id;
     }
 }

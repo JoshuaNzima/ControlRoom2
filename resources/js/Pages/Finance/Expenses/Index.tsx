@@ -13,6 +13,7 @@ interface Expense {
   expense_date: string;
   payment_method: string;
   status: 'pending' | 'approved' | 'rejected';
+  approval_stage?: 'admin_pending' | 'asset_pending' | 'complete' | 'rejected';
   account_id?: number | null;
   notes?: string | null;
   user?: {
@@ -89,7 +90,8 @@ export default function ExpenseIndex({ expenses, totals, filters }: Props) {
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
 
-  const { url } = usePage();
+  const { url, props } = usePage<any>();
+  const currentUserId = props?.auth?.user?.id as number | undefined;
   const isAdminRoute = typeof url === 'string' && url.startsWith('/admin/');
   const Layout = isAdminRoute ? AdminLayout : FinanceLayout;
   const listRouteName = isAdminRoute ? 'admin.requisitions.index' : 'finance.expenses.index';
@@ -544,22 +546,59 @@ export default function ExpenseIndex({ expenses, totals, filters }: Props) {
                   </div>
                 )}
               </div>
-              <div className="px-6 py-3 bg-gray-50 border-t text-xs text-gray-500 flex justify-between">
-                <span>
-                  Status:{' '}
-                  {viewingExpense.status === 'pending'
-                    ? 'Pending approval'
-                    : viewingExpense.status === 'approved'
-                    ? 'Approved'
-                    : 'Rejected'}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setViewModalOpen(false)}
-                  className="text-indigo-600 hover:text-indigo-800 font-medium"
-                >
-                  Close
-                </button>
+              <div className="px-6 py-3 bg-gray-50 border-t text-xs text-gray-600 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <span>
+                    Status:{' '}
+                    {viewingExpense.status === 'pending'
+                      ? 'Pending approval'
+                      : viewingExpense.status === 'approved'
+                      ? 'Approved'
+                      : 'Rejected'}
+                  </span>
+                  <span className="inline-flex items-center px-2 py-0.5 rounded bg-gray-200 text-gray-700">
+                    Stage: {viewingExpense.approval_stage === 'asset_pending' ? 'Assets approval' : viewingExpense.approval_stage === 'complete' ? 'Complete' : viewingExpense.approval_stage === 'rejected' ? 'Rejected' : 'Admin approval'}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  {viewingExpense.status === 'pending' && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => router.post(route('finance.expenses.approve', viewingExpense.id), {}, { onSuccess: () => setViewModalOpen(false) })}
+                        className="px-3 py-1.5 rounded bg-emerald-600 hover:bg-emerald-700 text-white font-medium"
+                      >
+                        Approve
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const reason = prompt('Rejection reason (optional)') || '';
+                          router.post(route('finance.expenses.reject', viewingExpense.id), { reason }, { onSuccess: () => setViewModalOpen(false) });
+                        }}
+                        className="px-3 py-1.5 rounded bg-rose-600 hover:bg-rose-700 text-white font-medium"
+                      >
+                        Reject
+                      </button>
+                    </>
+                  )}
+                  {viewingExpense.status === 'rejected' && viewingExpense.user?.id && currentUserId === viewingExpense.user.id && (
+                    <button
+                      type="button"
+                      onClick={() => router.post(route('finance.expenses.resubmit', viewingExpense.id), {}, { onSuccess: () => setViewModalOpen(false) })}
+                      className="px-3 py-1.5 rounded bg-indigo-600 hover:bg-indigo-700 text-white font-medium"
+                    >
+                      Resubmit
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setViewModalOpen(false)}
+                    className="px-3 py-1.5 rounded bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium"
+                  >
+                    Close
+                  </button>
+                </div>
               </div>
             </Modal>
           )}

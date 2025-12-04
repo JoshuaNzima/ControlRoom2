@@ -28,6 +28,11 @@ class EmployeeController extends Controller
             ->when($request->input('status'), function ($q, $status) {
                 $q->where('status', $status);
             })
+            ->when($request->input('employee_role'), function ($q, $role) {
+                if (in_array($role, ['guard','driver'])) {
+                    $q->where('employee_role', $role);
+                }
+            })
             ->orderBy('name');
 
         $guards = $query->paginate(15)->withQueryString();
@@ -36,7 +41,7 @@ class EmployeeController extends Controller
 
         return Inertia::render('HR/Employees', [
             'guards' => $guards,
-            'filters' => $request->only(['search', 'status']),
+            'filters' => $request->only(['search', 'status', 'employee_role']),
             'zones' => $zones,
         ]);
     }

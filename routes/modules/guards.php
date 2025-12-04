@@ -42,6 +42,9 @@ Route::middleware(['auth'])->group(function () {
             Route::post('/checkpoint/scan', [CheckpointScanController::class, 'scan'])->name('checkpoint.scan');
             Route::post('/checkpoint/clear', [CheckpointScanController::class, 'clearScan'])->name('checkpoint.clear');
 
+            // Site QR scan (for attendance site-lock)
+            Route::get('/site/scan/{site}', [\App\Http\Controllers\Guards\SiteScanController::class, 'scan'])->name('site.scan');
+
             // Downs reporting
             Route::post('/downs', [DownReportController::class, 'store'])->name('downs.store');
 

@@ -83,6 +83,9 @@ export default function GuardsIndex() {
   const [showSupervisor, setShowSupervisor] = useState(false);
   const [selectedSupervisorId, setSelectedSupervisorId] = useState<string>('');
   const [selectedGuardIds, setSelectedGuardIds] = useState<number[]>([]);
+  const [viewOpen, setViewOpen] = useState(false);
+  const [viewData, setViewData] = useState<any | null>(null);
+  const [viewLoading, setViewLoading] = useState<number | null>(null);
 
   React.useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -117,6 +120,21 @@ export default function GuardsIndex() {
     };
     const url = route('control-room.guards.export', query);
     window.location.href = url;
+  };
+
+  const openView = async (id: number) => {
+    setViewLoading(id);
+    try {
+      const res = await fetch(route('control-room.guards.json', { guard: id }), { headers: { Accept: 'application/json' } });
+      if (!res.ok) throw new Error('Failed');
+      const json = await res.json();
+      setViewData(json);
+      setViewOpen(true);
+    } catch (e) {
+      // no-op
+    } finally {
+      setViewLoading(null);
+    }
   };
 
   return (
@@ -293,6 +311,15 @@ export default function GuardsIndex() {
                         >
                           <IconMapper name="MapPin" size={18} />
                         </button>
+                        <button
+                          onClick={() => openView(g.id)}
+                          className="p-2 rounded bg-gray-100 hover:bg-gray-200 text-gray-800 border"
+                          title="View Details"
+                          aria-label="View Details"
+                          disabled={viewLoading === g.id}
+                        >
+                          {viewLoading === g.id ? '...' : <IconMapper name="Eye" size={18} />}
+                        </button>
                         {canAssignSupervisor && (
                           <button
                             onClick={() => { setCurrentGuardId(g.id); setSelectedSupervisorId(''); setShowSupervisor(true); }}
@@ -353,6 +380,7 @@ export default function GuardsIndex() {
                 setErrorsCreate({});
                 router.post(route('control-room.guards.store'), form, {
                   preserveScroll: true,
+                  forceFormData: true,
                   onFinish: () => setSaving(false),
                   onSuccess: () => { setShowAdd(false); },
                   onError: (errs: any) => setErrorsCreate(errs as Record<string, string>),
@@ -367,6 +395,58 @@ export default function GuardsIndex() {
           </div>
         </Modal>
 
+        {/* View Guard Details Modal */}
+        <Modal show={viewOpen} onClose={() => { setViewOpen(false); setViewData(null); }} maxWidth="2xl">
+          <div className="p-4 sm:p-6 bg-white dark:bg-gray-800">
+            <div className="flex items-start gap-4">
+              {viewData?.photo_url ? (
+                <img src={viewData.photo_url} alt={viewData?.name || 'Guard'} className="w-24 h-24 rounded object-cover border dark:border-gray-700" />
+              ) : (
+                <div className="w-24 h-24 rounded bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-gray-500">No Photo</div>
+              )}
+              <div className="flex-1">
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{viewData?.name}</h2>
+                <div className="text-sm text-gray-600 dark:text-gray-300">Employee ID: {viewData?.employee_id}</div>
+                <div className="mt-2 flex flex-wrap gap-2 text-xs">
+                  <span className="px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200">{viewData?.status}</span>
+                  {viewData?.guard_type && <span className="px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200">{viewData.guard_type}</span>}
+                  {viewData?.grade?.name && <span className="px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200">{viewData.grade.name}</span>}
+                </div>
+              </div>
+            </div>
+            <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+              <div><span className="font-medium text-gray-700 dark:text-gray-300">Phone:</span> <span className="text-gray-900 dark:text-gray-100">{viewData?.phone || '-'}</span></div>
+              <div><span className="font-medium text-gray-700 dark:text-gray-300">Email:</span> <span className="text-gray-900 dark:text-gray-100">{viewData?.email || '-'}</span></div>
+              <div className="md:col-span-2"><span className="font-medium text-gray-700 dark:text-gray-300">Address:</span> <span className="text-gray-900 dark:text-gray-100">{viewData?.address || '-'}</span></div>
+              <div><span className="font-medium text-gray-700 dark:text-gray-300">Residence:</span> <span className="text-gray-900 dark:text-gray-100">{viewData?.residence_address || '-'}</span></div>
+              <div><span className="font-medium text-gray-700 dark:text-gray-300">District:</span> <span className="text-gray-900 dark:text-gray-100">{viewData?.residence_district || '-'}</span></div>
+              <div><span className="font-medium text-gray-700 dark:text-gray-300">DOB / Gender:</span> <span className="text-gray-900 dark:text-gray-100">{[viewData?.date_of_birth, viewData?.gender].filter(Boolean).join(' • ') || '-'}</span></div>
+              <div><span className="font-medium text-gray-700 dark:text-gray-300">ID Number:</span> <span className="text-gray-900 dark:text-gray-100">{viewData?.id_number || '-'}</span></div>
+              <div><span className="font-medium text-gray-700 dark:text-gray-300">Supervisor:</span> <span className="text-gray-900 dark:text-gray-100">{viewData?.supervisor?.name || '-'}</span></div>
+              <div><span className="font-medium text-gray-700 dark:text-gray-300">Zone:</span> <span className="text-gray-900 dark:text-gray-100">{viewData?.zone?.name || '-'}</span></div>
+              <div className="md:col-span-2"><span className="font-medium text-gray-700 dark:text-gray-300">Emergency Contact:</span> <span className="text-gray-900 dark:text-gray-100">{[viewData?.emergency_contact_name, viewData?.emergency_contact_phone].filter(Boolean).join(' • ') || '-'}</span></div>
+              <div className="md:col-span-2"><span className="font-medium text-gray-700 dark:text-gray-300">Next of Kin:</span> <span className="text-gray-900 dark:text-gray-100">{[viewData?.next_of_kin_name, viewData?.next_of_kin_relationship, viewData?.next_of_kin_phone].filter(Boolean).join(' • ') || '-'}</span></div>
+              <div className="md:col-span-2"><span className="font-medium text-gray-700 dark:text-gray-300">Children:</span> <span className="text-gray-900 dark:text-gray-100">{viewData?.children_names || '-'}</span></div>
+            </div>
+            {Array.isArray(viewData?.assignments) && viewData.assignments.length > 0 && (
+              <div className="mt-4">
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Assignments</h3>
+                <div className="mt-2 space-y-2">
+                  {viewData.assignments.map((a: any) => (
+                    <div key={a.id} className="text-sm text-gray-800 dark:text-gray-200">
+                      <span className="font-medium">{a.site?.client?.name || 'Client'} - {a.site?.name || 'Site'}</span>
+                      <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">{a.start_date} {a.end_date ? `→ ${a.end_date}` : ''} {a.is_active ? '• Active' : ''}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            <div className="mt-6 flex justify-end">
+              <button onClick={() => { setViewOpen(false); setViewData(null); }} className="px-4 py-2 rounded-md bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-100">Close</button>
+            </div>
+          </div>
+        </Modal>
+
         {/* Assign Site Modal */}
         <AssignSiteModal
           open={showAssign}
@@ -374,9 +454,6 @@ export default function GuardsIndex() {
           zones={zones}
           onClose={() => { setShowAssign(false); setCurrentGuardId(null); }}
           onSuccess={() => router.reload()}
-          fetchSitesRouteName="control-room.clients.sites.json"
-          assignRouteName="control-room.guards.assign-site"
-          unassignRouteName="control-room.guards.unassign-site"
         />
 
         {/* Assign Supervisor Modal */}

@@ -20,9 +20,14 @@ Route::middleware('web')->group(function () {
 // Public landing page for guests (redirects authenticated users to dashboard)
 Route::get('/', [\App\Http\Controllers\Public\LandingController::class, 'index'])->name('public.home');
 
-// Public contact page
+// Public pages
 Route::get('/contact', [\App\Http\Controllers\Public\ContactController::class, 'index'])->name('public.contact');
 Route::post('/contact', [\App\Http\Controllers\Public\ContactController::class, 'store'])->name('public.contact.store');
+Route::get('/services', [\App\Http\Controllers\Public\PageController::class, 'services'])->name('public.services');
+Route::get('/services/{slug}', [\App\Http\Controllers\Public\PageController::class, 'service'])->name('public.services.show');
+Route::get('/about', [\App\Http\Controllers\Public\PageController::class, 'about'])->name('public.about');
+Route::get('/careers', [\App\Http\Controllers\Public\PageController::class, 'careers'])->name('public.careers');
+Route::get('/privacy', [\App\Http\Controllers\Public\PageController::class, 'privacy'])->name('public.privacy');
 
 // Guest routes
 Route::middleware('guest')->group(function () {
@@ -120,6 +125,9 @@ Route::middleware(['auth'])->group(function () {
             case in_array('marketing_officer', $roles):
             case in_array('marketing_manager', $roles):
                 return redirect()->route('admin.marketing');
+            case in_array('asset_manager', $roles):
+            case in_array('assets_manager', $roles):
+                return redirect()->route('admin.assets');
             case in_array('supervisor', $roles):
                 return redirect()->route('supervisor.dashboard');
             case in_array('sergeant', $roles):
@@ -261,5 +269,9 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/profile', [\App\Http\Controllers\ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [\App\Http\Controllers\ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [\App\Http\Controllers\ProfileController::class, 'destroy'])->name('profile.destroy');
+
+    // Profile dashboard (commissions, payroll summaries)
+    Route::get('/me', [\App\Http\Controllers\Profile\ProfileDashboardController::class, 'index'])->name('profile.dashboard');
+    Route::post('/me/commissions/{commission}/claim', [\App\Http\Controllers\Profile\ProfileDashboardController::class, 'claim'])->name('profile.commissions.claim');
 
 });

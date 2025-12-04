@@ -29,7 +29,7 @@ export default function AssignSiteModal({
       const params = new URLSearchParams();
       if (search) params.set('search', search);
       if (zoneId) params.set('zone_id', zoneId);
-      const url = `${route('admin.clients.sites.json')}?${params.toString()}`;
+      const url = `${route('control-room.clients.sites.json')}?${params.toString()}`;
       const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
       const data: Site[] = await res.json();
       setSites(data);
@@ -46,7 +46,7 @@ export default function AssignSiteModal({
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!guardId || !selectedSite) return;
-    router.post(route('admin.guards.assign-site'), {
+    router.post(route('control-room.guards.assign-site'), {
       guard_id: guardId,
       client_site_id: selectedSite,
     }, {
@@ -58,7 +58,7 @@ export default function AssignSiteModal({
   const unassign = () => {
     if (!guardId) return;
     if (!confirm('Unassign guard from current site?')) return;
-    router.post(route('admin.guards.unassign-site'), { guard_id: guardId }, {
+    router.post(route('control-room.guards.unassign-site'), { guard_id: guardId }, {
       preserveScroll: true,
       onSuccess: () => { onSuccess(); onClose(); },
     });

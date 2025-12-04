@@ -22,6 +22,20 @@ export default function ServicePage({ service }: { service: Service }) {
     website: ''
   });
 
+  const safeRoute = (name: string, params?: any, fallback: string = '#') => {
+    try {
+      // @ts-ignore global route
+      const r = route as any;
+      if (typeof r === 'function') {
+        try {
+          if (typeof r().has === 'function' && !r().has(name)) return fallback;
+        } catch {}
+        return r(name, params);
+      }
+    } catch {}
+    return fallback;
+  };
+
   const submitQuote = (e: React.FormEvent) => {
     e.preventDefault();
     post(route('public.contact.store'), {
@@ -56,7 +70,7 @@ export default function ServicePage({ service }: { service: Service }) {
               Request Quote
             </button>
             <Link
-              href={route('public.services')}
+              href={safeRoute('public.services', undefined, '/services')}
               className="inline-flex items-center gap-2 px-5 py-3 bg-white/10 border border-white/20 rounded-lg font-medium hover:bg-white/20"
             >
               <IconMapper name="ArrowLeft" className="w-5 h-5" />

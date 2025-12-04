@@ -54,6 +54,7 @@ Route::middleware(['auth'])->group(function () {
         // Guard management (create/update/delete), assignments and exports in Control Room
         Route::prefix('guards')->name('guards.')->group(function () {
             Route::get('/export', [\App\Http\Controllers\ControlRoom\GuardsController::class, 'export'])->name('export');
+            Route::get('/{guard}/json', [\App\Http\Controllers\ControlRoom\GuardsController::class, 'showJson'])->name('json');
             Route::post('/', [\App\Http\Controllers\ControlRoom\GuardManageController::class, 'store'])
                 ->middleware(['role_or_permission:operations_officer|manager|control_room_operator'])
                 ->name('store');

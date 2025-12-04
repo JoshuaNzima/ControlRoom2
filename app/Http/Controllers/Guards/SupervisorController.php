@@ -309,18 +309,23 @@ class SupervisorController extends Controller
     {
         $validated = $request->validate([
             'guard_id' => 'required|exists:guards,id',
-            'client_site_id' => 'required|exists:client_sites,id',
+            'client_site_id' => 'nullable|exists:client_sites,id',
             'notes' => 'nullable|string',
             'time' => 'nullable|date_format:H:i',
-            // In production we want a photo; in tests we allow it to be omitted
             'photo' => (app()->environment('testing') ? 'nullable' : 'nullable') . '|image|max:5120',
         ]);
 
-        // Require active checkpoint lock matching the site (skip in testing)
+        // Determine target site: prefer payload, else session lock
+        $scan = session('active_checkpoint_scan');
+        $siteId = $validated['client_site_id'] ?? ($scan['site_id'] ?? null);
+
+        // Require active site context when not in tests
         if (!app()->environment('testing')) {
-            $scan = session('active_checkpoint_scan');
-            if (!$scan || (int)($scan['site_id'] ?? 0) !== (int)$validated['client_site_id']) {
-                return back()->withErrors(['message' => 'Scan the site checkpoint to take attendance for this site.']);
+            if (!$siteId) {
+                return back()->withErrors(['message' => 'Scan the site QR/checkpoint first to lock the site for attendance.']);
+            }
+            if ($validated['client_site_id'] && (int)$validated['client_site_id'] !== (int)$siteId) {
+                return back()->withErrors(['message' => 'Selected site does not match the active site lock.']);
             }
         }
 
@@ -343,7 +348,7 @@ class SupervisorController extends Controller
         $attendance = new Attendance([
             'guard_id' => $validated['guard_id'],
             'supervisor_id' => Auth::id(),
-            'client_site_id' => $validated['client_site_id'],
+            'client_site_id' => $siteId,
             'date' => Carbon::today(),
             'check_in_time' => $checkInTime,
             'check_in_notes' => $validated['notes'] ?? null,

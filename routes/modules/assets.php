@@ -2,7 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 
-Route::middleware(['auth', 'role:super_admin,assets_manager'])
+Route::middleware(['auth', 'role:super_admin,asset_manager'])
     ->prefix('admin/assets')
     ->name('admin.assets.')
     ->group(function () {

@@ -2,6 +2,10 @@ import React, { ChangeEvent, FormEvent } from 'react';
 import { useForm } from '@inertiajs/react';
 import { GuardFormData } from '@/types/guards';
 
+const DISTRICTS = [
+  'Balaka','Blantyre','Chikwawa','Chiradzulu','Chitipa','Dedza','Dowa','Karonga','Kasungu','Likoma','Lilongwe','Machinga','Mangochi','Mchinji','Mulanje','Mwanza','Mzimba','Neno','Nkhata Bay','Nkhotakota','Nsanje','Ntcheu','Ntchisi','Phalombe','Rumphi','Salima','Thyolo','Zomba'
+];
+
 interface Supervisor {
   id: number;
   name: string;
@@ -62,6 +66,7 @@ export default function GuardForm({
     qualifications: (initialData as any).qualifications || '',
     languages: (initialData as any).languages || '',
     dependents_count: (initialData as any).dependents_count || '',
+    children_names: (initialData as any).children_names || '',
     notes: initialData.notes || '',
     status: initialData.status || 'active',
   });
@@ -69,11 +74,49 @@ export default function GuardForm({
   const set = (field: string, value: any) => (setData as any)(field as any, value);
   const handleChange = (field: string) => (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     set(field, e.target.value);
+    if (clientErrors[field]) {
+      setClientErrors((prev) => {
+        const { [field]: _omit, ...rest } = prev;
+        return rest;
+      });
+    }
   };
+
+  const [clientErrors, setClientErrors] = React.useState<Record<string, string>>({});
+  const [submitted, setSubmitted] = React.useState(false);
+  const err = (k: string) => (errors && (errors as any)[k]) || clientErrors[k];
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
+    setSubmitted(true);
+    const local: Record<string, string> = {};
+    if (!String(data.name || '').trim()) local.name = 'Full Name is required';
+    if (!String(data.phone || '').trim()) local.phone = 'Phone is required';
+    if (!String(data.id_number || '').trim()) local.id_number = 'ID Number is required';
+    if (!String(data.date_of_birth || '').trim()) local.date_of_birth = 'Date of Birth is required';
+    if (!String(data.gender || '').trim()) local.gender = 'Gender is required';
+    if (!String(data.guard_type || '').trim()) local.guard_type = 'Guard Type is required';
+    if (!String(data.status || '').trim()) local.status = 'Status is required';
+    if (!String(data.emergency_contact_name || '').trim()) local.emergency_contact_name = 'Emergency contact name is required';
+    if (!String(data.emergency_contact_phone || '').trim()) local.emergency_contact_phone = 'Emergency contact phone is required';
+
+    setClientErrors(local);
+    if (Object.keys(local).length > 0) return;
+
     const payload = { ...data };
+    const normalizeDate = (input: any): any => {
+      if (!input || typeof input !== 'string') return input;
+      const s = input.trim();
+      if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+      const m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+      if (m) {
+        const dd = m[1].padStart(2, '0');
+        const mm = m[2].padStart(2, '0');
+        const yyyy = m[3];
+        return `${yyyy}-${mm}-${dd}`;
+      }
+      return s;
+    };
     const toArray = (val: any) => {
       if (Array.isArray(val)) return val;
       if (typeof val === 'string') {
@@ -85,13 +128,15 @@ export default function GuardForm({
       }
       return [];
     };
+    payload.date_of_birth = normalizeDate(payload.date_of_birth);
+    payload.hire_date = normalizeDate(payload.hire_date);
     if (payload.qualifications) payload.qualifications = toArray(payload.qualifications);
     if (payload.languages) payload.languages = toArray(payload.languages);
     onSubmit(payload as GuardFormData);
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} noValidate className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">Employee ID</label>
@@ -111,10 +156,10 @@ export default function GuardForm({
             type="text"
             value={data.name}
             onChange={handleChange('name')}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
+            className={`w-full px-4 py-2 border rounded-lg focus:ring-2 ${err('name') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-red-500'}`}
             required
           />
-          {errors.name && <p className="text-red-600 text-sm mt-1">{errors.name}</p>}
+          {err('name') && <p className="text-red-600 text-sm mt-1">{err('name')}</p>}
         </div>
 
         {canAssignSupervisor && (
@@ -137,14 +182,15 @@ export default function GuardForm({
         )}
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Phone</label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Phone *</label>
           <input
             type="tel"
             value={data.phone}
             onChange={handleChange('phone')}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
+            className={`w-full px-4 py-2 border rounded-lg focus:ring-2 ${err('phone') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-red-500'}`}
+            required
           />
-          {errors.phone && <p className="text-red-600 text-sm mt-1">{errors.phone}</p>}
+          {err('phone') && <p className="text-red-600 text-sm mt-1">{err('phone')}</p>}
         </div>
 
         <div>
@@ -159,40 +205,44 @@ export default function GuardForm({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">ID Number</label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">ID Number *</label>
           <input
             type="text"
             value={data.id_number}
             onChange={handleChange('id_number')}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
+            className={`w-full px-4 py-2 border rounded-lg focus:ring-2 ${err('id_number') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-red-500'}`}
+            required
           />
-          {errors.id_number && <p className="text-red-600 text-sm mt-1">{errors.id_number}</p>}
+          {err('id_number') && <p className="text-red-600 text-sm mt-1">{err('id_number')}</p>}
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Date of Birth</label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Date of Birth *</label>
           <input
-            type="date"
+            type="text"
+            placeholder="DD/MM/YYYY"
             value={data.date_of_birth}
             onChange={handleChange('date_of_birth')}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
+            className={`w-full px-4 py-2 border rounded-lg focus:ring-2 ${err('date_of_birth') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-red-500'}`}
+            required
           />
-          {errors.date_of_birth && <p className="text-red-600 text-sm mt-1">{errors.date_of_birth}</p>}
+          {err('date_of_birth') && <p className="text-red-600 text-sm mt-1">{err('date_of_birth')}</p>}
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Gender</label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Gender *</label>
           <select
             value={data.gender}
             onChange={handleChange('gender')}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
+            className={`w-full px-4 py-2 border rounded-lg focus:ring-2 ${err('gender') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-red-500'}`}
+            required
           >
             <option value="">Select Gender</option>
             <option value="male">Male</option>
             <option value="female">Female</option>
             <option value="other">Other</option>
           </select>
-          {errors.gender && <p className="text-red-600 text-sm mt-1">{errors.gender}</p>}
+          {err('gender') && <p className="text-red-600 text-sm mt-1">{err('gender')}</p>}
         </div>
 
         <div>
@@ -216,23 +266,19 @@ export default function GuardForm({
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
           />
         </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Residence City</label>
-          <input
-            type="text"
-            value={data.residence_city as any}
-            onChange={handleChange('residence_city')}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
-          />
-        </div>
+        {/* Residence City removed per request */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">Residence District</label>
-          <input
-            type="text"
+          <select
             value={data.residence_district as any}
             onChange={handleChange('residence_district')}
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
-          />
+          >
+            <option value="">Select District</option>
+            {DISTRICTS.map((d) => (
+              <option key={d} value={d}>{d}</option>
+            ))}
+          </select>
         </div>
 
         {/* Marital Information */}
@@ -319,12 +365,16 @@ export default function GuardForm({
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">Home District</label>
-          <input
-            type="text"
+          <select
             value={(data.home_district as any) || ''}
             onChange={handleChange('home_district')}
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
-          />
+          >
+            <option value="">Select District</option>
+            {DISTRICTS.map((d) => (
+              <option key={d} value={d}>{d}</option>
+            ))}
+          </select>
         </div>
 
         {/* Education & Qualifications */}
@@ -365,32 +415,48 @@ export default function GuardForm({
           />
         </div>
 
+        {/* Children Names */}
+        <div className="md:col-span-2">
+          <label className="block text-sm font-medium text-gray-700 mb-2">Children Names</label>
+          <textarea
+            value={data.children_names as any}
+            onChange={handleChange('children_names')}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
+            rows={2}
+            placeholder="List children names separated by commas"
+          />
+          {errors.children_names && <p className="text-red-600 text-sm mt-1">{errors.children_names}</p>}
+        </div>
+
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Emergency Contact Name</label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Emergency Contact Name *</label>
           <input
             type="text"
             value={data.emergency_contact_name}
             onChange={handleChange('emergency_contact_name')}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
+            className={`w-full px-4 py-2 border rounded-lg focus:ring-2 ${err('emergency_contact_name') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-red-500'}`}
+            required
           />
-          {errors.emergency_contact_name && <p className="text-red-600 text-sm mt-1">{errors.emergency_contact_name}</p>}
+          {err('emergency_contact_name') && <p className="text-red-600 text-sm mt-1">{err('emergency_contact_name')}</p>}
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Emergency Contact Phone</label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Emergency Contact Phone *</label>
           <input
             type="tel"
             value={data.emergency_contact_phone}
             onChange={handleChange('emergency_contact_phone')}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
+            className={`w-full px-4 py-2 border rounded-lg focus:ring-2 ${err('emergency_contact_phone') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-red-500'}`}
+            required
           />
-          {errors.emergency_contact_phone && <p className="text-red-600 text-sm mt-1">{errors.emergency_contact_phone}</p>}
+          {err('emergency_contact_phone') && <p className="text-red-600 text-sm mt-1">{err('emergency_contact_phone')}</p>}
         </div>
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">Hire Date</label>
           <input
-            type="date"
+            type="text"
+            placeholder="DD/MM/YYYY"
             value={data.hire_date}
             onChange={handleChange('hire_date')}
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
@@ -399,17 +465,18 @@ export default function GuardForm({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Guard Type</label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Guard Type *</label>
           <select
             value={data.guard_type}
             onChange={handleChange('guard_type')}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
+            className={`w-full px-4 py-2 border rounded-lg focus:ring-2 ${err('guard_type') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-red-500'}`}
+            required
           >
             <option value="permanent">Permanent</option>
             <option value="standby">Standby</option>
             <option value="reliever">Reliever</option>
           </select>
-          {errors.guard_type && <p className="text-red-600 text-sm mt-1">{errors.guard_type}</p>}
+          {err('guard_type') && <p className="text-red-600 text-sm mt-1">{err('guard_type')}</p>}
         </div>
 
         <div>
@@ -428,17 +495,18 @@ export default function GuardForm({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Status *</label>
           <select
             value={data.status}
             onChange={handleChange('status')}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
+            className={`w-full px-4 py-2 border rounded-lg focus:ring-2 ${err('status') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-red-500'}`}
+            required
           >
             <option value="active">Active</option>
             <option value="inactive">Inactive</option>
             <option value="suspended">Suspended</option>
           </select>
-          {errors.status && <p className="text-red-600 text-sm mt-1">{errors.status}</p>}
+          {err('status') && <p className="text-red-600 text-sm mt-1">{err('status')}</p>}
         </div>
 
         <div className="md:col-span-2">
@@ -450,6 +518,21 @@ export default function GuardForm({
             rows={4}
           />
           {errors.notes && <p className="text-red-600 text-sm mt-1">{errors.notes}</p>}
+        </div>
+
+        {/* Photo Upload */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Photo</label>
+          <input
+            type="file"
+            accept="image/*"
+            onChange={(e) => {
+              const file = (e.target as HTMLInputElement).files?.[0];
+              if (file) set('photo', file);
+            }}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white dark:bg-gray-900 focus:ring-2 focus:ring-red-500"
+          />
+          {errors?.photo && <p className="text-red-600 text-sm mt-1">{errors.photo}</p>}
         </div>
       </div>
 

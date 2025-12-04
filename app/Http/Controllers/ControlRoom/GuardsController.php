@@ -140,4 +140,59 @@ class GuardsController extends Controller
             'Content-Type' => 'text/csv',
         ]);
     }
+
+    public function showJson(Guard $guard)
+    {
+        $guard->load(['supervisor', 'zone', 'grade', 'activeAssignments', 'assignments.clientSite.client']);
+
+        return response()->json([
+            'id' => $guard->id,
+            'employee_id' => $guard->employee_id,
+            'name' => $guard->name,
+            'phone' => $guard->phone,
+            'email' => $guard->email,
+            'status' => $guard->status,
+            'guard_type' => $guard->guard_type,
+            'hire_date' => optional($guard->hire_date)->format('Y-m-d'),
+            'id_number' => $guard->id_number,
+            'address' => $guard->address,
+            'residence_address' => $guard->residence_address,
+            'residence_city' => $guard->residence_city,
+            'residence_district' => $guard->residence_district,
+            'gender' => $guard->gender,
+            'date_of_birth' => optional($guard->date_of_birth)->format('Y-m-d'),
+            'spouse_name' => $guard->spouse_name,
+            'spouse_phone' => $guard->spouse_phone,
+            'emergency_contact_name' => $guard->emergency_contact_name,
+            'emergency_contact_phone' => $guard->emergency_contact_phone,
+            'next_of_kin_name' => $guard->next_of_kin_name,
+            'next_of_kin_relationship' => $guard->next_of_kin_relationship,
+            'next_of_kin_phone' => $guard->next_of_kin_phone,
+            'education_level' => $guard->education_level,
+            'qualifications' => $guard->qualifications,
+            'languages' => $guard->languages,
+            'dependents_count' => $guard->dependents_count,
+            'children_names' => $guard->children_names,
+            'zone' => $guard->zone ? ['id' => $guard->zone->id, 'name' => $guard->zone->name] : null,
+            'grade' => $guard->grade ? ['id' => $guard->grade->id, 'name' => $guard->grade->name, 'code' => $guard->grade->code ?? null] : null,
+            'supervisor' => $guard->supervisor ? ['id' => $guard->supervisor->id, 'name' => $guard->supervisor->name] : null,
+            'photo_url' => $guard->photo ? url('storage/'.$guard->photo) : null,
+            'assignments' => $guard->assignments->map(function ($a) {
+                return [
+                    'id' => $a->id,
+                    'site' => $a->clientSite ? [
+                        'id' => $a->clientSite->id,
+                        'name' => $a->clientSite->name,
+                        'client' => $a->clientSite->client ? [
+                            'id' => $a->clientSite->client->id,
+                            'name' => $a->clientSite->client->name,
+                        ] : null,
+                    ] : null,
+                    'start_date' => $a->start_date,
+                    'end_date' => $a->end_date,
+                    'is_active' => (bool) $a->is_active,
+                ];
+            }),
+        ]);
+    }
 }

@@ -44,6 +44,8 @@ class Guard extends Model
         'next_of_kin_phone',
         'status',
         'guard_type',
+        'employee_role',
+        'children_names',
         'guard_grade_id',
         'home_village',
         'home_ta',
@@ -178,7 +180,9 @@ class Guard extends Model
 
     public function currentShift()
     {
-        return $this->hasOne(Shift::class)->where('is_active', true);
+        return $this->hasOne(Shift::class)
+            ->whereIn('status', ['scheduled', 'in_progress'])
+            ->whereDate('date', today());
     }
 
     public function currentSite()

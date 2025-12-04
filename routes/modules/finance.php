@@ -4,7 +4,7 @@ use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
 // Finance module routes
-Route::middleware(['auth', 'role:super_admin|finance_officer|accountant|finance|accounting'])
+Route::middleware(['auth', 'role:super_admin|finance_officer|accountant|finance|accounting|asset_manager'])
     ->prefix('finance')
     ->name('finance.')
     ->group(function () {
@@ -22,10 +22,13 @@ Route::middleware(['auth', 'role:super_admin|finance_officer|accountant|finance|
         Route::resource('expenses', \App\Http\Controllers\Finance\ExpenseController::class);
         Route::post('expenses/{expense}/approve', [\App\Http\Controllers\Finance\ExpenseController::class, 'approve'])
             ->name('expenses.approve')
-            ->middleware('can:manage,expense');
+            ->middleware('can:approve,expense');
         Route::post('expenses/{expense}/reject', [\App\Http\Controllers\Finance\ExpenseController::class, 'reject'])
             ->name('expenses.reject')
-            ->middleware('can:manage,expense');
+            ->middleware('can:reject,expense');
+        Route::post('expenses/{expense}/resubmit', [\App\Http\Controllers\Finance\ExpenseController::class, 'resubmit'])
+            ->name('expenses.resubmit')
+            ->middleware('can:resubmit,expense');
 
         // Invoice Management (custom endpoints must come BEFORE the resource route)
         Route::get('invoices/next-number', [\App\Http\Controllers\Finance\InvoiceController::class, 'nextNumber'])

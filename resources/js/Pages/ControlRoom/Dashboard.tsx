@@ -18,7 +18,6 @@ import {
     Filler
 } from 'chart.js';
 import { Line, Bar } from 'react-chartjs-2';
-import QRCodeGenerator from '@/Components/QRCodeGenerator';
 import LiveMonitoring from '@/Components/ControlRoom/LiveMonitoring';
 import { User } from '@/types';
 
@@ -567,9 +566,7 @@ const Dashboard = ({ stats, recentIncidents, activeAlerts, coverageData, attenda
                         </Card>
                     </div>
 
-                    {/* QR Code Generator */}
-                <div>
-                        <QRCodeGenerator />
+                    {/* QR Code Generator removed for Control Room */}
                 </div>
             </div>
         </ControlRoomLayout>
