@@ -93,17 +93,15 @@ export default function AdminLayout({ title, children, user }: Props) {
   const canAccessControlRoom = hasAnyRole(['super_admin','control_room','dispatcher','operations_officer']) || hasPerm('control_room.access');
   const canAccessReports = hasAnyRole(['super_admin','supervisor','reports']) || hasPerm('reports.access');
 
-  const marketingHref = canAccessMarketing ? route('admin.marketing') : route('admin.modules.summary', 'marketing');
-  const controlRoomHref = canAccessControlRoom ? route('control-room.dashboard') : route('admin.modules.summary', 'control_room');
-  const clientsHref = canAccessClients ? route('admin.clients.index') : route('admin.modules.summary', 'clients');
-  const guardsHref = canAccessHR
-    ? route('hr.employees.index')
-    : (canAccessControlRoom ? route('control-room.guards') : route('admin.modules.summary', 'guards'));
-  const hrHref = canAccessHR ? route('hr.dashboard') : route('admin.modules.summary', 'hr');
-  const k9Href = canAccessK9 ? route('k9.dashboard') : route('admin.modules.summary', 'k9');
-  const bizDevHref = canAccessBusinessDev ? route('admin.business-dev') : route('admin.modules.summary', 'business_dev');
-  const assetsHref = canAccessAssets ? route('admin.assets.index') : route('admin.modules.summary', 'assets');
-  const financeHref = canSeeFinance ? route('admin.finance') : route('admin.modules.summary', 'finance');
+  const marketingHref = route('admin.modules.summary', 'marketing');
+  const controlRoomHref = route('admin.modules.summary', 'control_room');
+  const clientsHref = route('admin.modules.summary', 'clients');
+  const guardsHref = route('admin.modules.summary', 'guards');
+  const hrHref = route('admin.modules.summary', 'hr');
+  const k9Href = route('admin.modules.summary', 'k9');
+  const bizDevHref = route('admin.modules.summary', 'business_dev');
+  const assetsHref = route('admin.modules.summary', 'assets');
+  const financeHref = route('admin.modules.summary', 'finance');
   const moduleLinks: ModuleNavItem[] = [
   { name: 'Control Room', href: controlRoomHref, icon: <IconMapper name="briefcase" className="h-6 w-6" />, current: isCurrent(controlRoomHref) },
   { name: 'Clients', href: clientsHref, icon: <IconMapper name="building-2" className="h-6 w-6" />, current: isCurrent(clientsHref) },
