@@ -547,21 +547,6 @@ export default function GuardForm({
           />
           {errors.notes && <p className="text-red-600 text-sm mt-1">{errors.notes}</p>}
         </div>
-
-        {/* Photo Upload */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Photo</label>
-          <input
-            type="file"
-            accept="image/*"
-            onChange={(e) => {
-              const file = (e.target as HTMLInputElement).files?.[0];
-              if (file) set('photo', file);
-            }}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white dark:bg-gray-900 focus:ring-2 focus:ring-red-500"
-          />
-          {errors?.photo && <p className="text-red-600 text-sm mt-1">{errors.photo}</p>}
-        </div>
       </div>
 
       <div className="flex gap-4">

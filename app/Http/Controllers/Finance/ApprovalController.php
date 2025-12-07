@@ -26,7 +26,7 @@ class ApprovalController extends Controller
             ->paginate(10)
             ->withQueryString();
 
-        return Inertia::render('Finance/Approvals/Index', [
+        return Inertia::render('Admin/Approvals/Index', [
             'approvals' => $approvals,
             'budgets' => $budgets,
             'selectedTab' => request()->input('tab', 'requisitions'),
@@ -39,7 +39,11 @@ class ApprovalController extends Controller
 
         $approval->load('expense', 'approver');
 
-        return Inertia::render('Finance/Approvals/Show', [
+        if (request()->wantsJson() || request()->ajax()) {
+            return response()->json($approval);
+        }
+
+        return Inertia::render('Admin/Approvals/Show', [
             'approval' => $approval,
         ]);
     }

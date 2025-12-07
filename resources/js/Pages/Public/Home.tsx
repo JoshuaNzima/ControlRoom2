@@ -2,11 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { Head, useForm, usePage } from '@inertiajs/react';
 import PublicLayout from '@/Layouts/PublicLayout';
 import IconMapper from '@/Components/IconMapper';
+import InteractiveHotspotImage from '@/Components/Public/InteractiveHotspotImage';
 import Modal from '@/Components/Modal';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export default function Home() {
   const [currentStat, setCurrentStat] = useState(0);
   const [activeIntake, setActiveIntake] = useState<'ticket' | 'down' | 'incident'>('ticket');
+  const [selected, setSelected] = useState<any | null>(null);
   const { flash, metrics, team = [] }: any = usePage().props;
   const { data, setData, post, processing, reset, errors, progress, transform } = useForm({
     type: 'ticket' as 'ticket' | 'down' | 'incident',
@@ -190,42 +193,158 @@ export default function Home() {
             </div>
 
             <div className="relative">
-              <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-3xl blur-3xl"></div>
-              <div className="relative bg-white/10 backdrop-blur-sm rounded-3xl p-8 border border-white/20">
-                <div className="space-y-6">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center">
-                      <IconMapper name="Shield" className="w-6 h-6 text-white" />
-                    </div>
-                    <div>
-                      <div className="text-lg font-semibold">Active Monitoring</div>
-                      <div className="text-sm text-gray-300">All systems operational</div>
-                    </div>
+              <div className="absolute inset-0 bg-gradient-to-r from-red-500/20 to-red-300/10 rounded-3xl blur-3xl"></div>
+              <div className="relative">
+                <InteractiveHotspotImage imageUrl="/images/compound.png" showModal={false} onSelect={setSelected} />
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <AnimatePresence>
+        {selected && (
+          <motion.section
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 12 }}
+            transition={{ duration: 0.25 }}
+            className="py-8 bg-white dark:bg-gray-900 border-t border-gray-100 dark:border-gray-800"
+          >
+            <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 p-6 md:p-8">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <div className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Highlighted service</div>
+                    <h3 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{selected.label}</h3>
                   </div>
-                  
-                  <div className="space-y-3">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm">Site Coverage</span>
-                      <span className="text-sm font-semibold">98.5%</span>
-                    </div>
-                    <div className="w-full bg-gray-700 rounded-full h-2">
-                      <div className="bg-gradient-to-r from-green-400 to-blue-400 h-2 rounded-full" style={{width: '98.5%'}}></div>
-                    </div>
+                  <button onClick={() => setSelected(null)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">✕</button>
+                </div>
+                <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <ul className="space-y-2 text-gray-700 dark:text-gray-300">
+                    {(['cctv','guards','k9','rapid','perimeter','signage'].includes(selected?.id) ? (
+                      selected.id === 'cctv' ? ['24/7 monitoring & analytics','Cloud or on‑prem recording','Remote incident review'] :
+                      selected.id === 'guards' ? ['Vetted, trained manpower','Site-specific SLAs','Daily supervision/briefing'] :
+                      selected.id === 'k9' ? ['Deterrence patrols','Rapid response pairing','Certified handlers'] :
+                      selected.id === 'rapid' ? ['Rapid response fleet','Dispatch & escalation','On‑scene reporting'] :
+                      selected.id === 'perimeter' ? ['Access control & fencing','Visitor logs & audits','Alarm integrations'] :
+                      ['Brand presence & signage','Visitor confidence','Compliance-ready assets']
+                    ) : []).map((b, i) => (
+                      <li key={i} className="flex items-start gap-2">
+                        <span className="mt-1 w-2 h-2 rounded-full bg-red-500" />
+                        <span>{b}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <div className="rounded-xl border border-gray-200 dark:border-gray-800 p-4 bg-gray-50 dark:bg-gray-900">
+                    <img src="/images/compound.png" alt="Service" className="w-full h-40 object-cover rounded-lg opacity-90" />
                   </div>
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="text-center p-3 bg-white/10 rounded-lg">
-                      <div className="text-2xl font-bold text-green-400">24</div>
-                      <div className="text-xs text-gray-300">Guards On Duty</div>
-                    </div>
-                    <div className="text-center p-3 bg-white/10 rounded-lg">
-                      <div className="text-2xl font-bold text-blue-400">12</div>
-                      <div className="text-xs text-gray-300">Active Sites</div>
-                    </div>
-                  </div>
+                </div>
+                <div className="mt-6 flex justify-end">
+                  {selected?.slug && (
+                    <a href={route('public.services.show', selected.slug) as any} className="px-5 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700">Learn more</a>
+                  )}
                 </div>
               </div>
             </div>
+          </motion.section>
+        )}
+      </AnimatePresence>
+
+      
+
+      {/* Features Section */}
+      <section className="py-20 bg-gray-50 dark:bg-gray-900">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl font-bold text-gray-900 dark:text-gray-100 mb-4">
+              Comprehensive Security Solutions
+            </h2>
+            <p className="text-xl text-gray-600 dark:text-gray-400 max-w-3xl mx-auto">
+              From professional guards to advanced technology, we provide everything you need to secure your business.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {features.map((feature, index) => (
+              <motion.div 
+                key={index}
+                initial={{ opacity: 0, y: 10 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, amount: 0.3 }}
+                transition={{ duration: 0.35, delay: index * 0.06 }}
+                className="group bg-white dark:bg-gray-950 rounded-2xl p-8 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2 border border-gray-100 dark:border-gray-800"
+              >
+                <div className={`w-16 h-16 bg-gradient-to-r ${feature.color} rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300`}>
+                  <IconMapper name={feature.icon} className="w-8 h-8 text-white" />
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">{feature.title}</h3>
+                <p className="text-gray-600 dark:text-gray-400 leading-relaxed">{feature.description}</p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Metrics Section */}
+      <section className="py-16 bg-white dark:bg-gray-900">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-gray-900 dark:text-gray-100">By the Numbers</h2>
+            <p className="text-gray-600 dark:text-gray-400">Operational scale and reliability</p>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+            {metricStats.map((stat, idx) => (
+              <motion.div
+                key={idx}
+                initial={{ opacity: 0, y: 10 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, amount: 0.4 }}
+                transition={{ duration: 0.35, delay: idx * 0.06 }}
+                className="text-center p-6 rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950"
+              >
+                <div className="text-3xl font-extrabold text-red-600">{stat.number}</div>
+                <div className="mt-1 text-sm text-gray-600 dark:text-gray-400">{stat.label}</div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Testimonials Section */}
+      <section className="py-20 bg-white dark:bg-gray-900">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl font-bold text-gray-900 dark:text-gray-100 mb-4">
+              Trusted by Leading Businesses
+            </h2>
+            <p className="text-xl text-gray-600 dark:text-gray-400">
+              See what our clients say about our security services
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {testimonials.map((testimonial, index) => (
+              <motion.div 
+                key={index}
+                initial={{ opacity: 0, y: 10 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, amount: 0.4 }}
+                transition={{ duration: 0.35, delay: index * 0.06 }}
+                className="bg-gray-50 dark:bg-gray-950 rounded-2xl p-8 hover:shadow-lg transition-shadow duration-300 border border-gray-100 dark:border-gray-800"
+              >
+                <div className="flex mb-4">
+                  {[...Array(testimonial.rating)].map((_, i) => (
+                    <IconMapper key={i} name="Star" className="w-5 h-5 text-yellow-400 fill-current" />
+                  ))}
+                </div>
+                <p className="text-gray-700 dark:text-gray-300 mb-6 italic">"{testimonial.content}"</p>
+                <div>
+                  <div className="font-semibold text-gray-900 dark:text-gray-100">{testimonial.name}</div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">{testimonial.company}</div>
+                </div>
+              </motion.div>
+            ))}
           </div>
         </div>
       </section>
@@ -368,66 +487,6 @@ export default function Home() {
               </button>
             </div>
           </form>
-        </div>
-      </section>
-
-      {/* Features Section */}
-      <section className="py-20 bg-gray-50 dark:bg-gray-900">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-gray-900 dark:text-gray-100 mb-4">
-              Comprehensive Security Solutions
-            </h2>
-            <p className="text-xl text-gray-600 dark:text-gray-400 max-w-3xl mx-auto">
-              From professional guards to advanced technology, we provide everything you need to secure your business.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {features.map((feature, index) => (
-              <div 
-                key={index}
-                className="group bg-white dark:bg-gray-950 rounded-2xl p-8 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2 border border-gray-100 dark:border-gray-800"
-              >
-                <div className={`w-16 h-16 bg-gradient-to-r ${feature.color} rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300`}>
-                  <IconMapper name={feature.icon} className="w-8 h-8 text-white" />
-                </div>
-                <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">{feature.title}</h3>
-                <p className="text-gray-600 dark:text-gray-400 leading-relaxed">{feature.description}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Testimonials Section */}
-      <section className="py-20 bg-white dark:bg-gray-900">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-gray-900 dark:text-gray-100 mb-4">
-              Trusted by Leading Businesses
-            </h2>
-            <p className="text-xl text-gray-600 dark:text-gray-400">
-              See what our clients say about our security services
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {testimonials.map((testimonial, index) => (
-              <div key={index} className="bg-gray-50 dark:bg-gray-950 rounded-2xl p-8 hover:shadow-lg transition-shadow duration-300 border border-gray-100 dark:border-gray-800">
-                <div className="flex mb-4">
-                  {[...Array(testimonial.rating)].map((_, i) => (
-                    <IconMapper key={i} name="Star" className="w-5 h-5 text-yellow-400 fill-current" />
-                  ))}
-                </div>
-                <p className="text-gray-700 dark:text-gray-300 mb-6 italic">"{testimonial.content}"</p>
-                <div>
-                  <div className="font-semibold text-gray-900 dark:text-gray-100">{testimonial.name}</div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400">{testimonial.company}</div>
-                </div>
-              </div>
-            ))}
-          </div>
         </div>
       </section>
 

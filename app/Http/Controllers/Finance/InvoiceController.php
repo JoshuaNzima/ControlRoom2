@@ -47,6 +47,10 @@ class InvoiceController extends Controller
             'overdue' => Invoice::overdue()->count(),
         ];
 
+        $clients = GuardClient::select('id', 'name', 'contact_person', 'phone', 'email', 'monthly_rate')
+            ->orderBy('name')
+            ->get();
+
         return Inertia::render('Finance/Invoices/Index', [
             'invoices' => $invoices,
             'summary' => $summary,
@@ -54,6 +58,11 @@ class InvoiceController extends Controller
                 'status' => $request->status,
                 'start_date' => $request->start_date,
                 'end_date' => $request->end_date,
+            ],
+            'clients' => $clients,
+            'defaultBilling' => [
+                'year' => now()->year,
+                'month' => now()->month,
             ],
         ]);
     }
@@ -141,7 +150,7 @@ class InvoiceController extends Controller
     /**
      * Display a specific invoice
      */
-    public function show(Invoice $invoice)
+    public function show(Request $request, Invoice $invoice)
     {
         $invoice->load('user', 'lineItems', 'client');
 
@@ -149,6 +158,10 @@ class InvoiceController extends Controller
         if (isset($data['line_items'])) {
             $data['lineItems'] = $data['line_items'];
             unset($data['line_items']);
+        }
+
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json($data);
         }
 
         return Inertia::render('Finance/Invoices/Show', [

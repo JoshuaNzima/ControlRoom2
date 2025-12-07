@@ -14,14 +14,11 @@ class SuperAdminMiddleware
     
     public function handle(Request $request, Closure $next)
     {
-        if (!Auth::check() || !Role::whereHas('users', function($query) {
-            $query->where('model_id', Auth::id());
-        })->where('name', 'super_admin')->doesntExist()) {
+        if (!Auth::check() || !Auth::user()->hasRole('super_admin')) {
             return redirect()->route('admin.dashboard')
                 ->with('error', 'Access denied. Super admin privileges required.');
         }
 
-        // Add last activity timestamp
         if ($user = Auth::user()) {
             $user->forceFill(['last_active_at' => now()])->save();
         }

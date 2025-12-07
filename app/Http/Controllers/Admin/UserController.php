@@ -24,9 +24,14 @@ class UserController extends Controller
             ->orderBy('name')
             ->paginate(20);
 
+        $roles = Role::all();
+        $zones = Zone::orderBy('name')->get(['id','name']);
+
         return Inertia::render('Admin/Users/Index', [
             'users' => $users,
             'filters' => request()->only('search'),
+            'roles' => $roles,
+            'zones' => $zones,
         ]);
     }
 

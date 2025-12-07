@@ -272,7 +272,7 @@ export default function ShowInvoice({ invoice }: Props) {
                 {invoice.status === 'draft' && (
                   <>
                     <Link
-                      href={route('finance.invoices.edit', invoice.id)}
+                      href={route('finance.invoices.index', { edit: invoice.id })}
                       className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all font-medium shadow-md hover:shadow-lg"
                     >
                       Edit Invoice

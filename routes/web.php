@@ -191,53 +191,44 @@ Route::middleware(['auth'])->group(function () {
         if (!$user) {
             return redirect()->route('login');
         }
-        
-        $roles = Role::whereHas('users', function($query) use ($user) {
-            $query->where('model_id', $user->id);
-        })->pluck('name')->toArray();
-        
-        switch(true) {
-            case in_array('super_admin', $roles):
-                return redirect()->route('superadmin.dashboard');
-            case in_array('admin', $roles):
-                return redirect()->route('admin.dashboard');
-            case in_array('operations_officer', $roles):
-                return redirect()->route('control-room.dashboard');
-            case in_array('control_room_operator', $roles):
-                return redirect()->route('control-room.dashboard');
-            case in_array('zone_commander', $roles):
-                return redirect()->route('zone.dashboard');
-            case in_array('manager', $roles):
-                return redirect()->route('manager.dashboard');
-            case in_array('business_dev', $roles):
-            case in_array('business_development', $roles):
-            case in_array('bdo', $roles):
-                return redirect()->route('admin.business-dev');
-            case in_array('marketing', $roles):
-            case in_array('marketing_officer', $roles):
-            case in_array('marketing_manager', $roles):
-                return redirect()->route('admin.marketing');
-            case in_array('asset_manager', $roles):
-            case in_array('assets_manager', $roles):
-                return redirect()->route('admin.assets');
-            case in_array('supervisor', $roles):
-                return redirect()->route('supervisor.dashboard');
-            case in_array('sergeant', $roles):
-                return redirect()->route('supervisor.dashboard');
-            case in_array('hr', $roles):
-            case in_array('human_resources', $roles):
-                return redirect()->route('hr.dashboard');
-            case in_array('client', $roles):
-                return redirect()->route('client.dashboard');
-            case in_array('finance_officer', $roles):
-            case in_array('accountant', $roles):
-                return redirect()->route('finance.dashboard');
-            case in_array('finance', $roles):
-            case in_array('accounting', $roles):
-                return redirect()->route('finance.dashboard');
-            default:
-                abort(403, 'Unauthorized. No dashboard is configured for your role.');
+        // Map dashboards using Spatie roles directly for accuracy
+        if ($user->hasRole('super_admin')) {
+            return redirect()->route('superadmin.dashboard');
         }
+        if ($user->hasRole('admin')) {
+            return redirect()->route('admin.dashboard');
+        }
+        if ($user->hasRole('operations_officer') || $user->hasRole('control_room_operator')) {
+            return redirect()->route('control-room.dashboard');
+        }
+        if ($user->hasRole('zone_commander')) {
+            return redirect()->route('zone.dashboard');
+        }
+        if ($user->hasRole('manager')) {
+            return redirect()->route('manager.dashboard');
+        }
+        if ($user->hasAnyRole(['business_dev','business_development','bdo'])) {
+            return redirect()->route('admin.business-dev');
+        }
+        if ($user->hasAnyRole(['marketing','marketing_officer','marketing_manager'])) {
+            return redirect()->route('admin.marketing');
+        }
+        if ($user->hasAnyRole(['asset_manager','assets_manager'])) {
+            return redirect()->route('admin.assets');
+        }
+        if ($user->hasAnyRole(['supervisor','sergeant'])) {
+            return redirect()->route('supervisor.dashboard');
+        }
+        if ($user->hasAnyRole(['hr','human_resources'])) {
+            return redirect()->route('hr.dashboard');
+        }
+        if ($user->hasRole('client')) {
+            return redirect()->route('client.dashboard');
+        }
+        if ($user->hasAnyRole(['finance_officer','accountant','finance','accounting'])) {
+            return redirect()->route('finance.dashboard');
+        }
+        abort(403, 'Unauthorized. No dashboard is configured for your role.');
     
     })->name('dashboard');
 
