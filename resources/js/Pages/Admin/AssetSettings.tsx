@@ -25,7 +25,7 @@ export default function AssetSettings({ auth = {}, settings }: Props) {
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const payload: Record<string, any> = { ...data };
-    router.post(route('admin.assets.settings.update'), payload, { preserveScroll: true });
+    router.post(route('assets.settings.update'), payload, { preserveScroll: true });
   };
 
   return (

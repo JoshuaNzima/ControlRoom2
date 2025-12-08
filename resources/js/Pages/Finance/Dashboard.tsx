@@ -4,6 +4,8 @@ import FinanceLayout from '@/Layouts/FinanceLayout';
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler } from 'chart.js';
 import { Line } from 'react-chartjs-2';
 import FinanceDrilldownPanel from '@/Components/FinanceDrilldownPanel';
+import QuickRequisitionModal from '@/Components/Requisitions/QuickRequisitionModal';
+import RequisitionSummary from '@/Components/Requisitions/RequisitionSummary';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler);
 
@@ -192,6 +194,9 @@ export default function FinanceDashboard(props: Props) {
               </div>
             </div>
           </div>
+
+          <QuickRequisitionModal />
+          <RequisitionSummary />
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="rounded-lg border bg-white p-4">

@@ -4,6 +4,7 @@ import BaseShell from './BaseShell';
 import IconMapper from '@/Components/IconMapper';
 import { User } from '@/types';
 import { useTheme } from '@/Providers/ThemeProvider';
+import QuickRequisitionButton from '@/Components/Requisitions/QuickRequisitionButton';
 
 interface Props {
   title: string;
@@ -78,6 +79,7 @@ export default function FrontDeskLayout({ title, children, user }: Props) {
                     <span className="absolute -top-1 -right-1 inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-bold leading-none rounded-full bg-red-600 text-white">{unread > 99 ? '99+' : unread}</span>
                   )}
                 </button>
+                <QuickRequisitionButton />
                 <button onClick={toggle} className="text-sm px-3 py-1 rounded-md bg-red-100 text-red-800 hover:bg-red-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700">
                   {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
                 </button>

@@ -5,6 +5,7 @@ import IconMapper from '@/Components/IconMapper';
 import DashboardLayout from '@/Layouts/SupervisorLayout';
 import CameraCapture from '@/Components/CameraCapture';
 import ScannerModal from '@/Components/Scanner/ScannerModal';
+import QuickRequisitionModal from '@/Components/Requisitions/QuickRequisitionModal';
 
 interface GuardAttendance {
   id: number;
@@ -185,7 +186,7 @@ export default function Dashboard({
     <DashboardLayout>
       <div className="min-h-screen bg-gray-50">
         <Head title="Dashboard" />
-  <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
           {/* Header Section with Date & Time */}
           <div className="bg-gradient-to-r from-coin-600 via-coin-500 to-coin-400 rounded-2xl shadow-xl p-6 text-white">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -265,7 +266,8 @@ export default function Dashboard({
     </div>
   )}
   </div>
-        
+
+          <QuickRequisitionModal />
 
           {/* Quick Attendance toggle */}
           <div className="flex items-center justify-end mb-4">

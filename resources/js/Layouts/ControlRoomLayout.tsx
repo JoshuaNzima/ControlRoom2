@@ -4,6 +4,7 @@ import IconMapper from '@/Components/IconMapper';
 import NotificationBell from '@/Components/Common/NotificationBell';
 import { User } from '@/types';
 import { useTheme } from '@/Providers/ThemeProvider';
+import QuickRequisitionButton from '@/Components/Requisitions/QuickRequisitionButton';
 
 interface Props {
   title: string;
@@ -60,6 +61,7 @@ export default function ControlRoomLayout({ title, children, user }: Props) {
     { name: 'Clients', href: route('control-room.clients'), icon: <IconMapper name="building-2" className="h-6 w-6" />, current: false },
     { name: 'Reports', href: route('control-room.reports'), icon: <IconMapper name="bar-chart-2" className="h-6 w-6" />, current: false },
     { name: 'Settings', href: route('control-room.settings'), icon: <IconMapper name="settings" className="h-6 w-6" />, current: false },
+    { name: 'Requisitions', href: route('requisitions.index'), icon: <IconMapper name="clipboard-list" className="h-6 w-6" />, current: false },
   ];
 
   return (
@@ -145,6 +147,7 @@ export default function ControlRoomLayout({ title, children, user }: Props) {
               <h1 className="text-xl font-semibold text-red-900 dark:text-gray-100">{title}</h1>
               <div className="flex items-center gap-4">
                 <NotificationBell />
+                <QuickRequisitionButton />
                 <button onClick={toggle} className="text-sm px-3 py-1 rounded-md bg-red-100 text-red-800 hover:bg-red-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700">
                   {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
                 </button>

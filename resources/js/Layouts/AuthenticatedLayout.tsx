@@ -6,6 +6,7 @@ import { Link, usePage } from '@inertiajs/react';
 import { PageProps, User } from '@/types';
 import { PropsWithChildren, ReactNode, useState } from 'react';
 import NotificationBell from '@/Components/Common/NotificationBell';
+import QuickRequisitionButton from '@/Components/Requisitions/QuickRequisitionButton';
 
 export default function Authenticated({
     user,
@@ -42,11 +43,18 @@ export default function Authenticated({
                                 >
                                     Messaging
                                 </NavLink>
+                                <NavLink
+                                    href={route('requisitions.index')}
+                                    active={window.location.pathname.startsWith(route('requisitions.index'))}
+                                >
+                                    Requisitions
+                                </NavLink>
                             </div>
                         </div>
 
                         <div className="hidden sm:ms-6 sm:flex sm:items-center gap-4">
                             <NotificationBell />
+                            <QuickRequisitionButton />
                             <div className="relative ms-3">
                                 <Dropdown>
                                     <Dropdown.Trigger>
@@ -147,12 +155,18 @@ export default function Authenticated({
                         >
                             Dashboard
                         </ResponsiveNavLink>
-                            <ResponsiveNavLink
-                                href={route('control-room.messaging.index')}
-                                active={window.location.pathname.startsWith(route('control-room.messaging.index'))}
-                            >
-                                Messaging
-                            </ResponsiveNavLink>
+                        <ResponsiveNavLink
+                            href={route('control-room.messaging.index')}
+                            active={window.location.pathname.startsWith(route('control-room.messaging.index'))}
+                        >
+                            Messaging
+                        </ResponsiveNavLink>
+                        <ResponsiveNavLink
+                            href={route('requisitions.index')}
+                            active={window.location.pathname.startsWith(route('requisitions.index'))}
+                        >
+                            Requisitions
+                        </ResponsiveNavLink>
                     </div>
 
                     <div className="border-t border-gray-200 pb-1 pt-4">

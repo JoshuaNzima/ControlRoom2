@@ -47,6 +47,6 @@ class AssetSettingController extends Controller
         $row->value = $data;
         $row->save();
 
-        return redirect()->route('admin.assets.settings');
+        return redirect()->route('assets.settings');
     }
 }

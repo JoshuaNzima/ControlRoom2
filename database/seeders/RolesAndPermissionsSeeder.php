@@ -103,6 +103,13 @@ class RolesAndPermissionsSeeder extends Seeder
             'finance.invoices.manage',
             'finance.budgets.view',
             'finance.budgets.manage',
+
+            // Requisitions module
+            'requisitions.create',
+            'requisitions.view_own',
+            'requisitions.view_all',
+            'requisitions.approve',
+            'requisitions.disburse',
         ];
 
         foreach ($permissions as $permission) {
@@ -139,6 +146,8 @@ class RolesAndPermissionsSeeder extends Seeder
             'reports.activity_logs.view',
             
             'admin.users.view', 'admin.users.create', 'admin.users.edit',
+            // Requisitions
+            'requisitions.create', 'requisitions.view_own',
         ]);
 
         // Supervisor role - limited to attendance and viewing
@@ -150,6 +159,8 @@ class RolesAndPermissionsSeeder extends Seeder
             'incidents.view',
             'reports.view',
             'clients.view',
+            // Requisitions
+            'requisitions.create', 'requisitions.view_own',
         ]);
 
         // Zone Commander role - manages a specific zone
@@ -164,6 +175,8 @@ class RolesAndPermissionsSeeder extends Seeder
             'zone.view.dashboard',
             'control.zones.view',
             'control.reports.view',
+            // Requisitions
+            'requisitions.create', 'requisitions.view_own',
         ]);
 
         // Control Room Operator role - dedicated control room access
@@ -190,6 +203,8 @@ class RolesAndPermissionsSeeder extends Seeder
             'control.qr_codes.generate',
             'guards.view', // Need to see guards for assignments
             'clients.view', // Need to see clients for incidents
+            // Requisitions
+            'requisitions.create', 'requisitions.view_own',
         ]);
 
         // Operations Officer - oversees control room, guards and zone operations
@@ -212,6 +227,8 @@ class RolesAndPermissionsSeeder extends Seeder
             'guards.view', // Only assigned guards
             'attendance.view', // Only their sites
             'reports.view', // Only their reports
+            // Requisitions
+            'requisitions.create', 'requisitions.view_own',
         ]);
 
         // Finance roles
@@ -241,6 +258,8 @@ class RolesAndPermissionsSeeder extends Seeder
             'clients.view', 'clients.create', 'clients.edit', 'clients.sites.manage',
             'k9.view',
             'reports.view',
+            // Requisitions
+            'requisitions.create', 'requisitions.view_own',
         ]);
 
         $hrPermissions = [
@@ -249,8 +268,10 @@ class RolesAndPermissionsSeeder extends Seeder
         ];
         $hr = Role::firstOrCreate(['name' => 'hr']);
         $hr->givePermissionTo($hrPermissions);
+        $hr->givePermissionTo(['requisitions.create', 'requisitions.view_own']);
 
         $humanResources = Role::firstOrCreate(['name' => 'human_resources']);
         $humanResources->givePermissionTo($hrPermissions);
+        $humanResources->givePermissionTo(['requisitions.create', 'requisitions.view_own']);
     }
 }

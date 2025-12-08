@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import Modal from '@/Components/Modal';
 
@@ -12,7 +12,9 @@ type Hotspot = {
   slug?: string;
 };
 
-export default function InteractiveHotspotImage({ imageUrl, hotspots: inputHotspots, onSelect, showModal = true }: { imageUrl: string; hotspots?: Hotspot[]; onSelect?: (h: Hotspot | null) => void; showModal?: boolean }) {
+type ParallaxLayer = { src: string; depth: number; alt?: string; className?: string };
+
+export default function InteractiveHotspotImage({ imageUrl, hotspots: inputHotspots, onSelect, showModal = true, layers }: { imageUrl: string; hotspots?: Hotspot[]; onSelect?: (h: Hotspot | null) => void; showModal?: boolean; layers?: ParallaxLayer[] }) {
   const hotspots = useMemo<Hotspot[]>(
     () =>
       inputHotspots || [
@@ -27,18 +29,57 @@ export default function InteractiveHotspotImage({ imageUrl, hotspots: inputHotsp
   );
 
   const [active, setActive] = useState<Hotspot | null>(null);
+  const [hover, setHover] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const containerRef = useRef<HTMLDivElement>(null);
 
   return (
     <div className="relative w-full">
-      <div className="relative w-full rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-800 bg-gray-100 dark:bg-gray-950">
+      <div
+        ref={containerRef}
+        className="relative w-full rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-800 bg-gray-100 dark:bg-gray-950"
+        onMouseMove={(e) => {
+          const rect = containerRef.current?.getBoundingClientRect();
+          if (!rect) return;
+          const nx = ((e.clientX - rect.left) / rect.width) * 2 - 1; // -1..1
+          const ny = ((e.clientY - rect.top) / rect.height) * 2 - 1; // -1..1
+          setHover({ x: nx * 16, y: ny * 16 });
+        }}
+        onMouseLeave={() => setHover({ x: 0, y: 0 })}
+        onTouchMove={(e) => {
+          const touch = e.touches[0];
+          const rect = containerRef.current?.getBoundingClientRect();
+          if (!rect || !touch) return;
+          const nx = ((touch.clientX - rect.left) / rect.width) * 2 - 1;
+          const ny = ((touch.clientY - rect.top) / rect.height) * 2 - 1;
+          setHover({ x: nx * 12, y: ny * 12 });
+        }}
+        onTouchEnd={() => setHover({ x: 0, y: 0 })}
+      >
         <img
           src={imageUrl}
           alt="Compound Overview"
-          className="w-full h-auto select-none"
+          className="w-full h-auto select-none will-change-transform"
+          style={{ transform: `translate3d(${hover.x * 0.2}px, ${hover.y * 0.2}px, 0)` }}
           onError={(e) => {
             (e.currentTarget as HTMLImageElement).style.opacity = '0.6';
           }}
         />
+        {layers && layers.length > 0 && (
+          <div className="pointer-events-none absolute inset-0">
+            {layers.map((layer, idx) => (
+              <motion.img
+                key={idx}
+                src={layer.src}
+                alt={layer.alt || 'Layer'}
+                className={`absolute inset-0 w-full h-full object-cover ${layer.className || ''}`}
+                style={{ transform: `translate3d(${hover.x * layer.depth}px, ${hover.y * layer.depth}px, 0)` }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.35, delay: 0.04 * idx }}
+              />
+            ))}
+          </div>
+        )}
         <div className="absolute inset-0">
           {hotspots.map((h) => {
             const base = h.color || 'red';
@@ -66,9 +107,9 @@ export default function InteractiveHotspotImage({ imageUrl, hotspots: inputHotsp
                   onClick={() => { setActive(h); onSelect?.(h); }}
                   whileHover={{ scale: 1.08 }}
                   whileTap={{ scale: 0.95 }}
-                  className={`relative w-8 h-8 rounded-full ${colorRing} ring-2 flex items-center justify-center focus:outline-none focus:ring-4 focus:ring-white/40`}
+                  className={`relative w-[clamp(28px,3.2vw,36px)] h-[clamp(28px,3.2vw,36px)] rounded-full ${colorRing} ring-2 flex items-center justify-center focus:outline-none focus:ring-4 focus:ring-white/40`}
                 >
-                  <span className={`w-2.5 h-2.5 rounded-full ${bgDot} shadow`} />
+                  <span className={`w-[clamp(8px,1vw,10px)] h-[clamp(8px,1vw,10px)] rounded-full ${bgDot} shadow`} />
                   <motion.span
                     className={`absolute inset-0 rounded-full ${colorRing}`}
                     initial={{ opacity: 0.4, scale: 1 }}

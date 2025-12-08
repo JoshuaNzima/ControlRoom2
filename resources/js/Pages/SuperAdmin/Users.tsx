@@ -38,7 +38,7 @@ export default function SuperAdminUsers({ users, filters, roles, zones }: UsersI
     email: '',
     phone: '',
     employee_id: '',
-    role: '',
+    role: roles?.[0]?.name || 'admin',
     status: 'active',
     zone_id: '' as any,
     password: '',
@@ -73,31 +73,98 @@ export default function SuperAdminUsers({ users, filters, roles, zones }: UsersI
     }
   }, [selectedUser]);
 
+  const roleNormalized = (createForm.role || '').toLowerCase().replace(' ', '_');
+  const createPasswordsMatch = !!createForm.password && createForm.password === createForm.password_confirmation;
+  const createPasswordValid = (createForm.password || '').length >= 8;
+  const createZoneRequired = roleNormalized === 'zone_commander';
+  const createZoneValid = !createZoneRequired || !!createForm.zone_id;
+  const canCreate =
+    !!createForm.name &&
+    !!createForm.email &&
+    !!createForm.role &&
+    createPasswordValid &&
+    createPasswordsMatch &&
+    createZoneValid &&
+    !saving;
+
+  React.useEffect(() => {
+    if (roleNormalized !== 'zone_commander' && createForm.zone_id !== null) {
+      setCreateForm((prev) => ({ ...prev, zone_id: '' as any }));
+    } else if (roleNormalized === 'zone_commander' && (createForm.zone_id === null || createForm.zone_id === '')) {
+      if (zones && zones.length > 0) {
+        setCreateForm((prev) => ({ ...prev, zone_id: zones[0].id as any }));
+      }
+    }
+  }, [createForm.role, roleNormalized, zones]);
+
+  const editRoleNormalized = (editForm.role || '').toLowerCase().replace(' ', '_');
+  const editPasswordsMatch = !editForm.password || editForm.password === editForm.password_confirmation;
+  const editPasswordValid = !editForm.password || (editForm.password || '').length >= 8;
+  const editZoneRequired = editRoleNormalized === 'zone_commander';
+  const editZoneValid = !editZoneRequired || !!editForm.zone_id;
+  const canEdit =
+    !!editForm.name &&
+    !!editForm.email &&
+    !!editForm.role &&
+    editPasswordValid &&
+    editPasswordsMatch &&
+    editZoneValid &&
+    !saving;
+
+  React.useEffect(() => {
+    if (editRoleNormalized !== 'zone_commander' && editForm.zone_id !== null && editForm.zone_id !== '') {
+      setEditForm((prev) => ({ ...prev, zone_id: '' as any }));
+    } else if (editRoleNormalized === 'zone_commander' && (editForm.zone_id === null || editForm.zone_id === '')) {
+      if (zones && zones.length > 0) {
+        setEditForm((prev) => ({ ...prev, zone_id: zones[0].id as any }));
+      }
+    }
+  }, [editForm.role, editRoleNormalized, zones]);
+
   const handleSearch = () => {
     router.get(route('superadmin.users'), { search }, { preserveState: true });
   };
 
   const submitCreate = () => {
     setSaving(true);
-    const payload: any = { ...createForm };
-    if (!payload.zone_id) payload.zone_id = null;
+    const payload: any = {
+      ...createForm,
+      role: (createForm.role || '').trim(),
+      zone_id: createForm.zone_id ? createForm.zone_id : null,
+    };
     router.post(route('admin.users.store'), payload, {
       preserveScroll: true,
       onFinish: () => setSaving(false),
-      onSuccess: () => { setShowAdd(false); push('User created'); setCreateForm({ name:'',email:'',phone:'',employee_id:'',role:'',status:'active',zone_id:'',password:'',password_confirmation:''}); },
+      onSuccess: () => {
+        setShowAdd(false);
+        push('User created');
+        setCreateForm({
+          name: '',
+          email: '',
+          phone: '',
+          employee_id: '',
+          role: roles?.[0]?.name || 'admin',
+          status: 'active',
+          zone_id: '' as any,
+          password: '',
+          password_confirmation: '',
+        });
+      },
+      onError: () => push('Failed to create user'),
     });
   };
 
   const submitUpdate = () => {
     if (!selectedUser) return;
     setSaving(true);
-    const payload: any = { ...editForm };
+    const payload: any = { ...editForm, role: (editForm.role || '').trim() };
     if (!payload.password) { delete payload.password; delete payload.password_confirmation; }
     if (!payload.zone_id) payload.zone_id = null;
     router.put(route('admin.users.update', { user: selectedUser.id }), payload, {
       preserveScroll: true,
       onFinish: () => setSaving(false),
       onSuccess: () => { setShowEdit(false); push('User updated'); },
+      onError: () => push('Failed to update user'),
     });
   };
 
@@ -135,14 +202,82 @@ export default function SuperAdminUsers({ users, filters, roles, zones }: UsersI
             </div>
             <button
               onClick={handleSearch}
-              className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium"
+              className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium"
             >
               Search
             </button>
           </div>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
+        {/* Mobile Cards */}
+        <div className="grid gap-3 md:hidden">
+          {users.data.map((u) => (
+            <div key={u.id} className="rounded-xl bg-white dark:bg-gray-900 shadow-md border border-gray-100 dark:border-gray-800 p-4 space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-gradient-to-br from-red-500 to-rose-600 rounded-full flex items-center justify-center text-white font-bold text-lg">
+                  {u.name.charAt(0)}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="font-semibold text-gray-900 dark:text-gray-100 truncate">{u.name}</div>
+                  <div className="text-sm text-gray-500 dark:text-gray-400 truncate">{u.email}</div>
+                </div>
+                <span className="px-3 py-1 bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-200 rounded-full text-xs font-semibold">
+                  {u.roles?.[0]?.name || 'No Role'}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="text-sm text-gray-500 dark:text-gray-400">Employee: {u.employee_id || 'N/A'}</div>
+                <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                  u.status === 'active'
+                    ? 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300'
+                    : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300'
+                }`}>
+                  {u.status || 'Active'}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => { setSelectedUser(u); setShowEdit(true); }}
+                  className="flex-1 px-3 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 transition"
+                  title="Edit"
+                >
+                  Edit
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (confirm('Are you sure you want to delete this user?')) {
+                      router.delete(route('admin.users.destroy', { user: u.id }));
+                    }
+                  }}
+                  className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition"
+                >
+                  <IconMapper name="Trash" size={18} />
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const newStatus = u.status === 'active' ? 'inactive' : 'active';
+                    if (!confirm(`Set status to ${newStatus}?`)) return;
+                    try {
+                      await router.put(route('admin.users.update', { user: u.id }), { status: newStatus });
+                      push(`User ${u.name} set to ${newStatus}`);
+                    } catch (e) {
+                      push('Failed to update user status');
+                    }
+                  }}
+                  className="p-2 text-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 rounded-lg transition"
+                  title={u.status === 'active' ? 'Deactivate user' : 'Activate user'}
+                >
+                  {u.status === 'active' ? 'Deactivate' : 'Activate'}
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="hidden md:block bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
           <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
             <thead className="bg-gray-50 dark:bg-gray-900/50">
               <tr>
@@ -169,13 +304,15 @@ export default function SuperAdminUsers({ users, filters, roles, zones }: UsersI
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-900 dark:text-gray-100">{u.email}</td>
                   <td className="px-6 py-4">
-                    <span className="px-3 py-1 bg-indigo-100 text-indigo-800 rounded-full text-xs font-semibold">
+                    <span className="px-3 py-1 bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-200 rounded-full text-xs font-semibold">
                       {u.roles?.[0]?.name || 'No Role'}
                     </span>
                   </td>
                   <td className="px-6 py-4">
                     <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                      u.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                      u.status === 'active'
+                        ? 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300'
+                        : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300'
                     }`}>
                       {u.status || 'Active'}
                     </span>
@@ -184,7 +321,7 @@ export default function SuperAdminUsers({ users, filters, roles, zones }: UsersI
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => { setSelectedUser(u); setShowEdit(true); }}
-                        className="p-2 text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition"
+                        className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition"
                         title="Edit"
                       >
                         <IconMapper name="Pencil" size={18} />
@@ -274,9 +411,9 @@ export default function SuperAdminUsers({ users, filters, roles, zones }: UsersI
                 <input type="password" value={createForm.password_confirmation} onChange={(e) => setCreateForm({ ...createForm, password_confirmation: e.target.value })} className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg dark:bg-gray-900 dark:text-gray-100" />
               </div>
             </div>
-            <div className="mt-4 flex gap-3">
-              <button onClick={submitCreate} disabled={saving} className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-bold">{saving ? 'Saving...' : 'Save'}</button>
+            <div className="mt-4 flex gap-3 justify-end">
               <button onClick={() => setShowAdd(false)} className="px-6 py-3 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-100 rounded-lg font-bold">Cancel</button>
+              <button onClick={submitCreate} disabled={!canCreate} className={`px-6 py-3 rounded-lg font-bold text-white ${canCreate ? 'bg-red-600 hover:bg-red-700' : 'bg-red-400 cursor-not-allowed'}`}>{saving ? 'Saving...' : 'Save User'}</button>
             </div>
           </div>
         </Modal>
@@ -329,16 +466,22 @@ export default function SuperAdminUsers({ users, filters, roles, zones }: UsersI
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Password</label>
                   <input type="password" value={editForm.password} onChange={(e) => setEditForm({ ...editForm, password: e.target.value })} className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg dark:bg-gray-900 dark:text-gray-100" />
+                  {!editPasswordValid && editForm.password && (
+                    <p className="text-xs text-red-500 mt-1">Minimum 8 characters.</p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Confirm Password</label>
                   <input type="password" value={editForm.password_confirmation} onChange={(e) => setEditForm({ ...editForm, password_confirmation: e.target.value })} className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg dark:bg-gray-900 dark:text-gray-100" />
+                  {editForm.password_confirmation && !editPasswordsMatch && (
+                    <p className="text-xs text-red-500 mt-1">Passwords must match.</p>
+                  )}
                 </div>
               </div>
             )}
-            <div className="mt-4 flex gap-3">
-              <button onClick={submitUpdate} disabled={saving} className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-bold">{saving ? 'Saving...' : 'Save'}</button>
+            <div className="mt-4 flex gap-3 justify-end">
               <button onClick={() => setShowEdit(false)} className="px-6 py-3 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-100 rounded-lg font-bold">Cancel</button>
+              <button onClick={submitUpdate} disabled={!canEdit} className={`px-6 py-3 rounded-lg font-bold text-white ${canEdit ? 'bg-red-600 hover:bg-red-700' : 'bg-red-400 cursor-not-allowed'}`}>{saving ? 'Saving...' : 'Save Changes'}</button>
             </div>
           </div>
         </Modal>

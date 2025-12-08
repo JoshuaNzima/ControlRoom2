@@ -1,6 +1,8 @@
 import React from 'react';
 import { Head } from '@inertiajs/react';
 import AssetManagementLayout from '@/Layouts/AssetManagementLayout';
+import { formatCurrencyMWK } from '@/Components/format';
+import RequisitionViewModal from '@/Components/Requisitions/RequisitionViewModal';
 
 interface Summary {
   total_assets: number;
@@ -15,18 +17,33 @@ interface Summary {
   equipment_status_counts: { active: number; maintenance: number; retired: number; lost: number };
 }
 
+interface RequisitionLite {
+  id: number;
+  title: string;
+  amount?: number | string | null;
+  status: 'pending_admin' | 'needs_revision' | 'pending_disbursement' | 'disbursed';
+  requested_by?: number;
+  requestedBy?: { id: number; name: string } | null;
+  created_at?: string;
+  needed_by?: string | null;
+}
+
 interface Props {
   auth?: any;
   summary: Summary;
+  pendingDisbursement?: RequisitionLite[];
 }
 
-export default function AssetManagement({ auth = {}, summary }: Props) {
+export default function AssetManagement({ auth = {}, summary, pendingDisbursement = [] }: Props) {
   const vTotal = summary.total_vehicles || 0;
   const eTotal = summary.total_equipment || 0;
   const vCounts = summary.vehicle_status_counts || { active: 0, maintenance: 0, retired: 0 };
   const eCounts = summary.equipment_status_counts || { active: 0, maintenance: 0, retired: 0, lost: 0 };
 
   const pct = (count: number, total: number) => (total > 0 ? Math.round((count / total) * 100) : 0);
+
+  const [open, setOpen] = React.useState(false);
+  const [selectedId, setSelectedId] = React.useState<number | null>(null);
 
   return (
     <AssetManagementLayout title="Asset Management" user={auth?.user as any}>
@@ -67,8 +84,37 @@ export default function AssetManagement({ auth = {}, summary }: Props) {
               pct={pct}
             />
           </div>
+
+          <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">Ready for disbursement</h3>
+              <span className="text-xs text-gray-500 dark:text-gray-400">{pendingDisbursement.length} item{pendingDisbursement.length === 1 ? '' : 's'}</span>
+            </div>
+            <div className="mt-3 divide-y divide-gray-200 dark:divide-gray-800">
+              {pendingDisbursement.length === 0 && (
+                <div className="py-6 text-sm text-gray-500 dark:text-gray-400 text-center">No requisitions awaiting disbursement.</div>
+              )}
+              {pendingDisbursement.map((r) => (
+                <button
+                  key={r.id}
+                  type="button"
+                  onClick={() => { setSelectedId(r.id); setOpen(true); }}
+                  className="w-full text-left py-3 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-800/50 px-2 rounded-md"
+                >
+                  <div className="min-w-0">
+                    <div className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{r.title}</div>
+                    <div className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                      Requested by {r.requestedBy?.name ?? (r.requested_by ? `User #${r.requested_by}` : '-')}
+                    </div>
+                  </div>
+                  <div className="ml-3 text-sm text-gray-800 dark:text-gray-200">{r.amount != null ? formatCurrencyMWK(r.amount) : '-'}</div>
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
+      <RequisitionViewModal open={open} requisitionId={selectedId} onClose={() => setOpen(false)} />
     </AssetManagementLayout>
   );
 }

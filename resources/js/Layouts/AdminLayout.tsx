@@ -112,6 +112,7 @@ export default function AdminLayout({ title, children, user }: Props) {
   { name: 'Assets', href: assetsHref, icon: <IconMapper name="boxes" className="h-6 w-6" />, current: isCurrent(assetsHref) },
   { name: 'Finance', href: financeHref, icon: <IconMapper name="wallet" className="h-6 w-6" />, current: isCurrent(financeHref) },
   { name: 'Marketing', href: marketingHref, icon: <IconMapper name="megaphone" className="h-6 w-6" />, current: isCurrent(marketingHref) },
+  { name: 'Requisitions', href: route('requisitions.index'), icon: <IconMapper name="clipboard-list" className="h-6 w-6" />, current: isCurrent(route('requisitions.index')) },
   ];
 
   return (

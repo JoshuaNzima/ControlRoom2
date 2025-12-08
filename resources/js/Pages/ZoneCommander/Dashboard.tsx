@@ -18,6 +18,7 @@ import {
   Legend,
   ArcElement,
 } from 'chart.js';
+import QuickRequisitionModal from '@/Components/Requisitions/QuickRequisitionModal';
 
 ChartJS.register(
   CategoryScale,

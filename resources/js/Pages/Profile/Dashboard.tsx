@@ -1,6 +1,8 @@
 import React from 'react';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import QuickRequisitionModal from '@/Components/Requisitions/QuickRequisitionModal';
+import RequisitionSummary from '@/Components/Requisitions/RequisitionSummary';
 
 interface Commission {
   id: number;
@@ -62,6 +64,9 @@ export default function ProfileDashboard() {
               Payroll
             </button>
           </div>
+
+          <QuickRequisitionModal />
+          <RequisitionSummary />
 
           {/* Profile */}
           {tab === 'profile' && (

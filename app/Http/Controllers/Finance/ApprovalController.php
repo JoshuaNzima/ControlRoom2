@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Finance;
 use App\Http\Controllers\Controller;
 use App\Models\Approval;
 use App\Models\Expense;
+use App\Models\Requisition;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
@@ -19,6 +20,15 @@ class ApprovalController extends Controller
             ->orderBy('stage')
             ->get();
 
+        // Requisitions awaiting admin approval
+        $requisitionsPending = Requisition::query()
+            ->when(!$user->hasAnyRole(['admin','super_admin']), fn($q) => $q->whereRaw('1=0'))
+            ->where('status', 'pending_admin')
+            ->with('requestedBy')
+            ->orderByDesc('created_at')
+            ->limit(100)
+            ->get();
+
         $budgets = \App\Models\Budget::query()
             ->with('user')
             ->orderBy('fiscal_year', 'desc')
@@ -29,6 +39,7 @@ class ApprovalController extends Controller
         return Inertia::render('Admin/Approvals/Index', [
             'approvals' => $approvals,
             'budgets' => $budgets,
+            'requisitionsPending' => $requisitionsPending,
             'selectedTab' => request()->input('tab', 'requisitions'),
         ]);
     }

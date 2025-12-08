@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Inertia\Inertia;
 use App\Models\Vehicle;
 use App\Models\Equipment;
+use App\Models\Requisition;
 use Illuminate\Support\Facades\DB;
 
 class AssetManagementController extends Controller
@@ -46,8 +47,16 @@ class AssetManagementController extends Controller
             'equipment_status_counts' => $equipmentStatusCounts,
         ];
 
+        $pendingDisbursement = Requisition::query()
+            ->where('status', 'pending_disbursement')
+            ->with('requestedBy')
+            ->orderByDesc('created_at')
+            ->limit(50)
+            ->get();
+
         return Inertia::render('Admin/AssetManagement', [
             'summary' => $summary,
+            'pendingDisbursement' => $pendingDisbursement,
             'auth' => [
                 'user' => [
                     'name' => $user?->name,

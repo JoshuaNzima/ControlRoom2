@@ -7,6 +7,7 @@ import ModuleCard from '@/Components/ModuleCard';
 import { route } from 'ziggy-js';
 import IconMapper from '@/Components/IconMapper';
 import QRCodeGenerator from '@/Components/QRCodeGenerator';
+import RequisitionSummary from '@/Components/Requisitions/RequisitionSummary';
 
 // Type Definitions
 interface Auth {
@@ -194,6 +195,8 @@ const Dashboard: React.FC<SuperAdminDashboardProps> = ({
             </div>
           </div>
         </div>
+
+        <RequisitionSummary />
 
         {/* System Statistics */}
         <div>

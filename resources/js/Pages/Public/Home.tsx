@@ -1,16 +1,20 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Head, useForm, usePage } from '@inertiajs/react';
 import PublicLayout from '@/Layouts/PublicLayout';
 import IconMapper from '@/Components/IconMapper';
 import InteractiveHotspotImage from '@/Components/Public/InteractiveHotspotImage';
 import Modal from '@/Components/Modal';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
 
 export default function Home() {
   const [currentStat, setCurrentStat] = useState(0);
   const [activeIntake, setActiveIntake] = useState<'ticket' | 'down' | 'incident'>('ticket');
   const [selected, setSelected] = useState<any | null>(null);
   const { flash, metrics, team = [] }: any = usePage().props;
+  const spotlightRef = useRef<HTMLDivElement>(null);
+  const { scrollYProgress } = useScroll();
+  const yGlow = useTransform(scrollYProgress, [0, 1], [0, 120]);
+  const yGlow2 = useTransform(scrollYProgress, [0, 1], [0, -80]);
   const { data, setData, post, processing, reset, errors, progress, transform } = useForm({
     type: 'ticket' as 'ticket' | 'down' | 'incident',
     name: '',
@@ -135,6 +139,12 @@ export default function Home() {
     return () => clearInterval(interval);
   }, []);
 
+  useEffect(() => {
+    if (selected && spotlightRef.current) {
+      spotlightRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [selected]);
+
   return (
     <PublicLayout title="Coin Security — Advanced Security Solutions">
       <Head title="Home" />
@@ -143,6 +153,8 @@ export default function Home() {
       <section className="relative overflow-hidden bg-gradient-to-br from-slate-900 via-red-900 to-slate-900 text-white">
         <div className="absolute inset-0 bg-black/20"></div>
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+          <motion.div aria-hidden className="pointer-events-none absolute -top-24 -left-24 w-[40vw] h-[40vw] rounded-full bg-red-500/15 blur-3xl" style={{ y: yGlow }} />
+          <motion.div aria-hidden className="pointer-events-none absolute -bottom-24 -right-24 w-[32vw] h-[32vw] rounded-full bg-purple-500/20 blur-3xl" style={{ y: yGlow2 }} />
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <div className="space-y-8">
               <div className="space-y-4">
@@ -163,7 +175,7 @@ export default function Home() {
                   href="#intake" 
                   className="inline-flex items-center justify-center gap-3 px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
                 >
-                  <IconMapper name="Send" className="w-5 h-5" />
+                  <IconMapper name="Send" className="w-[clamp(18px,3vw,22px)] h-[clamp(18px,3vw,22px)]" />
                   Report an Issue
                 </a>
                 <button 
@@ -171,7 +183,7 @@ export default function Home() {
                   onClick={() => setShowQuote(true)}
                   className="inline-flex items-center justify-center gap-3 px-8 py-4 bg-white/10 backdrop-blur-sm text-white font-semibold rounded-xl border border-white/20 hover:bg-white/20 transition-all duration-300"
                 >
-                  <IconMapper name="Phone" className="w-5 h-5" />
+                  <IconMapper name="Phone" className="w-[clamp(18px,3vw,22px)] h-[clamp(18px,3vw,22px)]" />
                   Get Quote
                 </button>
               </div>
@@ -211,7 +223,7 @@ export default function Home() {
             transition={{ duration: 0.25 }}
             className="py-8 bg-white dark:bg-gray-900 border-t border-gray-100 dark:border-gray-800"
           >
-            <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div ref={spotlightRef} className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
               <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 p-6 md:p-8">
                 <div className="flex items-start justify-between gap-4">
                   <div>
@@ -276,7 +288,7 @@ export default function Home() {
                 className="group bg-white dark:bg-gray-950 rounded-2xl p-8 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2 border border-gray-100 dark:border-gray-800"
               >
                 <div className={`w-16 h-16 bg-gradient-to-r ${feature.color} rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300`}>
-                  <IconMapper name={feature.icon} className="w-8 h-8 text-white" />
+                  <IconMapper name={feature.icon} className="w-[clamp(24px,3vw,32px)] h-[clamp(24px,3vw,32px)] text-white" />
                 </div>
                 <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">{feature.title}</h3>
                 <p className="text-gray-600 dark:text-gray-400 leading-relaxed">{feature.description}</p>
@@ -335,7 +347,7 @@ export default function Home() {
               >
                 <div className="flex mb-4">
                   {[...Array(testimonial.rating)].map((_, i) => (
-                    <IconMapper key={i} name="Star" className="w-5 h-5 text-yellow-400 fill-current" />
+                    <IconMapper key={i} name="Star" className="w-[clamp(16px,2.2vw,20px)] h-[clamp(16px,2.2vw,20px)] text-yellow-400 fill-current" />
                   ))}
                 </div>
                 <p className="text-gray-700 dark:text-gray-300 mb-6 italic">"{testimonial.content}"</p>

@@ -1,10 +1,11 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Admin\AssetHandoverController;
 
 Route::middleware(['auth', 'role:super_admin,asset_manager'])
-    ->prefix('admin/assets')
-    ->name('admin.assets.')
+    ->prefix('assets')
+    ->name('assets.')
     ->group(function () {
         Route::get('/', [\App\Http\Controllers\Admin\AssetManagementController::class, 'index'])->name('index');
 
@@ -15,6 +16,10 @@ Route::middleware(['auth', 'role:super_admin,asset_manager'])
         // Vehicles
         Route::get('/vehicles/{vehicle}/json', [\App\Http\Controllers\Admin\VehicleController::class, 'showJson'])->name('vehicles.json');
         Route::resource('vehicles', \App\Http\Controllers\Admin\VehicleController::class)->except(['create','edit','show']);
+
+        // Handovers
+        Route::post('/handovers', [AssetHandoverController::class, 'store'])->name('handovers.store');
+        Route::post('/handovers/{handover}/return', [AssetHandoverController::class, 'returnAsset'])->name('handovers.return');
 
         // Settings
         Route::get('/settings', [\App\Http\Controllers\Admin\AssetSettingController::class, 'index'])->name('settings');

@@ -4,6 +4,7 @@ import BaseShell from './BaseShell';
 import IconMapper from '@/Components/IconMapper';
 import { User } from '@/types';
 import { useTheme } from '@/Providers/ThemeProvider';
+import QuickRequisitionButton from '@/Components/Requisitions/QuickRequisitionButton';
 
 interface Props {
   title: string;
@@ -26,10 +27,10 @@ export default function AssetManagementLayout({ title, children, user }: Props) 
   const unread = Number(props?.notifications?.unread_count || 0);
 
   const nav: NavItem[] = [
-    { name: 'Overview', href: route('admin.assets'), icon: <IconMapper name="package" className="h-6 w-6" />, current: isCurrent(route('admin.assets')) },
-    { name: 'Vehicles', href: route('admin.assets.vehicles.index'), icon: <IconMapper name="truck" className="h-6 w-6" />, current: isCurrent(route('admin.assets.vehicles.index')) },
-    { name: 'Equipment', href: route('admin.assets.equipment.index'), icon: <IconMapper name="wrench" className="h-6 w-6" />, current: isCurrent(route('admin.assets.equipment.index')) },
-    { name: 'Settings', href: route('admin.assets.settings'), icon: <IconMapper name="settings" className="h-6 w-6" />, current: isCurrent(route('admin.assets.settings')) },
+    { name: 'Overview', href: route('assets.index'), icon: <IconMapper name="package" className="h-6 w-6" />, current: isCurrent(route('assets.index')) },
+    { name: 'Vehicles', href: route('assets.vehicles.index'), icon: <IconMapper name="truck" className="h-6 w-6" />, current: isCurrent(route('assets.vehicles.index')) },
+    { name: 'Equipment', href: route('assets.equipment.index'), icon: <IconMapper name="wrench" className="h-6 w-6" />, current: isCurrent(route('assets.equipment.index')) },
+    { name: 'Settings', href: route('assets.settings'), icon: <IconMapper name="settings" className="h-6 w-6" />, current: isCurrent(route('assets.settings')) },
   ];
 
   return (
@@ -78,6 +79,7 @@ export default function AssetManagementLayout({ title, children, user }: Props) 
                     <span className="absolute -top-1 -right-1 inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-bold leading-none rounded-full bg-red-600 text-white">{unread > 99 ? '99+' : unread}</span>
                   )}
                 </button>
+                <QuickRequisitionButton />
                 <button onClick={toggle} className="text-sm px-3 py-1 rounded-md bg-red-100 text-red-800 hover:bg-red-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700">
                   {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
                 </button>

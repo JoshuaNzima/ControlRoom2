@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Head, router, useForm } from '@inertiajs/react';
 import AdminLayout from '@/Layouts/AdminLayout';
 import IconMapper from '@/Components/IconMapper';
@@ -69,6 +69,7 @@ export default function UsersIndex({ users, filters, roles, zones }: UsersIndexP
     data: createData,
     setData: setCreateData,
     post: postCreate,
+    transform: transformCreate,
     processing: creating,
     errors: createErrors,
     reset: resetCreate,
@@ -79,27 +80,53 @@ export default function UsersIndex({ users, filters, roles, zones }: UsersIndexP
     password_confirmation: '',
     phone: '',
     employee_id: '',
-    role: roles?.[0]?.name || '',
+    role: roles?.[0]?.name || 'admin',
     zone_id: null,
     status: 'active',
   });
 
   const openCreate = () => {
     resetCreate();
-    setCreateData('role', roles?.[0]?.name || '');
+    setCreateData('role', roles?.[0]?.name || 'admin');
     setCreateData('status', 'active');
     setCreateData('zone_id', null as any);
     setShowCreate(true);
   };
 
+  const roleNormalized = (createData.role || '').toLowerCase().replace(' ', '_');
+  const passwordsMatch = !!createData.password && createData.password === createData.password_confirmation;
+  const passwordValid = (createData.password || '').length >= 8;
+  const zoneRequired = roleNormalized === 'zone_commander';
+  const zoneValid = !zoneRequired || !!createData.zone_id;
+  const canCreate = !!createData.name && !!createData.email && !!(createData.role && createData.role.length) && passwordValid && passwordsMatch && zoneValid && !creating;
+
+  useEffect(() => {
+    if (roleNormalized !== 'zone_commander' && createData.zone_id !== null) {
+      setCreateData('zone_id', null as any);
+    } else if (roleNormalized === 'zone_commander' && (createData.zone_id === null || createData.zone_id === '')) {
+      if (zones && zones.length > 0) {
+        setCreateData('zone_id', zones[0].id as any);
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [createData.role]);
+
   const submitCreate = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!canCreate) return;
+    transformCreate((data) => ({
+      ...data,
+      zone_id: (data.zone_id === '' ? null : data.zone_id) as any,
+      role: (data.role || '').trim(),
+    }));
     postCreate(route('admin.users.store'), {
       preserveScroll: true,
       onSuccess: () => {
         setShowCreate(false);
         resetCreate();
+        push('User created');
       },
+      onError: () => push('Failed to create user'),
     });
   };
 
@@ -167,8 +194,8 @@ export default function UsersIndex({ users, filters, roles, zones }: UsersIndexP
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Users Management</h1>
-            <p className="text-gray-600">Manage system users and permissions</p>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Users Management</h1>
+            <p className="text-gray-600 dark:text-gray-400">Manage system users and permissions</p>
           </div>
           <button
             type="button"
@@ -181,7 +208,7 @@ export default function UsersIndex({ users, filters, roles, zones }: UsersIndexP
         </div>
 
         {/* Search */}
-        <div className="bg-white rounded-xl shadow-lg p-6">
+        <div className="bg-white dark:bg-gray-900 rounded-xl shadow-lg p-6">
           <div className="flex gap-4">
               <div className="flex-1 relative">
               <span className="absolute left-3 top-3 text-gray-400"><IconMapper name="Search" size={20} /></span>
@@ -191,55 +218,126 @@ export default function UsersIndex({ users, filters, roles, zones }: UsersIndexP
                 onChange={(e) => setSearch(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
                 placeholder="Search by name or email..."
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-red-500 dark:bg-gray-800 dark:text-gray-100"
               />
             </div>
             <button
               onClick={handleSearch}
-              className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium"
+              className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium"
             >
               Search
             </button>
           </div>
         </div>
 
-        {/* Users Table */}
-        <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+        {/* Mobile Cards */}
+        <div className="grid gap-3 md:hidden">
+          {users.data.map((user) => (
+            <div key={user.id} className="rounded-xl bg-white dark:bg-gray-900 shadow-md border border-gray-100 dark:border-gray-800 p-4 space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-gradient-to-br from-red-500 to-rose-600 rounded-full flex items-center justify-center text-white font-bold text-lg">
+                  {user.name.charAt(0)}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="font-semibold text-gray-900 dark:text-gray-100 truncate">{user.name}</div>
+                  <div className="text-sm text-gray-500 dark:text-gray-400 truncate">{user.email}</div>
+                </div>
+                <span className="px-3 py-1 bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-200 rounded-full text-xs font-semibold">
+                  {user.roles[0]?.name || 'No Role'}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="text-sm text-gray-500 dark:text-gray-400">Employee: {user.employee_id || 'N/A'}</div>
+                <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                  user.status === 'active'
+                    ? 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300'
+                    : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300'
+                }`}>
+                  {user.status || 'Active'}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => openEdit(user)}
+                  className="flex-1 px-3 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 transition"
+                >
+                  Edit
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (confirm('Are you sure you want to delete this user?')) {
+                      router.delete(route('admin.users.destroy', { user: user.id }));
+                    }
+                  }}
+                  className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition"
+                >
+                  <IconMapper name="Trash" size={18} />
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const newStatus = user.status === 'active' ? 'inactive' : 'active';
+                    if (!confirm(`Are you sure you want to set status to ${newStatus}?`)) return;
+                    setLoadingId(user.id);
+                    try {
+                      await router.put(route('admin.users.update', { user: user.id }), { status: newStatus });
+                      showToast(`User ${user.name} set to ${newStatus}`);
+                    } catch (e) {
+                      showToast('Failed to update user status');
+                    } finally {
+                      setLoadingId(null);
+                    }
+                  }}
+                  className="p-2 text-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 rounded-lg transition"
+                  title={user.status === 'active' ? 'Deactivate user' : 'Activate user'}
+                  disabled={loadingId === user.id}
+                >
+                  {loadingId === user.id ? '...' : user.status === 'active' ? 'Deactivate' : 'Activate'}
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Users Table (desktop) */}
+        <div className="hidden md:block bg-white dark:bg-gray-900 rounded-xl shadow-lg overflow-hidden">
+          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-800">
+            <thead className="bg-gray-50 dark:bg-gray-800">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">User</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Role</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">User</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Email</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Role</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Status</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Actions</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-800">
               {users.data.map((user) => (
-                <tr key={user.id} className="hover:bg-gray-50">
+                <tr key={user.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 bg-gradient-to-br from-red-500 to-rose-600 rounded-full flex items-center justify-center text-white font-bold">
                         {user.name.charAt(0)}
                       </div>
                       <div>
-                        <div className="font-medium text-gray-900">{user.name}</div>
-                        <div className="text-sm text-gray-500">{user.employee_id || 'N/A'}</div>
+                        <div className="font-medium text-gray-900 dark:text-gray-100">{user.name}</div>
+                        <div className="text-sm text-gray-500 dark:text-gray-400">{user.employee_id || 'N/A'}</div>
                       </div>
                     </div>
                   </td>
-                  <td className="px-6 py-4 text-sm text-gray-900">{user.email}</td>
+                  <td className="px-6 py-4 text-sm text-gray-900 dark:text-gray-100">{user.email}</td>
                   <td className="px-6 py-4">
-                    <span className="px-3 py-1 bg-indigo-100 text-indigo-800 rounded-full text-xs font-semibold">
+                    <span className="px-3 py-1 bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300 rounded-full text-xs font-semibold">
                       {user.roles[0]?.name || 'No Role'}
                     </span>
                   </td>
                   <td className="px-6 py-4">
                     <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
                       user.status === 'active' 
-                        ? 'bg-green-100 text-green-800' 
-                        : 'bg-gray-100 text-gray-800'
+                        ? 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300' 
+                        : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300'
                     }`}>
                       {user.status || 'Active'}
                     </span>
@@ -249,7 +347,7 @@ export default function UsersIndex({ users, filters, roles, zones }: UsersIndexP
                       <button
                         type="button"
                         onClick={() => openEdit(user)}
-                        className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition"
+                        className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition"
                       >
                         <IconMapper name="Pencil" size={18} />
                       </button>
@@ -259,7 +357,7 @@ export default function UsersIndex({ users, filters, roles, zones }: UsersIndexP
                             router.delete(route('admin.users.destroy', { user: user.id }));
                           }
                         }}
-                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition"
+                        className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition"
                         >
                         <IconMapper name="Trash" size={18} />
                       </button>
@@ -277,7 +375,7 @@ export default function UsersIndex({ users, filters, roles, zones }: UsersIndexP
                             setLoadingId(null);
                           }
                         }}
-                        className="p-2 text-yellow-600 hover:bg-yellow-50 rounded-lg transition"
+                        className="p-2 text-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 rounded-lg transition"
                         title={user.status === 'active' ? 'Deactivate user' : 'Activate user'}
                         disabled={loadingId === user.id}
                       >
@@ -297,7 +395,7 @@ export default function UsersIndex({ users, filters, roles, zones }: UsersIndexP
       <div className="p-4 sm:p-6 bg-white dark:bg-gray-800">
         <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">Add User</h2>
         <form onSubmit={submitCreate} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Name</label>
               <input
@@ -351,6 +449,9 @@ export default function UsersIndex({ users, filters, roles, zones }: UsersIndexP
                 required
               />
               {createErrors.password && <p className="text-xs text-red-600 mt-1">{createErrors.password}</p>}
+              {!passwordValid && createData.password && (
+                <p className="text-xs text-red-600 mt-1">Minimum 8 characters.</p>
+              )}
             </div>
 
             <div>
@@ -363,6 +464,9 @@ export default function UsersIndex({ users, filters, roles, zones }: UsersIndexP
                 required
               />
               {createErrors.password_confirmation && <p className="text-xs text-red-600 mt-1">{createErrors.password_confirmation}</p>}
+              {createData.password_confirmation && !passwordsMatch && (
+                <p className="text-xs text-red-600 mt-1">Passwords must match.</p>
+              )}
             </div>
 
             <div>
@@ -412,6 +516,9 @@ export default function UsersIndex({ users, filters, roles, zones }: UsersIndexP
                   ))}
                 </select>
                 {createErrors.zone_id && <p className="text-xs text-red-600 mt-1">{createErrors.zone_id}</p>}
+                {!zoneValid && (
+                  <p className="text-xs text-red-600 mt-1">Zone is required for Zone Commander.</p>
+                )}
               </div>
             )}
           </div>
@@ -427,8 +534,8 @@ export default function UsersIndex({ users, filters, roles, zones }: UsersIndexP
             </button>
             <button
               type="submit"
-              disabled={creating}
-              className="px-4 py-2 rounded-md bg-red-600 text-white hover:bg-red-700"
+              disabled={!canCreate}
+              className={`px-4 py-2 rounded-md text-white ${canCreate ? 'bg-red-600 hover:bg-red-700' : 'bg-red-400 cursor-not-allowed'}`}
             >
               {creating ? 'Creating...' : 'Create User'}
             </button>

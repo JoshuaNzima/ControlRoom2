@@ -4,6 +4,7 @@ import IconMapper from '@/Components/IconMapper';
 import { User } from '@/types';
 import NotificationBell from '@/Components/Common/NotificationBell';
 import BaseShell from './BaseShell';
+import QuickRequisitionButton from '@/Components/Requisitions/QuickRequisitionButton';
 
 interface Props {
     title: string;
@@ -224,6 +225,7 @@ export default function SuperAdminLayout({ title, children, user }: Props) {
                                 <h1 className="text-xl font-bold text-red-900 dark:text-gray-100">{title}</h1>
                                 <div className="flex items-center gap-4">
                                     <NotificationBell />
+                                    <QuickRequisitionButton />
                                 </div>
                             </div>
                         </div>

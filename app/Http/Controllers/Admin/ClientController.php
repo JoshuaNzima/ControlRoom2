@@ -360,6 +360,51 @@ class ClientController extends Controller
             ->withSuccess('Site added successfully.');
     }
 
+    public function destroySite(Request $request, Client $client, \App\Models\Guards\ClientSite $site)
+    {
+        abort_unless($site->client_id === $client->id, 404);
+
+        $site->delete();
+
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json(['success' => true]);
+        }
+
+        return redirect()->route('admin.clients.edit', $client)
+            ->withSuccess('Site removed successfully.');
+    }
+
+    /**
+     * Return soft-deleted sites for a client (for restore UI)
+     */
+    public function deletedSitesJson(Request $request, Client $client)
+    {
+        $trashed = ClientSite::onlyTrashed()
+            ->where('client_id', $client->id)
+            ->orderByDesc('deleted_at')
+            ->get(['id', 'name', 'address', 'deleted_at', 'status']);
+
+        return response()->json($trashed);
+    }
+
+    /**
+     * Restore a soft-deleted site. Route-model binding does not bind trashed models by default,
+     * so we fetch withTrashed() using the numeric ID.
+     */
+    public function restoreSite(Request $request, Client $client, $site)
+    {
+        $model = ClientSite::withTrashed()->where('id', $site)->firstOrFail();
+        abort_unless($model->client_id === $client->id, 404);
+        $model->restore();
+
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json(['success' => true]);
+        }
+
+        return redirect()->route('admin.clients.edit', $client)
+            ->withSuccess('Site restored successfully.');
+    }
+
     public function bulkImport(Request $request)
     {
         $request->validate([

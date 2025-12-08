@@ -7,6 +7,7 @@ use App\Models\Guards\Guard;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use Illuminate\Validation\Rule;
 
 class GuardAssignmentController extends Controller
 {
@@ -69,7 +70,7 @@ class GuardAssignmentController extends Controller
     {
         $validated = $request->validate([
             'guard_id' => 'required|exists:guards,id',
-            'client_site_id' => 'required|exists:client_sites,id',
+            'client_site_id' => ['required', Rule::exists('client_sites', 'id')->whereNull('deleted_at')],
             'start_date' => 'nullable|date',
             'assignment_type' => 'nullable|in:permanent,temporary',
             'notes' => 'nullable|string',

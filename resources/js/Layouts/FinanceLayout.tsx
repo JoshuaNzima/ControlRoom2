@@ -5,6 +5,7 @@ import IconMapper from '@/Components/IconMapper';
 import NotificationBell from '@/Components/Common/NotificationBell';
 import { User, PageProps } from '@/types';
 import { useTheme } from '@/Providers/ThemeProvider';
+import QuickRequisitionButton from '@/Components/Requisitions/QuickRequisitionButton';
 
 interface Props {
   title: string;
@@ -48,6 +49,7 @@ export default function FinanceLayout({ title, children, user }: Props) {
     { name: 'Requisitions', href: safeRoute('finance.expenses.index', '/finance/expenses'), icon: <IconMapper name="trending-down" className="h-6 w-6" />, current: isCurrent(safeRoute('finance.expenses.index', '/finance/expenses')) },
     { name: 'Budgets', href: safeRoute('finance.budgets.index', '/finance/budgets'), icon: <IconMapper name="pie-chart" className="h-6 w-6" />, current: isCurrent(safeRoute('finance.budgets.index', '/finance/budgets')) },
     { name: 'Payroll', href: safeRoute('finance.payroll.index', '/finance/payroll'), icon: <IconMapper name="users" className="h-6 w-6" />, current: isCurrent(safeRoute('finance.payroll.index', '/finance/payroll')) },
+    { name: 'Req Summary', href: route('requisitions.index') as unknown as string, icon: <IconMapper name="clipboard-list" className="h-6 w-6" />, current: isCurrent(route('requisitions.index') as unknown as string) },
   ];
   const linksToRender = financeLinks;
 
@@ -134,6 +136,7 @@ export default function FinanceLayout({ title, children, user }: Props) {
             <h1 className="text-lg font-semibold text-gray-900 dark:text-white">{title}</h1>
             <div className="flex items-center space-x-4">
               <NotificationBell />
+              <QuickRequisitionButton />
               <Link
                 href={route('finance.expenses.create')}
                 className="inline-flex items-center px-3 py-1.5 rounded-md bg-red-600 text-white hover:bg-red-700 text-sm"

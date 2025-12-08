@@ -4,6 +4,8 @@ import AdminLayout from '@/Layouts/AdminLayout';
 import { Button } from '@/Components/ui/button';
 import EditSiteModal from '@/Components/Clients/EditSiteModal';
 import AddSiteModal from '@/Components/Clients/AddSiteModal';
+import axios from 'axios';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/Components/ui/dialog';
 
 type Service = { id: number; name: string; monthly_price: number };
 type Zone = { id: number; name: string };
@@ -32,10 +34,34 @@ export default function Edit({ client, services, zones = [] }: { client: any; se
   const [addSiteOpen, setAddSiteOpen] = React.useState(false);
   const [editSiteOpen, setEditSiteOpen] = React.useState(false);
   const [selectedSiteId, setSelectedSiteId] = React.useState<number | null>(null);
+  const [deletedOpen, setDeletedOpen] = React.useState(false);
+  const [deletedSites, setDeletedSites] = React.useState<any[]>([]);
+  const [loadingDeleted, setLoadingDeleted] = React.useState(false);
 
   const refreshClient = React.useCallback(() => {
     router.reload({ only: ['client'] });
   }, []);
+
+  const openDeleted = React.useCallback(async () => {
+    setLoadingDeleted(true);
+    try {
+      const url = route('admin.clients.sites.deleted-json', { client: client.id });
+      const res = await axios.get(url, { headers: { 'Accept': 'application/json' } });
+      setDeletedSites(res.data || []);
+      setDeletedOpen(true);
+    } finally {
+      setLoadingDeleted(false);
+    }
+  }, [client?.id]);
+
+  const restoreSite = React.useCallback(async (siteId: number) => {
+    await axios.post(route('admin.clients.sites.restore', { client: client.id, site: siteId }), {}, { headers: { 'Accept': 'application/json' } });
+    await refreshClient();
+    // refresh deleted list
+    const res = await axios.get(route('admin.clients.sites.deleted-json', { client: client.id }), { headers: { 'Accept': 'application/json' } });
+    setDeletedSites(res.data || []);
+    if (!res.data || res.data.length === 0) setDeletedOpen(false);
+  }, [client?.id, refreshClient]);
 
   return (
     <AdminLayout title="Edit Client">
@@ -116,7 +142,10 @@ export default function Edit({ client, services, zones = [] }: { client: any; se
         <div className="mt-10">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-xl font-semibold">Sites</h2>
-            <Button size="sm" onClick={() => setAddSiteOpen(true)}>Add Site</Button>
+            <div className="flex items-center gap-2">
+              <Button size="sm" variant="outline" onClick={openDeleted} disabled={loadingDeleted}>Deleted Sites</Button>
+              <Button size="sm" onClick={() => setAddSiteOpen(true)}>Add Site</Button>
+            </div>
           </div>
           <div className="space-y-2">
             {(client.sites || []).length === 0 && (
@@ -153,6 +182,31 @@ export default function Edit({ client, services, zones = [] }: { client: any; se
           onSaved={refreshClient}
           zones={zones}
         />
+
+        <Dialog open={deletedOpen} onOpenChange={setDeletedOpen}>
+          <DialogContent className="w-full max-w-xl dark:bg-gray-800 dark:text-gray-100">
+            <DialogHeader>
+              <DialogTitle>Deleted Sites</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-2">
+              {deletedSites.length === 0 ? (
+                <div className="text-sm text-gray-500 dark:text-gray-400">No deleted sites.</div>
+              ) : (
+                <div className="divide-y divide-gray-200 dark:divide-gray-700">
+                  {deletedSites.map((s) => (
+                    <div key={s.id} className="py-3 flex items-center justify-between">
+                      <div className="min-w-0">
+                        <div className="font-medium truncate">{s.name}</div>
+                        <div className="text-xs text-gray-500 truncate">Deleted: {s.deleted_at}</div>
+                      </div>
+                      <Button size="sm" onClick={() => restoreSite(s.id)} className="bg-emerald-600 hover:bg-emerald-700 text-white">Restore</Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </AdminLayout>
   );

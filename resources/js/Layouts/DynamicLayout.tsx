@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Link, usePage } from "@inertiajs/react";
 import BaseShell from './BaseShell';
 import NotificationBell from '@/Components/Common/NotificationBell';
+import QuickRequisitionButton from '@/Components/Requisitions/QuickRequisitionButton';
 import { PageProps } from '@/types';
 import { router } from "@inertiajs/react";
 
@@ -81,7 +82,10 @@ export default function DynamicLayout({ children, title, modules }: Props) {
           header={
             <div className="flex items-center justify-between">
               <h1 className="text-xl font-bold text-red-900 dark:text-gray-100">{title}</h1>
-              <NotificationBell />
+              <div className="flex items-center gap-3">
+                <NotificationBell />
+                <QuickRequisitionButton />
+              </div>
             </div>
           }
         >

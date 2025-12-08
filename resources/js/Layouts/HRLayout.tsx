@@ -4,6 +4,7 @@ import BaseShell from './BaseShell';
 import IconMapper from '@/Components/IconMapper';
 import { User } from '@/types';
 import { useTheme } from '@/Providers/ThemeProvider';
+import QuickRequisitionButton from '@/Components/Requisitions/QuickRequisitionButton';
 
 interface Props {
   title: string;
@@ -29,6 +30,7 @@ export default function HRLayout({ title, children, user }: Props) {
     { name: 'Leaves', href: route('hr.leaves'), icon: <IconMapper name="calendar" className="h-6 w-6" />, current: isCurrent(route('hr.leaves')) },
     { name: 'Training', href: route('hr.training'), icon: <IconMapper name="graduation-cap" className="h-6 w-6" />, current: isCurrent(route('hr.training')) },
     { name: 'Careers', href: route('hr.jobs.index'), icon: <IconMapper name="megaphone" className="h-6 w-6" />, current: isCurrent(route('hr.jobs.index')) },
+    { name: 'Requisitions', href: route('requisitions.index'), icon: <IconMapper name="clipboard-list" className="h-6 w-6" />, current: isCurrent(route('requisitions.index')) },
   ];
 
   return (
@@ -68,6 +70,7 @@ export default function HRLayout({ title, children, user }: Props) {
             <div className="flex items-center justify-between">
               <h1 className="text-xl font-semibold text-red-900 dark:text-gray-100">{title}</h1>
               <div className="flex items-center gap-4">
+                <QuickRequisitionButton />
                 <button onClick={toggle} className="text-sm px-3 py-1 rounded-md bg-red-100 text-red-800 hover:bg-red-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700">
                   {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
                 </button>

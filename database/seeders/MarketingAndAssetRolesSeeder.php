@@ -26,6 +26,11 @@ class MarketingAndAssetRolesSeeder extends Seeder
         $assetPerms = [
             'assets.settings.view',
             'assets.settings.manage',
+            'assets.handovers.view',
+            'assets.handovers.manage',
+            'assets.handovers.return',
+            'requisitions.view_all',
+            'requisitions.disburse',
         ];
 
         foreach (array_merge($marketingPerms, $assetPerms) as $perm) {

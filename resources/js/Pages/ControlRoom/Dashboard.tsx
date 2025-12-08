@@ -20,6 +20,8 @@ import {
 import { Line, Bar } from 'react-chartjs-2';
 import LiveMonitoring from '@/Components/ControlRoom/LiveMonitoring';
 import { User } from '@/types';
+import QuickRequisitionModal from '@/Components/Requisitions/QuickRequisitionModal';
+import RequisitionSummary from '@/Components/Requisitions/RequisitionSummary';
 
 ChartJS.register(
     CategoryScale,
@@ -210,6 +212,9 @@ const Dashboard = ({ stats, recentIncidents, activeAlerts, coverageData, attenda
             <Head title="Control Room Dashboard" />
 
             <div className="space-y-6">
+                <QuickRequisitionModal />
+                <RequisitionSummary />
+
                 {/* Key Metrics */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
                     {metricsData.map((metric, index) => (

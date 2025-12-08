@@ -90,6 +90,22 @@ export default function EditSiteModal({ open, onClose, clientId, siteId, onSaved
     }
   };
 
+  const handleDelete = async () => {
+    if (!siteId) return;
+    if (!confirm('Are you sure you want to delete this site? This action cannot be undone.')) return;
+    setSaving(true);
+    try {
+      const url = route('admin.clients.sites.destroy', { client: clientId, site: siteId });
+      await axios.delete(url, { headers: { 'Accept': 'application/json' } });
+      onSaved?.();
+      onClose();
+    } catch (_) {
+      // no-op; errors will be surfaced by server flash or remain silent in modal context
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="w-full max-w-2xl dark:bg-gray-800 dark:text-gray-100">
@@ -166,9 +182,12 @@ export default function EditSiteModal({ open, onClose, clientId, siteId, onSaved
               </div>
             </div>
           )}
-          <div className="flex items-center gap-3 justify-end">
-            <Button variant="outline" onClick={onClose} className="dark:border-gray-600 dark:text-gray-200">Cancel</Button>
-            <Button onClick={handleSave} disabled={saving}>{saving ? 'Saving...' : 'Save Changes'}</Button>
+          <div className="flex items-center gap-3 justify-between">
+            <Button onClick={handleDelete} disabled={saving} className="bg-red-600 hover:bg-red-700 text-white">{saving ? 'Working...' : 'Delete Site'}</Button>
+            <div className="flex items-center gap-3">
+              <Button variant="outline" onClick={onClose} className="dark:border-gray-600 dark:text-gray-200">Cancel</Button>
+              <Button onClick={handleSave} disabled={saving}>{saving ? 'Saving...' : 'Save Changes'}</Button>
+            </div>
           </div>
         </div>
       </DialogContent>

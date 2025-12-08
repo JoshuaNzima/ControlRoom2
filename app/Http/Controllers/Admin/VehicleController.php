@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\AssetHandover;
 use App\Models\Vehicle;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -14,6 +15,27 @@ class VehicleController extends Controller
     {
         $vehicles = Vehicle::orderBy('created_at', 'desc')->paginate(15);
         $user = auth()->user();
+        $openHandovers = AssetHandover::where('asset_type', 'vehicle')
+            ->whereNull('returned_at')
+            ->with('handedTo:id,name')
+            ->get()
+            ->mapWithKeys(function (AssetHandover $handover) {
+                return [
+                    $handover->asset_id => [
+                        'id' => $handover->id,
+                        'asset_id' => $handover->asset_id,
+                        'handed_to' => $handover->handed_to,
+                        'handed_to_user' => $handover->handedTo ? [
+                            'id' => $handover->handedTo->id,
+                            'name' => $handover->handedTo->name,
+                        ] : null,
+                        'condition_out' => $handover->condition_out,
+                        'serial' => $handover->serial,
+                        'color' => $handover->color,
+                        'notes_out' => $handover->notes_out,
+                    ],
+                ];
+            });
 
         return Inertia::render('Admin/AssetVehicles', [
             'vehicles' => $vehicles,
@@ -21,6 +43,7 @@ class VehicleController extends Controller
                 'statuses' => Vehicle::STATUSES,
                 'users' => User::orderBy('name')->get(['id','name']),
             ],
+            'openHandovers' => $openHandovers,
             'auth' => [
                 'user' => [
                     'name' => $user?->name,
@@ -33,20 +56,20 @@ class VehicleController extends Controller
     {
         $data = $this->validateData($request);
         Vehicle::create($data);
-        return redirect()->route('admin.assets.vehicles.index');
+        return redirect()->route('assets.vehicles.index');
     }
 
     public function update(Request $request, Vehicle $vehicle)
     {
         $data = $this->validateData($request);
         $vehicle->update($data);
-        return redirect()->route('admin.assets.vehicles.index');
+        return redirect()->route('assets.vehicles.index');
     }
 
     public function destroy(Vehicle $vehicle)
     {
         $vehicle->delete();
-        return redirect()->route('admin.assets.vehicles.index');
+        return redirect()->route('assets.vehicles.index');
     }
 
     public function showJson(Vehicle $vehicle)

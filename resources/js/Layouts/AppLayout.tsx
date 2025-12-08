@@ -1,5 +1,6 @@
 import React from 'react';
 import NotificationBell from '@/Components/Common/NotificationBell';
+import QuickRequisitionButton from '@/Components/Requisitions/QuickRequisitionButton';
 
 type Props = {
   children: React.ReactNode;
@@ -14,7 +15,10 @@ export default function AppLayout({ children, title }: Props) {
           <div className="max-w-7xl mx-auto px-6 py-4">
             <div className="flex items-center justify-between">
               <h1 className="text-xl font-bold text-red-900 dark:text-gray-100">{title}</h1>
-              <NotificationBell />
+              <div className="flex items-center gap-3">
+                <NotificationBell />
+                <QuickRequisitionButton />
+              </div>
             </div>
           </div>
         </header>

@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { Head, router } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import AdminLayout from '@/Layouts/AdminLayout';
 import Modal from '@/Components/Modal';
+import { formatCurrencyMWK } from '@/Components/format';
+import RequisitionViewModal from '@/Components/Requisitions/RequisitionViewModal';
 
 interface ExpenseLite {
   id: number;
@@ -32,13 +34,27 @@ interface Props {
   approvals: Approval[];
   budgets: { data: BudgetLite[]; meta?: any } | BudgetLite[];
   selectedTab?: 'requisitions' | 'budgets';
+  requisitionsPending?: RequisitionLite[];
 }
 
-export default function AdminApprovalsIndex({ approvals = [], budgets, selectedTab = 'requisitions' }: Props) {
+interface RequisitionLite {
+  id: number;
+  title: string;
+  amount?: number | string | null;
+  status: 'pending_admin' | 'needs_revision' | 'pending_disbursement' | 'disbursed';
+  requested_by?: number;
+  requestedBy?: { id: number; name: string } | null;
+  created_at?: string;
+  needed_by?: string | null;
+}
+
+export default function AdminApprovalsIndex({ approvals = [], budgets, selectedTab = 'requisitions', requisitionsPending = [] }: Props) {
   const [tab, setTab] = useState<'requisitions' | 'budgets'>(selectedTab);
   const [viewOpen, setViewOpen] = useState(false);
   const [viewing, setViewing] = useState<Approval | null>(null);
   const [loadingId, setLoadingId] = useState<number | null>(null);
+  const [reqOpen, setReqOpen] = useState(false);
+  const [reqId, setReqId] = useState<number | null>(null);
 
   useEffect(() => {
     if (tab !== selectedTab) {
@@ -62,6 +78,17 @@ export default function AdminApprovalsIndex({ approvals = [], budgets, selectedT
     } finally {
       setLoadingId(null);
     }
+  };
+
+  const approveReq = (r: RequisitionLite) => {
+    if (!confirm('Approve this requisition?')) return;
+    router.post(route('requisitions.approve', r.id), {}, { preserveScroll: true });
+  };
+
+  const declineReq = (r: RequisitionLite) => {
+    const reason = prompt('Reason (optional)') || '';
+    if (!confirm('Decline this requisition?')) return;
+    router.post(route('requisitions.decline', r.id), { notes_admin: reason }, { preserveScroll: true });
   };
 
   const doApprove = async (a: Approval) => {
@@ -101,53 +128,50 @@ export default function AdminApprovalsIndex({ approvals = [], budgets, selectedT
           </div>
 
           {tab === 'requisitions' && (
-            <div className="bg-white rounded-xl shadow overflow-hidden">
+            <div className="bg-white rounded-xl shadow overflow-hidden dark:bg-gray-900 dark:border dark:border-gray-800">
               <table className="min-w-full">
-                <thead className="bg-gray-50">
+                <thead className="bg-gray-50 dark:bg-gray-800/60">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Requisition</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Amount</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Stage</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Status</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Approver</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Actions</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase dark:text-gray-300">Requisition</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase dark:text-gray-300">Amount</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase dark:text-gray-300">Requested By</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase dark:text-gray-300">Status</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase dark:text-gray-300">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {approvals.length > 0 ? approvals.map((a) => (
-                    <tr key={a.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-3 text-sm text-gray-900">{a.expense?.description || `Expense #${a.expense?.id ?? '-'}`}</td>
-                      <td className="px-6 py-3 text-sm text-gray-900">{a.expense?.amount ?? '-'}</td>
-                      <td className="px-6 py-3 text-sm text-gray-700">{a.stage ?? '-'}</td>
+                <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
+                  {requisitionsPending.length > 0 ? requisitionsPending.map((r) => (
+                    <tr key={r.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/60">
+                      <td className="px-6 py-3 text-sm text-gray-900 dark:text-gray-100">
+                        <div className="flex flex-col">
+                          <span className="font-medium">{r.title}</span>
+                          <span className="text-xs text-gray-500 dark:text-gray-400">#{r.id}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-3 text-sm text-gray-900 dark:text-gray-100">{r.amount != null ? formatCurrencyMWK(r.amount) : '-'}</td>
+                      <td className="px-6 py-3 text-sm text-gray-700 dark:text-gray-300">{r.requestedBy?.name ?? (r.requested_by ? `User #${r.requested_by}` : '-')}</td>
                       <td className="px-6 py-3 text-sm">
-                        <span className={`px-2 py-1 rounded text-xs font-medium ${
-                          a.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : a.status === 'approved' ? 'bg-green-100 text-green-800' : 'bg-rose-100 text-rose-800'
-                        }`}>
-                          {a.status}
+                        <span className="px-2 py-1 rounded text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-500/20 dark:text-yellow-200 border border-yellow-500/30">
+                          {String(r.status).replace('_', ' ')}
                         </span>
                       </td>
-                      <td className="px-6 py-3 text-sm text-gray-700">{a.approver?.name ?? '-'}</td>
                       <td className="px-6 py-3 text-sm">
-                        <div className="flex flex-wrap items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-3">
                           <button
-                            onClick={() => openView(a.id)}
-                            className="text-indigo-600 hover:text-indigo-800 disabled:opacity-50"
-                            disabled={loadingId === a.id}
+                            type="button"
+                            onClick={() => { setReqId(r.id); setReqOpen(true); }}
+                            className="text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300"
                           >
-                            {loadingId === a.id ? 'Opening…' : 'View'}
+                            View
                           </button>
-                          {a.status === 'pending' && (
-                            <>
-                              <button onClick={() => doApprove(a)} className="text-emerald-600 hover:text-emerald-800">Approve</button>
-                              <button onClick={() => doReject(a)} className="text-rose-600 hover:text-rose-800">Reject</button>
-                            </>
-                          )}
+                          <button onClick={() => approveReq(r)} className="text-emerald-600 hover:text-emerald-800 dark:text-emerald-400 dark:hover:text-emerald-300">Approve</button>
+                          <button onClick={() => declineReq(r)} className="text-rose-600 hover:text-rose-800 dark:text-rose-400 dark:hover:text-rose-300">Decline</button>
                         </div>
                       </td>
                     </tr>
                   )) : (
                     <tr>
-                      <td colSpan={6} className="px-6 py-8 text-center text-gray-500">No approvals pending.</td>
+                      <td colSpan={5} className="px-6 py-8 text-center text-gray-500 dark:text-gray-400">No requisitions pending admin approval.</td>
                     </tr>
                   )}
                 </tbody>
@@ -229,6 +253,7 @@ export default function AdminApprovalsIndex({ approvals = [], budgets, selectedT
               </div>
             </Modal>
           )}
+          <RequisitionViewModal open={reqOpen} requisitionId={reqId} onClose={() => setReqOpen(false)} />
         </div>
       </div>
     </AdminLayout>

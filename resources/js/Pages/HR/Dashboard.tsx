@@ -2,6 +2,7 @@ import React from 'react';
 import { Head, usePage } from '@inertiajs/react';
 import HRLayout from '@/Layouts/HRLayout';
 import IconMapper from '@/Components/IconMapper';
+import QuickRequisitionModal from '@/Components/Requisitions/QuickRequisitionModal';
 
 export default function HRDashboard() {
   const { auth } = (usePage().props as any);
@@ -9,11 +10,13 @@ export default function HRDashboard() {
     <HRLayout title="HR" user={auth?.user as any}>
       <Head title="HR Dashboard" />
       <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        <div className="px-4 py-6 sm:px-0">
+        <div className="px-4 py-6 sm:px-0 space-y-6">
           <div className="mb-6">
             <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">HR Dashboard</h1>
             <p className="text-gray-600 dark:text-gray-400 mt-1">Manage HR operations and visibility.</p>
           </div>
+
+          <QuickRequisitionModal />
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <a href={route('hr.leaves')} className="group block rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-6 shadow hover:shadow-md transition">

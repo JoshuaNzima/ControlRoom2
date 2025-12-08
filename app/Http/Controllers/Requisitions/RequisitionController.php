@@ -1,0 +1,137 @@
+<?php
+
+namespace App\Http\Controllers\Requisitions;
+
+use App\Http\Controllers\Controller;
+use App\Models\Requisition;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Inertia\Inertia;
+use Inertia\Response;
+
+class RequisitionController extends Controller
+{
+    public function index(Request $request): Response
+    {
+        $user = $request->user();
+
+        $query = Requisition::query()->with('requestedBy');
+
+        if ($user->hasAnyRole(['admin', 'super_admin'])) {
+            // admins see everything
+        } elseif ($user->hasAnyRole(['asset_manager', 'assets_manager'])) {
+            // asset managers focus on items pending disbursement
+            $query->where('status', 'pending_disbursement');
+        } else {
+            // regular users see their own
+            $query->where('requested_by', $user->id);
+        }
+
+        $requisitions = $query->orderByDesc('created_at')->paginate(20);
+
+        return Inertia::render('Requisitions/Index', [
+            'requisitions' => $requisitions,
+            'auth' => [
+                'user' => [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'roles' => $user->getRoleNames(),
+                ],
+            ],
+        ]);
+    }
+
+    public function store(Request $request): RedirectResponse
+    {
+        $user = $request->user();
+
+        $data = $request->validate([
+            'title' => ['required', 'string', 'max:255'],
+            'category' => ['nullable', 'string', 'in:general,fuel,vehicle_hire'],
+            'description' => ['nullable', 'string'],
+            'needed_by' => ['nullable', 'date'],
+            'amount' => ['required', 'numeric', 'min:0'],
+        ]);
+
+        $data['requested_by'] = $user->id;
+        $data['status'] = 'pending_admin';
+        $data['category'] = $data['category'] ?? 'general';
+
+        Requisition::create($data);
+
+        return redirect()->route('requisitions.index');
+    }
+
+    public function show(Requisition $requisition): Response|JsonResponse
+    {
+        $requisition->load(['requestedBy', 'approvedBy', 'disbursedBy']);
+
+        if (request()->wantsJson() || request()->ajax()) {
+            return response()->json($requisition);
+        }
+
+        return Inertia::render('Requisitions/Show', [
+            'requisition' => $requisition,
+        ]);
+    }
+
+    public function resubmit(Request $request, Requisition $requisition): RedirectResponse
+    {
+        $this->authorizeOwner($request, $requisition);
+
+        if ($requisition->status !== 'needs_revision') {
+            return back();
+        }
+
+        $data = $request->validate([
+            'title' => ['required', 'string', 'max:255'],
+            'description' => ['nullable', 'string'],
+            'needed_by' => ['nullable', 'date'],
+            'amount' => ['required', 'numeric', 'min:0'],
+        ]);
+
+        $requisition->fill($data);
+        $requisition->status = 'pending_admin';
+        $requisition->notes_admin = null;
+        $requisition->save();
+
+        return back();
+    }
+
+    public function summary(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        $myOpen = Requisition::where('requested_by', $user->id)
+            ->whereIn('status', ['pending_admin', 'needs_revision', 'pending_disbursement'])
+            ->count();
+
+        $myNeedsRevision = Requisition::where('requested_by', $user->id)
+            ->where('status', 'needs_revision')
+            ->count();
+
+        $pendingAdmin = 0;
+        $pendingDisbursement = 0;
+
+        if ($user->hasAnyRole(['admin', 'super_admin'])) {
+            $pendingAdmin = Requisition::where('status', 'pending_admin')->count();
+        }
+
+        if ($user->hasAnyRole(['asset_manager', 'assets_manager', 'super_admin'])) {
+            $pendingDisbursement = Requisition::where('status', 'pending_disbursement')->count();
+        }
+
+        return response()->json([
+            'my_open' => $myOpen,
+            'my_needs_revision' => $myNeedsRevision,
+            'pending_admin' => $pendingAdmin,
+            'pending_disbursement' => $pendingDisbursement,
+        ]);
+    }
+
+    protected function authorizeOwner(Request $request, Requisition $requisition): void
+    {
+        abort_unless($request->user()->id === $requisition->requested_by, 403);
+    }
+}

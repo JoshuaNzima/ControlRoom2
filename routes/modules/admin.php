@@ -86,6 +86,11 @@ Route::middleware(['auth', 'role:admin,super_admin'])
             // Sites Management
             Route::get('/{client}/sites/create', [\App\Http\Controllers\Admin\ClientController::class, 'createSite'])->name('sites.create');
             Route::post('/{client}/sites', [\App\Http\Controllers\Admin\ClientController::class, 'storeSite'])->name('sites.store');
+            Route::get('/{client}/sites/{site}/json', [\App\Http\Controllers\Admin\ClientController::class, 'siteJson'])->name('sites.show-json');
+            Route::put('/{client}/sites/{site}', [\App\Http\Controllers\Admin\ClientController::class, 'updateSite'])->name('sites.update');
+            Route::delete('/{client}/sites/{site}', [\App\Http\Controllers\Admin\ClientController::class, 'destroySite'])->name('sites.destroy');
+            Route::get('/{client}/sites/deleted/json', [\App\Http\Controllers\Admin\ClientController::class, 'deletedSitesJson'])->name('sites.deleted-json');
+            Route::post('/{client}/sites/{site}/restore', [\App\Http\Controllers\Admin\ClientController::class, 'restoreSite'])->name('sites.restore');
         });
 
         // Services Management

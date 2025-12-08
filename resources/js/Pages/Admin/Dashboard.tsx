@@ -107,8 +107,7 @@ export default function Dashboard({
     <AdminLayout title="Admin Dashboard" user={auth?.user as any}>
       <Head title="Admin Dashboard" />
 
-      <div className="py-6">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+
           {/* Client Management Overview */}
           <Card className="p-6">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
@@ -189,7 +188,7 @@ export default function Dashboard({
                     </a>
                   </Button>
                   <Button variant="outline" asChild className="h-auto py-3 flex flex-col items-center justify-center gap-2">
-                    <a href={route('admin.assets.index')}>
+                    <a href={route('assets.index')}>
                       <IconMapper name="Boxes" className="w-5 h-5" />
                       <span>Assets</span>
                     </a>
@@ -547,8 +546,6 @@ export default function Dashboard({
             </div>
             )}
           </Card>
-        </div>
-      </div>
     </AdminLayout>
   );
 }

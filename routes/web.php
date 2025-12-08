@@ -214,7 +214,7 @@ Route::middleware(['auth'])->group(function () {
             return redirect()->route('admin.marketing');
         }
         if ($user->hasAnyRole(['asset_manager','assets_manager'])) {
-            return redirect()->route('admin.assets');
+            return redirect()->route('assets.index');
         }
         if ($user->hasAnyRole(['supervisor','sergeant'])) {
             return redirect()->route('supervisor.dashboard');

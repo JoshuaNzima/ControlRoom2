@@ -2,6 +2,7 @@ import React from 'react';
 import { Head, usePage } from '@inertiajs/react';
 import K9Layout from '@/Layouts/K9Layout';
 import IconMapper from '@/Components/IconMapper';
+import QuickRequisitionModal from '@/Components/Requisitions/QuickRequisitionModal';
 
 export default function K9Dashboard() {
   const { auth } = (usePage().props as any);
@@ -9,11 +10,13 @@ export default function K9Dashboard() {
     <K9Layout title="K9 Dashboard" user={auth?.user as any}>
       <Head title="K9 Dashboard" />
       <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        <div className="px-4 py-6 sm:px-0">
+        <div className="px-4 py-6 sm:px-0 space-y-6">
           <div className="mb-6">
             <h1 className="text-3xl font-bold text-gray-900 dark:text-slate-100">K9 Unit</h1>
             <p className="text-gray-600 dark:text-slate-400 mt-1">Overview of K9 operations.</p>
           </div>
+
+          <QuickRequisitionModal />
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <a href={route('k9.dogs')} className="group block rounded-2xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-6 shadow hover:shadow-md transition">
