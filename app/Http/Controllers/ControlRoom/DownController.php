@@ -12,7 +12,7 @@ class DownController extends Controller
 {
     public function index(Request $request)
     {
-        $downs = Down::with(['reporter', 'client', 'clientSite', 'guard'])
+        $downs = Down::with(['reporter', 'client', 'clientSite', 'guardRelation'])
             ->when($request->status, fn($q, $s) => $q->where('status', $s))
             ->latest()
             ->paginate(10);
@@ -97,7 +97,7 @@ class DownController extends Controller
 
     public function show(Down $down)
     {
-        $down->load(['reporter', 'client', 'clientSite', 'guard']);
+        $down->load(['reporter', 'client', 'clientSite', 'guardRelation']);
 
         return Inertia::render('ControlRoom/Downs/Show', [
             'down' => $down,

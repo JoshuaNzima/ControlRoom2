@@ -11,7 +11,7 @@ class IncidentController extends Controller
 {
     public function index()
     {
-        $incidents = Incident::with(['reporter', 'assignedTo', 'guard', 'client', 'clientSite'])
+        $incidents = Incident::with(['reporter', 'assignedTo', 'guardRelation', 'client', 'clientSite'])
             ->latest()
             ->paginate(20);
 
@@ -73,7 +73,7 @@ class IncidentController extends Controller
 
     public function show(Incident $incident)
     {
-        $incident->load(['reporter', 'assignedTo', 'guard', 'client', 'clientSite', 'comments.user']);
+        $incident->load(['reporter', 'assignedTo', 'guardRelation', 'client', 'clientSite', 'comments.user']);
 
         return Inertia::render('ControlRoom/Incidents/Show', [
             'incident' => $incident,

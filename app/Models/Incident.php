@@ -42,7 +42,7 @@ class Incident extends Model
         return $this->belongsTo(User::class, 'assigned_to');
     }
 
-    public function guard(): BelongsTo
+    public function guardRelation(): BelongsTo
     {
         return $this->belongsTo(\App\Models\Guards\Guard::class, 'guard_id');
     }
