@@ -12,8 +12,9 @@ use Inertia\Inertia;
 
 class DashboardController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
+        $user = $request->user();
         // System Overview
         $systemStats = [
             'total_users' => User::count(),
@@ -25,6 +26,10 @@ class DashboardController extends Controller
             'database_size' => $this->getDatabaseSize(),
             'cache_size' => $this->getCacheSize(),
         ];
+
+        // Role-based KPI visibility flags
+        $canSeePendingAdmin = $user && $user->hasAnyRole(['super_admin', 'admin', 'finance_officer', 'accountant', 'finance', 'accounting']);
+        $canSeeFinanceApprovals = $user && $user->hasAnyRole(['super_admin', 'finance_officer', 'accountant', 'finance', 'accounting']);
 
         // Modules Management (App\Models\Module)
         $modules = AppModule::orderBy('order')->get()->map(fn($m) => [
@@ -134,6 +139,8 @@ class DashboardController extends Controller
             'adminActions' => $adminActions,
             'isMaintenance' => file_exists(storage_path('framework/down')),
             'maintenanceSecret' => env('APP_MAINTENANCE_SECRET', 'super-secret-token'),
+            'canSeePendingAdmin' => $canSeePendingAdmin,
+            'canSeeFinanceApprovals' => $canSeeFinanceApprovals,
         ]);
     }
 

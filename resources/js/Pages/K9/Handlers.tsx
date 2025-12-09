@@ -1,12 +1,12 @@
 import React from 'react';
 import { Head, usePage } from '@inertiajs/react';
-import K9Layout from '@/Layouts/K9Layout';
+import BusinessDevLayout from '@/Layouts/BusinessDevLayout';
 import IconMapper from '@/Components/IconMapper';
 
 export default function K9Handlers() {
   const { auth } = (usePage().props as any);
   return (
-    <K9Layout title="K9 Handlers" user={auth?.user as any}>
+    <BusinessDevLayout title="K9 Handlers" user={auth?.user as any}>
       <Head title="K9 Handlers" />
       <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
@@ -23,6 +23,6 @@ export default function K9Handlers() {
           </div>
         </div>
       </div>
-    </K9Layout>
+    </BusinessDevLayout>
   );
 }

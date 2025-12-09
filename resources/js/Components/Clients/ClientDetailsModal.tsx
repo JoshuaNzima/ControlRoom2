@@ -7,6 +7,7 @@ import axios from 'axios';
 import IconMapper from '@/Components/IconMapper';
 import LocationPicker from '@/Components/Map/LocationPicker';
 import { formatCurrencyMWK } from '@/Components/format';
+import EditSiteModal from '@/Components/Clients/EditSiteModal';
 
 interface Site {
   id: number;
@@ -47,9 +48,10 @@ interface ClientDetailsModalProps {
   onClose: () => void;
   services?: Service[];
   onClientUpdated?: (client: any) => void;
+  zones?: Array<{ id: number; name: string }>;
 }
 
-export default function ClientDetailsModal({ client, open, onClose, services = [], onClientUpdated }: ClientDetailsModalProps) {
+export default function ClientDetailsModal({ client, open, onClose, services = [], onClientUpdated, zones = [] }: ClientDetailsModalProps) {
   // Note: parent can pass services list and onClientUpdated handler
   const [activeTab, setActiveTab] = React.useState<'overview' | 'sites' | 'services'>('overview');
   const { data, setData, post, processing } = useForm({
@@ -64,6 +66,19 @@ export default function ClientDetailsModal({ client, open, onClose, services = [
     latitude: '',
     longitude: '',
   });
+
+  const [editSiteOpen, setEditSiteOpen] = React.useState(false);
+  const [selectedSiteId, setSelectedSiteId] = React.useState<number | null>(null);
+
+  const refreshClient = React.useCallback(async () => {
+    try {
+      if (onClientUpdated) {
+        const showUrl = route('admin.clients.json', { client: client.id });
+        const resp = await axios.get(showUrl, { headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' } });
+        onClientUpdated(resp.data);
+      }
+    } catch (_) {}
+  }, [client?.id, onClientUpdated]);
 
   const handleAddSite = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -111,7 +126,7 @@ export default function ClientDetailsModal({ client, open, onClose, services = [
     });
   };
 
-  return (
+  return (<>
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="w-full max-w-4xl rounded-2xl bg-white p-6">
         <div className="flex items-center justify-between mb-6">
@@ -331,10 +346,8 @@ export default function ClientDetailsModal({ client, open, onClose, services = [
                           }`}>
                             {site.guard_count || 0} guards
                           </span>
-                          <Button variant="outline" size="sm" asChild>
-                            <a href={route('admin.clients.sites.show', { client: client.id, site: site.id })}>
-                              <IconMapper name="ExternalLink" className="w-4 h-4" />
-                            </a>
+                          <Button variant="outline" size="sm" onClick={() => { setSelectedSiteId(site.id); setEditSiteOpen(true); }}>
+                            <IconMapper name="Pencil" className="w-4 h-4" />
                           </Button>
                         </div>
                       </div>
@@ -430,5 +443,15 @@ export default function ClientDetailsModal({ client, open, onClose, services = [
 
         </DialogContent>
     </Dialog>
+
+    <EditSiteModal
+      open={editSiteOpen}
+      onClose={() => setEditSiteOpen(false)}
+      clientId={client.id}
+      siteId={selectedSiteId}
+      onSaved={refreshClient}
+      zones={zones}
+    />
+  </>
   );
 }

@@ -6,6 +6,8 @@ import NotificationBell from '@/Components/Common/NotificationBell';
 import { User, PageProps } from '@/types';
 import { useTheme } from '@/Providers/ThemeProvider';
 import QuickRequisitionButton from '@/Components/Requisitions/QuickRequisitionButton';
+import QuickBudgetButton from '@/Components/Budgets/QuickBudgetButton';
+import useCounters from '@/Hooks/useCounters';
 
 interface Props {
   title: string;
@@ -18,6 +20,7 @@ interface ModuleNavItem {
   href: string;
   icon: React.ReactNode;
   current: boolean;
+  badge?: string;
 }
 
 export default function FinanceLayout({ title, children, user }: Props) {
@@ -25,6 +28,7 @@ export default function FinanceLayout({ title, children, user }: Props) {
   const [logoOk, setLogoOk] = React.useState<boolean>(true);
   const { theme, toggle } = useTheme();
   const page = usePage<PageProps>();
+  const { counters } = useCounters();
   const currentUser = (page?.props?.auth?.user as any) as (User & { roles?: string[]; permissions?: string[] }) | undefined;
   const permissions = currentUser?.permissions ?? [];
   const roles = currentUser?.roles ?? [];
@@ -46,10 +50,10 @@ export default function FinanceLayout({ title, children, user }: Props) {
   const financeLinks: ModuleNavItem[] = [
     { name: 'Dashboard', href: safeRoute('finance.dashboard', '/finance'), icon: <IconMapper name="home" className="h-6 w-6" />, current: isCurrent(safeRoute('finance.dashboard', '/finance')) },
     { name: 'Invoices', href: safeRoute('finance.invoices.index', '/finance/invoices'), icon: <IconMapper name="file-text" className="h-6 w-6" />, current: isCurrent(safeRoute('finance.invoices.index', '/finance/invoices')) },
-    { name: 'Requisitions', href: safeRoute('finance.expenses.index', '/finance/expenses'), icon: <IconMapper name="trending-down" className="h-6 w-6" />, current: isCurrent(safeRoute('finance.expenses.index', '/finance/expenses')) },
+    { name: 'Requisitions', href: safeRoute('finance.expenses.index', '/finance/expenses'), icon: <IconMapper name="trending-down" className="h-6 w-6" />, current: isCurrent(safeRoute('finance.expenses.index', '/finance/expenses')), badge: (()=>{ const n = Number(counters?.finance_approvals_pending || counters?.finance_expenses_pending_mine || 0); return n>0? String(n): undefined; })() },
     { name: 'Budgets', href: safeRoute('finance.budgets.index', '/finance/budgets'), icon: <IconMapper name="pie-chart" className="h-6 w-6" />, current: isCurrent(safeRoute('finance.budgets.index', '/finance/budgets')) },
     { name: 'Payroll', href: safeRoute('finance.payroll.index', '/finance/payroll'), icon: <IconMapper name="users" className="h-6 w-6" />, current: isCurrent(safeRoute('finance.payroll.index', '/finance/payroll')) },
-    { name: 'Req Summary', href: route('requisitions.index') as unknown as string, icon: <IconMapper name="clipboard-list" className="h-6 w-6" />, current: isCurrent(route('requisitions.index') as unknown as string) },
+    { name: 'Req Summary', href: route('requisitions.index') as unknown as string, icon: <IconMapper name="clipboard-list" className="h-6 w-6" />, current: isCurrent(route('requisitions.index') as unknown as string), badge: (()=>{ const n = Number(counters?.requisitions_my_open||0); return n>0? String(n): undefined; })() },
   ];
   const linksToRender = financeLinks;
 
@@ -102,6 +106,9 @@ export default function FinanceLayout({ title, children, user }: Props) {
               >
                 {item.icon}
                 <span className="ml-3">{item.name}</span>
+                {item.badge && (
+                  <span className="ml-auto inline-block py-0.5 px-2 text-xs font-medium rounded-full bg-white/10 text-white">{item.badge}</span>
+                )}
               </Link>
             ))}
           </nav>
@@ -136,6 +143,7 @@ export default function FinanceLayout({ title, children, user }: Props) {
             <h1 className="text-lg font-semibold text-gray-900 dark:text-white">{title}</h1>
             <div className="flex items-center space-x-4">
               <NotificationBell />
+              <QuickBudgetButton />
               <QuickRequisitionButton />
               <Link
                 href={route('finance.expenses.create')}
@@ -168,7 +176,9 @@ export default function FinanceLayout({ title, children, user }: Props) {
 
         {/* Page content */}
         <BaseShell noHeader fullScreen={false}>
-          {children}
+          <div className="animate-slideUp transition-all-smooth">
+            {children}
+          </div>
         </BaseShell>
       </div>
     </div>

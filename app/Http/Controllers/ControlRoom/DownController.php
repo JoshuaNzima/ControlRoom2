@@ -12,7 +12,7 @@ class DownController extends Controller
 {
     public function index(Request $request)
     {
-        $downs = Down::with(['reporter', 'client', 'clientSite'])
+        $downs = Down::with(['reporter', 'client', 'clientSite', 'guard'])
             ->when($request->status, fn($q, $s) => $q->where('status', $s))
             ->latest()
             ->paginate(10);
@@ -27,16 +27,39 @@ class DownController extends Controller
         $validated = $request->validate([
             'client_id' => 'nullable|exists:clients,id',
             'client_site_id' => 'nullable|exists:client_sites,id',
+            'guard_id' => 'nullable|exists:guards,id',
             'type' => 'required|in:guard_absent,site_unmanned,other',
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
+            'flag_guard' => 'sometimes|boolean',
+            'flag_reason' => 'required_if:flag_guard,1|nullable|string|max:255',
+            'flag_details' => 'nullable|string',
         ]);
 
-        Down::create([
+        if (($validated['client_id'] ?? null) === null && ($validated['client_site_id'] ?? null)) {
+            $site = \App\Models\ClientSite::find($validated['client_site_id']);
+            if ($site) {
+                $validated['client_id'] = $site->client_id;
+            }
+        }
+
+        $down = Down::create([
             ...$validated,
             'reported_by' => Auth::id(),
             'status' => 'open',
         ]);
+
+        if ($request->boolean('flag_guard') && ($validated['guard_id'] ?? null)) {
+            \App\Models\Flag::create([
+                'flaggable_type' => \App\Models\Guards\Guard::class,
+                'flaggable_id' => $validated['guard_id'],
+                'reason' => $request->input('flag_reason') ?? 'Down report involvement',
+                'details' => $request->input('flag_details') ?? ('Guard linked to down ID: ' . $down->id),
+                'reported_by' => Auth::id(),
+                'status' => 'pending_review',
+                'site_id' => $down->client_site_id,
+            ]);
+        }
 
         return back()->withSuccess('Down reported.');
     }
@@ -74,7 +97,7 @@ class DownController extends Controller
 
     public function show(Down $down)
     {
-        $down->load(['reporter', 'client', 'clientSite']);
+        $down->load(['reporter', 'client', 'clientSite', 'guard']);
 
         return Inertia::render('ControlRoom/Downs/Show', [
             'down' => $down,

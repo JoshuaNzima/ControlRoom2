@@ -13,8 +13,10 @@ export default function AuthLayout({ children }: PropsWithChildren) {
             </div>
 
             <div className="flex-1 flex items-center justify-center px-4 sm:px-6 lg:px-8 py-6">
-                {children}
-            </div>
+				<div className="animate-slideUp transition-all-smooth">
+					{children}
+				</div>
+			</div>
         </div>
     );
 }

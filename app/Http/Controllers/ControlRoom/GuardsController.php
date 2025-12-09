@@ -80,6 +80,32 @@ class GuardsController extends Controller
         ]);
     }
 
+    public function search(Request $request)
+    {
+        $q = trim((string) $request->input('q', ''));
+        $limit = min(50, max(5, (int) $request->input('limit', 20)));
+
+        $guards = Guard::query()
+            ->when($q, function ($qq) use ($q) {
+                $qq->where(function ($w) use ($q) {
+                    $w->where('name', 'like', "%{$q}%")
+                      ->orWhere('employee_id', 'like', "%{$q}%");
+                });
+            })
+            ->orderBy('name')
+            ->limit($limit)
+            ->get(['id','name','employee_id','status']);
+
+        return response()->json($guards->map(function ($g) {
+            return [
+                'id' => $g->id,
+                'name' => $g->name,
+                'employee_id' => $g->employee_id,
+                'status' => $g->status,
+            ];
+        }));
+    }
+
     public function export()
     {
         $request = request();

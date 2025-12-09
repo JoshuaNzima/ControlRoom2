@@ -7,6 +7,7 @@ import { PageProps, User } from '@/types';
 import { PropsWithChildren, ReactNode, useState } from 'react';
 import NotificationBell from '@/Components/Common/NotificationBell';
 import QuickRequisitionButton from '@/Components/Requisitions/QuickRequisitionButton';
+import QuickBudgetButton from '@/Components/Budgets/QuickBudgetButton';
 
 export default function Authenticated({
     user,
@@ -54,6 +55,7 @@ export default function Authenticated({
 
                         <div className="hidden sm:ms-6 sm:flex sm:items-center gap-4">
                             <NotificationBell />
+                            <QuickBudgetButton />
                             <QuickRequisitionButton />
                             <div className="relative ms-3">
                                 <Dropdown>
@@ -204,9 +206,13 @@ export default function Authenticated({
             )}
 
             <main>
-                <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6 text-gray-900 dark:text-gray-100">
-                    {children}
-                </div>
+                <main>
+                    <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6 text-gray-900 dark:text-gray-100">
+                        <div className="animate-slideUp transition-all-smooth">
+                            {children}
+                        </div>
+                    </div>
+                </main>
             </main>
         </div>
     );

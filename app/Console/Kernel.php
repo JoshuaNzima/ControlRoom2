@@ -11,6 +11,8 @@ class Kernel extends ConsoleKernel
     {
         // Run the prepayments migration daily to move any prepaid amounts into recognized revenue for current months
         $schedule->command('prepayments:migrate')->daily();
+        $schedule->command('attendance:auto-checkout')->everyFifteenMinutes();
+        $schedule->command('zones:recalc-required-guards')->dailyAt('02:30');
     }
 
     protected function commands()

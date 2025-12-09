@@ -1,5 +1,5 @@
 import React from 'react';
-import { Head } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 import { useForm } from '@inertiajs/react';
 import AppLayout from '@/Layouts/AppLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card';
@@ -24,6 +24,10 @@ const FlagShow: React.FC<{ flag: any; canReview?: boolean }> = ({ flag, canRevie
 		review_notes: flag.review_notes || '',
 	});
 	const { data, setData, patch, processing } = _form;
+
+	const acknowledgeFlag = () => router.post(route('control-room.flags.acknowledge', flag.id));
+	const resolveFlag = () => router.post(route('control-room.flags.resolve', flag.id));
+	const escalateFlag = () => router.post(route('control-room.flags.escalate', flag.id));
 
 	const handleSubmit = (e: React.FormEvent) => {
 		e.preventDefault();
@@ -132,6 +136,12 @@ const FlagShow: React.FC<{ flag: any; canReview?: boolean }> = ({ flag, canRevie
 											</div>
 
 											<Button type="submit" className="w-full" disabled={processing}>Update Flag</Button>
+
+								<div className="mt-4 grid grid-cols-3 gap-2">
+									<Button type="button" variant="outline" onClick={acknowledgeFlag}>Acknowledge</Button>
+									<Button type="button" variant="outline" onClick={escalateFlag}>Escalate</Button>
+									<Button type="button" onClick={resolveFlag}>Resolve</Button>
+								</div>
 										</form>
 									</CardContent>
 								</Card>

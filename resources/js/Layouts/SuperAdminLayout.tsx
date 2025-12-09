@@ -5,6 +5,8 @@ import { User } from '@/types';
 import NotificationBell from '@/Components/Common/NotificationBell';
 import BaseShell from './BaseShell';
 import QuickRequisitionButton from '@/Components/Requisitions/QuickRequisitionButton';
+import QuickBudgetButton from '@/Components/Budgets/QuickBudgetButton';
+import useCounters from '@/Hooks/useCounters';
 
 interface Props {
     title: string;
@@ -23,41 +25,17 @@ interface ModuleNavItem {
 export default function SuperAdminLayout({ title, children, user }: Props) {
     const [sidebarOpen, setSidebarOpen] = React.useState(false);
     const [logoOk, setLogoOk] = React.useState<boolean>(true);
+    const { counters } = useCounters();
 
     const modules: ModuleNavItem[] = [
-    { name: 'Dashboard', href: route('superadmin.dashboard'), icon: <IconMapper name="Home" size={24} />, current: window.location.pathname === route('superadmin.dashboard') },
-        { 
-            name: 'HR Management', 
-            href: route('superadmin.modules.category', { category: 'hr' }), 
-            icon: <IconMapper name="Users2" size={24} />, 
-            current: false,
-            badge: 'New'
-        },
-        { 
-            name: 'Finance', 
-            href: route('superadmin.modules.category', { category: 'finance' }), 
-            icon: <IconMapper name="DollarSign" size={24} />, 
-            current: false 
-        },
-        { 
-            name: 'Administration', 
-            href: route('superadmin.modules.category', { category: 'admin' }), 
-            icon: <IconMapper name="Briefcase" size={24} />, 
-            current: false 
-        },
-        { 
-            name: 'Marketing', 
-            href: route('superadmin.modules.category', { category: 'marketing' }), 
-            icon: <IconMapper name="Megaphone" size={24} />, 
-            current: false 
-        },
-        { 
-            name: 'Analytics', 
-            href: route('superadmin.modules.category', { category: 'analytics' }), 
-            icon: <IconMapper name="BarChart2" size={24} />, 
-            current: false,
-            badge: 'Beta'
-        },
+        { name: 'Dashboard', href: route('superadmin.dashboard'), icon: <IconMapper name="Home" size={24} />, current: window.location.pathname === route('superadmin.dashboard') },
+        { name: 'HR', href: route('superadmin.hr.index'), icon: <IconMapper name="Users2" size={24} />, current: window.location.pathname === route('superadmin.hr.index') },
+        { name: 'Finance', href: route('superadmin.finance.index'), icon: <IconMapper name="DollarSign" size={24} />, current: window.location.pathname === route('superadmin.finance.index') },
+        { name: 'Clients', href: route('superadmin.clients.index'), icon: <IconMapper name="Building2" size={24} />, current: window.location.pathname === route('superadmin.clients.index') },
+        { name: 'Control Room', href: route('superadmin.control-room.index'), icon: <IconMapper name="Monitor" size={24} />, current: window.location.pathname === route('superadmin.control-room.index') },
+        { name: 'Assets', href: route('superadmin.assets.index'), icon: <IconMapper name="Package" size={24} />, current: window.location.pathname === route('superadmin.assets.index') },
+        { name: 'Reports', href: route('superadmin.reports.index'), icon: <IconMapper name="BarChart2" size={24} />, current: window.location.pathname === route('superadmin.reports.index') },
+        { name: 'Modules', href: route('superadmin.modules'), icon: <IconMapper name="Puzzle" size={24} />, current: window.location.pathname === route('superadmin.modules') },
     ];
 
     const systemNav: ModuleNavItem[] = [
@@ -72,6 +50,13 @@ export default function SuperAdminLayout({ title, children, user }: Props) {
             href: route('superadmin.security'), 
             icon: <IconMapper name="Shield" size={24} />, 
             current: window.location.pathname === route('superadmin.security') 
+        },
+        {
+            name: 'My Requisitions',
+            href: route('requisitions.index'),
+            icon: <IconMapper name="ClipboardList" size={24} />,
+            current: window.location.pathname === route('requisitions.index'),
+            badge: (() => { const n = Number(counters?.requisitions_my_open || 0); return n > 0 ? String(n) : undefined; })()
         },
         {
             name: 'Roles & Permissions',
@@ -110,7 +95,7 @@ export default function SuperAdminLayout({ title, children, user }: Props) {
 
             {/* Mobile sidebar */}
             <div
-                className={`fixed inset-0 bg-red-800 bg-opacity-50 z-40 md:hidden ${
+                className={`fixed inset-0 bg-red-800 bg-opacity-50 dark:bg-gray-900 dark:bg-opacity-70 z-40 md:hidden ${
                     sidebarOpen ? 'block' : 'hidden'
                 }`}
                 onClick={() => setSidebarOpen(false)}
@@ -118,7 +103,7 @@ export default function SuperAdminLayout({ title, children, user }: Props) {
 
             {/* Sidebar */}
             <div
-                className={`fixed top-0 left-0 bottom-0 flex flex-col w-64 bg-red-900 text-white transform ${
+                className={`fixed top-0 left-0 bottom-0 flex flex-col w-64 bg-red-900 dark:bg-gray-950 text-white transform ${
                     sidebarOpen ? 'translate-x-0' : '-translate-x-full'
                 } md:translate-x-0 transition-transform duration-300 ease-in-out z-50`}
             >
@@ -148,14 +133,14 @@ export default function SuperAdminLayout({ title, children, user }: Props) {
                                     href={item.href}
                                     className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md ${
                                         item.current
-                                            ? 'bg-red-800 text-white'
-                                            : 'text-red-100 hover:bg-red-800 hover:text-white'
+                                            ? 'bg-red-800 text-white dark:bg-gray-800'
+                                            : 'text-red-100 hover:bg-red-800 hover:text-white dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white'
                                     }`}
                                 >
                                     {item.icon}
                                     <span className="ml-3">{item.name}</span>
                                     {item.badge && (
-                                        <span className="ml-auto inline-block py-0.5 px-2 text-xs font-medium rounded-full bg-purple-100 text-purple-800">
+                                        <span className="ml-auto inline-block py-0.5 px-2 text-xs font-medium rounded-full bg-white/10 text-white">
                                             {item.badge}
                                         </span>
                                     )}
@@ -174,12 +159,17 @@ export default function SuperAdminLayout({ title, children, user }: Props) {
                                     href={item.href}
                                     className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md ${
                                         item.current
-                                            ? 'bg-gray-800 text-white'
-                                            : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+                                            ? 'bg-red-800 text-white dark:bg-gray-800'
+                                            : 'text-red-100 hover:bg-red-800 hover:text-white dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white'
                                     }`}
                                 >
                                     {item.icon}
                                     <span className="ml-3">{item.name}</span>
+                                    {item.badge && (
+                                        <span className="ml-auto inline-block py-0.5 px-2 text-xs font-medium rounded-full bg-white/10 text-white">
+                                            {item.badge}
+                                        </span>
+                                    )}
                                 </Link>
                             ))}
                         </div>
@@ -187,7 +177,7 @@ export default function SuperAdminLayout({ title, children, user }: Props) {
                 </div>
 
                 {/* User Menu */}
-                <div className="flex-shrink-0 flex items-center justify-between border-t border-red-800 p-4">
+                <div className="flex-shrink-0 flex items-center justify-between border-t border-red-800 dark:border-gray-800 p-4">
                     <div>
                         <div className="text-base font-medium text-white">{user?.name}</div>
                         <div className="text-sm font-medium text-gray-400">Super Admin</div>
@@ -225,6 +215,7 @@ export default function SuperAdminLayout({ title, children, user }: Props) {
                                 <h1 className="text-xl font-bold text-red-900 dark:text-gray-100">{title}</h1>
                                 <div className="flex items-center gap-4">
                                     <NotificationBell />
+                                    <QuickBudgetButton />
                                     <QuickRequisitionButton />
                                 </div>
                             </div>

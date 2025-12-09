@@ -62,7 +62,9 @@ export default function PublicLayout({ title = 'Coin Security', children }: Prop
       </header>
 
       <main>
-        {children}
+        <div className="animate-slideUp transition-all-smooth">
+          {children}
+        </div>
       </main>
 
       <footer className="bg-gradient-to-r from-slate-900 to-gray-900 text-white">

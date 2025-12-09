@@ -4,6 +4,7 @@ namespace App\Models\Guards;
 
 use App\Models\Camera;
 use App\Models\CameraAlert;
+use App\Models\Zone;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -73,6 +74,44 @@ class ClientSite extends Model
             'client_site_id', // Foreign key on cameras table
             'camera_id'       // Foreign key on camera_alerts table
         );
+    }
+
+    protected static function booted(): void
+    {
+        static::created(function (self $site) {
+            self::updateZoneRequiredGuards($site->zone_id);
+        });
+
+        static::updated(function (self $site) {
+            $originalZone = $site->getOriginal('zone_id');
+            if ($originalZone && (int)$originalZone !== (int)$site->zone_id) {
+                self::updateZoneRequiredGuards($originalZone);
+            }
+            if ($site->isDirty('zone_id') || $site->isDirty('required_guards') || $site->isDirty('status')) {
+                self::updateZoneRequiredGuards($site->zone_id);
+            }
+        });
+
+        static::deleted(function (self $site) {
+            self::updateZoneRequiredGuards($site->zone_id);
+        });
+
+        static::restored(function (self $site) {
+            self::updateZoneRequiredGuards($site->zone_id);
+        });
+    }
+
+    protected static function updateZoneRequiredGuards($zoneId): void
+    {
+        if (!$zoneId) return;
+        try {
+            $sum = static::query()
+                ->where('zone_id', $zoneId)
+                ->where('status', 'active')
+                ->sum('required_guards');
+
+            Zone::whereKey($zoneId)->update(['required_guard_count' => (int) $sum]);
+        } catch (\Throwable $e) {}
     }
 
     public function scopeActive($query)

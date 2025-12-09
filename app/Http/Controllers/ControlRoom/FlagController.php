@@ -20,9 +20,19 @@ class FlagController extends Controller
 
         $flags = $query->paginate(20)->withQueryString();
 
+        $user = $request->user();
+        $canReview = false;
+        if ($user) {
+            $canReview = $user->can('review flags')
+                || (method_exists($user, 'hasAnyRole') && $user->hasAnyRole([
+                    'super_admin', 'control_room_operator', 'operations_officer', 'supervisor', 'manager',
+                ]));
+        }
+
         return Inertia::render('ControlRoom/Flags/Index', [
             'flags' => $flags,
             'statuses' => Flag::STATUSES,
+            'canReview' => $canReview,
         ]);
     }
 
@@ -60,9 +70,19 @@ class FlagController extends Controller
     {
         $flag->load(['flaggable', 'reporter', 'reviewer']);
 
+        $user = auth()->user();
+        $canReview = false;
+        if ($user) {
+            // Allow users with explicit permission OR typical control room roles to review
+            $canReview = $user->can('review flags')
+                || (method_exists($user, 'hasAnyRole') && $user->hasAnyRole([
+                    'super_admin', 'control_room_operator', 'operations_officer', 'supervisor', 'manager',
+                ]));
+        }
+
         return Inertia::render('ControlRoom/Flags/Show', [
             'flag' => $flag,
-            'canReview' => auth()->user() ? auth()->user()->can('review flags') : false,
+            'canReview' => $canReview,
         ]);
     }
 

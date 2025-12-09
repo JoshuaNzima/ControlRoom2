@@ -1,6 +1,7 @@
 import React from 'react';
 import NotificationBell from '@/Components/Common/NotificationBell';
 import QuickRequisitionButton from '@/Components/Requisitions/QuickRequisitionButton';
+import QuickBudgetButton from '@/Components/Budgets/QuickBudgetButton';
 
 type Props = {
   children: React.ReactNode;
@@ -17,13 +18,18 @@ export default function AppLayout({ children, title }: Props) {
               <h1 className="text-xl font-bold text-red-900 dark:text-gray-100">{title}</h1>
               <div className="flex items-center gap-3">
                 <NotificationBell />
+                <QuickBudgetButton />
                 <QuickRequisitionButton />
               </div>
             </div>
           </div>
         </header>
       )}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 text-gray-900 dark:text-gray-100">{children}</main>
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 text-gray-900 dark:text-gray-100">
+        <div className="animate-slideUp transition-all-smooth">
+          {children}
+        </div>
+      </main>
     </div>
   );
 }

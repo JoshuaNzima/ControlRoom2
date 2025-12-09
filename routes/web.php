@@ -7,6 +7,7 @@ use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\Guards\SupervisorController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\CounterController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\{DashboardController as AdminDashboard, UserController};
 use App\Models\Role;
@@ -49,6 +50,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/notifications/unread-count', [NotificationController::class, 'unreadCount'])->name('notifications.unread');
     Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead'])->name('notifications.readAll');
     Route::post('/notifications/{id}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
+
+    // Lightweight counters API for sidebar badges
+    Route::get('/counters', [CounterController::class, 'index'])->name('counters.index');
 });
 Route::middleware(['auth', 'role:super_admin'])->prefix('superadmin')->name('superadmin.')->group(function () {
     Route::get('/dashboard', [\App\Http\Controllers\SuperAdmin\DashboardController::class, 'index'])->name('dashboard');
@@ -60,6 +64,36 @@ Route::middleware(['auth', 'role:super_admin'])->prefix('superadmin')->name('sup
     // Module Management
     Route::get('/modules', fn() => Inertia::render('SuperAdmin/Modules'))->name('modules');
     Route::get('/modules/{category}', fn($category) => Inertia::render('SuperAdmin/Modules', ['category' => $category]))->name('modules.category');
+    // Module Index Pages
+    Route::get('/finance', fn() => Inertia::render('SuperAdmin/Finance/Index'))->name('finance.index');
+    Route::get('/finance/manage', fn() => Inertia::render('SuperAdmin/Finance/Manage'))->name('finance.manage');
+    Route::get('/hr', fn() => Inertia::render('SuperAdmin/HR/Index'))->name('hr.index');
+    Route::get('/hr/manage', fn() => Inertia::render('SuperAdmin/HR/Manage'))->name('hr.manage');
+    Route::get('/clients', fn() => Inertia::render('SuperAdmin/Clients/Index'))->name('clients.index');
+    Route::get('/clients/manage', function () {
+        $perPage = (int) request('per_page', 20);
+        $clients = \App\Models\Client::withCount(['sites', 'services'])
+            ->when(request('search'), function ($q, $search) {
+                $q->where('name', 'like', "%{$search}%");
+            })
+            ->orderBy('name')
+            ->paginate($perPage)
+            ->withQueryString();
+        $services = \App\Models\Service::where('active', true)->orderBy('name')->get(['id','name','monthly_price']);
+        $zones = \App\Models\Zone::orderBy('name')->get(['id','name']);
+        return Inertia::render('SuperAdmin/Clients/Manage', [
+            'clients' => $clients,
+            'filters' => array_merge(request()->only(['search']), ['per_page' => $perPage]),
+            'services' => $services,
+            'zones' => $zones,
+        ]);
+    })->name('clients.manage');
+    Route::get('/control-room', fn() => Inertia::render('SuperAdmin/ControlRoom/Index'))->name('control-room.index');
+    Route::get('/control-room/manage', fn() => Inertia::render('SuperAdmin/ControlRoom/Manage'))->name('control-room.manage');
+    Route::get('/assets', fn() => Inertia::render('SuperAdmin/Assets/Index'))->name('assets.index');
+    Route::get('/assets/manage', fn() => Inertia::render('SuperAdmin/Assets/Manage'))->name('assets.manage');
+    Route::get('/reports', fn() => Inertia::render('SuperAdmin/Reports/Index'))->name('reports.index');
+    Route::get('/reports/manage', fn() => Inertia::render('SuperAdmin/Reports/Manage'))->name('reports.manage');
     
     // User Management (SuperAdmin UI, uses Admin endpoints under the hood)
     Route::get('/users', function () {

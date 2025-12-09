@@ -5,6 +5,7 @@ import IconMapper from '@/Components/IconMapper';
 import { User } from '@/types';
 import NotificationBell from '@/Components/Common/NotificationBell';
 import { useTheme } from '@/Providers/ThemeProvider';
+import useCounters from '@/Hooks/useCounters';
 
 interface Props {
   title: string;
@@ -25,6 +26,7 @@ export default function AdminLayout({ title, children, user }: Props) {
   const [logoOk, setLogoOk] = React.useState<boolean>(true);
   const { theme, toggle } = useTheme();
   const { props } = usePage<any>();
+  const { counters } = useCounters();
   const effectiveUser: User | undefined = (user as any) ?? (props?.auth?.user as any) ?? undefined;
 
   const isCurrent = (href: string) => {
@@ -40,7 +42,7 @@ export default function AdminLayout({ title, children, user }: Props) {
      { name: 'Admin Dashboard', href: route('admin.dashboard'), icon: <IconMapper name="home" className="h-6 w-6" />, current: isCurrent(route('admin.dashboard')) },
      { name: 'Services', href: route('admin.services.index'), icon: <IconMapper name="package" className="h-6 w-6" />, current: isCurrent(route('admin.services.index')) },
      { name: 'Users', href: route('admin.users.index'), icon: <IconMapper name="users-2" className="h-6 w-6" />, current: isCurrent(route('admin.users.index')) },
-     { name: 'Approvals', href: route('admin.approvals.index'), icon: <IconMapper name="check-circle" className="h-6 w-6" />, current: isCurrent(route('admin.approvals.index')) },
+     { name: 'Approvals', href: route('admin.approvals.index'), icon: <IconMapper name="check-circle" className="h-6 w-6" />, current: isCurrent(route('admin.approvals.index')), badge: (() => { const n = (Number(counters?.requisitions_pending_admin||0) + Number(counters?.finance_approvals_pending||0)); return n>0 ? String(n) : undefined; })() },
      { name: 'Messaging', href: route('control-room.messaging.index'), icon: <IconMapper name="message-square-text" className="h-6 w-6" />, current: isCurrent(route('control-room.messaging.index')) },
     { name: 'Reports', href: route('admin.reports.index'), icon: <IconMapper name="bar-chart-2" className="h-6 w-6" />, current: isCurrent(route('admin.reports.index')) },
     { name: 'Payments Checker', href: route('admin.payments.index'), icon: <IconMapper name="wallet" className="h-6 w-6" />, current: isCurrent(route('admin.payments.index')) },
@@ -112,7 +114,7 @@ export default function AdminLayout({ title, children, user }: Props) {
   { name: 'Assets', href: assetsHref, icon: <IconMapper name="boxes" className="h-6 w-6" />, current: isCurrent(assetsHref) },
   { name: 'Finance', href: financeHref, icon: <IconMapper name="wallet" className="h-6 w-6" />, current: isCurrent(financeHref) },
   { name: 'Marketing', href: marketingHref, icon: <IconMapper name="megaphone" className="h-6 w-6" />, current: isCurrent(marketingHref) },
-  { name: 'Requisitions', href: route('requisitions.index'), icon: <IconMapper name="clipboard-list" className="h-6 w-6" />, current: isCurrent(route('requisitions.index')) },
+  { name: 'Requisitions', href: route('requisitions.index'), icon: <IconMapper name="clipboard-list" className="h-6 w-6" />, current: isCurrent(route('requisitions.index')), badge: (()=>{ const n = Number(counters?.requisitions_my_open||0); return n>0? String(n): undefined; })() },
   ];
 
   return (
@@ -202,7 +204,9 @@ export default function AdminLayout({ title, children, user }: Props) {
           </div>
         </div>
         <BaseShell noHeader fullScreen={false}>
-          {children}
+          <div className="animate-slideUp transition-all-smooth">
+            {children}
+          </div>
         </BaseShell>
       </div>
     </div>

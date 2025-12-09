@@ -6,6 +6,8 @@ import IconMapper from '@/Components/IconMapper';
 import Modal from '@/Components/Modal';
 import GuardForm from '@/Components/Guards/GuardForm';
 import AssignSiteModal from '@/Components/Guards/AssignSiteModal';
+import ManualCheckInModal from '@/Components/Guards/ManualCheckInModal';
+import ManualCheckOutModal from '@/Components/Guards/ManualCheckOutModal';
 
 type Guard = {
   id: number;
@@ -78,6 +80,10 @@ export default function GuardsIndex() {
   const [showAdd, setShowAdd] = useState(false);
   const [showAssign, setShowAssign] = useState(false);
   const [currentGuardId, setCurrentGuardId] = useState<number | null>(null);
+  const [showManualCheckIn, setShowManualCheckIn] = useState(false);
+  const [manualGuardId, setManualGuardId] = useState<number | null>(null);
+  const [showManualCheckOut, setShowManualCheckOut] = useState(false);
+  const [manualOutGuardId, setManualOutGuardId] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [errorsCreate, setErrorsCreate] = useState<Record<string, string>>({});
   const [showSupervisor, setShowSupervisor] = useState(false);
@@ -312,6 +318,24 @@ export default function GuardsIndex() {
                           <IconMapper name="MapPin" size={18} />
                         </button>
                         <button
+                          onClick={() => { setManualGuardId(g.id); setShowManualCheckIn(true); }}
+                          className={`p-2 rounded text-white ${g.today_attendance?.check_in ? 'bg-gray-400 cursor-not-allowed' : 'bg-coin-700 hover:bg-coin-800'}`}
+                          title={g.today_attendance?.check_in ? 'Already checked in' : 'Manual Check-In'}
+                          aria-label="Manual Check-In"
+                          disabled={!!g.today_attendance?.check_in}
+                        >
+                          <IconMapper name="CheckCircle" size={18} />
+                        </button>
+                        <button
+                          onClick={() => { setManualOutGuardId(g.id); setShowManualCheckOut(true); }}
+                          className={`p-2 rounded text-white ${(!g.today_attendance?.check_in || !!g.today_attendance?.check_out) ? 'bg-gray-400 cursor-not-allowed' : 'bg-coin-700 hover:bg-coin-800'}`}
+                          title={!g.today_attendance?.check_in ? 'No active check-in' : (g.today_attendance?.check_out ? 'Already checked out' : 'Manual Check-Out')}
+                          aria-label="Manual Check-Out"
+                          disabled={!g.today_attendance?.check_in || !!g.today_attendance?.check_out}
+                        >
+                          <IconMapper name="LogOut" size={18} />
+                        </button>
+                        <button
                           onClick={() => openView(g.id)}
                           className="p-2 rounded bg-gray-100 hover:bg-gray-200 text-gray-800 border"
                           title="View Details"
@@ -508,6 +532,22 @@ export default function GuardsIndex() {
             </div>
           </form>
         </Modal>
+
+        {/* Manual Check-In Modal */}
+        <ManualCheckInModal
+          open={showManualCheckIn}
+          guardId={manualGuardId}
+          zones={zones}
+          onClose={() => { setShowManualCheckIn(false); setManualGuardId(null); }}
+          onSuccess={() => router.reload()}
+        />
+
+        <ManualCheckOutModal
+          open={showManualCheckOut}
+          guardId={manualOutGuardId}
+          onClose={() => { setShowManualCheckOut(false); setManualOutGuardId(null); }}
+          onSuccess={() => router.reload()}
+        />
       </div>
     </ControlRoomLayout>
   );

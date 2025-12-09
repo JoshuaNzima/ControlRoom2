@@ -13,6 +13,7 @@ class Down extends Model
         'client_id',
         'client_site_id',
         'reported_by',
+        'guard_id',
         'type',
         'title',
         'description',
@@ -45,6 +46,11 @@ class Down extends Model
     public function clientSite()
     {
         return $this->belongsTo(\App\Models\Guards\ClientSite::class, 'client_site_id');
+    }
+
+    public function guardRelation()
+    {
+        return $this->belongsTo(\App\Models\Guards\Guard::class, 'guard_id');
     }
 }
 

@@ -16,13 +16,18 @@ class RequisitionController extends Controller
     {
         $user = $request->user();
 
-        $query = Requisition::query()->with('requestedBy');
+        $query = Requisition::query()->with(['requestedBy', 'approvedBy', 'disbursedBy']);
 
         if ($user->hasAnyRole(['admin', 'super_admin'])) {
             // admins see everything
         } elseif ($user->hasAnyRole(['asset_manager', 'assets_manager'])) {
-            // asset managers focus on items pending disbursement
-            $query->where('status', 'pending_disbursement');
+            // Asset managers: allow toggling via mode=disburse|mine (default: disburse)
+            $mode = $request->query('mode', 'disburse');
+            if ($mode === 'mine') {
+                $query->where('requested_by', $user->id);
+            } else {
+                $query->where('status', 'pending_disbursement');
+            }
         } else {
             // regular users see their own
             $query->where('requested_by', $user->id);
@@ -32,6 +37,7 @@ class RequisitionController extends Controller
 
         return Inertia::render('Requisitions/Index', [
             'requisitions' => $requisitions,
+            'mode' => $request->query('mode', $user->hasAnyRole(['asset_manager','assets_manager']) ? 'disburse' : 'mine'),
             'auth' => [
                 'user' => [
                     'id' => $user->id,
@@ -48,7 +54,7 @@ class RequisitionController extends Controller
 
         $data = $request->validate([
             'title' => ['required', 'string', 'max:255'],
-            'category' => ['nullable', 'string', 'in:general,fuel,vehicle_hire'],
+            'category' => ['nullable', 'string', 'in:general,fuel,vehicle_hire,events,k9,utilities,office_supplies'],
             'description' => ['nullable', 'string'],
             'needed_by' => ['nullable', 'date'],
             'amount' => ['required', 'numeric', 'min:0'],

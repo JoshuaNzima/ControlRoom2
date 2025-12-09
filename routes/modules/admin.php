@@ -91,6 +91,7 @@ Route::middleware(['auth', 'role:admin,super_admin'])
             Route::delete('/{client}/sites/{site}', [\App\Http\Controllers\Admin\ClientController::class, 'destroySite'])->name('sites.destroy');
             Route::get('/{client}/sites/deleted/json', [\App\Http\Controllers\Admin\ClientController::class, 'deletedSitesJson'])->name('sites.deleted-json');
             Route::post('/{client}/sites/{site}/restore', [\App\Http\Controllers\Admin\ClientController::class, 'restoreSite'])->name('sites.restore');
+            Route::post('/sites/bulk-update', [\App\Http\Controllers\Admin\ClientController::class, 'bulkUpdateSites'])->name('sites.bulk-update');
         });
 
         // Services Management
@@ -158,6 +159,10 @@ Route::middleware(['auth', 'role:admin,super_admin,business_dev,business_develop
         Route::get('/business-dev', [\App\Http\Controllers\Admin\BusinessDevController::class, 'index'])->name('business-dev');
 
         Route::prefix('business-dev')->name('business-dev.')->group(function () {
+            // Expose sites data to Business Dev module (read-only JSON for lookups/search)
+            Route::get('/sites/json', [\App\Http\Controllers\Admin\ClientController::class, 'sitesJson'])
+                ->name('sites.json');
+
             Route::get('/events/{event}/json', [\App\Http\Controllers\Admin\BusinessDevEventController::class, 'showJson'])
                 ->name('events.json');
 
@@ -175,6 +180,44 @@ Route::middleware(['auth', 'role:admin,super_admin,business_dev,business_develop
 
             Route::get('/settings', [\App\Http\Controllers\Admin\BusinessDevSettingController::class, 'index'])->name('settings');
             Route::post('/settings', [\App\Http\Controllers\Admin\BusinessDevSettingController::class, 'update'])->name('settings.update');
+
+            // Business Dev Operations page
+            Route::get('/ops', function () {
+                $today = now();
+                $monthStart = $today->copy()->startOfMonth();
+                $monthEnd = $today->copy()->endOfMonth();
+
+                $summary = [
+                    'upcoming_events' => (int) \App\Models\ClientEvent::whereDate('event_date', '>=', $today->toDateString())
+                        ->whereIn('status', ['planned', 'confirmed'])
+                        ->count(),
+                    'month_event_revenue' => (float) \App\Models\ClientEvent::whereBetween('event_date', [$monthStart->toDateString(), $monthEnd->toDateString()])
+                        ->whereIn('status', ['planned', 'confirmed', 'completed'])
+                        ->sum('expected_amount'),
+                    'k9_events_month' => (int) \App\Models\ClientEvent::whereBetween('event_date', [$monthStart->toDateString(), $monthEnd->toDateString()])
+                        ->where('category', 'k9')
+                        ->count(),
+                    'k9_units_month' => (int) \App\Models\ClientEvent::whereBetween('event_date', [$monthStart->toDateString(), $monthEnd->toDateString()])
+                        ->sum('k9_units'),
+                    'active_clients_with_events' => (int) \App\Models\ClientEvent::distinct('client_id')->count('client_id'),
+                    'active_sites' => (int) \App\Models\Guards\ClientSite::where('status', 'active')->count(),
+                    'total_clients' => (int) \App\Models\Client::count(),
+                    'contracts_active' => (int) \App\Models\Contract::where('status', 'active')->count(),
+                    'contracts_draft' => (int) \App\Models\Contract::where('status', 'draft')->count(),
+                    'contracts_expired' => (int) \App\Models\Contract::where('status', 'expired')->count(),
+                ];
+
+                return Inertia::render('Admin/BusinessDevOps', [
+                    'summary' => $summary,
+                ]);
+            })->name('ops');
+
+            // K9 module pages under Business Dev (unified module for same officers)
+            Route::prefix('k9')->name('k9.')->group(function () {
+                Route::get('/dashboard', fn() => Inertia::render('K9/Dashboard'))->name('dashboard');
+                Route::get('/dogs', fn() => Inertia::render('K9/Dogs'))->name('dogs');
+                Route::get('/handlers', fn() => Inertia::render('K9/Handlers'))->name('handlers');
+            });
         });
     });
 

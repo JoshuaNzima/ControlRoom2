@@ -5,6 +5,8 @@ import NotificationBell from '@/Components/Common/NotificationBell';
 import { User } from '@/types';
 import { useTheme } from '@/Providers/ThemeProvider';
 import QuickRequisitionButton from '@/Components/Requisitions/QuickRequisitionButton';
+import QuickBudgetButton from '@/Components/Budgets/QuickBudgetButton';
+import useCounters from '@/Hooks/useCounters';
 
 interface Props {
   title: string;
@@ -24,19 +26,20 @@ export default function ControlRoomLayout({ title, children, user }: Props) {
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
   const [logoOk, setLogoOk] = React.useState<boolean>(true);
   const { theme, toggle } = useTheme();
+  const { counters } = useCounters();
 
   const isCurrent = (href: string) => window.location.pathname === href;
 
   const controlRoomLinks: ModuleNavItem[] = [
   { name: 'Control Room Dashboard', href: route('control-room.dashboard'), icon: <IconMapper name="home" className="h-6 w-6" />, current: isCurrent(route('control-room.dashboard')) },
   { name: 'Live Monitoring', href: route('control-room.monitoring'), icon: <IconMapper name="activity" className="h-6 w-6" />, current: false },
-  { name: 'Incident Management', href: route('control-room.incidents.index'), icon: <IconMapper name="alert-triangle" className="h-6 w-6" />, current: false },
+  { name: 'Incident Management', href: route('control-room.incidents.index'), icon: <IconMapper name="alert-triangle" className="h-6 w-6" />, current: false, badge: (()=>{ const n = Number(counters?.control_incidents_open||0); return n>0? String(n): undefined; })() },
   { name: 'Camera Systems', href: route('control-room.cameras.index'), icon: <IconMapper name="camera" className="h-6 w-6" />, current: false },
   { name: 'Zone Management', href: route('control-room.zones.index'), icon: <IconMapper name="map-pin" className="h-6 w-6" />, current: false },
   { name: 'Shift Management', href: route('control-room.shifts.index'), icon: <IconMapper name="clock" className="h-6 w-6" />, current: false },
-  { name: 'Tickets', href: route('control-room.tickets.index'), icon: <IconMapper name="briefcase" className="h-6 w-6" />, current: false },
-  { name: 'Flags', href: route('control-room.flags.index'), icon: <IconMapper name="alert-triangle" className="h-6 w-6" />, current: false },
-  { name: 'Downs', href: route('control-room.downs.index'), icon: <IconMapper name="activity" className="h-6 w-6" />, current: false },
+  { name: 'Tickets', href: route('control-room.tickets.index'), icon: <IconMapper name="briefcase" className="h-6 w-6" />, current: false, badge: (()=>{ const n = Number(counters?.control_tickets_open||0); return n>0? String(n): undefined; })() },
+  { name: 'Flags', href: route('control-room.flags.index'), icon: <IconMapper name="alert-triangle" className="h-6 w-6" />, current: false, badge: (()=>{ const n = Number(counters?.control_flags_pending||0); return n>0? String(n): undefined; })() },
+  { name: 'Downs', href: route('control-room.downs.index'), icon: <IconMapper name="activity" className="h-6 w-6" />, current: false, badge: (()=>{ const n = Number(counters?.control_downs_active||0); return n>0? String(n): undefined; })() },
   { name: 'Public Intake Triage', href: route('control-room.triage.intakes.index'), icon: <IconMapper name="inbox" className="h-6 w-6" />, current: false },
   ];
 
@@ -52,7 +55,7 @@ export default function ControlRoomLayout({ title, children, user }: Props) {
         return route('control-room.messaging.index');
       }
     })(), icon: <IconMapper name="message-square-text" className="h-6 w-6" />, current: false },
-    { name: 'Emergency Alerts', href: route('control-room.alerts'), icon: <IconMapper name="alert-triangle" className="h-6 w-6" />, current: false },
+    { name: 'Emergency Alerts', href: route('control-room.alerts'), icon: <IconMapper name="alert-triangle" className="h-6 w-6" />, current: false, badge: (()=>{ const n = Number(counters?.alerts_active||0); return n>0? String(n): undefined; })() },
   ];
 
   const systemLinks: ModuleNavItem[] = [
@@ -61,7 +64,7 @@ export default function ControlRoomLayout({ title, children, user }: Props) {
     { name: 'Clients', href: route('control-room.clients'), icon: <IconMapper name="building-2" className="h-6 w-6" />, current: false },
     { name: 'Reports', href: route('control-room.reports'), icon: <IconMapper name="bar-chart-2" className="h-6 w-6" />, current: false },
     { name: 'Settings', href: route('control-room.settings'), icon: <IconMapper name="settings" className="h-6 w-6" />, current: false },
-    { name: 'Requisitions', href: route('requisitions.index'), icon: <IconMapper name="clipboard-list" className="h-6 w-6" />, current: false },
+    { name: 'Requisitions', href: route('requisitions.index'), icon: <IconMapper name="clipboard-list" className="h-6 w-6" />, current: false, badge: (()=>{ const n = Number(counters?.requisitions_my_open||0); return n>0? String(n): undefined; })() },
   ];
 
   return (
@@ -147,6 +150,7 @@ export default function ControlRoomLayout({ title, children, user }: Props) {
               <h1 className="text-xl font-semibold text-red-900 dark:text-gray-100">{title}</h1>
               <div className="flex items-center gap-4">
                 <NotificationBell />
+                <QuickBudgetButton />
                 <QuickRequisitionButton />
                 <button onClick={toggle} className="text-sm px-3 py-1 rounded-md bg-red-100 text-red-800 hover:bg-red-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700">
                   {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
@@ -166,7 +170,11 @@ export default function ControlRoomLayout({ title, children, user }: Props) {
         </div>
         <main className="flex-1">
           <div className="py-6">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 text-gray-900 dark:text-gray-100">{children}</div>
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 text-gray-900 dark:text-gray-100">
+              <div className="animate-slideUp transition-all-smooth">
+                {children}
+              </div>
+            </div>
           </div>
         </main>
       </div>

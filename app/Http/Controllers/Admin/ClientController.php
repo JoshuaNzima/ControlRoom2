@@ -320,7 +320,7 @@ class ClientController extends Controller
     {
         $client->delete();
 
-        return redirect()->route('clients.index')
+        return redirect()->route('admin.clients.index')
             ->withSuccess('Client deleted successfully.');
     }
 
@@ -403,6 +403,72 @@ class ClientController extends Controller
 
         return redirect()->route('admin.clients.edit', $client)
             ->withSuccess('Site restored successfully.');
+    }
+
+    public function bulkUpdateSites(Request $request)
+    {
+        $validated = $request->validate([
+            'site_ids' => ['required', 'array', 'min:1'],
+            'site_ids.*' => ['integer', 'exists:client_sites,id'],
+            'action' => ['required', 'in:activate,deactivate,move_zone,set_required_guards'],
+            'zone_id' => ['nullable', 'integer', 'exists:zones,id'],
+            'required_guards' => ['nullable', 'integer', 'min:1'],
+        ]);
+
+        $updated = 0;
+
+        $affectedZoneIds = ClientSite::query()
+            ->whereIn('id', $validated['site_ids'])
+            ->pluck('zone_id')
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+
+        if ($validated['action'] === 'activate') {
+            $updated = ClientSite::whereIn('id', $validated['site_ids'])->update(['status' => 'active']);
+        } elseif ($validated['action'] === 'deactivate') {
+            $updated = ClientSite::whereIn('id', $validated['site_ids'])->update(['status' => 'inactive']);
+        } elseif ($validated['action'] === 'move_zone') {
+            if (empty($validated['zone_id'])) {
+                if ($request->wantsJson() || $request->ajax()) {
+                    return response()->json(['success' => false, 'message' => 'zone_id is required for move_zone'], 422);
+                }
+                return redirect()->back()->withErrors(['zone_id' => 'Zone is required for move operation.']);
+            }
+            $updated = ClientSite::whereIn('id', $validated['site_ids'])->update(['zone_id' => $validated['zone_id']]);
+            if ($validated['zone_id']) {
+                $affectedZoneIds[] = (int) $validated['zone_id'];
+            }
+        } elseif ($validated['action'] === 'set_required_guards') {
+            if (!isset($validated['required_guards'])) {
+                if ($request->wantsJson() || $request->ajax()) {
+                    return response()->json(['success' => false, 'message' => 'required_guards is required for this action'], 422);
+                }
+                return redirect()->back()->withErrors(['required_guards' => 'Required guards value is needed.']);
+            }
+            $updated = ClientSite::whereIn('id', $validated['site_ids'])->update(['required_guards' => $validated['required_guards']]);
+        }
+
+        $affectedZoneIds = array_values(array_unique(array_filter($affectedZoneIds)));
+
+        foreach ($affectedZoneIds as $zoneId) {
+            try {
+                $sum = ClientSite::query()
+                    ->where('zone_id', $zoneId)
+                    ->where('status', 'active')
+                    ->sum('required_guards');
+
+                Zone::whereKey($zoneId)->update(['required_guard_count' => (int) $sum]);
+            } catch (\Throwable $e) {
+            }
+        }
+
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json(['success' => true, 'updated' => $updated]);
+        }
+
+        return redirect()->back()->withSuccess('Updated ' . $updated . ' sites.');
     }
 
     public function bulkImport(Request $request)

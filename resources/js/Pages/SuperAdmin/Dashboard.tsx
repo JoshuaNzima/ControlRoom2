@@ -8,6 +8,7 @@ import { route } from 'ziggy-js';
 import IconMapper from '@/Components/IconMapper';
 import QRCodeGenerator from '@/Components/QRCodeGenerator';
 import RequisitionSummary from '@/Components/Requisitions/RequisitionSummary';
+import useCounters from '@/Hooks/useCounters';
 
 // Type Definitions
 interface Auth {
@@ -93,6 +94,8 @@ interface SuperAdminDashboardProps {
   adminActions: AdminAction[];
   isSuperAdmin: boolean;
   isMaintenance?: boolean;
+  canSeePendingAdmin?: boolean;
+  canSeeFinanceApprovals?: boolean;
 }
 
 interface SystemStatCardProps {
@@ -109,32 +112,58 @@ interface HealthCardProps {
   status: boolean;
 }
 
+interface SparklineProps {
+  values?: number[];
+}
+
 // Helper Components
 const SystemStatCard: React.FC<SystemStatCardProps> = ({ icon, title, value, subtitle, color }) => {
   return (
-    <div className="bg-white rounded-xl shadow-md p-6 border-l-4 border-indigo-500">
+    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 border border-red-100 dark:border-gray-700">
       <div className="flex items-center gap-4">
-        <div className="p-3 rounded-lg bg-indigo-100 text-indigo-600">
+        <div className="p-3 rounded-lg bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-300">
           {icon}
         </div>
         <div>
-          <p className="text-sm text-gray-600">{title}</p>
-          <p className="text-2xl font-bold text-gray-900">{value}</p>
-          <p className="text-xs text-gray-500">{subtitle}</p>
+          <p className="text-sm text-gray-600 dark:text-gray-400">{title}</p>
+          <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{value}</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400">{subtitle}</p>
         </div>
       </div>
     </div>
   );
 };
 
+const Sparkline: React.FC<SparklineProps> = ({ values }) => {
+  if (!values || values.length === 0) return null;
+  const width = 80;
+  const height = 24;
+  const max = Math.max(...values);
+  const min = Math.min(...values);
+  const points = values.map((v, i) => {
+    const x = values.length === 1 ? width / 2 : (width / (values.length - 1)) * i;
+    const y = max === min ? height / 2 : height - ((v - min) / Math.max(max - min, 1)) * height;
+    return { x, y };
+  });
+  const d = points
+    .map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`)
+    .join(' ');
+
+  return (
+    <svg viewBox={`0 0 ${width} ${height}`} className="mt-2 w-full h-5 text-red-500 dark:text-red-300">
+      <path d={d} fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+};
+
 const HealthCard: React.FC<HealthCardProps> = ({ label, value, status }) => {
   return (
-    <div className="bg-gray-50 rounded-lg p-4">
+    <div className="bg-gray-50 dark:bg-gray-900/30 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
       <div className="flex items-center justify-between mb-2">
-        <span className="text-sm font-medium text-gray-600">{label}</span>
+        <span className="text-sm font-medium text-gray-600 dark:text-gray-400">{label}</span>
         <span className={`w-2 h-2 rounded-full ${status ? 'bg-green-500' : 'bg-yellow-500'}`} />
       </div>
-      <p className="text-lg font-semibold text-gray-900">{value}</p>
+      <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">{value}</p>
     </div>
   );
 };
@@ -152,7 +181,48 @@ const Dashboard: React.FC<SuperAdminDashboardProps> = ({
   adminActions,
   isSuperAdmin,
   isMaintenance,
+  canSeePendingAdmin,
+  canSeeFinanceApprovals,
 }) => {
+  const { counters } = useCounters();
+  const [kpiHistory, setKpiHistory] = React.useState<Record<string, number[]>>({});
+
+  React.useEffect(() => {
+    if (!counters) return;
+    const keys = [
+      'notifications_unread',
+      'requisitions_my_open',
+      'requisitions_needs_revision',
+      'requisitions_pending_admin',
+      'finance_approvals_pending',
+      'finance_expenses_pending_mine',
+      'control_tickets_open',
+      'control_incidents_open',
+      'control_flags_pending',
+      'control_downs_active',
+      'alerts_active',
+      'assets_handovers_outstanding',
+    ];
+    setKpiHistory((prev) => {
+      const next: Record<string, number[]> = { ...prev };
+      keys.forEach((key) => {
+        const raw = (counters as any)?.[key];
+        const v = Number(raw ?? 0);
+        const series = next[key] ?? [];
+        if (series.length === 0 || series[series.length - 1] !== v) {
+          next[key] = [...series.slice(-19), v];
+        }
+      });
+      return next;
+    });
+  }, [counters]);
+
+  const isDbOk = systemHealth.database === 'Connected';
+  const isCacheOk = systemHealth.cache === 'Working';
+  const isHealthy = isDbOk && isCacheOk;
+  const isDegraded = !isHealthy && (isDbOk || isCacheOk);
+  const statusLabel = isHealthy ? 'Operational' : isDegraded ? 'Degraded' : 'Issue';
+  const statusColor = isHealthy ? 'bg-emerald-500' : isDegraded ? 'bg-amber-500' : 'bg-red-600';
   const handleToggleModule = (moduleId: number) => {
     router.post(route('superadmin.modules.toggle', { module: moduleId }));
   };
@@ -191,8 +261,81 @@ const Dashboard: React.FC<SuperAdminDashboardProps> = ({
             </div>
             <div className="text-right">
               <p className="text-sm opacity-90">System Status</p>
-              <p className="text-2xl font-bold">Operational</p>
+              <div className="mt-1 inline-flex items-center gap-2 rounded-full px-3 py-1 bg-white/10 backdrop-blur text-xs font-medium">
+                <span className={`inline-block h-2 w-2 rounded-full ${statusColor}`} />
+                <span>{statusLabel}</span>
+              </div>
             </div>
+          </div>
+        </div>
+
+        {/* KPIs at a glance */}
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-red-100 dark:border-gray-700">
+            <div className="text-xs text-gray-500 dark:text-gray-400">Unread Notifications</div>
+            <div className="mt-1 text-2xl font-bold text-gray-900 dark:text-gray-100">{Number(counters?.notifications_unread || 0)}</div>
+            <Sparkline values={kpiHistory['notifications_unread']} />
+          </div>
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-red-100 dark:border-gray-700">
+            <div className="text-xs text-gray-500 dark:text-gray-400">My Requisitions</div>
+            <div className="mt-1 text-2xl font-bold text-gray-900 dark:text-gray-100">{Number(counters?.requisitions_my_open || 0)}</div>
+            <Sparkline values={kpiHistory['requisitions_my_open']} />
+          </div>
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-red-100 dark:border-gray-700">
+            <div className="text-xs text-gray-500 dark:text-gray-400">Needs Revision</div>
+            <div className="mt-1 text-2xl font-bold text-gray-900 dark:text-gray-100">{Number(counters?.requisitions_needs_revision || 0)}</div>
+            <Sparkline values={kpiHistory['requisitions_needs_revision']} />
+          </div>
+          {canSeePendingAdmin && (
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-red-100 dark:border-gray-700">
+              <div className="text-xs text-gray-500 dark:text-gray-400">Pending Admin</div>
+              <div className="mt-1 text-2xl font-bold text-gray-900 dark:text-gray-100">{Number(counters?.requisitions_pending_admin || 0)}</div>
+              <Sparkline values={kpiHistory['requisitions_pending_admin']} />
+            </div>
+          )}
+          {canSeeFinanceApprovals && (
+            <>
+              <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-red-100 dark:border-gray-700">
+                <div className="text-xs text-gray-500 dark:text-gray-400">Finance Approvals</div>
+                <div className="mt-1 text-2xl font-bold text-gray-900 dark:text-gray-100">{Number(counters?.finance_approvals_pending || 0)}</div>
+                <Sparkline values={kpiHistory['finance_approvals_pending']} />
+              </div>
+              <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-red-100 dark:border-gray-700">
+                <div className="text-xs text-gray-500 dark:text-gray-400">My Expenses Pending</div>
+                <div className="mt-1 text-2xl font-bold text-gray-900 dark:text-gray-100">{Number(counters?.finance_expenses_pending_mine || 0)}</div>
+                <Sparkline values={kpiHistory['finance_expenses_pending_mine']} />
+              </div>
+            </>
+          )}
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-red-100 dark:border-gray-700">
+            <div className="text-xs text-gray-500 dark:text-gray-400">Tickets Open</div>
+            <div className="mt-1 text-2xl font-bold text-gray-900 dark:text-gray-100">{Number(counters?.control_tickets_open || 0)}</div>
+            <Sparkline values={kpiHistory['control_tickets_open']} />
+          </div>
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-red-100 dark:border-gray-700">
+            <div className="text-xs text-gray-500 dark:text-gray-400">Incidents Open</div>
+            <div className="mt-1 text-2xl font-bold text-gray-900 dark:text-gray-100">{Number(counters?.control_incidents_open || 0)}</div>
+            <Sparkline values={kpiHistory['control_incidents_open']} />
+          </div>
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-red-100 dark:border-gray-700">
+            <div className="text-xs text-gray-500 dark:text-gray-400">Flags Pending</div>
+            <div className="mt-1 text-2xl font-bold text-gray-900 dark:text-gray-100">{Number(counters?.control_flags_pending || 0)}</div>
+            <Sparkline values={kpiHistory['control_flags_pending']} />
+          </div>
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-red-100 dark:border-gray-700">
+            <div className="text-xs text-gray-500 dark:text-gray-400">Downs Active</div>
+            <div className="mt-1 text-2xl font-bold text-gray-900 dark:text-gray-100">{Number(counters?.control_downs_active || 0)}</div>
+            <Sparkline values={kpiHistory['control_downs_active']} />
+          </div>
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-red-100 dark:border-gray-700">
+            <div className="text-xs text-gray-500 dark:text-gray-400">Alerts Active</div>
+            <div className="mt-1 text-2xl font-bold text-gray-900 dark:text-gray-100">{Number(counters?.alerts_active || 0)}</div>
+            <Sparkline values={kpiHistory['alerts_active']} />
+          </div>
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-red-100 dark:border-gray-700">
+            <div className="text-xs text-gray-500 dark:text-gray-400">Asset Handovers</div>
+            <div className="mt-1 text-2xl font-bold text-gray-900 dark:text-gray-100">{Number(counters?.assets_handovers_outstanding || 0)}</div>
+            <Sparkline values={kpiHistory['assets_handovers_outstanding']} />
           </div>
         </div>
 
@@ -200,7 +343,7 @@ const Dashboard: React.FC<SuperAdminDashboardProps> = ({
 
         {/* System Statistics */}
         <div>
-          <h2 className="text-xl font-bold text-gray-900 mb-4">System Overview</h2>
+          <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">System Overview</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <SystemStatCard
               icon={<IconMapper name="Server" size={24} />}
@@ -235,9 +378,9 @@ const Dashboard: React.FC<SuperAdminDashboardProps> = ({
 
         {/* System Health */}
         {isSuperAdmin && (
-          <div className="bg-white rounded-xl shadow-lg p-6">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold text-gray-900">System Health</h2>
+              <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">System Health</h2>
               <button
                 onClick={() => router.reload({ only: ['systemHealth'] })}
                 className="p-2 hover:bg-gray-100 rounded-lg transition"
@@ -265,13 +408,13 @@ const Dashboard: React.FC<SuperAdminDashboardProps> = ({
         {/* Quick Admin Actions */}
         {isSuperAdmin && (
           <div>
-            <h2 className="text-xl font-bold text-gray-900 mb-4">Quick Actions</h2>
+            <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">Quick Actions</h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {adminActions.map((action) => (
                 <Link
                   key={action.route}
                   href={route(action.route)}
-                  className="bg-white rounded-xl p-6 shadow-md hover:shadow-xl transition-all transform hover:-translate-y-1 text-center group"
+                  className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md hover:shadow-xl transition-all transform hover:-translate-y-1 text-center group border border-red-100 dark:border-gray-700"
                 >
                   <div
                     className={`w-16 h-16 rounded-full mx-auto mb-3 flex items-center justify-center text-3xl group-hover:scale-110 transition-transform`}
@@ -279,8 +422,8 @@ const Dashboard: React.FC<SuperAdminDashboardProps> = ({
                   >
                     {action.icon}
                   </div>
-                  <h3 className="font-bold text-gray-900 text-sm mb-1">{action.title}</h3>
-                  <p className="text-xs text-gray-600">{action.description}</p>
+                  <h3 className="font-bold text-gray-900 dark:text-gray-100 text-sm mb-1">{action.title}</h3>
+                  <p className="text-xs text-gray-600 dark:text-gray-400">{action.description}</p>
                 </Link>
               ))}
             </div>
@@ -289,20 +432,20 @@ const Dashboard: React.FC<SuperAdminDashboardProps> = ({
 
         {/* Modules by Category */}
         <div>
-          <h2 className="text-xl font-bold text-gray-900 mb-4">Available Modules</h2>
+          <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">Available Modules</h2>
           {Object.entries(modulesByCategory).map(([category, categoryModules]) => (
             <div key={category} className="mb-8">
-              <h3 className="text-lg font-semibold text-gray-800 mb-4 capitalize">
+              <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4 capitalize">
                 {category.replace('_', ' ')} Modules
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {categoryModules.map((module) => (
                   <div
                     key={module.id}
-                    className={`p-6 rounded-xl shadow-md border-2 transition-all ${
+                    className={`p-6 rounded-xl shadow-md border transition-all ${
                       module.is_active
-                        ? 'border-indigo-400 bg-white hover:shadow-xl hover:-translate-y-1'
-                        : 'border-gray-200 bg-gray-100'
+                        ? 'border-red-300 bg-white dark:bg-gray-800 hover:shadow-xl hover:-translate-y-1'
+                        : 'border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-900/30'
                     }`}
                     role="group"
                     aria-label={`${module.display_name} module card`}
@@ -311,9 +454,9 @@ const Dashboard: React.FC<SuperAdminDashboardProps> = ({
                       <div className="mb-2 flex items-center justify-center">
                         <IconMapper name={module.icon || 'Puzzle'} size={36} />
                       </div>
-                      <h3 className="font-bold text-gray-900 text-lg mb-1">{module.display_name}</h3>
-                      <p className="text-xs text-gray-500 mb-2">v{module.version}</p>
-                      <p className="text-xs text-gray-600">{module.description}</p>
+                      <h3 className="font-bold text-gray-900 dark:text-gray-100 text-lg mb-1">{module.display_name}</h3>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">v{module.version}</p>
+                      <p className="text-xs text-gray-600 dark:text-gray-400">{module.description}</p>
                       {module.is_core && (
                         <p className="text-xs text-red-600 mt-2">Core module</p>
                       )}
@@ -338,7 +481,7 @@ const Dashboard: React.FC<SuperAdminDashboardProps> = ({
                         return (
                           <Link
                             href={href}
-                            className="ml-3 inline-flex items-center px-3 py-2 rounded-lg text-sm font-medium border border-gray-200 hover:bg-gray-50"
+                            className="ml-3 inline-flex items-center px-3 py-2 rounded-lg text-sm font-medium border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700"
                           >
                             Open
                           </Link>
@@ -357,41 +500,41 @@ const Dashboard: React.FC<SuperAdminDashboardProps> = ({
 
         {/* Bottom Grid: User Activity, Logs, Audit Trail */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-white rounded-xl shadow-lg p-6">
-            <h3 className="font-bold text-gray-900 mb-4">Recent User Activity</h3>
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+            <h3 className="font-bold text-gray-900 dark:text-gray-100 mb-4">Recent User Activity</h3>
             <div className="space-y-3">
               {userActivity.map((activity, index) => (
-                <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
+                <div key={index} className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-900/30 rounded-lg">
                   <div>
-                    <p className="text-sm font-medium text-gray-900">{activity.name}</p>
-                    <p className="text-xs text-gray-500">{activity.role}</p>
+                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{activity.name}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">{activity.role}</p>
                   </div>
-                  <p className="text-xs text-gray-400">{activity.last_active}</p>
+                  <p className="text-xs text-gray-400 dark:text-gray-400">{activity.last_active}</p>
                 </div>
               ))}
             </div>
           </div>
-          <div className="bg-white rounded-xl shadow-lg p-6">
-            <h3 className="font-bold text-gray-900 mb-4">Recent System Logs</h3>
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+            <h3 className="font-bold text-gray-900 dark:text-gray-100 mb-4">Recent System Logs</h3>
             <div className="space-y-2 max-h-64 overflow-y-auto">
               {recentLogs.map((log, index) => (
-                <div key={index} className="p-2 bg-gray-50 rounded text-xs">
-                  <p className="text-gray-700 truncate">{log.message}</p>
-                  <p className="text-gray-400 text-[10px]">{log.time}</p>
+                <div key={index} className="p-2 bg-gray-50 dark:bg-gray-900/30 rounded text-xs">
+                  <p className="text-gray-700 dark:text-gray-300 truncate">{log.message}</p>
+                  <p className="text-gray-400 dark:text-gray-500 text-[10px]">{log.time}</p>
                 </div>
               ))}
             </div>
           </div>
-          <div className="bg-white rounded-xl shadow-lg p-6">
-            <h3 className="font-bold text-gray-900 mb-4">Audit Trail</h3>
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+            <h3 className="font-bold text-gray-900 dark:text-gray-100 mb-4">Audit Trail</h3>
             <div className="space-y-3">
               {auditTrail.map((audit, index) => (
-                <div key={index} className="p-3 bg-gray-50 rounded-lg">
-                  <p className="text-sm font-medium text-gray-900">{audit.user}</p>
-                  <p className="text-xs text-gray-600">{audit.action}</p>
+                <div key={index} className="p-3 bg-gray-50 dark:bg-gray-900/30 rounded-lg">
+                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{audit.user}</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-400">{audit.action}</p>
                   <div className="flex justify-between mt-1">
-                    <p className="text-xs text-gray-400">{audit.time}</p>
-                    <p className="text-xs text-gray-400">{audit.ip}</p>
+                    <p className="text-xs text-gray-400 dark:text-gray-500">{audit.time}</p>
+                    <p className="text-xs text-gray-400 dark:text-gray-500">{audit.ip}</p>
                   </div>
                 </div>
               ))}
@@ -400,8 +543,8 @@ const Dashboard: React.FC<SuperAdminDashboardProps> = ({
         </div>
 
         {/* Danger Zone */}
-        <div className="bg-red-50 border-2 border-red-300 rounded-xl p-6">
-          <h2 className="text-xl font-bold text-red-900 mb-4">Danger Zone</h2>
+        <div className="bg-red-50 dark:bg-red-950/30 border-2 border-red-300 dark:border-red-900 rounded-xl p-6">
+          <h2 className="text-xl font-bold text-red-900 dark:text-red-200 mb-4">Danger Zone</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <button
               onClick={handleClearCache}

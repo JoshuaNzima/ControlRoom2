@@ -9,12 +9,14 @@ import useNotifications from '@/Hooks/useNotifications';
 import { Toaster } from 'react-hot-toast';
 import NotificationBell from '@/Components/Common/NotificationBell';
 import QuickRequisitionButton from '@/Components/Requisitions/QuickRequisitionButton';
+import QuickBudgetButton from '@/Components/Budgets/QuickBudgetButton';
 
 const navLinks = [
   { href: "/supervisor/dashboard", label: "Dashboard", icon: <IconMapper name="Grid" size={22} /> },
   { href: "/supervisor/attendance", label: "Attendance", icon: <IconMapper name="Clipboard" size={22} /> },
   { href: "/supervisor/guards", label: "Guards", icon: <IconMapper name="Users2" size={22} /> },
   { href: "/supervisor/assignments", label: "Assignments", icon: <IconMapper name="Clipboard" size={22} /> },
+  { href: "/requisitions", label: "My Requisitions", icon: <IconMapper name="ClipboardList" size={22} /> },
 ];
 
 interface SupervisorLayoutProps {
@@ -92,6 +94,7 @@ export default function SupervisorLayout({ children, title }: SupervisorLayoutPr
         <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-100 truncate">{title || "CoinSec"}</h1>
         <div className="flex items-center gap-2">
           <NotificationBell />
+          <QuickBudgetButton />
           <QuickRequisitionButton />
           <button className="p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800" onClick={() => setSettingsOpen(!settingsOpen)}>
             <IconMapper name="Settings" size={22} />
@@ -153,6 +156,7 @@ export default function SupervisorLayout({ children, title }: SupervisorLayoutPr
         <header className="hidden md:flex h-16 bg-red-50 dark:bg-gray-900 border-b border-red-100 dark:border-gray-800 px-6 items-center justify-between shadow-sm">
           <h1 className="text-xl font-bold text-red-900 dark:text-gray-100">{title || "Dashboard"}</h1>
           <div className="flex items-center gap-3">
+            <QuickBudgetButton />
             <QuickRequisitionButton />
             <NotificationBell />
             <button className="p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800" onClick={() => setSettingsOpen(!settingsOpen)}>

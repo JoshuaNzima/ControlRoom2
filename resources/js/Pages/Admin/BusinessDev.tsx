@@ -39,7 +39,19 @@ interface Summary {
   upcoming_events?: number;
   month_event_revenue?: number;
   k9_events_month?: number;
+  k9_units_month?: number;
   active_clients_with_events?: number;
+  active_sites?: number;
+  total_clients?: number;
+  contracts_active?: number;
+  contracts_draft?: number;
+  contracts_expired?: number;
+  month_event_status?: {
+    planned?: number;
+    confirmed?: number;
+    completed?: number;
+    cancelled?: number;
+  };
 }
 
 interface Props {
@@ -149,7 +161,7 @@ export default function BusinessDevPage({
                 Clients
               </Link>
               <Link
-                href={route('k9.dashboard')}
+                href={route('admin.business-dev.k9.dashboard')}
                 className="inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium bg-white text-red-800 border border-red-200 hover:bg-red-50"
               >
                 <IconMapper name="shield" className="w-4 h-4 mr-2" />
@@ -196,6 +208,42 @@ export default function BusinessDevPage({
               </div>
               <p className="text-2xl font-bold text-gray-900">
                 {summary.active_clients_with_events ?? 0}
+              </p>
+            </Card>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <Card className="p-4 bg-gradient-to-br from-rose-50 to-rose-100 border-rose-200">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-sm font-medium text-rose-900">Active Sites</h3>
+                <IconMapper name="map-pin" className="w-5 h-5 text-rose-500" />
+              </div>
+              <p className="text-2xl font-bold text-rose-900">{summary.active_sites ?? 0}</p>
+            </Card>
+
+            <Card className="p-4 bg-gradient-to-br from-amber-50 to-amber-100 border-amber-200">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-sm font-medium text-amber-900">Active Contracts</h3>
+                <IconMapper name="file-check" className="w-5 h-5 text-amber-500" />
+              </div>
+              <p className="text-2xl font-bold text-amber-900">{summary.contracts_active ?? 0}</p>
+            </Card>
+
+            <Card className="p-4 bg-gradient-to-br from-fuchsia-50 to-fuchsia-100 border-fuchsia-200">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-sm font-medium text-fuchsia-900">K9 Units (This Month)</h3>
+                <IconMapper name="shield" className="w-5 h-5 text-fuchsia-500" />
+              </div>
+              <p className="text-2xl font-bold text-fuchsia-900">{summary.k9_units_month ?? 0}</p>
+            </Card>
+
+            <Card className="p-4 bg-gradient-to-br from-slate-50 to-slate-100 border-slate-200">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-sm font-medium text-slate-900">Contracts (Draft/Expired)</h3>
+                <IconMapper name="file-warning" className="w-5 h-5 text-slate-500" />
+              </div>
+              <p className="text-sm font-semibold text-slate-900">
+                Draft: {summary.contracts_draft ?? 0} • Expired: {summary.contracts_expired ?? 0}
               </p>
             </Card>
           </div>

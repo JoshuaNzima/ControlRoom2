@@ -1,10 +1,13 @@
 import React from 'react';
-import { Head, Link, usePage } from '@inertiajs/react';
+import { Head, Link } from '@inertiajs/react';
 import BaseShell from './BaseShell';
 import IconMapper from '@/Components/IconMapper';
 import { User } from '@/types';
 import { useTheme } from '@/Providers/ThemeProvider';
 import QuickRequisitionButton from '@/Components/Requisitions/QuickRequisitionButton';
+import QuickBudgetButton from '@/Components/Budgets/QuickBudgetButton';
+import NotificationBell from '@/Components/Common/NotificationBell';
+import useCounters from '@/Hooks/useCounters';
 
 interface Props {
   title: string;
@@ -17,19 +20,20 @@ interface NavItem {
   href: string;
   icon: React.ReactNode;
   current: boolean;
+  badge?: string;
 }
 
 export default function AssetManagementLayout({ title, children, user }: Props) {
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
   const isCurrent = (href: string) => typeof window !== 'undefined' && window.location.pathname === href;
   const { theme, toggle } = useTheme();
-  const { props } = usePage<any>();
-  const unread = Number(props?.notifications?.unread_count || 0);
+  const { counters } = useCounters();
 
   const nav: NavItem[] = [
-    { name: 'Overview', href: route('assets.index'), icon: <IconMapper name="package" className="h-6 w-6" />, current: isCurrent(route('assets.index')) },
+    { name: 'Overview', href: route('assets.index'), icon: <IconMapper name="package" className="h-6 w-6" />, current: isCurrent(route('assets.index')), badge: (()=>{ const n = Number(counters?.assets_handovers_outstanding||0); return n>0? String(n): undefined; })() },
     { name: 'Vehicles', href: route('assets.vehicles.index'), icon: <IconMapper name="truck" className="h-6 w-6" />, current: isCurrent(route('assets.vehicles.index')) },
     { name: 'Equipment', href: route('assets.equipment.index'), icon: <IconMapper name="wrench" className="h-6 w-6" />, current: isCurrent(route('assets.equipment.index')) },
+    { name: 'Requisitions', href: route('requisitions.index'), icon: <IconMapper name="clipboard-list" className="h-6 w-6" />, current: isCurrent(route('requisitions.index')), badge: (()=>{ const n = Number(counters?.requisitions_my_open||0); return n>0? String(n): undefined; })() },
     { name: 'Settings', href: route('assets.settings'), icon: <IconMapper name="settings" className="h-6 w-6" />, current: isCurrent(route('assets.settings')) },
   ];
 
@@ -49,6 +53,9 @@ export default function AssetManagementLayout({ title, children, user }: Props) 
               <Link key={item.name} href={item.href} className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md ${item.current ? 'bg-red-800 text-white dark:bg-gray-800' : 'text-red-100 hover:bg-red-800 hover:text-white dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white'}`}>
                 {item.icon}
                 <span className="ml-3">{item.name}</span>
+                {item.badge && (
+                  <span className="ml-auto inline-block py-0.5 px-2 text-xs font-medium rounded-full bg-white/10 text-white">{item.badge}</span>
+                )}
               </Link>
             ))}
           </nav>
@@ -73,12 +80,8 @@ export default function AssetManagementLayout({ title, children, user }: Props) 
             <div className="flex items-center justify-between">
               <h1 className="text-xl font-semibold text-red-900 dark:text-gray-100">{title}</h1>
               <div className="flex items-center gap-4">
-                <button type="button" className="relative inline-flex items-center justify-center h-9 w-9 rounded-md text-red-700 hover:text-red-900 dark:text-gray-200 dark:hover:text-gray-100 hover:bg-red-100 dark:hover:bg-gray-800">
-                  <IconMapper name="bell" className="h-5 w-5" />
-                  {unread > 0 && (
-                    <span className="absolute -top-1 -right-1 inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-bold leading-none rounded-full bg-red-600 text-white">{unread > 99 ? '99+' : unread}</span>
-                  )}
-                </button>
+                <NotificationBell />
+                <QuickBudgetButton />
                 <QuickRequisitionButton />
                 <button onClick={toggle} className="text-sm px-3 py-1 rounded-md bg-red-100 text-red-800 hover:bg-red-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700">
                   {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
@@ -92,7 +95,9 @@ export default function AssetManagementLayout({ title, children, user }: Props) 
           </div>
         </div>
         <BaseShell noHeader fullScreen={false}>
-          {children}
+          <div className="animate-slideUp transition-all-smooth">
+            {children}
+          </div>
         </BaseShell>
       </div>
     </div>

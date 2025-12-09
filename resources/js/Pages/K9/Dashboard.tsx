@@ -1,13 +1,13 @@
 import React from 'react';
 import { Head, usePage } from '@inertiajs/react';
-import K9Layout from '@/Layouts/K9Layout';
+import BusinessDevLayout from '@/Layouts/BusinessDevLayout';
 import IconMapper from '@/Components/IconMapper';
 import QuickRequisitionModal from '@/Components/Requisitions/QuickRequisitionModal';
 
 export default function K9Dashboard() {
   const { auth } = (usePage().props as any);
   return (
-    <K9Layout title="K9 Dashboard" user={auth?.user as any}>
+    <BusinessDevLayout title="K9 Dashboard" user={auth?.user as any}>
       <Head title="K9 Dashboard" />
       <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0 space-y-6">
@@ -19,7 +19,7 @@ export default function K9Dashboard() {
           <QuickRequisitionModal />
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <a href={route('k9.dogs')} className="group block rounded-2xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-6 shadow hover:shadow-md transition">
+            <a href={route('admin.business-dev.k9.dogs')} className="group block rounded-2xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-6 shadow hover:shadow-md transition">
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center text-white">
                   <IconMapper name="Dog" className="w-6 h-6" />
@@ -31,7 +31,7 @@ export default function K9Dashboard() {
               </div>
             </a>
 
-            <a href={route('k9.handlers')} className="group block rounded-2xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-6 shadow hover:shadow-md transition">
+            <a href={route('admin.business-dev.k9.handlers')} className="group block rounded-2xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-6 shadow hover:shadow-md transition">
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 rounded-xl bg-gradient-to-r from-emerald-600 to-green-600 flex items-center justify-center text-white">
                   <IconMapper name="User" className="w-6 h-6" />
@@ -57,6 +57,6 @@ export default function K9Dashboard() {
           </div>
         </div>
       </div>
-    </K9Layout>
+    </BusinessDevLayout>
   );
 }

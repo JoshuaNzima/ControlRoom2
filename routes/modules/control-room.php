@@ -58,6 +58,7 @@ Route::middleware(['auth'])->group(function () {
         // Guard management (create/update/delete), assignments and exports in Control Room
         Route::prefix('guards')->name('guards.')->group(function () {
             Route::get('/export', [\App\Http\Controllers\ControlRoom\GuardsController::class, 'export'])->name('export');
+            Route::get('/search', [\App\Http\Controllers\ControlRoom\GuardsController::class, 'search'])->name('search');
             Route::get('/{guard}/json', [\App\Http\Controllers\ControlRoom\GuardsController::class, 'showJson'])->name('json');
             Route::post('/', [\App\Http\Controllers\ControlRoom\GuardManageController::class, 'store'])
                 ->middleware(['role_or_permission:operations_officer|manager|control_room_operator'])
@@ -137,6 +138,11 @@ Route::middleware(['auth'])->group(function () {
 		Route::get('/live/stats', [\App\Http\Controllers\ControlRoom\LiveMonitoringController::class, 'getLiveStats'])->name('live.stats');
 		Route::get('/live/locations', [\App\Http\Controllers\ControlRoom\LiveMonitoringController::class, 'getGuardLocations'])->name('live.locations');
 		Route::get('/live/alerts', [\App\Http\Controllers\ControlRoom\LiveMonitoringController::class, 'getAttendanceAlerts'])->name('live.alerts');
+
+		Route::prefix('attendance')->name('attendance.')->middleware(['role_or_permission:control_room_operator|operations_officer|manager|super_admin'])->group(function () {
+			Route::post('/check-in', [\App\Http\Controllers\ControlRoom\AttendanceController::class, 'checkIn'])->name('check-in');
+			Route::post('/check-out', [\App\Http\Controllers\ControlRoom\AttendanceController::class, 'checkOut'])->name('check-out');
+		});
 
 		// Public Intake Triage
 		Route::prefix('triage')->name('triage.')->group(function () {

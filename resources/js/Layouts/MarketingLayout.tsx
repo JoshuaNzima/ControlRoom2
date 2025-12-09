@@ -6,6 +6,8 @@ import { User } from '@/types';
 import NotificationBell from '@/Components/Common/NotificationBell';
 import { useTheme } from '@/Providers/ThemeProvider';
 import QuickRequisitionButton from '@/Components/Requisitions/QuickRequisitionButton';
+import QuickBudgetButton from '@/Components/Budgets/QuickBudgetButton';
+import useCounters from '@/Hooks/useCounters';
 
 interface Props {
   title: string;
@@ -18,17 +20,20 @@ interface NavItem {
   href: string;
   icon: React.ReactNode;
   current: boolean;
+  badge?: string;
 }
 
 export default function MarketingLayout({ title, children, user }: Props) {
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
   const isCurrent = (href: string) => typeof window !== 'undefined' && window.location.pathname === href;
   const { theme, toggle } = useTheme();
+  const { counters } = useCounters();
 
   const nav: NavItem[] = [
     { name: 'Overview', href: route('admin.marketing'), icon: <IconMapper name="megaphone" className="h-6 w-6" />, current: isCurrent(route('admin.marketing')) },
     { name: 'Leads', href: route('admin.marketing.leads.index'), icon: <IconMapper name="users" className="h-6 w-6" />, current: isCurrent(route('admin.marketing.leads.index')) },
     { name: 'Analytics', href: route('admin.marketing.analytics'), icon: <IconMapper name="bar-chart-2" className="h-6 w-6" />, current: isCurrent(route('admin.marketing.analytics')) },
+    { name: 'My Requisitions', href: route('requisitions.index'), icon: <IconMapper name="clipboard-list" className="h-6 w-6" />, current: isCurrent(route('requisitions.index')), badge: (()=>{ const n = Number(counters?.requisitions_my_open||0); return n>0? String(n): undefined; })() },
     { name: 'Settings', href: route('admin.marketing.settings'), icon: <IconMapper name="settings" className="h-6 w-6" />, current: isCurrent(route('admin.marketing.settings')) },
   ];
 
@@ -48,6 +53,9 @@ export default function MarketingLayout({ title, children, user }: Props) {
               <Link key={item.name} href={item.href} className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md ${item.current ? 'bg-red-800 text-white dark:bg-gray-800' : 'text-red-100 hover:bg-red-800 hover:text-white dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white'}`}>
                 {item.icon}
                 <span className="ml-3">{item.name}</span>
+                {item.badge && (
+                  <span className="ml-auto inline-block py-0.5 px-2 text-xs font-medium rounded-full bg-white/10 text-white">{item.badge}</span>
+                )}
               </Link>
             ))}
           </nav>
@@ -73,6 +81,7 @@ export default function MarketingLayout({ title, children, user }: Props) {
               <h1 className="text-xl font-semibold text-red-900 dark:text-gray-100">{title}</h1>
               <div className="flex items-center gap-4">
                 <NotificationBell />
+                <QuickBudgetButton />
                 <QuickRequisitionButton />
                 <button onClick={toggle} className="text-sm px-3 py-1 rounded-md bg-red-100 text-red-800 hover:bg-red-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700">
                   {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
@@ -86,7 +95,9 @@ export default function MarketingLayout({ title, children, user }: Props) {
           </div>
         </div>
         <BaseShell noHeader fullScreen={false}>
-          {children}
+          <div className="animate-slideUp transition-all-smooth">
+            {children}
+          </div>
         </BaseShell>
       </div>
     </div>

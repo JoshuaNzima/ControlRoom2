@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import IconMapper from '@/Components/IconMapper';
+import { useNotification } from '@/Providers/NotificationProvider';
 
 type AppNotification = {
   id: string;
@@ -19,13 +20,23 @@ export default function NotificationBell({ className = '' }: { className?: strin
   const [loading, setLoading] = useState(false);
   const [unread, setUnread] = useState<number>(0);
   const [items, setItems] = useState<AppNotification[]>([]);
+  const { push } = useNotification();
+  const prevUnread = useRef<number>(0);
+  const firstLoad = useRef<boolean>(true);
 
   const fetchUnread = async () => {
     try {
       const res = await fetch('/notifications/unread-count', { credentials: 'same-origin' });
       if (!res.ok) return;
       const json = await res.json();
-      setUnread(Number(json.count || 0));
+      const newCount = Number(json.count || 0);
+      // Notify if there are new notifications (skip on first load)
+      if (!firstLoad.current && newCount > prevUnread.current) {
+        const delta = newCount - prevUnread.current;
+        push(`${delta === 1 ? '1 new notification' : `${delta} new notifications`}`, 'info');
+      }
+      prevUnread.current = newCount;
+      setUnread(newCount);
     } catch {}
   };
 
@@ -62,7 +73,9 @@ export default function NotificationBell({ className = '' }: { className?: strin
     fetchUnread();
     fetchItems();
     const id = window.setInterval(fetchUnread, 30000);
-    return () => window.clearInterval(id);
+    // After first fetch cycle, allow toasts
+    const firstLoadTimeout = window.setTimeout(() => { firstLoad.current = false; }, 1000);
+    return () => { window.clearInterval(id); window.clearTimeout(firstLoadTimeout); };
   }, []);
 
   const toggleOpen = async () => {

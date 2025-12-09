@@ -3,6 +3,7 @@ import { Link, usePage } from "@inertiajs/react";
 import BaseShell from './BaseShell';
 import NotificationBell from '@/Components/Common/NotificationBell';
 import QuickRequisitionButton from '@/Components/Requisitions/QuickRequisitionButton';
+import QuickBudgetButton from '@/Components/Budgets/QuickBudgetButton';
 import { PageProps } from '@/types';
 import { router } from "@inertiajs/react";
 
@@ -84,12 +85,15 @@ export default function DynamicLayout({ children, title, modules }: Props) {
               <h1 className="text-xl font-bold text-red-900 dark:text-gray-100">{title}</h1>
               <div className="flex items-center gap-3">
                 <NotificationBell />
+                <QuickBudgetButton />
                 <QuickRequisitionButton />
               </div>
             </div>
           }
         >
-          {children}
+          <div className="animate-slideUp transition-all-smooth">
+            {children}
+          </div>
         </BaseShell>
       </div>
     </div>

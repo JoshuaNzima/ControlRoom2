@@ -1,10 +1,11 @@
 import React from 'react';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import { formatCurrencyMWK } from '@/Components/format';
 import RequisitionsLayout from '@/Layouts/RequisitionsLayout';
 import type { PageProps } from '@/types';
 import QuickRequisitionButton from '@/Components/Requisitions/QuickRequisitionButton';
 import RequisitionViewModal from '@/Components/Requisitions/RequisitionViewModal';
+import { useNotification } from '@/Providers/NotificationProvider';
 
 interface RequisitionUser {
   id: number;
@@ -20,7 +21,11 @@ export interface Requisition {
   needed_by?: string | null;
   amount?: number | string | null;
   created_at: string;
+  updated_at: string;
   requested_by: number;
+  requestedBy?: RequisitionUser;
+  approvedBy?: RequisitionUser | null;
+  disbursedBy?: RequisitionUser | null;
 }
 
 interface PaginationMeta {
@@ -40,6 +45,7 @@ type RequisitionsIndexProps = PageProps<{
     meta?: PaginationMeta;
     links?: PaginationLink[];
   };
+  mode?: 'disburse' | 'mine' | string;
 }>;
 
 const statusColors: Record<string, string> = {
@@ -49,12 +55,24 @@ const statusColors: Record<string, string> = {
   disbursed: 'bg-emerald-500/20 text-emerald-200 border border-emerald-500/40',
 };
 
-export default function RequisitionsIndex({ requisitions, auth }: RequisitionsIndexProps) {
+export default function RequisitionsIndex({ requisitions, auth, mode: initialMode }: RequisitionsIndexProps) {
   const roles = (auth.user.roles ?? []) as string[];
   const isAdmin = roles.includes('admin') || roles.includes('super_admin');
   const isAssetManager = roles.includes('asset_manager') || roles.includes('assets_manager');
   const [open, setOpen] = React.useState(false);
   const [selectedId, setSelectedId] = React.useState<number | null>(null);
+  const { push } = useNotification();
+  const mode: 'disburse' | 'mine' = (initialMode === 'mine' ? 'mine' : 'disburse');
+
+  const getRelationName = (obj: any, camel: string, snake: string) => {
+    return obj?.[camel]?.name || obj?.[snake]?.name || '';
+  };
+  const getRequestedByLabel = (req: any) => {
+    const name = getRelationName(req, 'requestedBy', 'requested_by');
+    if (name) return name;
+    const idVal = req?.requested_by;
+    return (typeof idVal === 'number' || typeof idVal === 'string') ? `User #${String(idVal)}` : 'User';
+  };
 
   return (
     <RequisitionsLayout title="Requisitions">
@@ -69,9 +87,29 @@ export default function RequisitionsIndex({ requisitions, auth }: RequisitionsIn
                 {isAdmin
                   ? 'Review and route requisitions for approval or revision.'
                   : isAssetManager
-                  ? 'View requisitions pending disbursement.'
+                  ? (mode === 'disburse' ? 'Requisitions pending disbursement.' : 'Your submitted requisitions.')
                   : 'Track your submitted requisitions and their status.'}
               </p>
+              {isAssetManager && (
+                <div className="mt-2 inline-flex rounded-full bg-gray-800/40 p-1">
+                  <Link
+                    href={route('requisitions.index', { mode: 'disburse' })}
+                    className={`px-3 py-1.5 rounded-full text-xs sm:text-sm font-medium ${mode === 'disburse' ? 'bg-indigo-600 text-white' : 'text-gray-300 hover:bg-gray-700/60'}`}
+                    preserveScroll
+                    preserveState
+                  >
+                    Needs Disbursement
+                  </Link>
+                  <Link
+                    href={route('requisitions.index', { mode: 'mine' })}
+                    className={`px-3 py-1.5 rounded-full text-xs sm:text-sm font-medium ${mode === 'mine' ? 'bg-indigo-600 text-white' : 'text-gray-300 hover:bg-gray-700/60'}`}
+                    preserveScroll
+                    preserveState
+                  >
+                    My Requests
+                  </Link>
+                </div>
+              )}
             </div>
             <div className="flex items-center gap-2">
               <QuickRequisitionButton />
@@ -98,48 +136,82 @@ export default function RequisitionsIndex({ requisitions, auth }: RequisitionsIn
               )}
 
               {requisitions.data.map((req) => (
-                <button
-                  key={req.id}
-                  type="button"
-                  onClick={() => { setSelectedId(req.id); setOpen(true); }}
-                  className="w-full text-left px-3 sm:px-4 py-3 hover:bg-gray-800/80 transition-colors"
-                >
-                  <div className="flex flex-col gap-2">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-100 truncate">{req.title}</p>
-                        {req.category && req.category !== 'general' && (
-                          <span className="mt-1 inline-flex items-center rounded-full bg-red-500/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-red-200">
-                            {req.category.replace('_', ' ')}
-                          </span>
-                        )}
-                        {req.description && (
-                          <p className="mt-0.5 text-xs text-gray-400 line-clamp-2">{req.description}</p>
-                        )}
+                <div key={req.id} className="">
+                  <button
+                    type="button"
+                    onClick={() => { setSelectedId(req.id); setOpen(true); }}
+                    className="w-full text-left px-3 sm:px-4 py-3 hover:bg-gray-800/80 transition-colors"
+                  >
+                    <div className="flex flex-col gap-2">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-100 truncate">{req.title}</p>
+                          {req.category && req.category !== 'general' && (
+                            <span className="mt-1 inline-flex items-center rounded-full bg-red-500/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-red-200">
+                              {req.category.replace('_', ' ')}
+                            </span>
+                          )}
+                          {req.description && (
+                            <p className="mt-0.5 text-xs text-gray-400 line-clamp-2">{req.description}</p>
+                          )}
+                        </div>
+                        <span
+                          className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] uppercase tracking-wide ${
+                            statusColors[req.status] ?? 'bg-gray-700 text-gray-200 border border-gray-600'
+                          }`}
+                        >
+                          {req.status.replace('_', ' ')}
+                        </span>
                       </div>
-                      <span
-                        className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] uppercase tracking-wide ${
-                          statusColors[req.status] ?? 'bg-gray-700 text-gray-200 border border-gray-600'
-                        }`}
-                      >
-                        {req.status.replace('_', ' ')}
-                      </span>
-                    </div>
 
-                    <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-gray-500">
-                      <span>
-                        Created {new Date(req.created_at).toLocaleDateString()} • Needed by{' '}
-                        {req.needed_by ? new Date(req.needed_by).toLocaleDateString() : 'Not set'}
-                      </span>
-                      <span className="flex items-center gap-2">
-                        {req.amount != null && (
-                          <span className="text-gray-300">{formatCurrencyMWK(req.amount)}</span>
-                        )}
-                        <span>Requested by {'User #' + req.requested_by}</span>
-                      </span>
+                      <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-gray-500">
+                        <span>
+                          Created {new Date(req.created_at).toLocaleDateString()} • Needed by{' '}
+                          {req.needed_by ? new Date(req.needed_by).toLocaleDateString() : 'Not set'}
+                        </span>
+                        <span className="flex flex-wrap items-center gap-2">
+                          {req.amount != null && (
+                            <span className="text-gray-300">{formatCurrencyMWK(req.amount)}</span>
+                          )}
+                          <span>Requested by {getRequestedByLabel(req as any)}</span>
+                          {(getRelationName(req as any, 'approvedBy', 'approved_by')) && (
+                            <>
+                              <span>•</span>
+                              <span>Approved by {getRelationName(req as any, 'approvedBy', 'approved_by')}</span>
+                            </>
+                          )}
+                          {(req.status === 'disbursed' && getRelationName(req as any, 'disbursedBy', 'disbursed_by')) && (
+                            <>
+                              <span>•</span>
+                              <span>Disbursed by {getRelationName(req as any, 'disbursedBy', 'disbursed_by')} on {new Date(req.updated_at).toLocaleString()}</span>
+                            </>
+                          )}
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                </button>
+                  </button>
+
+                  {isAssetManager && req.status === 'pending_disbursement' && (
+                    <div className="px-3 sm:px-4 pb-3">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          router.post(route('requisitions.disburse', req.id), { notes_disbursement: '' }, {
+                            preserveScroll: true,
+                            onSuccess: () => {
+                              push('Requisition marked as disbursed', 'success');
+                              router.reload();
+                            },
+                          });
+                        }}
+                        className="inline-flex items-center rounded-md bg-indigo-600 px-3 py-2 text-xs font-medium text-white hover:bg-indigo-700"
+                      >
+                        Mark as disbursed
+                      </button>
+                    </div>
+                  )}
+                </div>
               ))}
             </div>
 

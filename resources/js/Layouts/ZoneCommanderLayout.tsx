@@ -3,6 +3,7 @@ import { Link, usePage } from '@inertiajs/react';
 import IconMapper from '@/Components/IconMapper';
 import NotificationBell from '@/Components/Common/NotificationBell';
 import BaseShell from './BaseShell';
+import useCounters from '@/Hooks/useCounters';
 
 type Props = {
 	title: string;
@@ -12,6 +13,7 @@ type Props = {
 export default function ZoneCommanderLayout({ title, children }: Props) {
 	const { url } = usePage();
 	const isCurrent = (href: string) => url === href || (typeof href === 'string' && url.startsWith(href + '/'));
+	const { counters } = useCounters();
 
 	const links = [
 		{ name: 'Dashboard', href: route('zone.dashboard'), icon: <IconMapper name="grid" className="h-5 w-5" /> },
@@ -23,6 +25,7 @@ export default function ZoneCommanderLayout({ title, children }: Props) {
 		{ name: 'Attendance', href: route('zone.attendance.index'), icon: <IconMapper name="clipboard" className="h-5 w-5" /> },
 		{ name: 'Downs', href: route('zone.downs.index'), icon: <IconMapper name="alert-triangle" className="h-5 w-5" /> },
 		{ name: 'Reports', href: route('zone.reports.index'), icon: <IconMapper name="bar-chart-2" className="h-5 w-5" /> },
+		// { name: 'My Requisitions', href: route('requisitions.index'), icon: <IconMapper name="clipboard-list" className="h-5 w-5" />, badge: (()=>{ const n = Number(counters?.requisitions_my_open||0); return n>0? String(n): undefined; })() },
 	];
 
 	return (
@@ -37,6 +40,9 @@ export default function ZoneCommanderLayout({ title, children }: Props) {
 							<Link key={item.name} href={item.href} className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm ${isCurrent(item.href) ? 'bg-red-800 text-white dark:bg-gray-800' : 'text-red-100 hover:bg-red-800 hover:text-white dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white'}`}>
 								{item.icon}
 								<span>{item.name}</span>
+							{(item as any).badge && (
+								<span className="ml-auto inline-block py-0.5 px-2 text-xs font-medium rounded-full bg-white/10 text-white">{(item as any).badge}</span>
+							)}
 							</Link>
 						))}
 					</nav>
@@ -60,7 +66,9 @@ export default function ZoneCommanderLayout({ title, children }: Props) {
 							</div>
 						}
 					>
-						{children}
+						<div className="animate-slideUp transition-all-smooth">
+							{children}
+						</div>
 					</BaseShell>
 				</div>
 			</div>

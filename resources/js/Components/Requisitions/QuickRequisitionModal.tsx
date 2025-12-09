@@ -7,7 +7,7 @@ type QuickRequisitionForm = {
   title: string;
   description: string;
   needed_by: string;
-  category: 'general' | 'fuel' | 'vehicle_hire';
+  category: 'general' | 'fuel' | 'vehicle_hire' | 'events' | 'k9' | 'utilities' | 'office_supplies';
   amount: string;
 };
 
@@ -106,6 +106,10 @@ export default function QuickRequisitionModal({ className = '' }: { className?: 
                 <option value="general">General</option>
                 <option value="fuel">Fuel</option>
                 <option value="vehicle_hire">Vehicle hire</option>
+                <option value="events">Events</option>
+                <option value="k9">K9</option>
+                <option value="utilities">Utilities</option>
+                <option value="office_supplies">Office supplies</option>
               </select>
             </div>
 

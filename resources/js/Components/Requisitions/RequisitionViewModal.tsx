@@ -52,6 +52,16 @@ export default function RequisitionViewModal({ requisitionId, open, onClose }: P
 
   const isOwner = !!req && userId === req.requested_by;
 
+  const relName = (obj: any, camel: string, snake: string): string => {
+    return obj?.[camel]?.name || obj?.[snake]?.name || '';
+  };
+  const requestedByLabel = (obj: any): string => {
+    const name = relName(obj, 'requestedBy', 'requested_by');
+    if (name) return name;
+    const idVal = obj?.requested_by;
+    return (typeof idVal === 'number' || typeof idVal === 'string') ? `User #${String(idVal)}` : 'User';
+  };
+
   const close = () => {
     setShowResubmit(false);
     (adminForm as any).reset();
@@ -68,13 +78,25 @@ export default function RequisitionViewModal({ requisitionId, open, onClose }: P
             <h2 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-gray-100">{req?.title || 'Requisition'}</h2>
             {!!req && (
               <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-                <span>Requested by {req.requestedBy?.name || `User #${req.requested_by}`}</span>
+                <span>Requested by {requestedByLabel(req)}</span>
                 <span className="hidden sm:inline">•</span>
                 <span>Created {req.created_at ? new Date(req.created_at).toLocaleString() : '-'}</span>
                 {req.needed_by && (
                   <>
                     <span className="hidden sm:inline">•</span>
                     <span>Needed by {new Date(req.needed_by).toLocaleDateString()}</span>
+                  </>
+                )}
+                {relName(req, 'approvedBy', 'approved_by') && (
+                  <>
+                    <span className="hidden sm:inline">•</span>
+                    <span>Approved by {relName(req, 'approvedBy', 'approved_by')}</span>
+                  </>
+                )}
+                {req.status === 'disbursed' && relName(req, 'disbursedBy', 'disbursed_by') && (
+                  <>
+                    <span className="hidden sm:inline">•</span>
+                    <span>Disbursed by {relName(req, 'disbursedBy', 'disbursed_by')} on {req.updated_at ? new Date(req.updated_at).toLocaleString() : '-'}</span>
                   </>
                 )}
               </div>
