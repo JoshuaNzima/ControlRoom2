@@ -28,6 +28,12 @@ export default function HRLayout({ title, children, user }: Props) {
   const isCurrent = (href: string) => typeof window !== 'undefined' && window.location.pathname === href;
   const { theme, toggle } = useTheme();
   const { counters } = useCounters();
+  const roleDisplay = (() => {
+    const r: any = (user as any)?.roles;
+    if (Array.isArray(r) && r.length) return String(r[0]).replaceAll('_', ' ');
+    if (typeof r === 'string') return String(r).replaceAll('_', ' ');
+    return 'HR';
+  })();
 
   const nav: NavItem[] = [
     { name: 'Overview', href: route('hr.dashboard'), icon: <IconMapper name="layout-dashboard" className="h-6 w-6" />, current: isCurrent(route('hr.dashboard')) },
@@ -36,6 +42,7 @@ export default function HRLayout({ title, children, user }: Props) {
     { name: 'Training', href: route('hr.training'), icon: <IconMapper name="graduation-cap" className="h-6 w-6" />, current: isCurrent(route('hr.training')) },
     { name: 'Careers', href: route('hr.jobs.index'), icon: <IconMapper name="megaphone" className="h-6 w-6" />, current: isCurrent(route('hr.jobs.index')) },
     { name: 'Requisitions', href: route('requisitions.index'), icon: <IconMapper name="clipboard-list" className="h-6 w-6" />, current: isCurrent(route('requisitions.index')), badge: (()=>{ const n = Number(counters?.requisitions_my_open||0); return n>0? String(n): undefined; })() },
+    { name: 'Budgets', href: route('budgets.index'), icon: <IconMapper name="pie-chart" className="h-6 w-6" />, current: isCurrent(route('budgets.index')) },
   ];
 
   return (
@@ -59,13 +66,14 @@ export default function HRLayout({ title, children, user }: Props) {
             ))}
           </nav>
         </div>
-        <div className="flex-shrink-0 flex border-t border-red-800 dark:border-gray-800 p-4">
-          <div className="flex items-center">
-            <div>
-              <div className="text-base font-medium text-white">{user?.name}</div>
-              <div className="text-sm font-medium text-red-200 dark:text-gray-400">HR</div>
-            </div>
+        <div className="flex-shrink-0 flex items-center justify-between border-t border-red-800 dark:border-gray-800 p-4">
+          <div>
+            <div className="text-base font-medium text-white">{user?.name}</div>
+            <div className="text-sm font-medium text-red-200 dark:text-gray-400">{roleDisplay}</div>
           </div>
+          <Link href={route('profile.dashboard')} className="inline-flex items-center gap-2 rounded-md bg-gray-800 px-3 py-2 text-sm font-medium text-white hover:bg-gray-700">
+            My Profile
+          </Link>
         </div>
       </div>
       <div className="md:pl-64">

@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Requisitions;
 
 use App\Http\Controllers\Controller;
 use App\Models\Requisition;
+use App\Models\RequisitionAttachment;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -16,7 +18,7 @@ class RequisitionController extends Controller
     {
         $user = $request->user();
 
-        $query = Requisition::query()->with(['requestedBy', 'approvedBy', 'disbursedBy']);
+        $query = Requisition::query()->with(['requestedBy', 'approvedBy', 'disbursedBy', 'batch']);
 
         if ($user->hasAnyRole(['admin', 'super_admin'])) {
             // admins see everything
@@ -58,20 +60,39 @@ class RequisitionController extends Controller
             'description' => ['nullable', 'string'],
             'needed_by' => ['nullable', 'date'],
             'amount' => ['required', 'numeric', 'min:0'],
+            'attachments' => ['sometimes', 'array', 'max:10'],
+            'attachments.*' => ['file', 'max:10240', 'mimes:pdf,jpg,jpeg,png,doc,docx,xls,xlsx'],
         ]);
 
         $data['requested_by'] = $user->id;
         $data['status'] = 'pending_admin';
         $data['category'] = $data['category'] ?? 'general';
 
-        Requisition::create($data);
+        $requisition = Requisition::create($data);
+
+        if ($request->hasFile('attachments')) {
+            foreach ($request->file('attachments') as $file) {
+                if (!$file) continue;
+                $disk = 'local';
+                $path = $file->store('requisitions/'.date('Y/m'), $disk);
+                RequisitionAttachment::create([
+                    'requisition_id' => $requisition->id,
+                    'uploaded_by' => $user->id,
+                    'disk' => $disk,
+                    'path' => $path,
+                    'original_name' => $file->getClientOriginalName(),
+                    'size' => $file->getSize() ?? 0,
+                    'mime_type' => $file->getClientMimeType(),
+                ]);
+            }
+        }
 
         return redirect()->route('requisitions.index');
     }
 
     public function show(Requisition $requisition): Response|JsonResponse
     {
-        $requisition->load(['requestedBy', 'approvedBy', 'disbursedBy']);
+        $requisition->load(['requestedBy', 'approvedBy', 'disbursedBy', 'batch', 'attachments.uploadedBy']);
 
         if (request()->wantsJson() || request()->ajax()) {
             return response()->json($requisition);

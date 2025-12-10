@@ -1,8 +1,12 @@
 import React from 'react';
-import { Head, Link, router, usePage } from '@inertiajs/react';
+import { Head, router, usePage } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import QuickRequisitionModal from '@/Components/Requisitions/QuickRequisitionModal';
 import RequisitionSummary from '@/Components/Requisitions/RequisitionSummary';
+import EditProfileModal from '@/Components/Profile/EditProfileModal';
+import ChangePasswordModal from '@/Components/Profile/ChangePasswordModal';
+import AvatarModal from '@/Components/Profile/AvatarModal';
+// Account deletion removed for regular users
 
 interface Commission {
   id: number;
@@ -16,7 +20,7 @@ interface Commission {
 
 interface PageProps {
   [key: string]: any;
-  user: { id: number; name: string; email: string; phone?: string | null };
+  user: { id: number; name: string; email: string; phone?: string | null; avatar_url?: string | null };
   commissions: { pending: Commission[]; recent: Commission[] };
   payroll: { totals: { salary_total: number; net_total: number; allowances_total: number; overtime_total: number } };
 }
@@ -28,8 +32,11 @@ function currency(n: number | string) {
 }
 
 export default function ProfileDashboard() {
-  const { user, commissions, payroll } = usePage<PageProps>().props as any;
+  const { user, commissions, payroll, mustVerifyEmail = false, status } = usePage<PageProps>().props as any;
   const [tab, setTab] = React.useState<'profile' | 'commissions' | 'payroll'>('profile');
+  const [showEdit, setShowEdit] = React.useState(false);
+  const [showPassword, setShowPassword] = React.useState(false);
+  const [showAvatar, setShowAvatar] = React.useState(false);
 
   const claim = (id: number) => {
     if (!confirm('Claim this commission?')) return;
@@ -37,9 +44,7 @@ export default function ProfileDashboard() {
   };
 
   return (
-    <AuthenticatedLayout
-      header={<h2 className="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-100">My Dashboard</h2>}
-    >
+    <AuthenticatedLayout header={<h2 className="text-xl font-bold text-red-900 dark:text-gray-100">My Dashboard</h2>}>
       <Head title="My Dashboard" />
       <div className="py-6">
         <div className="mx-auto max-w-7xl sm:px-6 lg:px-8 space-y-4">
@@ -70,25 +75,42 @@ export default function ProfileDashboard() {
 
           {/* Profile */}
           {tab === 'profile' && (
-            <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4 sm:p-6">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <div className="text-sm text-gray-500 dark:text-gray-400">Name</div>
-                  <div className="text-gray-900 dark:text-gray-100 font-medium">{user?.name}</div>
+            <>
+              <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4 sm:p-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="flex items-center gap-4">
+                    <div className="w-16 h-16 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-800 flex items-center justify-center">
+                      {user?.avatar_url ? (
+                        <img src={user.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="text-lg font-semibold text-gray-600 dark:text-gray-300">
+                          {user?.name?.charAt(0)?.toUpperCase()}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex flex-col">
+                      <div className="text-sm text-gray-500 dark:text-gray-400">Name</div>
+                      <div className="text-gray-900 dark:text-gray-100 font-medium">{user?.name}</div>
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-sm text-gray-500 dark:text-gray-400">Email</div>
+                    <div className="text-gray-900 dark:text-gray-100 font-medium">{user?.email}</div>
+                  </div>
+                  <div>
+                    <div className="text-sm text-gray-500 dark:text-gray-400">Phone</div>
+                    <div className="text-gray-900 dark:text-gray-100 font-medium">{user?.phone || '-'}</div>
+                  </div>
                 </div>
-                <div>
-                  <div className="text-sm text-gray-500 dark:text-gray-400">Email</div>
-                  <div className="text-gray-900 dark:text-gray-100 font-medium">{user?.email}</div>
-                </div>
-                <div>
-                  <div className="text-sm text-gray-500 dark:text-gray-400">Phone</div>
-                  <div className="text-gray-900 dark:text-gray-100 font-medium">{user?.phone || '-'}</div>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <button onClick={() => setShowAvatar(true)} className="inline-flex items-center px-4 py-2 rounded-md bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 text-sm border dark:border-gray-700">Change Avatar</button>
+                  <button onClick={() => setShowEdit(true)} className="inline-flex items-center px-4 py-2 rounded-md bg-coin-600 hover:bg-coin-700 text-white text-sm">Edit Profile</button>
+                  <button onClick={() => setShowPassword(true)} className="inline-flex items-center px-4 py-2 rounded-md bg-gray-800 hover:bg-gray-700 text-white text-sm">Change Password</button>
                 </div>
               </div>
-              <div className="mt-4">
-                <Link href={route('profile.edit')} className="inline-flex items-center px-4 py-2 rounded-md bg-indigo-600 hover:bg-indigo-700 text-white text-sm">Edit Profile</Link>
-              </div>
-            </div>
+
+              {/* Account deletion is restricted to admins; no self-delete UI here. */}
+            </>
           )}
 
           {/* Commissions */}
@@ -163,6 +185,9 @@ export default function ProfileDashboard() {
           )}
         </div>
       </div>
+      <EditProfileModal show={showEdit} onClose={() => setShowEdit(false)} mustVerifyEmail={mustVerifyEmail} status={status} />
+      <ChangePasswordModal show={showPassword} onClose={() => setShowPassword(false)} />
+      <AvatarModal show={showAvatar} onClose={() => setShowAvatar(false)} />
     </AuthenticatedLayout>
   );
 }

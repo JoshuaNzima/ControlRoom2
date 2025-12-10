@@ -13,9 +13,10 @@ interface Props {
   equipment?: Paginated<Equipment>;
   options?: { statuses: string[]; users: UserOpt[] };
   openHandovers?: Record<number, Handover>;
+  filters?: { category?: string | null };
 }
 
-export default function AssetEquipment({ auth = {}, equipment, options, openHandovers = {} }: Props) {
+export default function AssetEquipment({ auth = {}, equipment, options, openHandovers = {}, filters }: Props) {
   const [createOpen, setCreateOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [selected, setSelected] = useState<Equipment | null>(null);
@@ -36,6 +37,15 @@ export default function AssetEquipment({ auth = {}, equipment, options, openHand
               <button onClick={() => setCreateOpen(true)} className="inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium bg-red-600 text-white hover:bg-red-700">New Equipment</button>
               <Link href={route('assets.index')} className="inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium bg-white dark:bg-gray-800 text-red-800 dark:text-gray-100 border border-red-200 dark:border-gray-700 hover:bg-red-50 dark:hover:bg-gray-700">Assets</Link>
             </div>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            <Link href={route('assets.equipment.index')}
+              className={`px-3 py-1.5 rounded-full text-xs border ${!(filters?.category) ? 'bg-red-600 text-white border-red-600' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-700'}`}>All</Link>
+            <Link href={route('assets.equipment.index', { category: 'uniform' } as any)}
+              className={`px-3 py-1.5 rounded-full text-xs border ${filters?.category === 'uniform' ? 'bg-red-600 text-white border-red-600' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-700'}`}>Uniforms</Link>
+            <Link href={route('assets.equipment.index', { category: 'weapon' } as any)}
+              className={`px-3 py-1.5 rounded-full text-xs border ${filters?.category === 'weapon' ? 'bg-red-600 text-white border-red-600' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-700'}`}>Weapons</Link>
           </div>
 
           <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden">
@@ -89,7 +99,7 @@ export default function AssetEquipment({ auth = {}, equipment, options, openHand
                       </td>
                     </tr>
                   )) : (
-                    <tr><td colSpan={5} className="px-4 py-6 text-center text-gray-500 dark:text-gray-400">No equipment yet.</td></tr>
+                    <tr><td colSpan={6} className="px-4 py-6 text-center text-gray-500 dark:text-gray-400">No equipment yet.</td></tr>
                   )}
                 </tbody>
               </table>

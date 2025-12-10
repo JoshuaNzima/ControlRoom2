@@ -3,7 +3,7 @@ import { usePage } from '@inertiajs/react';
 import AdminLayout from '@/Layouts/AdminLayout';
 import FinanceLayout from '@/Layouts/FinanceLayout';
 import AssetManagementLayout from '@/Layouts/AssetManagementLayout';
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import AppLayout from '@/Layouts/AppLayout';
 import type { PageProps } from '@/types';
 
 interface Props {
@@ -33,10 +33,8 @@ export default function RequisitionsLayout({ title = 'Requisitions', children }:
 
   // Fallback for general authenticated users
   return (
-    <AuthenticatedLayout
-      header={<h2 className="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-100">{title}</h2>}
-    >
+    <AppLayout title={title}>
       {children}
-    </AuthenticatedLayout>
+    </AppLayout>
   );
 }

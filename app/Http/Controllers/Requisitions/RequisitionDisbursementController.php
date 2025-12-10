@@ -4,8 +4,10 @@ namespace App\Http\Controllers\Requisitions;
 
 use App\Http\Controllers\Controller;
 use App\Models\Requisition;
+use App\Models\RequisitionBatch;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 
 class RequisitionDisbursementController extends Controller
 {
@@ -19,6 +21,12 @@ class RequisitionDisbursementController extends Controller
         abort_unless($user->hasAnyRole(['asset_manager', 'assets_manager', 'super_admin']), 403);
 
         if ($requisition->status !== 'pending_disbursement') {
+            return back();
+        }
+
+        // Enforce acknowledgement before disbursement: must be in a batch and that batch must be acknowledged
+        $requisition->loadMissing('batch');
+        if (!$requisition->batch || $requisition->batch->status !== 'acknowledged') {
             return back();
         }
 

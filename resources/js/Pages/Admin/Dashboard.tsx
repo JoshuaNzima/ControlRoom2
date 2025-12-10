@@ -107,13 +107,85 @@ export default function Dashboard({
     <AdminLayout title="Admin Dashboard" user={auth?.user as any}>
       <Head title="Admin Dashboard" />
 
+      <Card className="p-6 bg-white dark:bg-gray-800 border dark:border-gray-700">
+        <div className="mb-4 flex items-center justify-between">
+          <h1 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-gray-100">KPI Summary</h1>
+          <div className="hidden md:flex items-center gap-2">
+            <Button size="sm" variant="outline" asChild>
+              <a href={route('admin.payments.index')}>Payments</a>
+            </Button>
+            <Button size="sm" variant="outline" asChild>
+              <a href={route('admin.approvals.index')}>Approvals</a>
+            </Button>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+          <div className="p-4 rounded-lg border bg-gradient-to-br from-red-50 to-red-100 dark:from-gray-800 dark:to-gray-800 dark:border-gray-700">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs font-medium text-red-900 dark:text-red-300">Outstanding (MWK)</span>
+              <IconMapper name="AlertTriangle" className="w-4 h-4 text-red-500" />
+            </div>
+            <div className="text-lg md:text-2xl font-bold text-red-900 dark:text-red-300">{formatCurrencyMWK(paymentsSummary?.outstanding_value || 0)}</div>
+          </div>
+          <div className="p-4 rounded-lg border bg-gradient-to-br from-emerald-50 to-emerald-100 dark:from-gray-800 dark:to-gray-800 dark:border-gray-700">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs font-medium text-emerald-900 dark:text-emerald-300">Collection Rate</span>
+              <IconMapper name="TrendingUp" className="w-4 h-4 text-emerald-500" />
+            </div>
+            <div className="text-lg md:text-2xl font-bold text-emerald-900 dark:text-emerald-300">{Number(kpis?.finance?.collection_rate ?? 0)}%</div>
+          </div>
+          <div className="p-4 rounded-lg border bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-gray-800 dark:to-gray-800 dark:border-gray-700">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs font-medium text-yellow-900 dark:text-yellow-300">Overdue Clients</span>
+              <IconMapper name="Users" className="w-4 h-4 text-yellow-500" />
+            </div>
+            <div className="text-lg md:text-2xl font-bold text-yellow-900 dark:text-yellow-300">{paymentsSummary?.clients_with_outstanding || 0}{paymentsSummary?.total_clients ? ` / ${paymentsSummary?.total_clients}` : ''}</div>
+          </div>
+          <div className="p-4 rounded-lg border bg-gradient-to-br from-blue-50 to-blue-100 dark:from-gray-800 dark:to-gray-800 dark:border-gray-700">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs font-medium text-blue-900 dark:text-blue-300">Approvals Pending</span>
+              <IconMapper name="CheckCircle2" className="w-4 h-4 text-blue-500" />
+            </div>
+            <div className="text-lg md:text-2xl font-bold text-blue-900 dark:text-blue-300">{approvalsPending ?? 0}</div>
+          </div>
+          <div className="p-4 rounded-lg border bg-gradient-to-br from-indigo-50 to-indigo-100 dark:from-gray-800 dark:to-gray-800 dark:border-gray-700">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs font-medium text-indigo-900 dark:text-indigo-300">Guards On Duty</span>
+              <IconMapper name="Shield" className="w-4 h-4 text-indigo-500" />
+            </div>
+            <div className="text-lg md:text-2xl font-bold text-indigo-900 dark:text-indigo-300">{Number(kpis?.control_room?.guards_on_duty ?? stats.on_duty_today ?? 0)}</div>
+          </div>
+          <div className="p-4 rounded-lg border bg-gradient-to-br from-orange-50 to-orange-100 dark:from-gray-800 dark:to-gray-800 dark:border-gray-700">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs font-medium text-orange-900 dark:text-orange-300">Active Incidents</span>
+              <IconMapper name="AlertOctagon" className="w-4 h-4 text-orange-500" />
+            </div>
+            <div className="text-lg md:text-2xl font-bold text-orange-900 dark:text-orange-300">{Number(kpis?.control_room?.active_incidents ?? 0)}</div>
+          </div>
+          <div className="p-4 rounded-lg border bg-gradient-to-br from-cyan-50 to-cyan-100 dark:from-gray-800 dark:to-gray-800 dark:border-gray-700">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs font-medium text-cyan-900 dark:text-cyan-300">Guards Coverage</span>
+              <IconMapper name="PieChart" className="w-4 h-4 text-cyan-500" />
+            </div>
+            <div className="text-lg md:text-2xl font-bold text-cyan-900 dark:text-cyan-300">{Number(coverageSummary?.guards_coverage_pct ?? 0)}%</div>
+          </div>
+          <div className="p-4 rounded-lg border bg-gradient-to-br from-teal-50 to-teal-100 dark:from-gray-800 dark:to-gray-800 dark:border-gray-700">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs font-medium text-teal-900 dark:text-teal-300">Sites Coverage</span>
+              <IconMapper name="Map" className="w-4 h-4 text-teal-500" />
+            </div>
+            <div className="text-lg md:text-2xl font-bold text-teal-900 dark:text-teal-300">{Number(coverageSummary?.sites_coverage_pct ?? 0)}%</div>
+          </div>
+        </div>
+      </Card>
+
 
           {/* Client Management Overview */}
-          <Card className="p-6">
+          <Card className="p-6 bg-white dark:bg-gray-800 border dark:border-gray-700">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">Client Management</h1>
-                <p className="text-gray-600">Overview of client services and performance</p>
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Client Management</h1>
+                <p className="text-gray-600 dark:text-gray-300">Overview of client services and performance</p>
               </div>
               <div className="flex items-center gap-3">
                 <Button variant="outline" asChild>
@@ -132,42 +204,42 @@ export default function Dashboard({
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-              <Card className="p-4 bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+              <Card className="p-4 bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 dark:bg-gray-800 dark:border-gray-700">
                 <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-sm font-medium text-blue-900">Total Clients</h3>
+                  <h3 className="text-sm font-medium text-blue-900 dark:text-blue-300">Total Clients</h3>
                   <IconMapper name="Users" className="w-5 h-5 text-blue-500" />
                 </div>
-                <p className="text-2xl font-bold text-blue-900">{paymentsSummary?.total_clients ?? 0}</p>
-                <p className="text-sm text-blue-700 mt-1">Active accounts</p>
+                <p className="text-2xl font-bold text-blue-900 dark:text-blue-300">{paymentsSummary?.total_clients ?? 0}</p>
+                <p className="text-sm text-blue-700 dark:text-blue-300/80 mt-1">Active accounts</p>
               </Card>
 
-              <Card className="p-4 bg-gradient-to-br from-green-50 to-green-100 border-green-200">
+              <Card className="p-4 bg-gradient-to-br from-green-50 to-green-100 border-green-200 dark:bg-gray-800 dark:border-gray-700">
                 <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-sm font-medium text-green-900">Active Sites</h3>
+                  <h3 className="text-sm font-medium text-green-900 dark:text-green-300">Active Sites</h3>
                   <IconMapper name="MapPin" className="w-5 h-5 text-green-500" />
                 </div>
-                <p className="text-2xl font-bold text-green-900">{stats.total_sites || 0}</p>
-                <p className="text-sm text-green-700 mt-1">Managed locations</p>
+                <p className="text-2xl font-bold text-green-900 dark:text-green-300">{stats.total_sites || 0}</p>
+                <p className="text-sm text-green-700 dark:text-green-300/80 mt-1">Managed locations</p>
               </Card>
 
-              <Card className="p-4 bg-gradient-to-br from-yellow-50 to-yellow-100 border-yellow-200">
+              <Card className="p-4 bg-gradient-to-br from-yellow-50 to-yellow-100 border-yellow-200 dark:bg-gray-800 dark:border-gray-700">
                 <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-sm font-medium text-yellow-900">Active Clients</h3>
+                  <h3 className="text-sm font-medium text-yellow-900 dark:text-yellow-300">Active Clients</h3>
                   <IconMapper name="UserCheck" className="w-5 h-5 text-yellow-500" />
                 </div>
-                <p className="text-2xl font-bold text-yellow-900">{stats.active_clients || 0}</p>
-                <p className="text-sm text-yellow-700 mt-1">Currently active</p>
+                <p className="text-2xl font-bold text-yellow-900 dark:text-yellow-300">{stats.active_clients || 0}</p>
+                <p className="text-sm text-yellow-700 dark:text-yellow-300/80 mt-1">Currently active</p>
               </Card>
 
-              <Card className="p-4 bg-gradient-to-br from-red-50 to-red-100 border-red-200">
+              <Card className="p-4 bg-gradient-to-br from-red-50 to-red-100 border-red-200 dark:bg-gray-800 dark:border-gray-700">
                 <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-sm font-medium text-red-900">Overdue Payments</h3>
+                  <h3 className="text-sm font-medium text-red-900 dark:text-red-300">Overdue Payments</h3>
                   <IconMapper name="AlertCircle" className="w-5 h-5 text-red-500" />
                 </div>
-                <p className="text-2xl font-bold text-red-900">
+                <p className="text-2xl font-bold text-red-900 dark:text-red-300">
                   {paymentsSummary?.clients_with_outstanding || 0}
                 </p>
-                <p className="text-sm text-red-700 mt-1">Require attention</p>
+                <p className="text-sm text-red-700 dark:text-red-300/80 mt-1">Require attention</p>
               </Card>
             </div>
 
@@ -237,10 +309,10 @@ export default function Dashboard({
           {/* Finance Overview merged into Finance KPIs below */}
 
           {/* Zone Coverage - Hero (collapsible) */}
-          <Card className="p-6">
+          <Card className="p-6 bg-white dark:bg-gray-800 border dark:border-gray-700">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
               <div className="flex items-center gap-3">
-                <h1 className="text-2xl font-bold text-gray-900">Zone Coverage</h1>
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Zone Coverage</h1>
                 <button
                   className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm transition ${showZoneHero ? 'bg-red-100 text-red-700 hover:bg-red-200' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
                   onClick={() => setShowZoneHero(!showZoneHero)}
@@ -301,28 +373,28 @@ export default function Dashboard({
           </Card>
 
           {/* Admin Snapshot: Approvals & System Health */}
-          <Card className="p-6">
+          <Card className="p-6 bg-white dark:bg-gray-800 border dark:border-gray-700">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-lg font-semibold text-gray-900">Approvals</h3>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Approvals</h3>
                   <Button size="sm" variant="outline" asChild>
                     <a href={route('admin.approvals.index')}>Open Approvals</a>
                   </Button>
                 </div>
-                <div className="p-4 rounded-lg border bg-white">
-                  <div className="text-sm text-gray-600">Pending Approvals</div>
-                  <div className="text-3xl font-bold text-gray-900 mt-1">{approvalsPending ?? 0}</div>
+                <div className="p-4 rounded-lg border bg-white dark:bg-gray-800 dark:border-gray-700">
+                  <div className="text-sm text-gray-600 dark:text-gray-300">Pending Approvals</div>
+                  <div className="text-3xl font-bold text-gray-900 dark:text-gray-100 mt-1">{approvalsPending ?? 0}</div>
                 </div>
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-3">System Health</h3>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">System Health</h3>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   <Health name="Database" status={systemHealth?.database} />
                   <Health name="Cache" status={systemHealth?.cache} />
-                  <div className={`p-4 rounded-lg border bg-white`}>
-                    <div className="text-xs text-gray-500">Queue Driver</div>
-                    <div className="text-sm font-semibold text-gray-900">{systemHealth?.queue || 'default'}</div>
+                  <div className={`p-4 rounded-lg border bg-white dark:bg-gray-800 dark:border-gray-700`}>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">Queue Driver</div>
+                    <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">{systemHealth?.queue || 'default'}</div>
                   </div>
                   <Health name="Storage Used" status={systemHealth?.storage} />
                 </div>
@@ -331,52 +403,52 @@ export default function Dashboard({
           </Card>
 
           {/* Modules Status */}
-          <Card className="p-6">
+          <Card className="p-6 bg-white dark:bg-gray-800 border dark:border-gray-700">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900">Modules</h2>
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Modules</h2>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
               {(modules || []).map((m, idx) => (
-                <div key={`${m.name}-${idx}`} className={`p-3 rounded-lg border bg-white flex items-center justify-between`}>
-                  <div className="text-sm font-medium text-gray-900">{m.display_name || m.name}</div>
-                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs ${m.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
+                <div key={`${m.name}-${idx}`} className={`p-3 rounded-lg border bg-white dark:bg-gray-800 dark:border-gray-700 flex items-center justify-between`}>
+                  <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{m.display_name || m.name}</div>
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs ${m.is_active ? 'bg-green-100 text-green-700 dark:bg-green-500/10 dark:text-green-300' : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'}`}>
                     {m.is_active ? 'Active' : 'Disabled'}
                   </span>
                 </div>
               ))}
               {(modules || []).length === 0 && (
-                <div className="text-sm text-gray-500">No modules information</div>
+                <div className="text-sm text-gray-500 dark:text-gray-400">No modules information</div>
               )}
             </div>
           </Card>
 
           {/* Top Guards */}
-          <Card className="p-6">
+          <Card className="p-6 bg-white dark:bg-gray-800 border dark:border-gray-700">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900">Top Guards</h2>
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Top Guards</h2>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
               {(topGuards || []).slice(0, 6).map((g, i) => (
-                <div key={`${g.employee_id}-${i}`} className="p-3 rounded-lg border bg-white flex items-center justify-between">
+                <div key={`${g.employee_id}-${i}`} className="p-3 rounded-lg border bg-white dark:bg-gray-800 dark:border-gray-700 flex items-center justify-between">
                   <div>
-                    <div className="font-medium text-gray-900">{g.name}</div>
-                    <div className="text-xs text-gray-500">{g.employee_id}</div>
+                    <div className="font-medium text-gray-900 dark:text-gray-100">{g.name}</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">{g.employee_id}</div>
                   </div>
-                  <div className="text-sm font-semibold text-gray-900">{g.attendance_rate}%</div>
+                  <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">{g.attendance_rate}%</div>
                 </div>
               ))}
               {(topGuards || []).length === 0 && (
-                <div className="text-sm text-gray-500">No top guard data</div>
+                <div className="text-sm text-gray-500 dark:text-gray-400">No top guard data</div>
               )}
             </div>
           </Card>
 
           {/* Coverage Summary Cards (collapsible) */}
-          <Card className="p-6">
+          <Card className="p-6 bg-white dark:bg-gray-800 border dark:border-gray-700">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-lg font-semibold text-gray-900">Coverage Summary</h2>
-                <p className="text-xs text-gray-500 mt-1">Today’s guards and sites coverage across all zones</p>
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Coverage Summary</h2>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Today’s guards and sites coverage across all zones</p>
               </div>
               <button
                 className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm transition ${showCoverageCards ? 'bg-red-100 text-red-700 hover:bg-red-200' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
@@ -389,7 +461,7 @@ export default function Dashboard({
             </div>
             {showCoverageCards && (
             <div id="coverage-summary-content" className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card className="p-6">
+            <Card className="p-6 bg-white dark:bg-gray-800 border dark:border-gray-700">
               <h2 className="text-lg font-semibold mb-4">Guards Coverage</h2>
               <div className="grid grid-cols-2 gap-4">
                 <ClickableStat label="Deployed Today" value={coverageSummary.guards_deployed_today ?? 0} routeName="guards.index" />
@@ -408,7 +480,7 @@ export default function Dashboard({
               </div>
             </Card>
 
-            <Card className="p-6">
+            <Card className="p-6 bg-white dark:bg-gray-800 border dark:border-gray-700">
               <h2 className="text-lg font-semibold mb-4">Sites Coverage</h2>
               <div className="grid grid-cols-2 gap-4">
                 <ClickableStat label="Sites Covered Today" value={coverageSummary.sites_covered_today ?? 0} routeName="clients.index" />
@@ -458,6 +530,7 @@ export default function Dashboard({
             { label: 'Unpaid Invoices (Count)', key: 'unpaid_invoices_count' },
             { label: 'Unpaid Invoices (Value)', key: 'unpaid_invoices_value', prefix: '$' },
             { label: 'Cash Flow', key: 'cash_flow_indicator' },
+            { label: 'Collection Rate', key: 'collection_rate', suffix: '%' },
             { label: 'Requisitions (MTD)', key: 'requisitions_mtd_total', prefix: '$' },
             { label: 'Pending Requisitions', key: 'pending_requisitions_count' },
           ]} />
@@ -521,26 +594,26 @@ export default function Dashboard({
           <QRCodeGenerator />
 
           {/* Recent Activity (collapsible) */}
-          <Card className="p-6">
+          <Card className="p-6 bg-white dark:bg-gray-800 border dark:border-gray-700">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h2 className="text-lg font-semibold">Recent Activity</h2>
-                <p className="text-xs text-gray-500 mt-1">Latest events across the platform</p>
+                <h2 className="text-lg font-semibold dark:text-gray-100">Recent Activity</h2>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Latest events across the platform</p>
               </div>
               <button className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm transition ${showRecent ? 'bg-red-100 text-red-700 hover:bg-red-200' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`} onClick={() => setShowRecent(!showRecent)} aria-expanded={showRecent}>{showRecent ? 'Hide' : 'Show'}</button>
             </div>
             {showRecent && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
               {(recentActivity || []).length === 0 && (
-                <p className="text-sm text-gray-500">No recent activity</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">No recent activity</p>
               )}
               {(recentActivity || []).map((item: Activity) => (
-                <div key={item.id} className="flex items-center justify-between p-3 rounded-lg border bg-white">
+                <div key={item.id} className="flex items-center justify-between p-3 rounded-lg border bg-white dark:bg-gray-800 dark:border-gray-700">
                   <div>
-                    <div className="font-medium text-gray-900">{item.message}</div>
-                    <div className="text-xs text-gray-500">{item.time}</div>
+                    <div className="font-medium text-gray-900 dark:text-gray-100">{item.message}</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">{item.time}</div>
                   </div>
-                  <span className="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-700">{item.type}</span>
+                  <span className="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200">{item.type}</span>
                 </div>
               ))}
             </div>

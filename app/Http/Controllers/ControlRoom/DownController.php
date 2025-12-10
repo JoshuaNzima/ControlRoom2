@@ -117,7 +117,7 @@ class DownController extends Controller
             'title' => 'required|string|max:255',
             'type' => 'required|in:guard_absent,site_unmanned,other',
             'description' => 'nullable|string',
-            'status' => 'required|in:open,escalated,resolved,closed',
+            'status' => 'required|in:open,escalated,resolved,closed,absconding',
         ]);
 
         $down->update($validated);
@@ -130,6 +130,32 @@ class DownController extends Controller
         $down->delete();
 
         return redirect()->route('control-room.downs.index')->withSuccess('Down deleted successfully.');
+    }
+
+    public function abscond(Down $down)
+    {
+        if ($down->status === 'resolved') {
+            return back();
+        }
+
+        $down->update([
+            'status' => 'absconding',
+        ]);
+
+        // Optionally create a flag for the guard if present
+        if ($down->guard_id) {
+            \App\Models\Flag::create([
+                'flaggable_type' => \App\Models\Guards\Guard::class,
+                'flaggable_id' => $down->guard_id,
+                'reason' => 'Absconding',
+                'details' => 'Marked as absconding via Down ID: ' . $down->id,
+                'reported_by' => Auth::id(),
+                'status' => 'pending_review',
+                'site_id' => $down->client_site_id,
+            ]);
+        }
+
+        return back()->withSuccess('Down marked as absconding.');
     }
 }
 

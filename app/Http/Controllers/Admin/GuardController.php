@@ -190,7 +190,7 @@ class GuardController extends Controller
             }
         }
 
-        return redirect()->route('admin.guards.index')
+        return redirect()->back()
             ->withSuccess('Guard created successfully.');
     }
 
@@ -302,7 +302,7 @@ class GuardController extends Controller
             }
         }
 
-        return redirect()->route('admin.guards.index')
+        return redirect()->back()
             ->withSuccess('Guard updated successfully.');
     }
 
@@ -316,7 +316,7 @@ class GuardController extends Controller
     {
         $guard->delete();
 
-        return redirect()->route('admin.guards.index')
+        return redirect()->back()
             ->withSuccess('Guard deleted successfully.');
     }
 }

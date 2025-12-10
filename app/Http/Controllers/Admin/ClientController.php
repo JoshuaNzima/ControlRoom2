@@ -42,6 +42,7 @@ class ClientController extends Controller
             'services_requested' => 'nullable|string',
             'status' => 'required|in:active,inactive',
             'zone_id' => 'nullable|integer|exists:zones,id',
+            'site_type' => 'nullable|string|max:50',
         ]);
 
         $site->update($validated);
@@ -127,6 +128,7 @@ class ClientController extends Controller
             'site.latitude' => 'nullable|numeric|between:-90,90',
             'site.longitude' => 'nullable|numeric|between:-180,180',
             'site.zone_id' => 'nullable|integer|exists:zones,id',
+            'site.site_type' => 'nullable|string|max:50',
         ]);
 
         $client = Client::create(collect($validated)->except(['site', 'services'])->toArray());
@@ -157,6 +159,7 @@ class ClientController extends Controller
             'address' => $validated['address'] ?? '',
             'contact_person' => $validated['contact_person'] ?? '',
             'phone' => $validated['phone'] ?? '',
+            'site_type' => $siteData['site_type'] ?? 'residential',
         ], $siteData);
         
         // If zone_id provided, ensure it's included in the site record
@@ -346,6 +349,7 @@ class ClientController extends Controller
             'services_requested' => 'nullable|string',
             'status' => 'required|in:active,inactive',
             'zone_id' => 'nullable|integer|exists:zones,id',
+            'site_type' => 'nullable|string|max:50',
         ]);
 
         $client->sites()->create($validated);

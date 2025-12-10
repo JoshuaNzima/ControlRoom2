@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/Components/ui/dialog';
 import { Button } from '@/Components/ui/button';
-import { useForm } from '@inertiajs/react';
+import { useForm, router } from '@inertiajs/react';
 import IconMapper from '@/Components/IconMapper';
 import LocationPicker from '@/Components/Map/LocationPicker';
 
@@ -75,6 +75,7 @@ export default function AddClientModal({ open, onClose, services = [], zones = [
       onSuccess: () => {
         reset();
         onClose();
+        router.reload({ only: ['clients'] });
       },
     });
   };
@@ -273,6 +274,7 @@ export default function AddClientModal({ open, onClose, services = [], zones = [
                 >
                   <option value="residential">Residential</option>
                   <option value="commercial">Commercial</option>
+                  <option value="office">Office</option>
                 </select>
               </div>
               <div>

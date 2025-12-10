@@ -121,6 +121,13 @@ Route::middleware(['auth'])->group(function () {
 		Route::post('tickets/{ticket}/assign', [\App\Http\Controllers\ControlRoom\TicketController::class, 'assign'])->name('tickets.assign');
 		Route::post('tickets/{ticket}/close', [\App\Http\Controllers\ControlRoom\TicketController::class, 'close'])->name('tickets.close');
 		Route::post('tickets/{ticket}/reopen', [\App\Http\Controllers\ControlRoom\TicketController::class, 'reopen'])->name('tickets.reopen');
+
+		// Vehicle Dispatches
+		Route::prefix('dispatches')->name('dispatches.')->group(function () {
+			Route::get('/', [\App\Http\Controllers\ControlRoom\VehicleDispatchController::class, 'index'])->name('index');
+			Route::post('/', [\App\Http\Controllers\ControlRoom\VehicleDispatchController::class, 'store'])->name('store');
+			Route::post('/{dispatch}/return', [\App\Http\Controllers\ControlRoom\VehicleDispatchController::class, 'returnVehicle'])->name('return');
+		});
 		
 		// Downs
 		Route::get('/downs', [\App\Http\Controllers\ControlRoom\DownController::class, 'index'])->name('downs.index');
@@ -131,6 +138,7 @@ Route::middleware(['auth'])->group(function () {
 		Route::delete('/downs/{down}', [\App\Http\Controllers\ControlRoom\DownController::class, 'destroy'])->name('downs.destroy');
 		Route::post('/downs/{down}/escalate', [\App\Http\Controllers\ControlRoom\DownController::class, 'escalate'])->name('downs.escalate');
 		Route::post('/downs/{down}/resolve', [\App\Http\Controllers\ControlRoom\DownController::class, 'resolve'])->name('downs.resolve');
+		Route::post('/downs/{down}/abscond', [\App\Http\Controllers\ControlRoom\DownController::class, 'abscond'])->name('downs.abscond');
 
 		// Live Monitoring
 		Route::get('/live/scans', [\App\Http\Controllers\ControlRoom\LiveMonitoringController::class, 'getRecentScans'])->name('live.scans');

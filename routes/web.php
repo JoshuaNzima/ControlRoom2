@@ -262,6 +262,9 @@ Route::middleware(['auth'])->group(function () {
         if ($user->hasAnyRole(['finance_officer','accountant','finance','accounting'])) {
             return redirect()->route('finance.dashboard');
         }
+        if ($user->hasAnyRole(['front_office','receptionist','client_service'])) {
+            return redirect()->route('front-office.dashboard');
+        }
         abort(403, 'Unauthorized. No dashboard is configured for your role.');
     
     })->name('dashboard');
@@ -382,10 +385,10 @@ Route::middleware(['auth'])->group(function () {
     })->name('expense.request.create');
     Route::post('/request/expense', [\App\Http\Controllers\Finance\ExpenseController::class, 'store'])->name('expense.request.store');
 
-    // Profile routes (edit/update/destroy)
+    // Profile routes (edit/update/avatar)
     Route::get('/profile', [\App\Http\Controllers\ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [\App\Http\Controllers\ProfileController::class, 'update'])->name('profile.update');
-    Route::delete('/profile', [\App\Http\Controllers\ProfileController::class, 'destroy'])->name('profile.destroy');
+    Route::post('/profile/avatar', [\App\Http\Controllers\ProfileController::class, 'updateAvatar'])->name('profile.avatar');
 
     // Profile dashboard (commissions, payroll summaries)
     Route::get('/me', [\App\Http\Controllers\Profile\ProfileDashboardController::class, 'index'])->name('profile.dashboard');

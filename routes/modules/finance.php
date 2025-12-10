@@ -54,6 +54,14 @@ Route::middleware(['auth', 'role:super_admin|finance_officer|accountant|finance|
         Route::post('payroll/{payroll}/process', [\App\Http\Controllers\Finance\PayrollRunController::class, 'process'])->name('payroll.process');
         Route::put('payroll/entries/{entry}', [\App\Http\Controllers\Finance\PayrollRunController::class, 'updateEntry'])->name('payroll.entries.update');
 
+        // Client Payments Checker (view in Finance, manage restricted)
+        Route::get('payments', [\App\Http\Controllers\Admin\PaymentController::class, 'index'])
+            ->name('payments.index')
+            ->middleware('permission:finance.view');
+        Route::post('payments/toggle', [\App\Http\Controllers\Admin\PaymentController::class, 'toggle'])
+            ->name('payments.toggle')
+            ->middleware('permission:finance.manage');
+
         // Approval Management (admins only)
         Route::middleware(['role:super_admin|admin'])->group(function () {
             Route::get('approvals', [\App\Http\Controllers\Finance\ApprovalController::class, 'index'])

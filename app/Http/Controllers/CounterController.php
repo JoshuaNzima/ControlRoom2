@@ -14,6 +14,7 @@ use App\Models\Down;
 use App\Models\Alert;
 use App\Models\AssetHandover;
 use App\Models\BudgetRequest;
+use App\Models\RequisitionBatch;
 
 class CounterController extends Controller
 {
@@ -34,6 +35,9 @@ class CounterController extends Controller
             : 0;
         $requisitionsPendingDisbursement = $user->hasAnyRole(['asset_manager', 'assets_manager', 'super_admin'])
             ? Requisition::where('status', 'pending_disbursement')->count()
+            : 0;
+        $requisitionBatchesPendingAck = $user->hasAnyRole(['admin', 'super_admin'])
+            ? RequisitionBatch::where('status', 'pending_ack')->count()
             : 0;
 
         $financeApprovalsPending = Approval::pendingForUser($user->id)->count();
@@ -67,6 +71,7 @@ class CounterController extends Controller
             'requisitions_needs_revision' => $requisitionsNeedsRevision,
             'requisitions_pending_admin' => $requisitionsPendingAdmin,
             'requisitions_pending_disbursement' => $requisitionsPendingDisbursement,
+            'requisition_batches_pending_ack' => $requisitionBatchesPendingAck,
             'finance_approvals_pending' => $financeApprovalsPending,
             'finance_expenses_pending_mine' => $financeExpensesPendingMine,
             'budgets_my_open' => $budgetsMyOpen,

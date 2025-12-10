@@ -3,7 +3,11 @@ export interface User {
     name: string;
     email: string;
     email_verified_at?: string;
+    phone?: string | null;
+    employee_id?: string | null;
+    roles?: string[];
     permissions?: string[];
+    avatar_url?: string | null;
 }
 
 export interface Location {

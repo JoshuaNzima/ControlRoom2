@@ -1,7 +1,7 @@
 import React from 'react';
 import { Head, router } from '@inertiajs/react';
 import { useForm } from '@inertiajs/react';
-import AppLayout from '@/Layouts/AppLayout';
+import ControlRoomLayout from '@/Layouts/ControlRoomLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import { Textarea } from '@/Components/ui/textarea';
@@ -42,7 +42,7 @@ const FlagShow: React.FC<{ flag: any; canReview?: boolean }> = ({ flag, canRevie
 	};
 
 	return (
-		<AppLayout>
+		<ControlRoomLayout title={`Flag #${flag.id}`}>
 			<Head title={`Flag #${flag.id}`} />
 
 			<div className="py-6">
@@ -150,8 +150,9 @@ const FlagShow: React.FC<{ flag: any; canReview?: boolean }> = ({ flag, canRevie
 					</div>
 				</div>
 			</div>
-		</AppLayout>
+		</ControlRoomLayout>
 	);
 };
 
 export default FlagShow;
+

@@ -37,6 +37,9 @@ export default function SupervisorLayout({ children, title }: SupervisorLayoutPr
   const { auth, notifications: serverNotifications } = usePage<PageProps<{ auth: { user: any }, notifications?: Notification[] }>>().props;
   const { url } = usePage();
   const { theme, toggle } = useTheme();
+  const isSuperAdmin = Array.isArray((auth?.user as any)?.roles)
+    ? (auth?.user as any).roles.includes('super_admin')
+    : (auth?.user as any)?.roles === 'super_admin';
   
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
@@ -96,6 +99,11 @@ export default function SupervisorLayout({ children, title }: SupervisorLayoutPr
           <NotificationBell />
           <QuickBudgetButton />
           <QuickRequisitionButton />
+          {isSuperAdmin && (
+            <Link href={route('superadmin.dashboard')} className="px-3 py-1.5 rounded-md bg-red-700 text-white text-xs font-medium">
+              Super Admin
+            </Link>
+          )}
           <button className="p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800" onClick={() => setSettingsOpen(!settingsOpen)}>
             <IconMapper name="Settings" size={22} />
           </button>
@@ -159,6 +167,15 @@ export default function SupervisorLayout({ children, title }: SupervisorLayoutPr
             <QuickBudgetButton />
             <QuickRequisitionButton />
             <NotificationBell />
+            <Link href={route('profile.dashboard')} className="inline-flex items-center px-3 py-1.5 rounded-md bg-gray-800 text-white hover:bg-gray-700 text-sm">
+              My Profile
+            </Link>
+            {isSuperAdmin && (
+              <Link href={route('superadmin.dashboard')} className="inline-flex items-center gap-2 rounded-md bg-red-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-600">
+                <IconMapper name="Shield" size={16} />
+                Super Admin
+              </Link>
+            )}
             <button className="p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800" onClick={() => setSettingsOpen(!settingsOpen)}>
               <IconMapper name="Settings" size={22} />
             </button>
@@ -232,7 +249,7 @@ export default function SupervisorLayout({ children, title }: SupervisorLayoutPr
               </button>
             </div>
             <div className="p-4 space-y-3">
-              <Link href="/profile" onClick={() => setSettingsOpen(false)} className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 transition-colors">
+              <Link href={route('profile.dashboard')} onClick={() => setSettingsOpen(false)} className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 transition-colors">
                 <IconMapper name="User" size={20} className="text-gray-600" />
                 <div>
                   <p className="font-medium text-gray-900 text-sm">Profile</p>

@@ -52,6 +52,8 @@ export default function BulkImportClientsModal({ open, onClose }: BulkImportClie
         });
         setFile(null);
         setUploading(false);
+        // Soft reload clients to refresh list and stats on the index
+        router.reload({ only: ['clients'] });
         onClose();
       },
       onError: (errors) => {

@@ -1,17 +1,11 @@
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import AppLayout from '@/Layouts/AppLayout';
 import { Head } from '@inertiajs/react';
 import QuickRequisitionModal from '@/Components/Requisitions/QuickRequisitionModal';
 import RequisitionSummary from '@/Components/Requisitions/RequisitionSummary';
 
 export default function Dashboard() {
     return (
-        <AuthenticatedLayout
-            header={
-                <h2 className="text-xl font-semibold leading-tight text-gray-800">
-                    Dashboard
-                </h2>
-            }
-        >
+        <AppLayout title="Dashboard">
             <Head title="Dashboard" />
 
             <div className="py-12">
@@ -25,6 +19,6 @@ export default function Dashboard() {
                     </div>
                 </div>
             </div>
-        </AuthenticatedLayout>
+        </AppLayout>
     );
 }

@@ -69,6 +69,9 @@ export default function ClientDetailsModal({ client, open, onClose, services = [
 
   const [editSiteOpen, setEditSiteOpen] = React.useState(false);
   const [selectedSiteId, setSelectedSiteId] = React.useState<number | null>(null);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = React.useState(false);
+  const [deletingSiteId, setDeletingSiteId] = React.useState<number | null>(null);
+  const [deleting, setDeleting] = React.useState(false);
 
   const refreshClient = React.useCallback(async () => {
     try {
@@ -79,6 +82,21 @@ export default function ClientDetailsModal({ client, open, onClose, services = [
       }
     } catch (_) {}
   }, [client?.id, onClientUpdated]);
+  const confirmDelete = React.useCallback(async () => {
+    if (!deletingSiteId) return;
+    setDeleting(true);
+    try {
+      const url = route('admin.clients.sites.destroy', { client: client.id, site: deletingSiteId });
+      await axios.post(url, { _method: 'DELETE' }, { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } });
+      await refreshClient();
+      setConfirmDeleteOpen(false);
+      setDeletingSiteId(null);
+    } catch (e: any) {
+      alert(e?.response?.data?.message || 'Failed to delete site.');
+    } finally {
+      setDeleting(false);
+    }
+  }, [client?.id, deletingSiteId, refreshClient]);
 
   const handleAddSite = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -349,6 +367,7 @@ export default function ClientDetailsModal({ client, open, onClose, services = [
                           <Button variant="outline" size="sm" onClick={() => { setSelectedSiteId(site.id); setEditSiteOpen(true); }}>
                             <IconMapper name="Pencil" className="w-4 h-4" />
                           </Button>
+                          <Button size="sm" onClick={() => { setDeletingSiteId(site.id); setConfirmDeleteOpen(true); }} className="bg-red-600 hover:bg-red-700 text-white">Delete</Button>
                         </div>
                       </div>
                     </div>
@@ -452,6 +471,22 @@ export default function ClientDetailsModal({ client, open, onClose, services = [
       onSaved={refreshClient}
       zones={zones}
     />
+    <Dialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
+      <DialogContent className="w-full max-w-md dark:bg-gray-800 dark:text-gray-100">
+        <DialogHeader>
+          <DialogTitle>Delete Site</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3">
+          <div className="text-sm text-gray-600 dark:text-gray-300">
+            Are you sure you want to delete this site? You can restore it later from Deleted Sites.
+          </div>
+          <div className="flex justify-end gap-3">
+            <Button variant="outline" onClick={() => setConfirmDeleteOpen(false)} className="dark:border-gray-600 dark:text-gray-200">Cancel</Button>
+            <Button onClick={confirmDelete} disabled={deleting} className="bg-red-600 hover:bg-red-700 text-white">{deleting ? 'Deleting...' : 'Delete'}</Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
   </>
   );
 }

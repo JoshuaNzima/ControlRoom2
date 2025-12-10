@@ -21,6 +21,13 @@ Route::middleware(['auth', 'role:super_admin,asset_manager'])
         Route::post('/handovers', [AssetHandoverController::class, 'store'])->name('handovers.store');
         Route::post('/handovers/{handover}/return', [AssetHandoverController::class, 'returnAsset'])->name('handovers.return');
 
+        // Vehicle Dispatches (Assets Manager)
+        Route::prefix('dispatches')->name('dispatches.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Admin\VehicleDispatchController::class, 'index'])->name('index');
+            Route::post('/', [\App\Http\Controllers\Admin\VehicleDispatchController::class, 'store'])->name('store');
+            Route::post('/{dispatch}/return', [\App\Http\Controllers\Admin\VehicleDispatchController::class, 'returnVehicle'])->name('return');
+        });
+
         // Settings
         Route::get('/settings', [\App\Http\Controllers\Admin\AssetSettingController::class, 'index'])->name('settings');
         Route::post('/settings', [\App\Http\Controllers\Admin\AssetSettingController::class, 'update'])->name('settings.update');

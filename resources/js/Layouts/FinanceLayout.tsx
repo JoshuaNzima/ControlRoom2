@@ -52,6 +52,7 @@ export default function FinanceLayout({ title, children, user }: Props) {
     { name: 'Invoices', href: safeRoute('finance.invoices.index', '/finance/invoices'), icon: <IconMapper name="file-text" className="h-6 w-6" />, current: isCurrent(safeRoute('finance.invoices.index', '/finance/invoices')) },
     { name: 'Requisitions', href: safeRoute('finance.expenses.index', '/finance/expenses'), icon: <IconMapper name="trending-down" className="h-6 w-6" />, current: isCurrent(safeRoute('finance.expenses.index', '/finance/expenses')), badge: (()=>{ const n = Number(counters?.finance_approvals_pending || counters?.finance_expenses_pending_mine || 0); return n>0? String(n): undefined; })() },
     { name: 'Budgets', href: safeRoute('finance.budgets.index', '/finance/budgets'), icon: <IconMapper name="pie-chart" className="h-6 w-6" />, current: isCurrent(safeRoute('finance.budgets.index', '/finance/budgets')) },
+    { name: 'Payments', href: safeRoute('finance.payments.index', '/finance/payments'), icon: <IconMapper name="check-square" className="h-6 w-6" />, current: isCurrent(safeRoute('finance.payments.index', '/finance/payments')) },
     { name: 'Payroll', href: safeRoute('finance.payroll.index', '/finance/payroll'), icon: <IconMapper name="users" className="h-6 w-6" />, current: isCurrent(safeRoute('finance.payroll.index', '/finance/payroll')) },
     { name: 'Req Summary', href: route('requisitions.index') as unknown as string, icon: <IconMapper name="clipboard-list" className="h-6 w-6" />, current: isCurrent(route('requisitions.index') as unknown as string), badge: (()=>{ const n = Number(counters?.requisitions_my_open||0); return n>0? String(n): undefined; })() },
   ];
@@ -145,6 +146,21 @@ export default function FinanceLayout({ title, children, user }: Props) {
               <NotificationBell />
               <QuickBudgetButton />
               <QuickRequisitionButton />
+              <Link
+                href={route('profile.dashboard') as unknown as string}
+                className="inline-flex items-center px-3 py-1.5 rounded-md bg-gray-800 text-white hover:bg-gray-700 text-sm"
+              >
+                My Profile
+              </Link>
+              {Array.isArray(roles) && roles.includes('super_admin') && (
+                <Link
+                  href={route('superadmin.dashboard') as unknown as string}
+                  className="inline-flex items-center gap-2 rounded-md bg-red-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-600"
+                >
+                  <IconMapper name="shield" className="h-4 w-4" />
+                  Super Admin
+                </Link>
+              )}
               <Link
                 href={route('finance.expenses.create')}
                 className="inline-flex items-center px-3 py-1.5 rounded-md bg-red-600 text-white hover:bg-red-700 text-sm"

@@ -187,7 +187,7 @@ export default function LiveMonitoringDashboard() {
             <h2 className="text-lg font-medium mb-4">Live Guard Locations</h2>
             <div className="h-[500px] rounded-lg overflow-hidden">
               <MapContainer
-                center={[-26.2041, 28.0473]}
+                center={[-13.9626, 33.7741]}
                 zoom={13}
                 className="h-full w-full"
               >

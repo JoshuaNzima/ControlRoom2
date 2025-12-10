@@ -1,5 +1,5 @@
 import React from 'react';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
 import BaseShell from './BaseShell';
 import IconMapper from '@/Components/IconMapper';
 import { User } from '@/types';
@@ -28,6 +28,9 @@ export default function FrontDeskLayout({ title, children, user }: Props) {
   const isCurrent = (href: string) => typeof window !== 'undefined' && window.location.pathname === href;
   const { theme, toggle } = useTheme();
   const { counters } = useCounters();
+  const page = usePage<any>();
+  const roles = ((user as any)?.roles ?? (page?.props as any)?.auth?.user?.roles ?? []) as any;
+  const isSuperAdmin = Array.isArray(roles) ? roles.includes('super_admin') : roles === 'super_admin';
 
   const nav: NavItem[] = [
     { name: 'Overview', href: route('admin.front-desk'), icon: <IconMapper name="users-2" className="h-6 w-6" />, current: isCurrent(route('admin.front-desk')) },
@@ -83,10 +86,21 @@ export default function FrontDeskLayout({ title, children, user }: Props) {
                 <NotificationBell />
                 <QuickBudgetButton />
                 <QuickRequisitionButton />
+                {isSuperAdmin && (
+                  <Link
+                    href={route('superadmin.dashboard')}
+                    className="text-sm px-3 py-1 rounded-md bg-red-700 text-white hover:bg-red-600"
+                  >
+                    Super Admin
+                  </Link>
+                )}
                 <button onClick={toggle} className="text-sm px-3 py-1 rounded-md bg-red-100 text-red-800 hover:bg-red-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700">
                   {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
                 </button>
                 <div className="text-sm text-red-700 dark:text-gray-300">{user?.name}</div>
+                <Link href={route('profile.dashboard')} className="text-sm px-3 py-1 rounded-md bg-gray-800 text-white hover:bg-gray-700">
+                  My Profile
+                </Link>
                 <Link href={route('logout')} method="post" as="button" className="text-sm px-3 py-1 rounded-md bg-white text-red-700 hover:bg-red-50 border border-red-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700">
                   Logout
                 </Link>

@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/Components/u
 import { Button } from '@/Components/ui/button';
 import LocationPicker from '@/Components/Map/LocationPicker';
 import axios from 'axios';
+import { useNotification } from '@/Providers/NotificationProvider';
 
 type Zone = { id: number; name: string };
 
@@ -16,6 +17,7 @@ type Props = {
 };
 
 export default function EditSiteModal({ open, onClose, clientId, siteId, onSaved, zones = [] }: Props) {
+  const { push } = useNotification();
   const [loading, setLoading] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
   const [errors, setErrors] = React.useState<Record<string, string>>({});
@@ -26,6 +28,7 @@ export default function EditSiteModal({ open, onClose, clientId, siteId, onSaved
     phone: '',
     required_guards: 1,
     status: 'active',
+    site_type: 'residential',
     services_requested: '',
     special_instructions: '',
     latitude: '',
@@ -49,6 +52,7 @@ export default function EditSiteModal({ open, onClose, clientId, siteId, onSaved
           phone: s.phone || '',
           required_guards: s.required_guards ?? 1,
           status: s.status || 'active',
+          site_type: s.site_type || 'residential',
           services_requested: s.services_requested || '',
           special_instructions: s.special_instructions || '',
           latitude: s.latitude != null ? String(s.latitude) : '',
@@ -96,18 +100,20 @@ export default function EditSiteModal({ open, onClose, clientId, siteId, onSaved
     setSaving(true);
     try {
       const url = route('admin.clients.sites.destroy', { client: clientId, site: siteId });
-      await axios.delete(url, { headers: { 'Accept': 'application/json' } });
+      await axios.post(url, { _method: 'DELETE' }, { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } });
       onSaved?.();
+      push('Site deleted successfully.', 'success');
       onClose();
-    } catch (_) {
-      // no-op; errors will be surfaced by server flash or remain silent in modal context
+    } catch (e: any) {
+      const msg = e?.response?.data?.message || 'Failed to delete site.';
+      alert(msg);
     } finally {
       setSaving(false);
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={onClose}>
+    <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
       <DialogContent className="w-full max-w-2xl dark:bg-gray-800 dark:text-gray-100">
         <DialogHeader>
           <DialogTitle>Edit Site</DialogTitle>
@@ -129,6 +135,15 @@ export default function EditSiteModal({ open, onClose, clientId, siteId, onSaved
                   <option value="inactive">Inactive</option>
                 </select>
                 {errors.status && <div className="text-xs text-red-500 mt-1">{errors.status}</div>}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Site Type</label>
+                <select value={form.site_type} onChange={(e) => setForm({ ...form, site_type: e.target.value })} className="mt-1 w-full border rounded-md px-3 py-2 dark:bg-gray-900 dark:border-gray-700">
+                  <option value="residential">Residential</option>
+                  <option value="commercial">Commercial</option>
+                  <option value="office">Office</option>
+                </select>
+                {errors.site_type && <div className="text-xs text-red-500 mt-1">{errors.site_type}</div>}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Zone</label>

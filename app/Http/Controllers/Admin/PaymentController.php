@@ -352,7 +352,13 @@ class PaymentController extends Controller
                 round(($aggregates->total_paid / $aggregates->total_due) * 100, 1) : 100,
         ];
 
-        return Inertia::render('Admin/Payments/Index', [
+        // Choose view based on current route namespace (admin vs finance)
+        $currentRoute = \Illuminate\Support\Facades\Route::currentRouteName();
+        $view = (is_string($currentRoute) && str_starts_with($currentRoute, 'finance.'))
+            ? 'Finance/Payments/Index'
+            : 'Admin/Payments/Index';
+
+        return Inertia::render($view, [
             'year' => $year,
             'clients' => $clients,
             'payments' => $payments,

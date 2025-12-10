@@ -321,9 +321,16 @@ export default function ClientsIndex({ clients, filters, services = [], zones = 
                         <Button 
                           variant="ghost" 
                           size="sm"
-                          onClick={() => {
-                            if (confirm('Are you sure you want to delete this client?')) {
-                              router.delete(route('admin.clients.destroy', { client: client.id }));
+                          onClick={async () => {
+                            if (!confirm('Are you sure you want to delete this client?')) return;
+                            try {
+                              await axios.delete(route('admin.clients.destroy', { client: client.id }), {
+                                headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                              });
+                              router.reload({ only: ['clients'] });
+                            } catch (e: any) {
+                              const msg = e?.response?.data?.message || 'Failed to delete client.';
+                              alert(msg);
                             }
                           }}
                         >
@@ -365,7 +372,10 @@ export default function ClientsIndex({ clients, filters, services = [], zones = 
             client={viewingClient}
             open={true}
             services={services}
-            onClientUpdated={(c: any) => setViewingClient(c)}
+            onClientUpdated={(c: any) => {
+              setViewingClient(c);
+              router.reload({ only: ['clients'] });
+            }}
             onClose={() => setViewingClient(null)}
           />
         )}

@@ -13,7 +13,11 @@ class EquipmentController extends Controller
 {
     public function index()
     {
-        $equipment = Equipment::orderBy('created_at', 'desc')->paginate(15);
+        $category = request('category');
+        $equipment = Equipment::when($category, fn($q) => $q->where('category', $category))
+            ->orderBy('created_at', 'desc')
+            ->paginate(15)
+            ->appends(request()->only('category'));
         $user = auth()->user();
         $openHandovers = AssetHandover::where('asset_type', 'equipment')
             ->whereNull('returned_at')
@@ -44,6 +48,7 @@ class EquipmentController extends Controller
                 'users' => User::orderBy('name')->get(['id','name']),
             ],
             'openHandovers' => $openHandovers,
+            'filters' => ['category' => $category],
             'auth' => [
                 'user' => [
                     'name' => $user?->name,

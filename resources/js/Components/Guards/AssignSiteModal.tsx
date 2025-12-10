@@ -24,6 +24,7 @@ export default function AssignSiteModal({
   const [loading, setLoading] = React.useState(false);
   const [sites, setSites] = React.useState<Site[]>([]);
   const [selectedSite, setSelectedSite] = React.useState<number | ''>('');
+  const zonesList = React.useMemo(() => (Array.isArray(zones) ? zones : []), [zones]);
 
   const loadSites = React.useCallback(async () => {
     try {
@@ -34,8 +35,9 @@ export default function AssignSiteModal({
       const listRoute = scope === 'admin' ? 'admin.clients.sites.json' : 'control-room.clients.sites.json';
       const url = `${route(listRoute)}?${params.toString()}`;
       const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
-      const data: Site[] = await res.json();
-      setSites(data);
+      if (!res.ok) { setSites([]); return; }
+      const data = await res.json();
+      setSites(Array.isArray(data) ? (data as Site[]) : []);
     } catch {}
     finally { setLoading(false); }
   }, [search, zoneId, scope]);
@@ -92,7 +94,7 @@ export default function AssignSiteModal({
               className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
             >
               <option value="">All zones</option>
-              {zones.map(z => (<option key={z.id} value={z.id}>{z.name}</option>))}
+              {zonesList.map(z => (<option key={z.id} value={z.id}>{z.name}</option>))}
             </select>
           </div>
         </div>

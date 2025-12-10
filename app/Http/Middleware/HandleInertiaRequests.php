@@ -55,15 +55,19 @@ class HandleInertiaRequests extends Middleware
                     'id' => $request->user()->id,
                     'name' => $request->user()->name,
                     'email' => $request->user()->email,
+                    'phone' => $request->user()->phone ?? null,
                     'employee_id' => $request->user()->employee_id,
-                        'roles' => method_exists($request->user(), 'getRoleNames') ? $request->user()->getRoleNames()->toArray() : [],
-                        'permissions' => method_exists($request->user(), 'getAllPermissions') ? $request->user()->getAllPermissions()->pluck('name')->toArray() : [],
-                        'can' => [
-                            'guards.view' => $request->user()->can('guards.view'),
-                            'attendance.manage' => $request->user()->can('attendance.manage'),
-                            'reports.view' => $request->user()->can('reports.view'),
-                            'admin.users.manage' => $request->user()->can('admin.users.manage'),
-                ]
+                    'avatar_url' => method_exists($request->user(), 'getAttribute') && $request->user()->getAttribute('avatar_path')
+                        ? asset('storage/' . ltrim($request->user()->getAttribute('avatar_path'), '/'))
+                        : null,
+                    'roles' => method_exists($request->user(), 'getRoleNames') ? $request->user()->getRoleNames()->toArray() : [],
+                    'permissions' => method_exists($request->user(), 'getAllPermissions') ? $request->user()->getAllPermissions()->pluck('name')->toArray() : [],
+                    'can' => [
+                        'guards.view' => $request->user()->can('guards.view'),
+                        'attendance.manage' => $request->user()->can('attendance.manage'),
+                        'reports.view' => $request->user()->can('reports.view'),
+                        'admin.users.manage' => $request->user()->can('admin.users.manage'),
+                    ],
                 ] : null,
             ],
             'flash' => [

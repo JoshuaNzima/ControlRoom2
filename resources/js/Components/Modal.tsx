@@ -1,9 +1,4 @@
-import {
-    Dialog,
-    DialogPanel,
-    Transition,
-    TransitionChild,
-} from '@headlessui/react';
+import { Dialog, Transition } from '@headlessui/react';
 import { PropsWithChildren } from 'react';
 
 export default function Modal({
@@ -40,7 +35,7 @@ export default function Modal({
                 className="fixed inset-0 z-50 flex transform items-start sm:items-center overflow-y-auto px-4 py-6 transition-all sm:px-0"
                 onClose={close}
             >
-                <TransitionChild
+                <Transition.Child
                     enter="ease-out duration-300"
                     enterFrom="opacity-0"
                     enterTo="opacity-100"
@@ -49,9 +44,9 @@ export default function Modal({
                     leaveTo="opacity-0"
                 >
                     <div className="absolute inset-0 bg-gray-500/75" />
-                </TransitionChild>
+                </Transition.Child>
 
-                <TransitionChild
+                <Transition.Child
                     enter="ease-out duration-300"
                     enterFrom="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
                     enterTo="opacity-100 translate-y-0 sm:scale-100"
@@ -59,14 +54,14 @@ export default function Modal({
                     leaveFrom="opacity-100 translate-y-0 sm:scale-100"
                     leaveTo="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
                 >
-                    <DialogPanel
+                    <Dialog.Panel
                         className={`mb-6 w-full transform overflow-hidden rounded-lg bg-white dark:bg-gray-900 shadow-xl transition-all sm:mx-auto sm:w-full ${maxWidthClass}`}
                     >
                         <div className="max-h-[90vh] overflow-y-auto">
                             {children}
                         </div>
-                    </DialogPanel>
-                </TransitionChild>
+                    </Dialog.Panel>
+                </Transition.Child>
             </Dialog>
         </Transition>
     );

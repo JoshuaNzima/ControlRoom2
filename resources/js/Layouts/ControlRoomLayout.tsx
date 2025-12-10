@@ -1,5 +1,5 @@
 import React from 'react';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
 import IconMapper from '@/Components/IconMapper';
 import NotificationBell from '@/Components/Common/NotificationBell';
 import { User } from '@/types';
@@ -27,6 +27,15 @@ export default function ControlRoomLayout({ title, children, user }: Props) {
   const [logoOk, setLogoOk] = React.useState<boolean>(true);
   const { theme, toggle } = useTheme();
   const { counters } = useCounters();
+  const page = usePage<any>();
+  const roles = ((user as any)?.roles ?? (page?.props as any)?.auth?.user?.roles ?? []) as any;
+  const isSuperAdmin = Array.isArray(roles) ? roles.includes('super_admin') : roles === 'super_admin';
+  const roleDisplay = (() => {
+    const r: any = roles;
+    if (Array.isArray(r) && r.length) return String(r[0]).replaceAll('_', ' ');
+    if (typeof r === 'string') return String(r).replaceAll('_', ' ');
+    return 'Control Room';
+  })();
 
   const isCurrent = (href: string) => window.location.pathname === href;
 
@@ -65,6 +74,7 @@ export default function ControlRoomLayout({ title, children, user }: Props) {
     { name: 'Reports', href: route('control-room.reports'), icon: <IconMapper name="bar-chart-2" className="h-6 w-6" />, current: false },
     { name: 'Settings', href: route('control-room.settings'), icon: <IconMapper name="settings" className="h-6 w-6" />, current: false },
     { name: 'Requisitions', href: route('requisitions.index'), icon: <IconMapper name="clipboard-list" className="h-6 w-6" />, current: false, badge: (()=>{ const n = Number(counters?.requisitions_my_open||0); return n>0? String(n): undefined; })() },
+    { name: 'Budgets', href: route('budgets.index'), icon: <IconMapper name="pie-chart" className="h-6 w-6" />, current: false },
   ];
 
   return (
@@ -129,13 +139,17 @@ export default function ControlRoomLayout({ title, children, user }: Props) {
             </div>
           </nav>
         </div>
-        <div className="flex-shrink-0 flex border-t border-red-800 dark:border-gray-800 p-4">
-          <div className="flex items-center">
-            <div>
-              <div className="text-base font-medium text-white">{user?.name}</div>
-              <div className="text-sm font-medium text-red-200 dark:text-gray-400">Control Room Operator</div>
-            </div>
+        <div className="flex-shrink-0 flex items-center justify-between border-t border-red-800 dark:border-gray-800 p-4">
+          <div>
+            <div className="text-base font-medium text-white">{user?.name}</div>
+            <div className="text-sm font-medium text-red-200 dark:text-gray-400">{roleDisplay}</div>
           </div>
+          <Link
+            href={route('profile.dashboard')}
+            className="inline-flex items-center gap-2 rounded-md bg-gray-800 px-3 py-2 text-sm font-medium text-white hover:bg-gray-700"
+          >
+            My Profile
+          </Link>
         </div>
       </div>
 
@@ -152,6 +166,16 @@ export default function ControlRoomLayout({ title, children, user }: Props) {
                 <NotificationBell />
                 <QuickBudgetButton />
                 <QuickRequisitionButton />
+                
+                {isSuperAdmin && (
+                  <Link
+                    href={route('superadmin.dashboard')}
+                    className="inline-flex items-center gap-2 rounded-md bg-red-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-600"
+                  >
+                    <IconMapper name="shield" className="h-4 w-4" />
+                    Super Admin
+                  </Link>
+                )}
                 <button onClick={toggle} className="text-sm px-3 py-1 rounded-md bg-red-100 text-red-800 hover:bg-red-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700">
                   {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
                 </button>

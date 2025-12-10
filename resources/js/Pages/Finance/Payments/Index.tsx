@@ -1,0 +1,561 @@
+import React, { useEffect, useState } from 'react';
+import { Head, router, usePage } from '@inertiajs/react';
+import FinanceLayout from '@/Layouts/FinanceLayout';
+import { Card } from '@/Components/ui/card';
+import { Button } from '@/Components/ui/button';
+import Modal from '@/Components/Modal';
+import { formatCurrencyMWK } from '@/Components/format';
+import { SortIcon } from '@/Components/ui/icons/SortIcon';
+import { PaymentLegend } from '@/Components/ui/PaymentLegend';
+import { Pagination } from '@/Components/ui/Pagination';
+import { PageProps } from '@/types';
+
+// Types mirrored from Admin/Payments/Index
+
+type Site = {
+  id: number;
+  name: string;
+  address: string;
+};
+
+type Client = {
+  id: number;
+  name: string;
+  contract_start_date?: string | null;
+  contract_end_date?: string | null;
+  monthly_rate?: number;
+  created_at?: string | null;
+  billing_start_date?: string | null;
+  sites: Site[];
+};
+
+type MonthState = { paid: boolean; amount_due: number; amount_paid: number; prepaid_amount?: number };
+interface Filters {
+  search: string;
+  site_id: string;
+  zone_id?: string;
+  status: 'all' | 'late' | 'paid';
+  sort_field: string;
+  sort_direction: 'asc' | 'desc';
+  page: number;
+  per_page: number | string;
+}
+
+interface PaginationMeta {
+  current_page: number;
+  last_page: number;
+  per_page: number;
+  total: number;
+  from: number;
+  to: number;
+}
+
+interface OverallSummary {
+  total_clients: number;
+  clients_with_outstanding: number;
+  clients_overdue_percentage: number;
+  total_outstanding: number;
+  max_outstanding_months: number;
+  overdue_clients: Array<{
+    id: number;
+    name: string;
+    outstanding_amount: number;
+    outstanding_months: number;
+  }>;
+  total_due: number;
+  total_paid: number;
+  collection_rate: number;
+}
+
+
+interface Props {
+  year: number;
+  clients: { data: Client[]; meta: PaginationMeta } | Client[];
+  payments: Record<string, Record<number, MonthState>>;
+  flags?: Record<string, boolean>;
+  summaries?: Record<string, { expected_amount: number; total_paid: number; outstanding_amount: number; outstanding_months: number; billing_start?: string | null }>;
+  sites: Site[];
+  zones?: Array<{ id: number; name: string }>;
+  filters: Filters;
+  overallSummary: OverallSummary;
+}
+
+const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+export default function PaymentsIndex({ 
+  year, 
+  clients = { data: [], meta: { current_page: 1, last_page: 1, per_page: 20, total: 0, from: 0, to: 0 } }, 
+  payments, 
+  flags = {}, 
+  summaries = {}, 
+  overallSummary = {
+    total_clients: 0,
+    clients_with_outstanding: 0,
+    clients_overdue_percentage: 0,
+    total_outstanding: 0,
+    max_outstanding_months: 0,
+    overdue_clients: [],
+    total_due: 0,
+    total_paid: 0,
+    collection_rate: 0
+  },
+  sites = [],
+  zones = [],
+  filters = {
+    search: '',
+    site_id: '',
+    status: 'all',
+    sort_field: 'name',
+    sort_direction: 'asc',
+    page: 1,
+    per_page: 20,
+  }
+}: Props) {
+  const page = usePage<PageProps>();
+  const roles = (page?.props as any)?.auth?.user?.roles ?? [];
+  const permissions = (page?.props as any)?.auth?.user?.permissions ?? [];
+  const canToggle = permissions.includes('finance.manage') || roles.includes('super_admin');
+
+  const [selectedYear, setSelectedYear] = useState<number>(year);
+  const [searchText, setSearchText] = useState<string>(filters.search ?? '');
+
+  const handleFilterChange = (newFilters: Partial<Filters>) => {
+    router.get(route('finance.payments.index'), { 
+      ...filters,
+      ...newFilters,
+      year: selectedYear.toString(),
+    }, {
+      preserveState: true,
+      preserveScroll: true,
+    });
+  };
+
+  const handleYearChange = (delta: number) => {
+    const newYear = selectedYear + delta;
+    setSelectedYear(newYear);
+    router.get(route('finance.payments.index'), { year: newYear }, { preserveScroll: true, preserveState: true });
+  };
+
+  const [prepayModalOpen, setPrepayModalOpen] = useState(false);
+  const [prepayClientId, setPrepayClientId] = useState<number | null>(null);
+  const [prepayMonth, setPrepayMonth] = useState<number | null>(null);
+  const [prepayAmountInput, setPrepayAmountInput] = useState<string>('');
+
+  const openPrepayModal = (clientId: number, month: number) => {
+    if (!canToggle) return;
+    setPrepayClientId(clientId);
+    setPrepayMonth(month);
+    setPrepayAmountInput('');
+    setPrepayModalOpen(true);
+  };
+
+  const submitPrepay = () => {
+    if (!prepayClientId || !prepayMonth) return;
+    const amount = prepayAmountInput !== '' ? parseFloat(prepayAmountInput) : undefined;
+    router.post(route('finance.payments.toggle'), { client_id: prepayClientId, year: selectedYear, month: prepayMonth, amount }, { preserveScroll: true });
+    setPrepayModalOpen(false);
+  };
+
+  const toggle = (clientId: number, month: number) => {
+    if (!canToggle) return;
+    const now = new Date();
+    const isFuture = (selectedYear > now.getFullYear()) || (selectedYear === now.getFullYear() && month > (now.getMonth() + 1));
+    if (isFuture) {
+      openPrepayModal(clientId, month);
+      return;
+    }
+    router.post(route('finance.payments.toggle'), { client_id: clientId, year: selectedYear, month }, { preserveScroll: true });
+  };
+
+  // Normalize clients payload for resilience (supports Laravel paginator top-level keys or meta object)
+  const defaultMeta: PaginationMeta = { current_page: 1, last_page: 1, per_page: 20, total: 0, from: 0, to: 0 };
+  const rawClients: any = clients as any;
+  const clientData: Client[] = Array.isArray(rawClients) ? (rawClients as unknown as Client[]) : (rawClients?.data ?? []);
+  const metaFromTop: PaginationMeta | null = rawClients && typeof rawClients === 'object' && !Array.isArray(rawClients) && (rawClients.current_page || rawClients.last_page || rawClients.total)
+    ? {
+        current_page: Number(rawClients.current_page ?? 1),
+        last_page: Number(rawClients.last_page ?? 1),
+        per_page: Number(rawClients.per_page ?? filters.per_page ?? 20),
+        total: Number(rawClients.total ?? clientData.length ?? 0),
+        from: Number(rawClients.from ?? ((clientData.length > 0 && rawClients.current_page && rawClients.per_page) ? ((Number(rawClients.current_page) - 1) * Number(rawClients.per_page) + 1) : 0)),
+        to: Number(rawClients.to ?? ((rawClients.from && clientData.length) ? (Number(rawClients.from) + clientData.length - 1) : (clientData.length || 0))),
+      }
+    : null;
+  const meta: PaginationMeta = Array.isArray(rawClients) ? defaultMeta : (rawClients?.meta ?? metaFromTop ?? defaultMeta);
+
+  // Debounce search input
+  useEffect(() => {
+    const id = setTimeout(() => {
+      if (searchText !== (filters.search ?? '')) {
+        router.get(
+          route('finance.payments.index'),
+          { ...filters, search: searchText, page: 1, year: selectedYear },
+          { preserveState: true, preserveScroll: true }
+        );
+      }
+    }, 350);
+    return () => clearTimeout(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchText, selectedYear]);
+
+  const clearFilter = (key: keyof Filters) => {
+    if (key === 'search') {
+      setSearchText('');
+      handleFilterChange({ search: '', page: 1 });
+      return;
+    }
+    if (key === 'per_page') {
+      handleFilterChange({ per_page: 20 as any, page: 1 });
+      return;
+    }
+    const payload: any = { page: 1 };
+    payload[key] = '';
+    handleFilterChange(payload);
+  };
+
+  return (
+    <FinanceLayout title="Payments Checker">
+      <Head title="Payments Checker" />
+
+      <Modal show={prepayModalOpen} onClose={() => setPrepayModalOpen(false)} maxWidth="sm">
+        <div className="p-4">
+          <h3 className="text-lg font-semibold mb-2">Prepay Month</h3>
+          <div className="mb-2 text-sm text-gray-600 dark:text-gray-300">Enter an amount to prepay for the selected future month. Leave blank to prepay the full month rate.</div>
+          <div className="relative">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">MWK</span>
+            <input
+              type="text"
+              className="w-full pl-12 pr-3 py-2 border rounded mb-3 text-right bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+              value={prepayAmountInput}
+              onChange={(e) => {
+                const value = e.target.value.replace(/[^0-9.]/g, '');
+                if (value === '' || /^\d*\.?\d{0,2}$/.test(value)) {
+                  setPrepayAmountInput(value);
+                }
+              }}
+              placeholder="0.00"
+            />
+          </div>
+          {prepayAmountInput && (
+            <div className="mb-3 text-sm text-gray-600 dark:text-gray-300 text-right">
+              {formatCurrencyMWK(parseFloat(prepayAmountInput) || 0)}
+            </div>
+          )}
+          <div className="flex justify-end gap-2">
+            <Button variant="ghost" onClick={() => setPrepayModalOpen(false)}>Cancel</Button>
+            <Button onClick={submitPrepay} disabled={!canToggle}>Prepay</Button>
+          </div>
+        </div>
+      </Modal>
+
+      <div className="py-6">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+          {/* Summary Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Card className="p-4 bg-white dark:bg-gray-900">
+              <div className="flex flex-col">
+                <div className="text-sm text-gray-500 dark:text-gray-400">Outstanding Balance</div>
+                <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{formatCurrencyMWK(overallSummary.total_outstanding)}</div>
+                <div className="mt-1 text-xs text-gray-400 dark:text-gray-400">
+                  Collection Rate: {overallSummary.collection_rate}%
+                </div>
+              </div>
+            </Card>
+            <Card className="p-4 bg-white dark:bg-gray-900">
+              <div className="flex flex-col">
+                <div className="text-sm text-gray-500 dark:text-gray-400">Clients with Outstanding</div>
+                <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{overallSummary.clients_with_outstanding} / {overallSummary.total_clients}</div>
+                <div className="mt-1 text-xs text-gray-400 dark:text-gray-400">
+                  {overallSummary.clients_overdue_percentage}% of clients have outstanding balance
+                </div>
+              </div>
+            </Card>
+            <Card className="p-4 bg-white dark:bg-gray-900">
+              <div className="flex flex-col">
+                <div className="text-sm text-gray-500 dark:text-gray-400">Max Outstanding Duration</div>
+                <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{overallSummary.max_outstanding_months} months</div>
+                <div className="mt-1 text-xs text-gray-400 dark:text-gray-400">
+                  Longest period without payment
+                </div>
+              </div>
+            </Card>
+            <Card className="p-4 bg-white dark:bg-gray-900">
+              <div className="flex flex-col">
+                <div className="text-sm text-gray-500 dark:text-gray-400">Total Amount Due</div>
+                <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{formatCurrencyMWK(overallSummary.total_due)}</div>
+                <div className="mt-1 text-xs text-gray-400 dark:text-gray-400">
+                  Paid: {formatCurrencyMWK(overallSummary.total_paid)}
+                </div>
+              </div>
+            </Card>
+          </div>
+
+          {/* Main Payments Table Card */}
+          <Card className="relative">
+            {/* Sticky toolbar */}
+            <div className="sticky top-0 z-10 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
+              <div className="p-4">
+                <div className="flex items-center justify-between mb-4">
+                  <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Client Payments</h1>
+                  <div className="flex items-center gap-2">
+                    <Button variant="outline" onClick={() => handleYearChange(-1)}>&laquo; {selectedYear - 1}</Button>
+                    <div className="text-lg font-bold w-24 text-center">{selectedYear}</div>
+                    <Button variant="outline" onClick={() => handleYearChange(1)}>{selectedYear + 1} &raquo;</Button>
+                  </div>
+                </div>
+              
+                <div className="flex flex-col gap-4">
+                  <div className="flex flex-wrap items-center gap-4">
+                    {/* Search with clear button */}
+                    <div className="flex-1 min-w-[200px] relative">
+                      <input
+                        type="text"
+                        placeholder="Search clients..."
+                        className="w-full pr-10 px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                        value={searchText}
+                        onChange={(e) => setSearchText(e.target.value)}
+                      />
+                      {searchText && (
+                        <button
+                          onClick={() => clearFilter('search')}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                          aria-label="Clear search"
+                        >
+                          ×
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Filter controls */}
+                    <div className="flex flex-wrap items-center gap-4">
+                      <div className="flex items-center gap-2">
+                        <label className="text-sm text-gray-600 dark:text-gray-300">Zone</label>
+                        <select
+                          className="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                          value={String(filters.zone_id ?? '')}
+                          onChange={(e) => handleFilterChange({ zone_id: e.target.value, page: 1 })}
+                        >
+                          <option value="">All Zones</option>
+                          {zones.map(z => (
+                            <option key={z.id} value={z.id}>{z.name}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <label className="text-sm text-gray-600 dark:text-gray-300">Per page</label>
+                        <select
+                          className="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                          value={String(filters.per_page ?? 20)}
+                          onChange={(e) => handleFilterChange({ per_page: e.target.value, page: 1 })}
+                        >
+                          <option value="10">10</option>
+                          <option value="20">20</option>
+                          <option value="50">50</option>
+                          <option value="100">100</option>
+                        </select>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <label className="text-sm text-gray-600 dark:text-gray-300">Status</label>
+                        <select
+                          className="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                          value={filters.status}
+                          onChange={(e) => handleFilterChange({ status: e.target.value as 'all' | 'late' | 'paid', page: 1 })}
+                        >
+                          <option value="all">All Clients</option>
+                          <option value="late">Late Payments</option>
+                          <option value="paid">Fully Paid</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Active filter chips */}
+                  <div className="flex flex-wrap items-center gap-2">
+                    {filters.zone_id && (
+                      <button
+                        onClick={() => clearFilter('zone_id')}
+                        className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-blue-50 dark:bg-blue-900/30 text-sm text-blue-700 dark:text-blue-200 hover:bg-blue-100 dark:hover:bg-blue-900/50"
+                      >
+                        Zone: {zones.find(z => String(z.id) === String(filters.zone_id))?.name ?? filters.zone_id}
+                        <span className="ml-1">×</span>
+                      </button>
+                    )}
+                    {filters.status !== 'all' && (
+                      <button
+                        onClick={() => clearFilter('status')}
+                        className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-blue-50 dark:bg-blue-900/30 text-sm text-blue-700 dark:text-blue-200 hover:bg-blue-100 dark:hover:bg-blue-900/50"
+                      >
+                        Status: {filters.status}
+                        <span className="ml-1">×</span>
+                      </button>
+                    )}
+                    {String(filters.per_page) !== '20' && (
+                      <button
+                        onClick={() => clearFilter('per_page')}
+                        className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-blue-50 dark:bg-blue-900/30 text-sm text-blue-700 dark:text-blue-200 hover:bg-blue-100 dark:hover:bg-blue-900/50"
+                      >
+                        {filters.per_page} per page
+                        <span className="ml-1">×</span>
+                      </button>
+                    )}
+                    {filters.search && (
+                      <button
+                        onClick={() => clearFilter('search')}
+                        className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-blue-50 dark:bg-blue-900/30 text-sm text-blue-700 dark:text-blue-200 hover:bg-blue-100 dark:hover:bg-blue-900/50"
+                      >
+                        "{filters.search}"
+                        <span className="ml-1">×</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-4">
+              <div className="relative overflow-x-auto sm:overflow-x-visible">
+                <table className="border min-w-[820px] sm:min-w-full">
+                  <thead>
+                    <tr className="bg-gray-50 dark:bg-gray-800">
+                      <th 
+                        onClick={() => handleFilterChange({ 
+                          sort_field: 'name',
+                          sort_direction: filters.sort_field === 'name' && filters.sort_direction === 'asc' ? 'desc' : 'asc'
+                        })}
+                        className="sticky left-0 z-20 px-3 py-2 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 border cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 bg-white dark:bg-gray-900 w-[200px] min-w-[200px] max-w-[260px]"
+                      >
+                        <div className="flex items-center gap-2">
+                          Client
+                          <SortIcon direction={filters.sort_field === 'name' ? filters.sort_direction : null} />
+                        </div>
+                      </th>
+                      {months.map((m, idx) => (
+                        <th key={m} className="px-2 py-2 text-xs font-semibold text-gray-600 dark:text-gray-300 border text-center min-w-[56px] w-[56px]">{m}</th>
+                      ))}
+                      <th
+                        onClick={() => handleFilterChange({
+                          sort_field: 'expected_amount',
+                          sort_direction: filters.sort_field === 'expected_amount' && filters.sort_direction === 'asc' ? 'desc' : 'asc'
+                        })}
+                        className="hidden sm:table-cell px-2 py-2 text-xs font-semibold text-gray-600 dark:text-gray-300 border text-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700"
+                      >
+                        <div className="flex items-center justify-center gap-2">
+                          Expected Amount
+                          <SortIcon direction={filters.sort_field === 'expected_amount' ? filters.sort_direction : null} />
+                        </div>
+                      </th>
+                      <th className="hidden sm:table-cell px-2 py-2 text-xs font-semibold text-gray-600 dark:text-gray-300 border text-center">Amount Paid</th>
+                      <th
+                        onClick={() => handleFilterChange({
+                          sort_field: 'outstanding_amount',
+                          sort_direction: filters.sort_field === 'outstanding_amount' && filters.sort_direction === 'asc' ? 'desc' : 'asc'
+                        })}
+                        className="hidden sm:table-cell px-2 py-2 text-xs font-semibold text-gray-600 dark:text-gray-300 border text-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700"
+                      >
+                        <div className="flex items-center justify-center gap-2">
+                          Outstanding
+                          <SortIcon direction={filters.sort_field === 'outstanding_amount' ? filters.sort_direction : null} />
+                        </div>
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {clientData.map((c: Client) => {
+                      const clientPayments = payments[String(c.id)] || {} as Record<number, MonthState>;
+                      const monthlyRate = (c as any).monthly_rate ?? 0;
+                      const summary = (summaries || {})[String(c.id)] || null;
+                      const startDate = c.contract_start_date ? new Date(c.contract_start_date) : (c.created_at ? new Date(c.created_at) : null);
+                      const billingStartMonth = startDate ? startDate.getMonth() : -1;
+                      const billingStartYear = startDate ? startDate.getFullYear() : 0;
+                      const isOverdue = flags[String(c.id)];
+                      const outstandingMonths = (summary as any)?.outstanding_months ?? 0;
+                      
+                      return (
+                        <tr key={c.id} className={`${isOverdue ? 'bg-red-50/80 hover:bg-red-100/90 dark:bg-red-900/30 dark:hover:bg-red-900/40' : 'odd:bg-white even:bg-gray-50 hover:bg-gray-100 odd:dark:bg-gray-900 even:dark:bg-gray-800 hover:dark:bg-gray-700'} transition-colors group`} title={isOverdue ? `${outstandingMonths} months overdue` : ''}>
+                          <td className={`sticky left-0 z-10 px-3 py-2 text-sm border whitespace-nowrap bg-white dark:bg-gray-900 w-[200px] min-w-[200px] max-w-[260px] ${isOverdue ? 'text-red-900 dark:text-red-300 font-semibold' : 'text-gray-900 dark:text-gray-100'} group-hover:bg-gray-100 dark:group-hover:bg-gray-800`}>
+                            <div className="flex items-center gap-2">
+                              <span className="group-hover:underline">{c.name}</span>
+                              {isOverdue && (
+                                <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" title={`${outstandingMonths} months overdue`} />
+                              )}
+                            </div>
+                          </td>
+                          {months.map((_, idx) => {
+                            const month = idx + 1;
+                            const paid = !!clientPayments[month]?.paid;
+                            const prepaid = !!(clientPayments[month]?.prepaid_amount && clientPayments[month]?.prepaid_amount > 0);
+                            const isBillingStart = selectedYear === billingStartYear && month === billingStartMonth + 1;
+                            const isBeforeBillingStart = startDate ? (
+                              selectedYear < billingStartYear || 
+                              (selectedYear === billingStartYear && month <= billingStartMonth)
+                            ) : false;
+                            
+                            return (
+                              <td key={month} className="px-2 py-2 border text-center min-w-[56px] w-[56px]">
+                                <button
+                                  onClick={() => toggle(c.id, month)}
+                                  disabled={isBeforeBillingStart || !canToggle}
+                                  className={`
+                                    inline-flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold transition
+                                    ${isBeforeBillingStart || !canToggle ? 'bg-gray-50 dark:bg-gray-700 text-gray-300 cursor-not-allowed' : 
+                                      paid ? 'bg-green-500 text-white' : (prepaid ? 'bg-blue-500 text-white hover:bg-blue-600' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600')}
+                                    ${isBillingStart ? 'ring-2 ring-blue-500' : ''}
+                                  `}
+                                  aria-pressed={paid}
+                                  aria-label={`Mark ${months[idx]} paid for ${c.name}`}
+                                  title={prepaid ? `Prepaid: ${formatCurrencyMWK(clientPayments[month]?.prepaid_amount || 0)}` : (isBillingStart ? 'Billing Start' : undefined)}
+                                >
+                                  {paid ? '✓' : (prepaid ? (
+                                    <span className="flex items-center justify-center">
+                                      P
+                                      <span className="sr-only">Prepaid</span>
+                                    </span>
+                                  ) : '')}
+                                  {isBillingStart && !paid ? '★' : ''}
+                                </button>
+                              </td>
+                            );
+                          })}
+                          <td className="hidden sm:table-cell px-2 py-2 border text-center text-sm">
+                            {formatCurrencyMWK((summary as any)?.expected_amount ?? (monthlyRate || 0))}
+                          </td>
+                          <td className="hidden sm:table-cell px-2 py-2 border text-center text-sm font-semibold">
+                            {formatCurrencyMWK((summary as any)?.total_paid ?? Object.values(clientPayments).reduce((sum, s) => sum + (s?.amount_paid || 0), 0))}
+                          </td>
+                          <td className={`hidden sm:table-cell px-2 py-2 border text-center text-sm ${isOverdue ? 'font-bold text-red-700 dark:text-red-400' : 'font-semibold text-red-600 dark:text-red-400'} ${isOverdue ? 'group-hover:scale-105' : ''} transition-transform`}>
+                            {formatCurrencyMWK((summary as any)?.outstanding_amount ?? 0)}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Payment Status Legend */}
+              <div className="mt-4">
+                <PaymentLegend />
+              </div>
+
+              {/* Shared pagination */}
+              <div className="mt-4">
+                <Pagination
+                  currentPage={meta.current_page}
+                  lastPage={meta.last_page}
+                  total={meta.total}
+                  perPage={meta.per_page}
+                  from={meta.from}
+                  to={meta.to}
+                  baseUrl={route('finance.payments.index')}
+                  filters={{ ...filters, year: selectedYear }}
+                />
+              </div>
+            </div>
+          </Card>
+        </div>
+      </div>
+    </FinanceLayout>
+  );
+}

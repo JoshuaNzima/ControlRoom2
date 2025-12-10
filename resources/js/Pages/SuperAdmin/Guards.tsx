@@ -600,7 +600,7 @@ export default function SuperAdminGuards({ guards, filters, supervisors = [], gr
           guardId={selectedGuard?.id ?? null}
           zones={zones}
           scope="admin"
-          onSuccess={() => push('Guard assigned to site')}
+          onSuccess={() => { push('Guard assigned to site', 'success'); router.reload(); }}
         />
 
         {/* Promote Guard Modal */}

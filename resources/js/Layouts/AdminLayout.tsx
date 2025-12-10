@@ -28,6 +28,12 @@ export default function AdminLayout({ title, children, user }: Props) {
   const { props } = usePage<any>();
   const { counters } = useCounters();
   const effectiveUser: User | undefined = (user as any) ?? (props?.auth?.user as any) ?? undefined;
+  const roleDisplay = (() => {
+    const r: any = (effectiveUser as any)?.roles;
+    if (Array.isArray(r) && r.length) return String(r[0]).replaceAll('_', ' ');
+    if (typeof r === 'string') return String(r).replaceAll('_', ' ');
+    return 'Admin';
+  })();
 
   const isCurrent = (href: string) => {
     try {
@@ -42,10 +48,12 @@ export default function AdminLayout({ title, children, user }: Props) {
      { name: 'Admin Dashboard', href: route('admin.dashboard'), icon: <IconMapper name="home" className="h-6 w-6" />, current: isCurrent(route('admin.dashboard')) },
      { name: 'Services', href: route('admin.services.index'), icon: <IconMapper name="package" className="h-6 w-6" />, current: isCurrent(route('admin.services.index')) },
      { name: 'Users', href: route('admin.users.index'), icon: <IconMapper name="users-2" className="h-6 w-6" />, current: isCurrent(route('admin.users.index')) },
-     { name: 'Approvals', href: route('admin.approvals.index'), icon: <IconMapper name="check-circle" className="h-6 w-6" />, current: isCurrent(route('admin.approvals.index')), badge: (() => { const n = (Number(counters?.requisitions_pending_admin||0) + Number(counters?.finance_approvals_pending||0)); return n>0 ? String(n) : undefined; })() },
+     { name: 'Approvals', href: route('admin.approvals.index'), icon: <IconMapper name="check-circle" className="h-6 w-6" />, current: isCurrent(route('admin.approvals.index')), badge: (() => { const n = (Number(counters?.requisitions_pending_admin||0) + Number(counters?.finance_approvals_pending||0) + Number(counters?.requisition_batches_pending_ack||0)); return n>0 ? String(n) : undefined; })() },
      { name: 'Messaging', href: route('control-room.messaging.index'), icon: <IconMapper name="message-square-text" className="h-6 w-6" />, current: isCurrent(route('control-room.messaging.index')) },
     { name: 'Reports', href: route('admin.reports.index'), icon: <IconMapper name="bar-chart-2" className="h-6 w-6" />, current: isCurrent(route('admin.reports.index')) },
     { name: 'Payments Checker', href: route('admin.payments.index'), icon: <IconMapper name="wallet" className="h-6 w-6" />, current: isCurrent(route('admin.payments.index')) },
+    { name: 'Requisitions', href: route('requisitions.index'), icon: <IconMapper name="clipboard-list" className="h-6 w-6" />, current: isCurrent(route('requisitions.index')), badge: (()=>{ const n = Number(counters?.requisitions_my_open||0); return n>0? String(n): undefined; })() },
+    { name: 'Budgets', href: route('budgets.index'), icon: <IconMapper name="pie-chart" className="h-6 w-6" />, current: isCurrent(route('budgets.index')) },
     { name: 'Settings', href: route('admin.settings.index'), icon: <IconMapper name="settings" className="h-6 w-6" />, current: isCurrent(route('admin.settings.index')) },
   ];
 
@@ -114,7 +122,6 @@ export default function AdminLayout({ title, children, user }: Props) {
   { name: 'Assets', href: assetsHref, icon: <IconMapper name="boxes" className="h-6 w-6" />, current: isCurrent(assetsHref) },
   { name: 'Finance', href: financeHref, icon: <IconMapper name="wallet" className="h-6 w-6" />, current: isCurrent(financeHref) },
   { name: 'Marketing', href: marketingHref, icon: <IconMapper name="megaphone" className="h-6 w-6" />, current: isCurrent(marketingHref) },
-  { name: 'Requisitions', href: route('requisitions.index'), icon: <IconMapper name="clipboard-list" className="h-6 w-6" />, current: isCurrent(route('requisitions.index')), badge: (()=>{ const n = Number(counters?.requisitions_my_open||0); return n>0? String(n): undefined; })() },
   ];
 
   return (
@@ -166,12 +173,18 @@ export default function AdminLayout({ title, children, user }: Props) {
             </div>
           </nav>
         </div>
-        <div className="flex-shrink-0 flex border-t border-red-800 dark:border-gray-800 p-4">
-          <div className="flex items-center">
-            <div>
-              <div className="text-base font-medium text-white">{effectiveUser?.name}</div>
-              <div className="text-sm font-medium text-red-200 dark:text-gray-400">Admin</div>
-            </div>
+        <div className="flex-shrink-0 flex items-center justify-between border-t border-red-800 dark:border-gray-800 p-4">
+          <div>
+            <div className="text-base font-medium text-white">{effectiveUser?.name}</div>
+            <div className="text-sm font-medium text-red-200 dark:text-gray-400">{roleDisplay}</div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Link
+              href={route('profile.dashboard')}
+              className="inline-flex items-center gap-2 rounded-md bg-gray-800 px-3 py-2 text-sm font-medium text-white hover:bg-gray-700"
+            >
+              My Profile
+            </Link>
           </div>
         </div>
       </div>
@@ -191,6 +204,15 @@ export default function AdminLayout({ title, children, user }: Props) {
                   {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
                 </button>
                 <div className="text-sm text-red-700 dark:text-gray-300">{effectiveUser?.name}</div>
+                {hasAnyRole(['super_admin']) && (
+                  <Link
+                    href={route('superadmin.dashboard')}
+                    className="inline-flex items-center gap-2 rounded-md bg-red-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-600"
+                  >
+                    <IconMapper name="shield" className="h-4 w-4" />
+                    Super Admin
+                  </Link>
+                )}
                 <Link
                   href={route('logout')}
                   method="post"

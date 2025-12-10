@@ -15,6 +15,11 @@ export default function ZoneCommanderLayout({ title, children }: Props) {
 	const isCurrent = (href: string) => url === href || (typeof href === 'string' && url.startsWith(href + '/'));
 	const { counters } = useCounters();
 
+	// Detect super admin role from page props
+	const pageAny = usePage<any>();
+	const roles = ((pageAny.props as any)?.auth?.user?.roles ?? []) as any;
+	const isSuperAdmin = Array.isArray(roles) ? roles.includes('super_admin') : roles === 'super_admin';
+
 	const links = [
 		{ name: 'Dashboard', href: route('zone.dashboard'), icon: <IconMapper name="grid" className="h-5 w-5" /> },
 		{ name: 'Clients', href: route('zone.clients.index'), icon: <IconMapper name="building-2" className="h-5 w-5" /> },
@@ -56,6 +61,21 @@ export default function ZoneCommanderLayout({ title, children }: Props) {
 								<h1 className="text-xl font-bold text-red-900 dark:text-gray-100">{title}</h1>
 								<div className="flex items-center gap-3">
 									<NotificationBell />
+									<Link
+										href={route('profile.dashboard')}
+										className="inline-flex items-center px-3 py-1.5 rounded-md bg-gray-800 text-white hover:bg-gray-700 text-sm"
+									>
+										My Profile
+									</Link>
+									{isSuperAdmin && (
+										<Link
+											href={route('superadmin.dashboard')}
+											className="inline-flex items-center px-3 py-1.5 rounded-md bg-red-700 text-white hover:bg-red-600 text-sm"
+										>
+											<IconMapper name="shield" className="h-4 w-4" />
+											Super Admin
+										</Link>
+									)}
 									<Link
 										href={route('expense.request.create')}
 										className="inline-flex items-center px-3 py-1.5 rounded-md bg-red-600 text-white hover:bg-red-700 text-sm"

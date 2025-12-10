@@ -1,7 +1,7 @@
 import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/Components/ui/dialog';
 import { Button } from '@/Components/ui/button';
-import { useForm } from '@inertiajs/react';
+import { useForm, router } from '@inertiajs/react';
 import IconMapper from '@/Components/IconMapper';
 
 interface Client {
@@ -41,7 +41,10 @@ export default function EditClientModal({ client, open, onClose, services = [] }
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     put(route('admin.clients.update', client.id), {
-      onSuccess: () => onClose(),
+      onSuccess: () => {
+        onClose();
+        router.reload({ only: ['clients'] });
+      },
     });
   };
 

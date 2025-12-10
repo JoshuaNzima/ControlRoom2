@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Guards\Attendance;
 use App\Models\Guards\Guard;
+use App\Models\Guards\ClientSite;
 use Carbon\Carbon;
 
 class AttendanceController extends Controller
@@ -43,8 +44,11 @@ class AttendanceController extends Controller
 
         $guard = Guard::with('assignments')->findOrFail($validated['guard_id']);
         $currentAssignment = $guard->currentAssignment();
-        if ($currentAssignment && (int) $currentAssignment->client_site_id !== (int) $validated['client_site_id']) {
-            return back()->withErrors(['client_site_id' => 'Selected site does not match guard\'s current assignment.']);
+        $site = ClientSite::findOrFail($validated['client_site_id']);
+        if ($currentAssignment && (int) $currentAssignment->client_site_id !== (int) $site->id) {
+            if ($site->site_type !== 'office') {
+                return back()->withErrors(['client_site_id' => 'Selected site does not match guard\'s current assignment.']);
+            }
         }
 
         $timeInput = $request->input('time');

@@ -12,6 +12,7 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use App\Models\VehicleDispatch;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 
@@ -155,7 +156,7 @@ class DashboardController extends Controller
                 'guards_on_duty' => $stats['on_duty_today'] ?? 0,
                 'cameras_online' => 0,
                 'cameras_offline' => 0,
-                'dispatches_today' => 0,
+                'dispatches_today' => (int) VehicleDispatch::whereDate('dispatched_at', $today)->count(),
                 'avg_response_time_min' => 0,
             ],
             'operations' => [

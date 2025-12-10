@@ -37,6 +37,9 @@ export default function Edit({ client, services, zones = [] }: { client: any; se
   const [deletedOpen, setDeletedOpen] = React.useState(false);
   const [deletedSites, setDeletedSites] = React.useState<any[]>([]);
   const [loadingDeleted, setLoadingDeleted] = React.useState(false);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = React.useState(false);
+  const [deletingSiteId, setDeletingSiteId] = React.useState<number | null>(null);
+  const [deleting, setDeleting] = React.useState(false);
 
   const refreshClient = React.useCallback(() => {
     router.reload({ only: ['client'] });
@@ -62,6 +65,23 @@ export default function Edit({ client, services, zones = [] }: { client: any; se
     setDeletedSites(res.data || []);
     if (!res.data || res.data.length === 0) setDeletedOpen(false);
   }, [client?.id, refreshClient]);
+  
+
+  const confirmDelete = React.useCallback(async () => {
+    if (!deletingSiteId) return;
+    setDeleting(true);
+    try {
+      const url = route('admin.clients.sites.destroy', { client: client.id, site: deletingSiteId });
+      await axios.post(url, { _method: 'DELETE' }, { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } });
+      await refreshClient();
+      setConfirmDeleteOpen(false);
+      setDeletingSiteId(null);
+    } catch (e: any) {
+      alert(e?.response?.data?.message || 'Failed to delete site.');
+    } finally {
+      setDeleting(false);
+    }
+  }, [client?.id, deletingSiteId, refreshClient]);
 
   return (
     <AdminLayout title="Edit Client">
@@ -160,6 +180,7 @@ export default function Edit({ client, services, zones = [] }: { client: any; se
                 <div className="flex items-center gap-2">
                   <span className={`px-2 py-1 text-xs rounded-full ${s.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>{s.status}</span>
                   <Button size="sm" variant="outline" onClick={() => { setSelectedSiteId(s.id); setEditSiteOpen(true); }} className="dark:border-gray-600">Edit</Button>
+                  <Button size="sm" onClick={() => { setDeletingSiteId(s.id); setConfirmDeleteOpen(true); }} className="bg-red-600 hover:bg-red-700 text-white">Delete</Button>
                 </div>
               </div>
             ))}
@@ -207,7 +228,25 @@ export default function Edit({ client, services, zones = [] }: { client: any; se
             </div>
           </DialogContent>
         </Dialog>
+
+        <Dialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
+          <DialogContent className="w-full max-w-md dark:bg-gray-800 dark:text-gray-100">
+            <DialogHeader>
+              <DialogTitle>Delete Site</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-3">
+              <div className="text-sm text-gray-600 dark:text-gray-300">
+                Are you sure you want to delete this site? You can restore it later from Deleted Sites.
+              </div>
+              <div className="flex justify-end gap-3">
+                <Button variant="outline" onClick={() => setConfirmDeleteOpen(false)} className="dark:border-gray-600 dark:text-gray-200">Cancel</Button>
+                <Button onClick={confirmDelete} disabled={deleting} className="bg-red-600 hover:bg-red-700 text-white">{deleting ? 'Deleting...' : 'Confirm Delete'}</Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </AdminLayout>
   );
 }
+

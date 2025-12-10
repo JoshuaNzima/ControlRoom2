@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from '@inertiajs/react';
 import NotificationBell from '@/Components/Common/NotificationBell';
 import QuickRequisitionButton from '@/Components/Requisitions/QuickRequisitionButton';
 import QuickBudgetButton from '@/Components/Budgets/QuickBudgetButton';
@@ -20,6 +21,9 @@ export default function AppLayout({ children, title }: Props) {
                 <NotificationBell />
                 <QuickBudgetButton />
                 <QuickRequisitionButton />
+                <Link href={route('profile.dashboard')} className="inline-flex items-center px-3 py-1.5 rounded-md bg-gray-800 text-white hover:bg-gray-700 text-sm">
+                  My Profile
+                </Link>
               </div>
             </div>
           </div>

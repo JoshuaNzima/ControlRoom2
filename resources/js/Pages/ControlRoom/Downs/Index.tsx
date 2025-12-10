@@ -1,17 +1,19 @@
 import React from 'react';
 import ControlRoomLayout from '@/Layouts/ControlRoomLayout';
 import { Head, Link, router, usePage, useForm } from '@inertiajs/react';
+import Modal from '@/Components/Modal';
 
 type Down = {
   id: number;
   title: string;
   type: 'guard_absent' | 'site_unmanned' | 'other';
-  status: 'open' | 'escalated' | 'resolved';
+  status: 'open' | 'escalated' | 'resolved' | 'absconding';
   description?: string;
   escalation_level: number;
   reporter?: { id: number; name: string };
   client?: { id: number; name: string };
   client_site?: { id: number; name: string };
+  guard_relation?: { id: number; name: string; employee_id?: string; status?: string };
 };
 
 type PageProps = {
@@ -42,6 +44,11 @@ export default function DownsIndex() {
   const [guardResults, setGuardResults] = React.useState<Array<{ id: number; name: string; employee_id?: string; status?: string }>>([]);
   const [loadingGuards, setLoadingGuards] = React.useState(false);
   const [selectedGuardName, setSelectedGuardName] = React.useState<string>('');
+
+  // Guard details modal state
+  const [guardModalOpen, setGuardModalOpen] = React.useState(false);
+  const [guardLoading, setGuardLoading] = React.useState(false);
+  const [guardDetails, setGuardDetails] = React.useState<any | null>(null);
 
   const loadSites = React.useCallback(async () => {
     try {
@@ -88,6 +95,25 @@ export default function DownsIndex() {
 
   function resolve(id: number) {
     router.post(route('control-room.downs.resolve', id));
+  }
+
+  function abscond(id: number) {
+    router.post(route('control-room.downs.abscond', id));
+  }
+
+  async function openGuardDetails(guardId: number) {
+    try {
+      setGuardModalOpen(true);
+      setGuardLoading(true);
+      setGuardDetails(null);
+      const res = await fetch(route('control-room.guards.json', guardId), { headers: { Accept: 'application/json' } });
+      const json = await res.json();
+      setGuardDetails(json);
+    } catch (e) {
+      setGuardDetails({ error: 'Failed to load guard details' });
+    } finally {
+      setGuardLoading(false);
+    }
   }
 
   return (
@@ -228,17 +254,37 @@ export default function DownsIndex() {
           <h2 className="text-lg font-semibold mb-4">Open Downs</h2>
           <div className="divide-y dark:divide-gray-700">
             {downs.data.map((d: any) => (
-              <div key={d.id} className="py-3 flex items-center justify-between">
-                <div>
-                  <div className="font-medium">{d.title} <span className="ml-2 text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-800 dark:bg-gray-700 dark:text-gray-100">{d.type.replace('_', ' ')}</span></div>
-                  <div className="text-sm text-gray-600 dark:text-gray-300">Status: {d.status}{d.escalation_level ? ` • Escalation ${d.escalation_level}` : ''}</div>
+              <div key={d.id} className="py-3 flex items-start justify-between gap-4">
+                <div className="min-w-0">
+                  <div className="font-medium text-gray-900 dark:text-gray-100">{d.title} <span className="ml-2 text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-800 dark:bg-gray-700 dark:text-gray-100">{d.type.replace('_', ' ')}</span></div>
+                  <div className="mt-1 text-sm text-gray-600 dark:text-gray-300 flex flex-wrap items-center gap-2">
+                    <span>Status: {d.status}{d.escalation_level ? ` • Escalation ${d.escalation_level}` : ''}</span>
+                    {d.guard_relation?.id && (
+                      <>
+                        <span>•</span>
+                        <button
+                          type="button"
+                          onClick={() => openGuardDetails(d.guard_relation.id)}
+                          className="text-xs px-2 py-0.5 rounded bg-gray-100 text-gray-800 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600"
+                        >
+                          View Guard {d.guard_relation.employee_id ? `(${d.guard_relation.employee_id})` : ''}
+                        </button>
+                      </>
+                    )}
+                  </div>
+                  {d.description && (
+                    <div className="mt-1 text-sm text-gray-600 dark:text-gray-300 line-clamp-2">{d.description}</div>
+                  )}
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-shrink-0">
                   {d.status !== 'resolved' && (
                     <button onClick={() => escalate(d.id)} className="px-3 py-1 rounded-md bg-yellow-500 text-white hover:bg-yellow-600">Escalate</button>
                   )}
                   {d.status !== 'resolved' && (
                     <button onClick={() => resolve(d.id)} className="px-3 py-1 rounded-md bg-green-600 text-white hover:bg-green-700">Resolve</button>
+                  )}
+                  {d.status !== 'resolved' && d.status !== 'absconding' && (
+                    <button onClick={() => abscond(d.id)} className="px-3 py-1 rounded-md bg-red-600 text-white hover:bg-red-700">Mark Absconding</button>
                   )}
                 </div>
               </div>
@@ -246,6 +292,46 @@ export default function DownsIndex() {
           </div>
         </section>
       </div>
+    {/* Guard Details Modal */}
+    <Modal show={guardModalOpen} onClose={() => setGuardModalOpen(false)} maxWidth="xl">
+      <div className="p-4 sm:p-6 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-lg font-semibold">Guard Details</h3>
+          <button onClick={() => setGuardModalOpen(false)} className="text-sm px-3 py-1 rounded bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600">Close</button>
+        </div>
+        {guardLoading && <div className="text-sm text-gray-500">Loading…</div>}
+        {!guardLoading && guardDetails && !guardDetails.error && (
+          <div className="space-y-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div><span className="text-sm text-gray-500">Name</span><div className="font-medium">{guardDetails.name}</div></div>
+              <div><span className="text-sm text-gray-500">Employee ID</span><div className="font-medium">{guardDetails.employee_id}</div></div>
+              <div><span className="text-sm text-gray-500">Phone</span><div className="font-medium">{guardDetails.phone || '—'}</div></div>
+              <div><span className="text-sm text-gray-500">Status</span><div className="font-medium">{guardDetails.status || '—'}</div></div>
+            </div>
+            {Array.isArray(guardDetails.assignments) && guardDetails.assignments.length > 0 && (
+              <div>
+                <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Assignments</h4>
+                <ul className="mt-1 space-y-1 text-sm">
+                  {guardDetails.assignments.map((a: any) => (
+                    <li key={a.id} className="flex items-center justify-between p-2 rounded border border-gray-200 dark:border-gray-700">
+                      <div>
+                        <div className="font-medium">{a.site?.client?.name || 'Client'} • {a.site?.name || 'Site'}</div>
+                        <div className="text-xs text-gray-500">Start {a.start_date || '—'}{a.end_date ? ` • End ${a.end_date}` : ''}</div>
+                      </div>
+                      <span className={`text-xs px-2 py-0.5 rounded ${a.is_active ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/10 dark:text-emerald-300' : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200'}`}>{a.is_active ? 'Active' : 'Inactive'}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
+        {!guardLoading && guardDetails?.error && (
+          <div className="text-sm text-red-500">{String(guardDetails.error)}</div>
+        )}
+      </div>
+    </Modal>
+
     </ControlRoomLayout>
   );
 }

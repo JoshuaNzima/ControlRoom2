@@ -496,7 +496,8 @@ export default function GuardsIndex({ guards, filters, canAssignSupervisor, canV
           onClose={() => setShowAssign(false)}
           guardId={selectedGuard?.id ?? null}
           zones={zones}
-          onSuccess={() => push('Guard assigned to site')}
+          scope="admin"
+          onSuccess={() => { push('Guard assigned to site', 'success'); router.reload(); }}
         />
 
         {/* Promote Guard Modal */}

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
 import BaseShell from './BaseShell';
 import IconMapper from '@/Components/IconMapper';
 import { User } from '@/types';
@@ -28,11 +28,17 @@ export default function AssetManagementLayout({ title, children, user }: Props) 
   const isCurrent = (href: string) => typeof window !== 'undefined' && window.location.pathname === href;
   const { theme, toggle } = useTheme();
   const { counters } = useCounters();
+  const page = usePage<any>();
+  const roles = ((user as any)?.roles ?? (page?.props as any)?.auth?.user?.roles ?? []) as any;
+  const isSuperAdmin = Array.isArray(roles) ? roles.includes('super_admin') : roles === 'super_admin';
 
   const nav: NavItem[] = [
     { name: 'Overview', href: route('assets.index'), icon: <IconMapper name="package" className="h-6 w-6" />, current: isCurrent(route('assets.index')), badge: (()=>{ const n = Number(counters?.assets_handovers_outstanding||0); return n>0? String(n): undefined; })() },
     { name: 'Vehicles', href: route('assets.vehicles.index'), icon: <IconMapper name="truck" className="h-6 w-6" />, current: isCurrent(route('assets.vehicles.index')) },
     { name: 'Equipment', href: route('assets.equipment.index'), icon: <IconMapper name="wrench" className="h-6 w-6" />, current: isCurrent(route('assets.equipment.index')) },
+    { name: 'Uniforms', href: route('assets.equipment.index', { category: 'uniform' } as any), icon: <IconMapper name="shirt" className="h-6 w-6" />, current: typeof window !== 'undefined' && window.location.pathname === route('assets.equipment.index') && new URLSearchParams(window.location.search).get('category') === 'uniform' },
+    { name: 'Weapons', href: route('assets.equipment.index', { category: 'weapon' } as any), icon: <IconMapper name="target" className="h-6 w-6" />, current: typeof window !== 'undefined' && window.location.pathname === route('assets.equipment.index') && new URLSearchParams(window.location.search).get('category') === 'weapon' },
+    { name: 'Dispatches', href: route('assets.dispatches.index'), icon: <IconMapper name="navigation" className="h-6 w-6" />, current: isCurrent(route('assets.dispatches.index')) },
     { name: 'Requisitions', href: route('requisitions.index'), icon: <IconMapper name="clipboard-list" className="h-6 w-6" />, current: isCurrent(route('requisitions.index')), badge: (()=>{ const n = Number(counters?.requisitions_my_open||0); return n>0? String(n): undefined; })() },
     { name: 'Settings', href: route('assets.settings'), icon: <IconMapper name="settings" className="h-6 w-6" />, current: isCurrent(route('assets.settings')) },
   ];
@@ -83,6 +89,21 @@ export default function AssetManagementLayout({ title, children, user }: Props) 
                 <NotificationBell />
                 <QuickBudgetButton />
                 <QuickRequisitionButton />
+                <Link
+                  href={route('profile.dashboard')}
+                  className="text-sm px-3 py-1 rounded-md bg-gray-800 text-white hover:bg-gray-700"
+                >
+                  My Profile
+                </Link>
+                {isSuperAdmin && (
+                  <Link
+                    href={route('superadmin.dashboard')}
+                    className="inline-flex items-center gap-2 rounded-md bg-red-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-600"
+                  >
+                    <IconMapper name="shield" className="h-4 w-4" />
+                    Super Admin
+                  </Link>
+                )}
                 <button onClick={toggle} className="text-sm px-3 py-1 rounded-md bg-red-100 text-red-800 hover:bg-red-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700">
                   {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
                 </button>

@@ -9,6 +9,7 @@ type QuickRequisitionForm = {
   needed_by: string;
   category: 'general' | 'fuel' | 'vehicle_hire' | 'events' | 'k9' | 'utilities' | 'office_supplies';
   amount: string;
+  attachments?: File[];
 };
 
 export default function QuickRequisitionModal({ className = '' }: { className?: string }) {
@@ -25,6 +26,7 @@ export default function QuickRequisitionModal({ className = '' }: { className?: 
       needed_by: new Date().toISOString().slice(0, 10),
       category: 'general',
       amount: '',
+      attachments: [],
     } as QuickRequisitionForm,
   );
 
@@ -40,6 +42,7 @@ export default function QuickRequisitionModal({ className = '' }: { className?: 
         setOpen(false);
       },
       preserveScroll: true,
+      forceFormData: true,
     });
   };
 
@@ -137,6 +140,25 @@ export default function QuickRequisitionModal({ className = '' }: { className?: 
                 onChange={(e) => setData('description', e.target.value)}
               />
               {errors.description && <p className="text-xs text-red-500">{errors.description}</p>}
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-gray-700 dark:text-gray-300">Attachments (optional)</label>
+              <input
+                type="file"
+                multiple
+                accept=".pdf,image/*,.doc,.docx,.xls,.xlsx"
+                className="block w-full text-xs text-gray-700 dark:text-gray-200 file:mr-2 file:rounded-md file:border file:border-gray-300 file:bg-white file:px-3 file:py-1.5 file:text-xs file:font-medium hover:file:bg-gray-50 dark:file:border-gray-700 dark:file:bg-gray-900"
+                onChange={(e) => setData('attachments', Array.from(e.target.files || []))}
+              />
+              {data.attachments && data.attachments.length > 0 && (
+                <ul className="mt-1 space-y-0.5 text-[11px] text-gray-600 dark:text-gray-400">
+                  {data.attachments.map((f, i) => (
+                    <li key={i}>{f.name}</li>
+                  ))}
+                </ul>
+              )}
+              {errors.attachments && <p className="text-xs text-red-500">{String(errors.attachments)}</p>}
             </div>
 
             <div className="space-y-1">

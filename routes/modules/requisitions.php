@@ -4,6 +4,8 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Requisitions\RequisitionController;
 use App\Http\Controllers\Requisitions\RequisitionApprovalController;
 use App\Http\Controllers\Requisitions\RequisitionDisbursementController;
+use App\Http\Controllers\Requisitions\RequisitionBatchController;
+use App\Http\Controllers\Requisitions\RequisitionAttachmentController;
 
 Route::middleware(['auth'])
     ->prefix('requisitions')
@@ -22,4 +24,30 @@ Route::middleware(['auth'])
 
         Route::post('/{requisition}/disburse', [RequisitionDisbursementController::class, 'disburse'])
             ->name('disburse');
+
+        // Attachments
+        Route::get('/{requisition}/attachments/{attachment}', [RequisitionAttachmentController::class, 'download'])
+            ->name('attachments.download');
+
+        // Daily batch compile and acknowledgement
+        Route::get('/batches/today', [RequisitionBatchController::class, 'today'])
+            ->name('batches.today');
+        Route::post('/batches/compile-today', [RequisitionBatchController::class, 'compileToday'])
+            ->name('batches.compile_today');
+        Route::post('/batches/acknowledge-today', [RequisitionBatchController::class, 'acknowledgeToday'])
+            ->name('batches.acknowledge_today');
+        Route::get('/batches/today/export.csv', [RequisitionBatchController::class, 'exportTodayCsv'])
+            ->name('batches.export_today_csv');
+        Route::get('/batches/today/print', [RequisitionBatchController::class, 'printToday'])
+            ->name('batches.print_today');
+
+        // Batches history
+        Route::get('/batches', [RequisitionBatchController::class, 'index'])
+            ->name('batches.index');
+        Route::get('/batches/{batch}', [RequisitionBatchController::class, 'show'])
+            ->name('batches.show');
+        Route::get('/batches/{batch}/export.csv', [RequisitionBatchController::class, 'exportCsv'])
+            ->name('batches.export_csv');
+        Route::get('/batches/{batch}/print', [RequisitionBatchController::class, 'print'])
+            ->name('batches.print');
     });

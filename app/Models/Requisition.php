@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Requisition extends Model
 {
@@ -22,11 +23,14 @@ class Requisition extends Model
         'needed_by',
         'notes_admin',
         'notes_disbursement',
+        'batch_id',
+        'batched_at',
     ];
 
     protected $casts = [
         'needed_by' => 'date',
         'amount' => 'decimal:2',
+        'batched_at' => 'datetime',
     ];
 
     public function requestedBy(): BelongsTo
@@ -42,5 +46,15 @@ class Requisition extends Model
     public function disbursedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'disbursed_by');
+    }
+
+    public function batch(): BelongsTo
+    {
+        return $this->belongsTo(RequisitionBatch::class, 'batch_id');
+    }
+
+    public function attachments(): HasMany
+    {
+        return $this->hasMany(RequisitionAttachment::class);
     }
 }

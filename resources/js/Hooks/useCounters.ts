@@ -6,6 +6,7 @@ export type Counters = {
   requisitions_needs_revision?: number;
   requisitions_pending_admin?: number;
   requisitions_pending_disbursement?: number;
+  requisition_batches_pending_ack?: number;
   finance_approvals_pending?: number;
   finance_expenses_pending_mine?: number;
   budgets_my_open?: number;

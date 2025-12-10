@@ -426,8 +426,8 @@ export default function PaymentsIndex({
             </div>
 
             <div className="p-4">
-              <div className="overflow-x-auto">
-                <table className="min-w-full border">
+              <div className="relative overflow-x-auto sm:overflow-x-visible">
+                <table className="border min-w-[820px] sm:min-w-full">
                   <thead>
                     <tr className="bg-gray-50">
                       <th 
@@ -435,7 +435,7 @@ export default function PaymentsIndex({
                           sort_field: 'name',
                           sort_direction: filters.sort_field === 'name' && filters.sort_direction === 'asc' ? 'desc' : 'asc'
                         })}
-                        className="px-3 py-2 text-left text-xs font-semibold text-gray-600 border cursor-pointer hover:bg-gray-50"
+                        className="sticky left-0 z-20 px-3 py-2 text-left text-xs font-semibold text-gray-600 border cursor-pointer hover:bg-gray-50 bg-white dark:bg-gray-900 w-[200px] min-w-[200px] max-w-[260px]"
                       >
                         <div className="flex items-center gap-2">
                           Client
@@ -443,27 +443,27 @@ export default function PaymentsIndex({
                         </div>
                       </th>
                       {months.map((m, idx) => (
-                        <th key={m} className="px-2 py-2 text-xs font-semibold text-gray-600 border text-center">{m}</th>
+                        <th key={m} className="px-2 py-2 text-xs font-semibold text-gray-600 border text-center min-w-[56px] w-[56px]">{m}</th>
                       ))}
                       <th
                         onClick={() => handleFilterChange({
                           sort_field: 'expected_amount',
                           sort_direction: filters.sort_field === 'expected_amount' && filters.sort_direction === 'asc' ? 'desc' : 'asc'
                         })}
-                        className="px-2 py-2 text-xs font-semibold text-gray-600 border text-center cursor-pointer hover:bg-gray-50"
+                        className="hidden sm:table-cell px-2 py-2 text-xs font-semibold text-gray-600 border text-center cursor-pointer hover:bg-gray-50"
                       >
                         <div className="flex items-center justify-center gap-2">
                           Expected Amount
                           <SortIcon direction={filters.sort_field === 'expected_amount' ? filters.sort_direction : null} />
                         </div>
                       </th>
-                      <th className="px-2 py-2 text-xs font-semibold text-gray-600 border text-center">Amount Paid</th>
+                      <th className="hidden sm:table-cell px-2 py-2 text-xs font-semibold text-gray-600 border text-center">Amount Paid</th>
                       <th
                         onClick={() => handleFilterChange({
                           sort_field: 'outstanding_amount',
                           sort_direction: filters.sort_field === 'outstanding_amount' && filters.sort_direction === 'asc' ? 'desc' : 'asc'
                         })}
-                        className="px-2 py-2 text-xs font-semibold text-gray-600 border text-center cursor-pointer hover:bg-gray-50"
+                        className="hidden sm:table-cell px-2 py-2 text-xs font-semibold text-gray-600 border text-center cursor-pointer hover:bg-gray-50"
                       >
                         <div className="flex items-center justify-center gap-2">
                           Outstanding
@@ -484,8 +484,8 @@ export default function PaymentsIndex({
                       const outstandingMonths = summary?.outstanding_months ?? 0;
                       
                       return (
-                        <tr key={c.id} className={`${isOverdue ? 'bg-red-50/80 hover:bg-red-100/90' : 'odd:bg-white even:bg-gray-50 hover:bg-gray-100'} transition-colors group`} title={isOverdue ? `${outstandingMonths} months overdue` : ''}>
-                          <td className={`px-3 py-2 text-sm border whitespace-nowrap ${isOverdue ? 'text-red-900 font-semibold' : 'text-gray-900'}`}>
+                        <tr key={c.id} className={`${isOverdue ? 'bg-red-50/80 hover:bg-red-100/90 dark:bg-red-900/30 dark:hover:bg-red-900/40' : 'odd:bg-white even:bg-gray-50 hover:bg-gray-100 odd:dark:bg-gray-900 even:dark:bg-gray-800 hover:dark:bg-gray-700'} transition-colors group`} title={isOverdue ? `${outstandingMonths} months overdue` : ''}>
+                          <td className={`sticky left-0 z-10 px-3 py-2 text-sm border whitespace-nowrap bg-white dark:bg-gray-900 w-[200px] min-w-[200px] max-w-[260px] ${isOverdue ? 'text-red-900 font-semibold' : 'text-gray-900 dark:text-gray-100'} group-hover:bg-gray-100 dark:group-hover:bg-gray-800`}>
                             <div className="flex items-center gap-2">
                               <span className="group-hover:underline">{c.name}</span>
                               {isOverdue && (
@@ -504,7 +504,7 @@ export default function PaymentsIndex({
                             ) : false;
                             
                             return (
-                              <td key={month} className="px-2 py-2 border text-center">
+                              <td key={month} className="px-2 py-2 border text-center min-w-[56px] w-[56px]">
                                 <button
                                   onClick={() => toggle(c.id, month)}
                                   disabled={isBeforeBillingStart}
@@ -529,13 +529,13 @@ export default function PaymentsIndex({
                               </td>
                             );
                           })}
-                          <td className="px-2 py-2 border text-center text-sm">
+                          <td className="hidden sm:table-cell px-2 py-2 border text-center text-sm">
                             {formatCurrencyMWK(summary?.expected_amount ?? (monthlyRate || 0))}
                           </td>
-                          <td className="px-2 py-2 border text-center text-sm font-semibold">
+                          <td className="hidden sm:table-cell px-2 py-2 border text-center text-sm font-semibold">
                             {formatCurrencyMWK(summary?.total_paid ?? Object.values(clientPayments).reduce((sum, s) => sum + (s?.amount_paid || 0), 0))}
                           </td>
-                          <td className={`px-2 py-2 border text-center text-sm ${isOverdue ? 'font-bold text-red-700' : 'font-semibold text-red-600'} ${isOverdue ? 'group-hover:scale-105' : ''} transition-transform`}>
+                          <td className={`hidden sm:table-cell px-2 py-2 border text-center text-sm ${isOverdue ? 'font-bold text-red-700' : 'font-semibold text-red-600'} ${isOverdue ? 'group-hover:scale-105' : ''} transition-transform`}>
                             {formatCurrencyMWK(summary?.outstanding_amount ?? 0)}
                           </td>
                         </tr>

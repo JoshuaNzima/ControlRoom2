@@ -85,7 +85,7 @@ function BoundsUpdater({ points }: { points: LatLngTuple[] }) {
   return null;
 }
 
-export default function GuardLocationMap({ guards, sites, center = [-26.2041, 28.0473], zoom = 13, onSiteClick, showCountsOverlay = true, scaleByRequired = true }: GuardLocationMapProps) {
+export default function GuardLocationMap({ guards, sites, center = [-13.9626, 33.7741], zoom = 13, onSiteClick, showCountsOverlay = true, scaleByRequired = true }: GuardLocationMapProps) {
   const [isDark, setIsDark] = React.useState(false);
   React.useEffect(() => {
     setIsDark(document.documentElement.classList.contains('dark'));

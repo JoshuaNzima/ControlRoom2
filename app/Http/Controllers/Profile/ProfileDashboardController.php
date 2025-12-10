@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Profile;
 use App\Http\Controllers\Controller;
 use App\Models\Commission;
 use App\Models\PayrollEntry;
+use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -57,6 +58,7 @@ class ProfileDashboardController extends Controller
                 'name' => $user->name,
                 'email' => $user->email,
                 'phone' => $user->phone ?? null,
+                'avatar_url' => $user->avatar_path ? asset('storage/' . ltrim($user->avatar_path, '/')) : null,
             ],
             'commissions' => [
                 'pending' => $pendingCommissions,
@@ -65,6 +67,8 @@ class ProfileDashboardController extends Controller
             'payroll' => [
                 'totals' => $totals,
             ],
+            'mustVerifyEmail' => $user instanceof MustVerifyEmail,
+            'status' => session('status'),
         ]);
     }
 

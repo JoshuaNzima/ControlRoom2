@@ -1,6 +1,6 @@
 import React from 'react';
 import { Head, Link } from '@inertiajs/react';
-import AppLayout from '@/Layouts/AppLayout';
+import ControlRoomLayout from '@/Layouts/ControlRoomLayout';
 import QRCodeGenerator from '@/Components/QRCodeGenerator';
 import { Card } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
@@ -16,7 +16,7 @@ export default function SupervisorQRCodes({ zones }: { zones: any }) {
     };
 
     return (
-        <AppLayout>
+        <ControlRoomLayout title="QR Code Management">
             <Head title="QR Code Management" />
 
             <div className="py-12">
@@ -92,6 +92,6 @@ export default function SupervisorQRCodes({ zones }: { zones: any }) {
                     </div>
                 </div>
             </div>
-        </AppLayout>
+        </ControlRoomLayout>
     );
 }

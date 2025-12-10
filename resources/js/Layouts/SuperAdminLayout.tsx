@@ -26,6 +26,12 @@ export default function SuperAdminLayout({ title, children, user }: Props) {
     const [sidebarOpen, setSidebarOpen] = React.useState(false);
     const [logoOk, setLogoOk] = React.useState<boolean>(true);
     const { counters } = useCounters();
+    const roleDisplay = (() => {
+        const r: any = (user as any)?.roles;
+        if (Array.isArray(r) && r.length) return String(r[0]).replaceAll('_', ' ');
+        if (typeof r === 'string') return String(r).replaceAll('_', ' ');
+        return 'Super Admin';
+    })();
 
     const modules: ModuleNavItem[] = [
         { name: 'Dashboard', href: route('superadmin.dashboard'), icon: <IconMapper name="Home" size={24} />, current: window.location.pathname === route('superadmin.dashboard') },
@@ -59,6 +65,12 @@ export default function SuperAdminLayout({ title, children, user }: Props) {
             badge: (() => { const n = Number(counters?.requisitions_my_open || 0); return n > 0 ? String(n) : undefined; })()
         },
         {
+            name: 'Budgets',
+            href: route('budgets.index'),
+            icon: <IconMapper name="PieChart" size={24} />,
+            current: window.location.pathname === route('budgets.index')
+        },
+        {
             name: 'Roles & Permissions',
             href: route('superadmin.roles.index'),
             icon: <IconMapper name="Users2" size={24} />,
@@ -87,6 +99,30 @@ export default function SuperAdminLayout({ title, children, user }: Props) {
             href: route('superadmin.settings'), 
             icon: <IconMapper name="Settings" size={24} />, 
             current: window.location.pathname === route('superadmin.settings') 
+        },
+        {
+            name: 'Logs',
+            href: route('superadmin.logs'),
+            icon: <IconMapper name="ClipboardList" size={24} />,
+            current: window.location.pathname === route('superadmin.logs')
+        },
+        {
+            name: 'Audit Trail',
+            href: route('superadmin.audit'),
+            icon: <IconMapper name="Search" size={24} />,
+            current: window.location.pathname === route('superadmin.audit')
+        },
+        {
+            name: 'Cache',
+            href: route('superadmin.cache'),
+            icon: <IconMapper name="Trash2" size={24} />,
+            current: window.location.pathname === route('superadmin.cache')
+        },
+        {
+            name: 'Backup',
+            href: route('superadmin.backup'),
+            icon: <IconMapper name="HardDrive" size={24} />,
+            current: window.location.pathname === route('superadmin.backup')
         },
     ];
 
@@ -180,8 +216,16 @@ export default function SuperAdminLayout({ title, children, user }: Props) {
                 <div className="flex-shrink-0 flex items-center justify-between border-t border-red-800 dark:border-gray-800 p-4">
                     <div>
                         <div className="text-base font-medium text-white">{user?.name}</div>
-                        <div className="text-sm font-medium text-gray-400">Super Admin</div>
+                        <div className="text-sm font-medium text-gray-400">{roleDisplay}</div>
                     </div>
+                    <div className="flex items-center gap-2">
+                        <Link
+                            href={route('profile.dashboard')}
+                            className="inline-flex items-center gap-2 rounded-md bg-gray-800 px-3 py-2 text-sm font-medium text-white hover:bg-gray-700"
+                        >
+                            <IconMapper name="User" size={16} />
+                            My Profile
+                        </Link>
                     <Link
                         href={route('logout')}
                         method="post"
@@ -191,6 +235,7 @@ export default function SuperAdminLayout({ title, children, user }: Props) {
                         <IconMapper name="LogOut" size={16} />
                         Logout
                     </Link>
+                    </div>
                 </div>
             </div>
 

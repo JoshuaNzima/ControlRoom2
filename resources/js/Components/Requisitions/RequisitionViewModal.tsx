@@ -2,6 +2,7 @@ import React from 'react';
 import Modal from '@/Components/Modal';
 import { Link, router, useForm, usePage } from '@inertiajs/react';
 import { formatCurrencyMWK } from '@/Components/format';
+import IconMapper from '@/Components/IconMapper';
 
 type Props = {
   requisitionId: number | null;
@@ -128,6 +129,50 @@ export default function RequisitionViewModal({ requisitionId, open, onClose }: P
                     <div>{formatCurrencyMWK(req.amount)}</div>
                   </div>
                 )}
+                <div>
+                  <div className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Attachments</div>
+                  {Array.isArray((req as any)?.attachments) && (req as any).attachments.length > 0 ? (
+                    <ul className="mt-1 space-y-1">
+                      {(req as any).attachments.map((a: any) => (
+                        <li key={a.id} className="flex items-center justify-between gap-2">
+                          <div className="min-w-0 text-xs text-gray-700 dark:text-gray-300 truncate">{a.original_name}</div>
+                          <a
+                            href={route('requisitions.attachments.download', [req.id, a.id])}
+                            className="inline-flex items-center rounded-md border border-gray-300 dark:border-gray-700 px-2 py-1 text-[11px] font-medium text-gray-700 hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-gray-800"
+                          >
+                            Download
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <div className="text-xs text-gray-500 dark:text-gray-400">No attachments</div>
+                  )}
+                </div>
+                <div>
+                  <div className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Batch</div>
+                  {req.batch ? (
+                    <span
+                      className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide border ${
+                        req.batch.status === 'acknowledged'
+                          ? 'bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-500/20 dark:text-emerald-200 dark:border-emerald-500/40'
+                          : 'bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-500/20 dark:text-amber-200 dark:border-amber-500/40'
+                      }`}
+                    >
+                      {req.batch.status === 'acknowledged' ? (
+                        <>
+                          <IconMapper name="check-circle" className="h-3 w-3 mr-1" /> Acknowledged
+                        </>
+                      ) : (
+                        <>Pending ack</>
+                      )}
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide border bg-gray-100 text-gray-700 border-gray-300 dark:bg-gray-800/60 dark:text-gray-300 dark:border-gray-700">
+                      No batch
+                    </span>
+                  )}
+                </div>
               </div>
             </section>
 
@@ -305,6 +350,11 @@ export default function RequisitionViewModal({ requisitionId, open, onClose }: P
                     }}
                     className="space-y-2"
                   >
+                    {(!req?.batch || req?.batch?.status !== 'acknowledged') && (
+                      <div className="text-xs text-amber-600 dark:text-amber-300">
+                        Waiting for admin acknowledgement of today's batch before disbursement.
+                      </div>
+                    )}
                     <div>
                       <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Disbursement notes (optional)</label>
                       <textarea
@@ -321,7 +371,7 @@ export default function RequisitionViewModal({ requisitionId, open, onClose }: P
                     <div className="flex flex-wrap gap-2">
                       <button
                         type="submit"
-                        disabled={disburseForm.processing}
+                        disabled={disburseForm.processing || !req?.batch || req?.batch?.status !== 'acknowledged'}
                         className="inline-flex items-center rounded-md bg-indigo-600 px-3 py-2 text-xs font-medium text-white hover:bg-indigo-700 disabled:opacity-60"
                       >
                         {disburseForm.processing ? 'Marking…' : 'Mark as disbursed'}

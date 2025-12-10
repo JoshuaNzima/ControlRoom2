@@ -1,17 +1,8 @@
 import React from 'react';
-import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet';
-import 'leaflet/dist/leaflet.css';
-import L from 'leaflet';
+import maplibregl from 'maplibre-gl';
+import 'maplibre-gl/dist/maplibre-gl.css';
 
-// Basic marker icon fix for Leaflet in many build setups
-const defaultIcon = new L.Icon({
-  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41],
-});
+// No external API key required. Using Carto vector styles for light/dark.
 
 export type LatLng = { lat: number; lng: number };
 
@@ -21,20 +12,14 @@ interface LocationPickerProps {
   heightClassName?: string;
 }
 
-function ClickHandler({ onPick }: { onPick: (lat: number, lng: number) => void }) {
-  useMapEvents({
-    click(e: any) {
-      onPick(e.latlng.lat, e.latlng.lng);
-    },
-  });
-  return null;
-}
-
 export default function LocationPicker({ value, onChange, heightClassName = 'h-64' }: LocationPickerProps) {
   const [isDark, setIsDark] = React.useState(false);
   const [position, setPosition] = React.useState<LatLng | null>(value ?? null);
   const [geoLoading, setGeoLoading] = React.useState(false);
   const [geoError, setGeoError] = React.useState<string | null>(null);
+  const mapRef = React.useRef<maplibregl.Map | null>(null);
+  const markerRef = React.useRef<maplibregl.Marker | null>(null);
+  const containerRef = React.useRef<HTMLDivElement | null>(null);
 
   React.useEffect(() => {
     setIsDark(document.documentElement.classList.contains('dark'));
@@ -44,12 +29,65 @@ export default function LocationPicker({ value, onChange, heightClassName = 'h-6
     setPosition(value ?? null);
   }, [value?.lat, value?.lng]);
 
-  const center: [number, number] = position ? [position.lat, position.lng] : [-26.2041, 28.0473];
+  const center: [number, number] = position ? [position.lat, position.lng] : [-13.9626, 33.7741];
+
+  React.useEffect(() => {
+    // Initialize map once
+    if (mapRef.current || !containerRef.current) return;
+    const styleUrl = isDark
+      ? 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json'
+      : 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json';
+    const map = new maplibregl.Map({
+      container: containerRef.current,
+      style: styleUrl,
+      center: [center[1], center[0]], // [lng, lat]
+      zoom: 14,
+    });
+
+    map.addControl(new maplibregl.NavigationControl({ showZoom: true }));
+
+    map.on('click', (e) => {
+      const lat = e.lngLat.lat;
+      const lng = e.lngLat.lng;
+      handlePick(lat, lng);
+    });
+
+    mapRef.current = map;
+
+    return () => {
+      try { map.remove(); } catch (_) {}
+      mapRef.current = null;
+      markerRef.current = null;
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [containerRef.current]);
+
+  // Update style on theme change
+  React.useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    const styleUrl = isDark
+      ? 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json'
+      : 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json';
+    try { map.setStyle(styleUrl); } catch (_) {}
+  }, [isDark]);
 
   const handlePick = (lat: number, lng: number) => {
     const next = { lat, lng };
     setPosition(next);
     onChange?.(next);
+    const map = mapRef.current;
+    if (map) {
+      if (!markerRef.current) {
+        markerRef.current = new maplibregl.Marker({ color: '#ef4444' })
+          .setLngLat([lng, lat])
+          .addTo(map);
+      } else {
+        markerRef.current.setLngLat([lng, lat]);
+      }
+      map.setCenter([lng, lat]);
+      map.setZoom(Math.max(map.getZoom(), 14));
+    }
   };
 
   const handleUseMyLocation = () => {
@@ -73,10 +111,18 @@ export default function LocationPicker({ value, onChange, heightClassName = 'h-6
   };
 
   function CenterOnPosition({ p }: { p: LatLng | null }) {
-    const map = useMap();
     React.useEffect(() => {
-      if (p) {
-        map.setView([p.lat, p.lng], Math.max(map.getZoom(), 14));
+      const map = mapRef.current;
+      if (p && map) {
+        if (!markerRef.current) {
+          markerRef.current = new maplibregl.Marker({ color: '#ef4444' })
+            .setLngLat([p.lng, p.lat])
+            .addTo(map);
+        } else {
+          markerRef.current.setLngLat([p.lng, p.lat]);
+        }
+        map.setCenter([p.lng, p.lat]);
+        map.setZoom(Math.max(map.getZoom(), 14));
       }
     }, [p?.lat, p?.lng]);
     return null;
@@ -95,15 +141,8 @@ export default function LocationPicker({ value, onChange, heightClassName = 'h-6
           <span className="text-xs text-red-500">{geoError}</span>
         )}
       </div>
-      <MapContainer center={center} zoom={14} className={`w-full rounded-md ${heightClassName}`} style={{ zIndex: 1 }}>
-        <TileLayer
-          url={isDark ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png' : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'}
-          attribution='&copy; OpenStreetMap contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-        />
-        <ClickHandler onPick={handlePick} />
-        <CenterOnPosition p={position} />
-        {position && <Marker position={[position.lat, position.lng]} icon={defaultIcon} />}
-      </MapContainer>
+      <div ref={containerRef} className={`w-full rounded-md ${heightClassName}`} style={{ zIndex: 1 }} />
+      <CenterOnPosition p={position} />
     </div>
   );
 }

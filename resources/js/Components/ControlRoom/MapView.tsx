@@ -33,7 +33,7 @@ const icon = new Icon({
 
 export default function MapView({
   tags,
-  defaultCenter = [-26.2041, 28.0473],
+  defaultCenter = [-13.9626, 33.7741],
   defaultZoom = 12
 }: MapViewProps) {
   // Some react-leaflet typings are strict about allowed JSX props; cast to any for JSX spread
