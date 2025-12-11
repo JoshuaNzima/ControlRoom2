@@ -24,7 +24,10 @@ export default function ResetPassword({
         e.preventDefault();
 
         post(route('password.store'), {
-            onFinish: () => reset('password', 'password_confirmation'),
+            onFinish: () => {
+                setData('password', '');
+                setData('password_confirmation', '');
+            },
         });
     };
 

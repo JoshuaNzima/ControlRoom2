@@ -8,9 +8,10 @@ type Props = {
   requisitionId: number | null;
   open: boolean;
   onClose: () => void;
+  initialEdit?: boolean;
 };
 
-export default function RequisitionViewModal({ requisitionId, open, onClose }: Props) {
+export default function RequisitionViewModal({ requisitionId, open, onClose, initialEdit }: Props) {
   const page = usePage() as any;
   const auth = page?.props?.auth;
   const roles: string[] = Array.isArray(auth?.user?.roles) ? auth.user.roles : [];
@@ -21,10 +22,13 @@ export default function RequisitionViewModal({ requisitionId, open, onClose }: P
   const [loading, setLoading] = React.useState(false);
   const [req, setReq] = React.useState<any | null>(null);
   const [showResubmit, setShowResubmit] = React.useState(false);
+  const [showEdit, setShowEdit] = React.useState(false);
 
   const adminForm = useForm<any>({ notes_admin: '' });
   const disburseForm = useForm<any>({ notes_disbursement: '' });
   const resubmitForm = useForm<any>({ title: '', description: '', needed_by: '', amount: '' });
+  const editForm = useForm<any>({ title: '', description: '', needed_by: '', amount: '', category: 'general' });
+  const attachForm = useForm<any>({ attachments: [] as any });
 
   React.useEffect(() => {
     if (!open || !requisitionId) return;
@@ -43,15 +47,31 @@ export default function RequisitionViewModal({ requisitionId, open, onClose }: P
           needed_by: data?.needed_by ? String(data.needed_by).slice(0, 10) : '',
           amount: data?.amount != null ? String(data.amount) : '',
         });
+        (editForm as any).setData({
+          title: data?.title ?? '',
+          description: data?.description ?? '',
+          needed_by: data?.needed_by ? String(data.needed_by).slice(0, 10) : '',
+          amount: data?.amount != null ? String(data.amount) : '',
+          category: data?.category ?? 'general',
+        });
+        if (initialEdit && userId && data?.requested_by === userId && data?.status === 'pending_admin') {
+          setShowEdit(true);
+        }
       })
       .finally(() => active && setLoading(false));
     return () => {
       active = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, requisitionId]);
+  }, [open, requisitionId, initialEdit]);
 
-  const isOwner = !!req && userId === req.requested_by;
+  const requestedByCandidate = (req: any) => {
+    const snake = (req?.requested_by && typeof req?.requested_by === 'object') ? req?.requested_by?.id : req?.requested_by;
+    const camel = req?.requestedBy?.id;
+    return snake ?? camel ?? '';
+  };
+  const isOwner = !!req && String(userId) === String(requestedByCandidate(req));
+  const statusIs = (s: string) => String(s || '').toLowerCase();
 
   const relName = (obj: any, camel: string, snake: string): string => {
     return obj?.[camel]?.name || obj?.[snake]?.name || '';
@@ -65,9 +85,12 @@ export default function RequisitionViewModal({ requisitionId, open, onClose }: P
 
   const close = () => {
     setShowResubmit(false);
+    setShowEdit(false);
     (adminForm as any).reset();
     (disburseForm as any).reset();
     (resubmitForm as any).reset();
+    (editForm as any).reset();
+    (attachForm as any).reset();
     onClose();
   };
 
@@ -142,11 +165,53 @@ export default function RequisitionViewModal({ requisitionId, open, onClose }: P
                           >
                             Download
                           </a>
+                          {isOwner && statusIs(req.status) === 'pending_admin' && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                router.delete(route('requisitions.attachments.destroy', [req.id, a.id]), {
+                                  preserveScroll: true,
+                                  onSuccess: () => router.reload(),
+                                });
+                              }}
+                              className="inline-flex items-center rounded-md border border-gray-300 dark:border-gray-700 px-2 py-1 text-[11px] font-medium text-gray-700 hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-gray-800"
+                            >
+                              Delete
+                            </button>
+                          )}
                         </li>
                       ))}
                     </ul>
                   ) : (
                     <div className="text-xs text-gray-500 dark:text-gray-400">No attachments</div>
+                  )}
+                  {isOwner && statusIs(req.status) === 'pending_admin' && (
+                    <form
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        (attachForm as any).post(route('requisitions.attachments.store', req.id), {
+                          preserveScroll: true,
+                          forceFormData: true,
+                          onSuccess: () => { (attachForm as any).reset(); router.reload(); },
+                        });
+                      }}
+                      className="mt-2 flex flex-col sm:flex-row items-start sm:items-center gap-2"
+                    >
+                      <input
+                        type="file"
+                        multiple
+                        accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx"
+                        onChange={(e) => (attachForm as any).setData('attachments', Array.from(e.target.files || []))}
+                        className="block w-full text-xs text-gray-700 dark:text-gray-300 file:mr-2 file:py-1.5 file:px-2 file:rounded-md file:border file:border-gray-300 dark:file:border-gray-700 file:text-xs file:font-medium file:bg-white dark:file:bg-gray-900 file:text-gray-700 dark:file:text-gray-200"
+                      />
+                      <button
+                        type="submit"
+                        disabled={(attachForm as any).processing}
+                        className="inline-flex items-center rounded-md bg-red-600 px-3 py-2 text-xs font-medium text-white hover:bg-red-700 disabled:opacity-60"
+                      >
+                        {(attachForm as any).processing ? 'Uploading…' : 'Upload'}
+                      </button>
+                    </form>
                   )}
                 </div>
                 <div>
@@ -197,7 +262,7 @@ export default function RequisitionViewModal({ requisitionId, open, onClose }: P
             <section className="bg-gray-50 dark:bg-gray-900/60 border border-gray-200 dark:border-gray-800 rounded-lg p-3 sm:p-4">
               <h3 className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-3">Actions</h3>
               <div className="space-y-4">
-                {isOwner && req.status === 'needs_revision' && (
+                {isOwner && statusIs(req.status) === 'needs_revision' && (
                   <div className="space-y-2">
                     <button
                       type="button"
@@ -288,7 +353,133 @@ export default function RequisitionViewModal({ requisitionId, open, onClose }: P
                   </div>
                 )}
 
-                {isAdmin && req.status === 'pending_admin' && (
+                {isOwner && statusIs(req.status) === 'pending_admin' && (
+                  <div className="space-y-2">
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setShowEdit((v) => !v)}
+                        className="inline-flex items-center rounded-md bg-red-600 px-3 py-2 text-xs font-medium text-white hover:bg-red-700"
+                      >
+                        {showEdit ? 'Cancel edit' : 'Edit'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (!req) return;
+                          if (window.confirm('Delete this requisition? This cannot be undone.')) {
+                            router.delete(route('requisitions.destroy', req.id), {
+                              preserveScroll: true,
+                              onSuccess: () => { close(); router.reload(); },
+                            });
+                          }
+                        }}
+                        className="inline-flex items-center rounded-md border border-gray-300 dark:border-gray-700 px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-gray-800"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                    {showEdit && (
+                      <form
+                        onSubmit={(e) => {
+                          e.preventDefault();
+                          (editForm as any).put(route('requisitions.update', req.id), {
+                            preserveScroll: true,
+                            onSuccess: () => { setShowEdit(false); close(); router.reload(); },
+                          });
+                        }}
+                        className="mt-2 space-y-2"
+                      >
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Category</label>
+                          <select
+                            value={editForm.data.category}
+                            onChange={(e) => (editForm as any).setData('category', e.target.value)}
+                            className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-red-500"
+                          >
+                            <option value="general">General</option>
+                            <option value="fuel">Fuel</option>
+                            <option value="airtime">Airtime</option>
+                            <option value="vehicle_hire">Vehicle hire</option>
+                            <option value="events">Events</option>
+                            <option value="k9">K9</option>
+                            <option value="utilities">Utilities</option>
+                            <option value="office_supplies">Office supplies</option>
+                            <option value="allowance">Allowance</option>
+
+                          </select>
+                          {(editForm.errors as any)?.category && (
+                            <p className="mt-1 text-xs text-red-500">{(editForm.errors as any).category}</p>
+                          )}
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Title</label>
+                          <input
+                            type="text"
+                            value={editForm.data.title}
+                            onChange={(e) => (editForm as any).setData('title', e.target.value)}
+                            className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-red-500"
+                            required
+                          />
+                          {(editForm.errors as any)?.title && (
+                            <p className="mt-1 text-xs text-red-500">{(editForm.errors as any).title}</p>
+                          )}
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Description</label>
+                          <textarea
+                            value={editForm.data.description}
+                            onChange={(e) => (editForm as any).setData('description', e.target.value)}
+                            rows={3}
+                            className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-red-500"
+                          />
+                          {(editForm.errors as any)?.description && (
+                            <p className="mt-1 text-xs text-red-500">{(editForm.errors as any).description}</p>
+                          )}
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Needed by</label>
+                          <input
+                            type="date"
+                            value={editForm.data.needed_by}
+                            onChange={(e) => (editForm as any).setData('needed_by', e.target.value)}
+                            className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-red-500"
+                          />
+                          {(editForm.errors as any)?.needed_by && (
+                            <p className="mt-1 text-xs text-red-500">{(editForm.errors as any).needed_by}</p>
+                          )}
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Amount</label>
+                          <input
+                            type="number"
+                            inputMode="decimal"
+                            step="0.01"
+                            min="0"
+                            placeholder="0.00"
+                            value={editForm.data.amount}
+                            onChange={(e) => (editForm as any).setData('amount', e.target.value)}
+                            className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-red-500"
+                            required
+                          />
+                          {(editForm.errors as any)?.amount && (
+                            <p className="mt-1 text-xs text-red-500">{(editForm.errors as any).amount}</p>
+                          )}
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          <button type="submit" disabled={editForm.processing} className="inline-flex items-center rounded-md bg-red-600 px-3 py-2 text-xs font-medium text-white hover:bg-red-700 disabled:opacity-60">
+                            {editForm.processing ? 'Saving…' : 'Save changes'}
+                          </button>
+                          <button type="button" onClick={() => setShowEdit(false)} className="inline-flex items-center rounded-md border border-gray-300 dark:border-gray-700 px-3 py-2 text-xs font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800">
+                            Cancel
+                          </button>
+                        </div>
+                      </form>
+                    )}
+                  </div>
+                )}
+
+                {isAdmin && statusIs(req.status) === 'pending_admin' && (
                   <form
                     onSubmit={(e) => {
                       e.preventDefault();
@@ -339,7 +530,7 @@ export default function RequisitionViewModal({ requisitionId, open, onClose }: P
                   </form>
                 )}
 
-                {isAssetManager && req.status === 'pending_disbursement' && (
+                {isAssetManager && statusIs(req.status) === 'pending_disbursement' && (
                   <form
                     onSubmit={(e) => {
                       e.preventDefault();

@@ -16,6 +16,8 @@ Route::middleware(['auth'])
         Route::get('/summary', [RequisitionController::class, 'summary'])->name('summary');
         Route::get('/{requisition}', [RequisitionController::class, 'show'])->name('show');
         Route::post('/{requisition}/resubmit', [RequisitionController::class, 'resubmit'])->name('resubmit');
+        Route::put('/{requisition}', [RequisitionController::class, 'update'])->name('update');
+        Route::delete('/{requisition}', [RequisitionController::class, 'destroy'])->name('destroy');
 
         Route::post('/{requisition}/approve', [RequisitionApprovalController::class, 'approve'])
             ->name('approve');
@@ -28,6 +30,10 @@ Route::middleware(['auth'])
         // Attachments
         Route::get('/{requisition}/attachments/{attachment}', [RequisitionAttachmentController::class, 'download'])
             ->name('attachments.download');
+        Route::post('/{requisition}/attachments', [RequisitionAttachmentController::class, 'store'])
+            ->name('attachments.store');
+        Route::delete('/{requisition}/attachments/{attachment}', [RequisitionAttachmentController::class, 'destroy'])
+            ->name('attachments.destroy');
 
         // Daily batch compile and acknowledgement
         Route::get('/batches/today', [RequisitionBatchController::class, 'today'])

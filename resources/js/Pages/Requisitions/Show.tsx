@@ -1,5 +1,5 @@
 import React from 'react';
-import { Head, Link, useForm, usePage } from '@inertiajs/react';
+import { Head, Link, useForm, usePage, router } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import type { PageProps } from '@/types';
 import { formatCurrencyMWK } from '@/Components/format';
@@ -20,9 +20,11 @@ export default function RequisitionShow({ requisition }: RequisitionShowProps) {
   const roles = (auth.user.roles ?? []) as string[];
   const isAdmin = roles.includes('admin') || roles.includes('super_admin');
   const isAssetManager = roles.includes('asset_manager') || roles.includes('assets_manager');
-  const isOwner = auth?.user?.id === requisition.requested_by;
+  const isOwner = String(auth?.user?.id ?? '') === String((requisition as any)?.requested_by ?? '');
+  const statusIs = (s: string) => String(s || '').toLowerCase();
 
   const [showResubmitForm, setShowResubmitForm] = React.useState(false);
+  const [showEditForm, setShowEditForm] = React.useState(false);
 
   const resubmitForm = useForm<any>({
     title: requisition.title ?? '',
@@ -37,6 +39,14 @@ export default function RequisitionShow({ requisition }: RequisitionShowProps) {
 
   const disburseForm = useForm<any>({
     notes_disbursement: '',
+  });
+
+  const editForm = useForm<any>({
+    title: requisition.title ?? '',
+    description: requisition.description ?? '',
+    needed_by: requisition.needed_by ? new Date(requisition.needed_by).toISOString().slice(0, 10) : '',
+    amount: requisition.amount != null ? String(requisition.amount) : '',
+    category: requisition.category ?? 'general',
   });
 
   return (
@@ -139,7 +149,7 @@ export default function RequisitionShow({ requisition }: RequisitionShowProps) {
             <section className="bg-gray-900/80 border border-gray-800/80 rounded-xl p-4 sm:p-5">
               <h2 className="text-sm font-semibold text-gray-200 mb-3">Actions</h2>
               <div className="space-y-4">
-                {isOwner && requisition.status === 'needs_revision' && (
+                {isOwner && statusIs(requisition.status) === 'needs_revision' && (
                   <div className="space-y-2">
                     <button
                       type="button"
@@ -235,7 +245,137 @@ export default function RequisitionShow({ requisition }: RequisitionShowProps) {
                   </div>
                 )}
 
-                {isAdmin && requisition.status === 'pending_admin' && (
+                {isOwner && statusIs(requisition.status) === 'pending_admin' && (
+                  <div className="space-y-2">
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setShowEditForm((v) => !v)}
+                        className="inline-flex items-center rounded-lg bg-red-600 px-3 py-2 text-xs font-medium text-white hover:bg-red-700"
+                      >
+                        {showEditForm ? 'Cancel edit' : 'Edit'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (window.confirm('Delete this requisition? This cannot be undone.')) {
+                            router.delete(route('requisitions.destroy', requisition.id), {
+                              preserveScroll: true,
+                              onSuccess: () => router.visit(route('requisitions.index')),
+                            });
+                          }
+                        }}
+                        className="inline-flex items-center rounded-lg border border-gray-700 bg-gray-900 px-3 py-2 text-xs font-medium text-gray-200 hover:bg-gray-800"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                    {showEditForm && (
+                      <form
+                        onSubmit={(e) => {
+                          e.preventDefault();
+                          editForm.put(route('requisitions.update', requisition.id), {
+                            preserveScroll: true,
+                            onSuccess: () => setShowEditForm(false),
+                          });
+                        }}
+                        className="mt-3 space-y-3 text-sm"
+                      >
+                        <div>
+                          <label className="block text-xs font-medium text-gray-300 mb-1">Category</label>
+                          <select
+                            value={editForm.data.category}
+                            onChange={(e) => (editForm as any).setData('category', e.target.value)}
+                            className="w-full rounded-md border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-gray-100 focus:border-red-500 focus:ring-1 focus:ring-red-500"
+                          >
+                            <option value="general">General</option>
+                            <option value="fuel">Fuel</option>
+                            <option value="vehicle_hire">Vehicle hire</option>
+                            <option value="events">Events</option>
+                            <option value="k9">K9</option>
+                            <option value="utilities">Utilities</option>
+                            <option value="office_supplies">Office supplies</option>
+                          </select>
+                          {(editForm.errors as any)?.category && (
+                            <p className="mt-1 text-xs text-red-400">{(editForm.errors as any).category}</p>
+                          )}
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-300 mb-1">Title</label>
+                          <input
+                            type="text"
+                            value={editForm.data.title}
+                            onChange={(e) => (editForm as any).setData('title', e.target.value)}
+                            className="w-full rounded-md border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-gray-100 focus:border-red-500 focus:ring-1 focus:ring-red-500"
+                            required
+                          />
+                          {(editForm.errors as any)?.title && (
+                            <p className="mt-1 text-xs text-red-400">{(editForm.errors as any).title}</p>
+                          )}
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-300 mb-1">Description</label>
+                          <textarea
+                            value={editForm.data.description}
+                            onChange={(e) => (editForm as any).setData('description', e.target.value)}
+                            rows={3}
+                            className="w-full rounded-md border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-gray-100 focus:border-red-500 focus:ring-1 focus:ring-red-500"
+                          />
+                          {(editForm.errors as any)?.description && (
+                            <p className="mt-1 text-xs text-red-400">{(editForm.errors as any).description}</p>
+                          )}
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-300 mb-1">Needed by</label>
+                          <input
+                            type="date"
+                            value={editForm.data.needed_by}
+                            onChange={(e) => (editForm as any).setData('needed_by', e.target.value)}
+                            className="w-full rounded-md border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-gray-100 focus:border-red-500 focus:ring-1 focus:ring-red-500"
+                          />
+                          {(editForm.errors as any)?.needed_by && (
+                            <p className="mt-1 text-xs text-red-400">{(editForm.errors as any).needed_by}</p>
+                          )}
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-300 mb-1">Amount</label>
+                          <input
+                            type="number"
+                            inputMode="decimal"
+                            step="0.01"
+                            min="0"
+                            placeholder="0.00"
+                            value={editForm.data.amount}
+                            onChange={(e) => (editForm as any).setData('amount', e.target.value)}
+                            className="w-full rounded-md border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-gray-100 focus:border-red-500 focus:ring-1 focus:ring-red-500"
+                            required
+                          />
+                          {(editForm.errors as any)?.amount && (
+                            <p className="mt-1 text-xs text-red-400">{(editForm.errors as any).amount}</p>
+                          )}
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            type="submit"
+                            disabled={editForm.processing}
+                            className="inline-flex items-center rounded-lg bg-red-600 px-3 py-2 text-xs font-medium text-white hover:bg-red-700 disabled:opacity-60"
+                          >
+                            {editForm.processing ? 'Saving…' : 'Save changes'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setShowEditForm(false)}
+                            className="inline-flex items-center rounded-lg border border-gray-700 bg-gray-900 px-3 py-2 text-xs font-medium text-gray-200 hover:bg-gray-800"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </form>
+                    )}
+                  </div>
+                )}
+
+                {isAdmin && statusIs(requisition.status) === 'pending_admin' && (
                   <form
                     onSubmit={(e) => {
                       e.preventDefault();
@@ -284,7 +424,7 @@ export default function RequisitionShow({ requisition }: RequisitionShowProps) {
                   </form>
                 )}
 
-                {isAssetManager && requisition.status === 'pending_disbursement' && (
+                {isAssetManager && statusIs(requisition.status) === 'pending_disbursement' && (
                   <form
                     onSubmit={(e) => {
                       e.preventDefault();

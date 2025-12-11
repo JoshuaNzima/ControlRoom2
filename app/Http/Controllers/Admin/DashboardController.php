@@ -317,7 +317,7 @@ class DashboardController extends Controller
 
         // Recent Check-ins
         $recentCheckIns = Attendance::whereDate('created_at', today())
-            ->with('guard')
+            ->with('guardRelation')
             ->latest()
             ->take(5)
             ->get();
@@ -326,7 +326,7 @@ class DashboardController extends Controller
             $activities[] = [
                 'id' => 'check-in-' . $attendance->id,
                 'type' => 'check_in',
-                'message' => "{$attendance->guard->name} checked in",
+                'message' => "{$attendance->guardRelation->name} checked in",
                 'time' => $attendance->created_at->diffForHumans(),
                 'icon' => 'LogIn',
                 'color' => 'green',

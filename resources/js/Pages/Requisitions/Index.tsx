@@ -66,8 +66,10 @@ export default function RequisitionsIndex({ requisitions, auth, mode: initialMod
   const roles = (auth.user.roles ?? []) as string[];
   const isAdmin = roles.includes('admin') || roles.includes('super_admin');
   const isAssetManager = roles.includes('asset_manager') || roles.includes('assets_manager');
+  const userId = (auth.user.id as number);
   const [open, setOpen] = React.useState(false);
   const [selectedId, setSelectedId] = React.useState<number | null>(null);
+  const [openEdit, setOpenEdit] = React.useState(false);
   const { push } = useNotification();
   const mode: 'disburse' | 'mine' = (initialMode === 'mine' ? 'mine' : 'disburse');
   const [showBatch, setShowBatch] = React.useState(false);
@@ -82,6 +84,7 @@ export default function RequisitionsIndex({ requisitions, auth, mode: initialMod
     const idVal = req?.requested_by;
     return (typeof idVal === 'number' || typeof idVal === 'string') ? `User #${String(idVal)}` : 'User';
   };
+  const isMine = (req: any) => String(userId) === String(req?.requested_by ?? '');
 
   return (
     <RequisitionsLayout title="Requisitions">
@@ -260,6 +263,38 @@ export default function RequisitionsIndex({ requisitions, auth, mode: initialMod
                       </button>
                     </div>
                   )}
+
+                  {(isMine(req) && req.status === 'pending_admin') && (
+                    <div className="px-3 sm:px-4 pb-3 flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setSelectedId(req.id);
+                          setOpenEdit(true);
+                          setOpen(true);
+                        }}
+                        className="inline-flex items-center rounded-md bg-red-600 px-3 py-2 text-xs font-medium text-white hover:bg-red-700"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          if (window.confirm('Delete this requisition? This cannot be undone.')) {
+                            router.delete(route('requisitions.destroy', req.id), {
+                              preserveScroll: true,
+                              onSuccess: () => router.reload(),
+                            });
+                          }
+                        }}
+                        className="inline-flex items-center rounded-md border border-gray-400/40 bg-gray-200/50 dark:bg-gray-800/50 px-3 py-2 text-xs font-medium text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-700"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -290,7 +325,7 @@ export default function RequisitionsIndex({ requisitions, auth, mode: initialMod
           </div>
         </div>
       </div>
-      <RequisitionViewModal open={open} requisitionId={selectedId} onClose={() => setOpen(false)} />
+      <RequisitionViewModal open={open} requisitionId={selectedId} initialEdit={openEdit} onClose={() => { setOpen(false); setOpenEdit(false); }} />
       <TodayBatchModal open={showBatch} onClose={() => setShowBatch(false)} isAdmin={isAdmin} isAssetManager={isAssetManager} />
       <BatchesHistoryModal open={showHistory} onClose={() => setShowHistory(false)} />
     </RequisitionsLayout>

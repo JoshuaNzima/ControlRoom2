@@ -4,7 +4,7 @@ import PublicLayout from '@/Layouts/PublicLayout';
 import IconMapper from '@/Components/IconMapper';
 import InteractiveHotspotImage from '@/Components/Public/InteractiveHotspotImage';
 import Modal from '@/Components/Modal';
-import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
+import { motion, AnimatePresence, useScroll, useTransform, useMotionValue, useSpring } from 'framer-motion';
 
 export default function Home() {
   const [currentStat, setCurrentStat] = useState(0);
@@ -15,6 +15,37 @@ export default function Home() {
   const { scrollYProgress } = useScroll();
   const yGlow = useTransform(scrollYProgress, [0, 1], [0, 120]);
   const yGlow2 = useTransform(scrollYProgress, [0, 1], [0, -80]);
+  const [isCoarse, setIsCoarse] = useState(false);
+  const pointerX = useMotionValue(0);
+  const pointerY = useMotionValue(0);
+  const px = useSpring(pointerX, { stiffness: 60, damping: 12, mass: 0.2 });
+  const py = useSpring(pointerY, { stiffness: 60, damping: 12, mass: 0.2 });
+  const glow1X = useTransform(px, (v) => v * 16);
+  const glow1Y = useTransform([yGlow, py], (vals) => {
+    const [sy, v] = vals as number[];
+    return sy + v * 12;
+  });
+  const glow2X = useTransform(px, (v) => v * -12);
+  const glow2Y = useTransform([yGlow2, py], (vals) => {
+    const [sy, v] = vals as number[];
+    return sy + v * -10;
+  });
+  const gridX = useTransform(px, (v) => v * 8);
+  const gridY = useTransform(py, (v) => v * 6);
+  const tiltX = useTransform(py, (v) => v * -3);
+  const tiltY = useTransform(px, (v) => v * 3);
+  const heroRef = useRef<HTMLDivElement>(null);
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const nx = (e.clientX - rect.left) / rect.width;
+    const ny = (e.clientY - rect.top) / rect.height;
+    pointerX.set(Math.max(-1, Math.min(1, (nx - 0.5) * 2)));
+    pointerY.set(Math.max(-1, Math.min(1, (ny - 0.5) * 2)));
+  };
+  const handleMouseLeave = () => {
+    pointerX.set(0);
+    pointerY.set(0);
+  };
   const { data, setData, post, processing, reset, errors, progress, transform } = useForm({
     type: 'ticket' as 'ticket' | 'down' | 'incident',
     name: '',
@@ -145,17 +176,41 @@ export default function Home() {
     }
   }, [selected]);
 
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const coarse = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+      setIsCoarse(!!coarse);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!isCoarse) return;
+    if (typeof window === 'undefined' || !(window as any).DeviceOrientationEvent) return;
+    const handler = (e: DeviceOrientationEvent) => {
+      const gamma = typeof e.gamma === 'number' ? e.gamma : 0;
+      const beta = typeof e.beta === 'number' ? e.beta : 0;
+      const nx = Math.max(-1, Math.min(1, gamma / 30));
+      const ny = Math.max(-1, Math.min(1, beta / 30));
+      pointerX.set(nx);
+      pointerY.set(ny);
+    };
+    window.addEventListener('deviceorientation', handler, true);
+    return () => window.removeEventListener('deviceorientation', handler, true);
+  }, [isCoarse]);
+
   return (
     <PublicLayout title="Coin Security — Advanced Security Solutions">
       <Head title="Home" />
 
       {/* Hero Section */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-slate-900 via-red-900 to-slate-900 text-white">
-        <div className="absolute inset-0 bg-black/20"></div>
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-          <motion.div aria-hidden className="pointer-events-none absolute -top-24 -left-24 w-[40vw] h-[40vw] rounded-full bg-red-500/15 blur-3xl" style={{ y: yGlow }} />
-          <motion.div aria-hidden className="pointer-events-none absolute -bottom-24 -right-24 w-[32vw] h-[32vw] rounded-full bg-purple-500/20 blur-3xl" style={{ y: yGlow2 }} />
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+      <section className="relative overflow-hidden bg-gradient-to-br from-slate-950 via-red-950 to-slate-900 text-white">
+        <div className="absolute inset-0 bg-black/30"></div>
+        <div ref={heroRef} onMouseMove={handleMouseMove} onMouseLeave={handleMouseLeave} className="relative min-h-[100svh] flex items-center pt-24 pb-16">
+          <motion.div aria-hidden className="pointer-events-none absolute inset-0 opacity-40 [background-image:radial-gradient(rgba(255,255,255,0.07)_1px,transparent_1px)] [background-size:14px_14px]" style={{ x: gridX, y: gridY }} />
+          <motion.div aria-hidden className="pointer-events-none absolute -top-24 -left-24 w-[40vw] h-[40vw] rounded-full bg-red-500/15 blur-3xl" style={{ x: glow1X, y: glow1Y }} />
+          <motion.div aria-hidden className="pointer-events-none absolute -bottom-24 -right-24 w-[32vw] h-[32vw] rounded-full bg-purple-500/20 blur-3xl" style={{ x: glow2X, y: glow2Y }} />
+          <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <div className="space-y-8">
               <div className="space-y-4">
                 <h1 className="text-5xl lg:text-6xl font-bold leading-tight">
@@ -204,12 +259,13 @@ export default function Home() {
               </div>
             </div>
 
-            <div className="relative">
+            <motion.div className="relative" style={{ rotateX: tiltX, rotateY: tiltY, transformPerspective: 900 }}>
               <div className="absolute inset-0 bg-gradient-to-r from-red-500/20 to-red-300/10 rounded-3xl blur-3xl"></div>
               <div className="relative">
                 <InteractiveHotspotImage imageUrl="/images/compound.png" showModal={false} onSelect={setSelected} />
               </div>
-            </div>
+            </motion.div>
+          </div>
           </div>
         </div>
       </section>

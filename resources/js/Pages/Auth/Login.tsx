@@ -4,8 +4,8 @@ import InputLabel from '@/Components/InputLabel';
 import PrimaryButton from '@/Components/PrimaryButton';
 import TextInput from '@/Components/TextInput';
 import AuthLayout from '@/Layouts/AuthLayout';
-import { Head, Link, useForm } from '@inertiajs/react';
-import { FormEventHandler } from 'react';
+import { Head, Link, usePage, router } from '@inertiajs/react';
+import { FormEventHandler, useState } from 'react';
 
 export default function Login({
     status,
@@ -14,18 +14,31 @@ export default function Login({
     status?: string;
     canResetPassword: boolean;
 }) {
-    const { data, setData, post, processing, errors, reset } = useForm({
-        email: '',
-        password: '',
-        remember: false as boolean,
-    });
+    const csrf = (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement | null)?.content ?? '';
+    const { errors } = usePage().props as any;
+
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [remember, setRemember] = useState(false);
+    const [processing, setProcessing] = useState(false);
 
     const submit: FormEventHandler = (e) => {
         e.preventDefault();
 
-        post(route('login'), {
-            onFinish: () => reset('password'),
-        });
+        setProcessing(true);
+
+        (router as any).post(
+            route('login'),
+            {
+                email,
+                password,
+                remember,
+                _token: csrf,
+            },
+            {
+                onFinish: () => setProcessing(false),
+            },
+        );
     };
 
     return (
@@ -59,11 +72,11 @@ export default function Login({
                                             id="email-mobile"
                                             type="email"
                                             name="email"
-                                            value={data.email}
+                                            value={email}
                                             className="mt-1 block w-full px-3 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-coin-300"
                                             autoComplete="username"
                                             isFocused={true}
-                                            onChange={(e) => setData('email', e.target.value)}
+                                            onChange={(e) => setEmail(e.target.value)}
                                         />
                                         <InputError message={errors.email} className="mt-2" />
                                     </div>
@@ -74,10 +87,10 @@ export default function Login({
                                             id="password-mobile"
                                             type="password"
                                             name="password"
-                                            value={data.password}
+                                            value={password}
                                             className="mt-1 block w-full px-3 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-coin-300"
                                             autoComplete="current-password"
-                                            onChange={(e) => setData('password', e.target.value)}
+                                            onChange={(e) => setPassword(e.target.value)}
                                         />
                                         <InputError message={errors.password} className="mt-2" />
                                     </div>
@@ -86,8 +99,8 @@ export default function Login({
                                         <label className="flex items-center">
                                             <Checkbox
                                                 name="remember"
-                                                checked={data.remember}
-                                                onChange={(e) => setData('remember', (e.target.checked || false) as false)}
+                                                checked={remember}
+                                                onChange={(e) => setRemember(!!e.target.checked)}
                                             />
                                             <span className="ms-2 text-sm text-gray-600">Remember me</span>
                                         </label>
@@ -131,11 +144,11 @@ export default function Login({
                                             id="email-desktop"
                                             type="email"
                                             name="email"
-                                            value={data.email}
+                                            value={email}
                                             className="w-full mt-1 px-3 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-coin-300"
                                             autoComplete="username"
                                             isFocused={true}
-                                            onChange={(e) => setData('email', e.target.value)}
+                                            onChange={(e) => setEmail(e.target.value)}
                                         />
                                         <InputError message={errors.email} className="mt-2" />
                                     </div>
@@ -146,10 +159,10 @@ export default function Login({
                                             id="password-desktop"
                                             type="password"
                                             name="password"
-                                            value={data.password}
+                                            value={password}
                                             className="w-full mt-1 px-3 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-coin-300"
                                             autoComplete="current-password"
-                                            onChange={(e) => setData('password', e.target.value)}
+                                            onChange={(e) => setPassword(e.target.value)}
                                         />
                                         <InputError message={errors.password} className="mt-2" />
                                     </div>

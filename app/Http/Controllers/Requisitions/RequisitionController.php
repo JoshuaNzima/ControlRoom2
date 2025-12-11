@@ -126,6 +126,51 @@ class RequisitionController extends Controller
         return back();
     }
 
+    public function update(Request $request, Requisition $requisition): RedirectResponse
+    {
+        $this->authorizeOwner($request, $requisition);
+
+        if ($requisition->status !== 'pending_admin') {
+            return back();
+        }
+
+        $data = $request->validate([
+            'title' => ['required', 'string', 'max:255'],
+            'category' => ['nullable', 'string', 'in:general,fuel,vehicle_hire,events,k9,utilities,office_supplies'],
+            'description' => ['nullable', 'string'],
+            'needed_by' => ['nullable', 'date'],
+            'amount' => ['required', 'numeric', 'min:0'],
+        ]);
+
+        $data['category'] = $data['category'] ?? $requisition->category ?? 'general';
+
+        $requisition->fill($data);
+        $requisition->save();
+
+        return back();
+    }
+
+    public function destroy(Request $request, Requisition $requisition): RedirectResponse
+    {
+        $this->authorizeOwner($request, $requisition);
+
+        if ($requisition->status !== 'pending_admin') {
+            return back();
+        }
+
+        $requisition->load('attachments');
+        foreach ($requisition->attachments as $attachment) {
+            if ($attachment->disk && $attachment->path) {
+                Storage::disk($attachment->disk)->delete($attachment->path);
+            }
+        }
+        $requisition->attachments()->delete();
+
+        $requisition->delete();
+
+        return redirect()->route('requisitions.index');
+    }
+
     public function summary(Request $request): JsonResponse
     {
         $user = $request->user();
