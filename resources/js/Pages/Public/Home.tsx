@@ -2,17 +2,90 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Head, useForm, usePage } from '@inertiajs/react';
 import PublicLayout from '@/Layouts/PublicLayout';
 import IconMapper from '@/Components/IconMapper';
-import InteractiveHotspotImage from '@/Components/Public/InteractiveHotspotImage';
 import Modal from '@/Components/Modal';
-import { motion, AnimatePresence, useScroll, useTransform, useMotionValue, useSpring } from 'framer-motion';
+import { motion, AnimatePresence, useScroll, useTransform, useMotionValue, useSpring, useReducedMotion } from 'framer-motion';
+
+function Starfield({ density = 140, speed = 0.02 }: { density?: number; speed?: number }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const rafRef = useRef<number | null>(null);
+  const starsRef = useRef<Array<{ x: number; y: number; z: number }>>([]);
+  const sizeRef = useRef({ w: 0, h: 0, dpr: 1 });
+
+  useEffect(() => {
+    const c = canvasRef.current;
+    if (!c) return;
+    const ctx = c.getContext('2d');
+    if (!ctx) return;
+
+    const onResize = () => {
+      const dpr = Math.min(2, window.devicePixelRatio || 1);
+      const w = c.clientWidth;
+      const h = c.clientHeight;
+      c.width = Math.max(1, Math.floor(w * dpr));
+      c.height = Math.max(1, Math.floor(h * dpr));
+      sizeRef.current = { w, h, dpr };
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      if (!starsRef.current.length) {
+        const arr: Array<{ x: number; y: number; z: number }> = [];
+        for (let i = 0; i < density; i++) {
+          arr.push({ x: (Math.random() - 0.5) * 2, y: (Math.random() - 0.5) * 2, z: Math.random() });
+        }
+        starsRef.current = arr;
+      }
+    };
+    onResize();
+    window.addEventListener('resize', onResize);
+
+    const animate = () => {
+      const { w, h } = sizeRef.current;
+      ctx.clearRect(0, 0, w, h);
+      const f = Math.min(w, h) * 0.6;
+      for (let i = 0; i < starsRef.current.length; i++) {
+        const s = starsRef.current[i];
+        s.z -= speed;
+        if (s.z <= 0.02) {
+          s.x = (Math.random() - 0.5) * 2;
+          s.y = (Math.random() - 0.5) * 2;
+          s.z = 1;
+        }
+        const px = (s.x / s.z) * f + w / 2;
+        const py = (s.y / s.z) * f + h / 2;
+        if (px < 0 || px > w || py < 0 || py > h) continue;
+        const t = 1 - s.z;
+        const r = Math.max(0.4, t) * 0.9;
+        ctx.globalAlpha = Math.min(0.55, 0.15 + t * 0.6);
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(px, py, r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+      rafRef.current = requestAnimationFrame(animate);
+    };
+    rafRef.current = requestAnimationFrame(animate);
+
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      window.removeEventListener('resize', onResize);
+    };
+  }, [density, speed]);
+
+  return <canvas ref={canvasRef} className="pointer-events-none absolute inset-0 w-full h-full opacity-[0.12] mix-blend-screen" />;
+}
 
 export default function Home() {
   const [currentStat, setCurrentStat] = useState(0);
   const [activeIntake, setActiveIntake] = useState<'ticket' | 'down' | 'incident'>('ticket');
-  const [selected, setSelected] = useState<any | null>(null);
   const { flash, metrics, team = [] }: any = usePage().props;
-  const spotlightRef = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll();
+  const prefersReduced = useReducedMotion();
+  const safeRoute = (name: string, params?: any, fallback: string = '#') => {
+    try {
+      return route(name, params);
+    } catch {
+      return fallback;
+    }
+  };
   const yGlow = useTransform(scrollYProgress, [0, 1], [0, 120]);
   const yGlow2 = useTransform(scrollYProgress, [0, 1], [0, -80]);
   const [isCoarse, setIsCoarse] = useState(false);
@@ -32,10 +105,27 @@ export default function Home() {
   });
   const gridX = useTransform(px, (v) => v * 8);
   const gridY = useTransform(py, (v) => v * 6);
-  const tiltX = useTransform(py, (v) => v * -3);
-  const tiltY = useTransform(px, (v) => v * 3);
+  const bgX = useTransform(px, (v) => v * 18);
+  const bgY = useTransform(py, (v) => v * 14);
+  const bgScale = useTransform(scrollYProgress, [0, 1], prefersReduced ? [1.06, 1.06] : [1.06, 1.12]);
+  const heroHue = useTransform(scrollYProgress, [0, 1], [
+    'hue-rotate(0deg)',
+    prefersReduced ? 'hue-rotate(0deg)' : 'hue-rotate(20deg)'
+  ]);
+  const chip1X = useTransform(px, (v) => v * 14);
+  const chip1Y = useTransform(py, (v) => v * -10);
+  const chip2X = useTransform(px, (v) => v * -10);
+  const chip2Y = useTransform(py, (v) => v * 12);
+  const chip3X = useTransform(px, (v) => v * 8);
+  const chip3Y = useTransform(py, (v) => v * 8);
+  const chip4X = useTransform(px, (v) => v * -14);
+  const chip4Y = useTransform(py, (v) => v * -6);
+  const titleX = useTransform(px, (v) => v * 2);
+  const titleY = useTransform(py, (v) => v * 1.5);
   const heroRef = useRef<HTMLDivElement>(null);
+  const [activeChip, setActiveChip] = useState<null | 'cctv' | 'rapid' | 'guards' | 'perimeter'>(null);
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (prefersReduced) return;
     const rect = e.currentTarget.getBoundingClientRect();
     const nx = (e.clientX - rect.left) / rect.width;
     const ny = (e.clientY - rect.top) / rect.height;
@@ -46,6 +136,7 @@ export default function Home() {
     pointerX.set(0);
     pointerY.set(0);
   };
+  
   const { data, setData, post, processing, reset, errors, progress, transform } = useForm({
     type: 'ticket' as 'ticket' | 'down' | 'incident',
     name: '',
@@ -170,11 +261,7 @@ export default function Home() {
     return () => clearInterval(interval);
   }, []);
 
-  useEffect(() => {
-    if (selected && spotlightRef.current) {
-      spotlightRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-  }, [selected]);
+  
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -184,7 +271,7 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    if (!isCoarse) return;
+    if (!isCoarse || prefersReduced) return;
     if (typeof window === 'undefined' || !(window as any).DeviceOrientationEvent) return;
     const handler = (e: DeviceOrientationEvent) => {
       const gamma = typeof e.gamma === 'number' ? e.gamma : 0;
@@ -196,51 +283,179 @@ export default function Home() {
     };
     window.addEventListener('deviceorientation', handler, true);
     return () => window.removeEventListener('deviceorientation', handler, true);
-  }, [isCoarse]);
+  }, [isCoarse, prefersReduced]);
 
   return (
     <PublicLayout title="Coin Security — Advanced Security Solutions">
       <Head title="Home" />
 
       {/* Hero Section */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-slate-950 via-red-950 to-slate-900 text-white">
-        <div className="absolute inset-0 bg-black/30"></div>
-        <div ref={heroRef} onMouseMove={handleMouseMove} onMouseLeave={handleMouseLeave} className="relative min-h-[100svh] flex items-center pt-24 pb-16">
+      <section className="relative overflow-hidden text-white">
+        {/* Animated gradient layer with hue shift */}
+        <motion.div aria-hidden className="pointer-events-none absolute inset-0 bg-gradient-to-br from-slate-950 via-red-950 to-slate-900" style={{ filter: heroHue }} />
+        <div className="pointer-events-none absolute inset-0 bg-black/18"></div>
+        <div ref={heroRef} onMouseMove={handleMouseMove} onMouseLeave={handleMouseLeave} className="relative z-10 min-h-[100svh] flex items-center pt-24 pb-16">
+          <motion.img aria-hidden src="/images/compound.png" alt="" className="pointer-events-none absolute inset-0 w-full h-full object-cover opacity-[0.26] blur-[8px] scale-110" style={{ x: bgX, y: bgY, scale: bgScale }} />
           <motion.div aria-hidden className="pointer-events-none absolute inset-0 opacity-40 [background-image:radial-gradient(rgba(255,255,255,0.07)_1px,transparent_1px)] [background-size:14px_14px]" style={{ x: gridX, y: gridY }} />
+          <div aria-hidden className="pointer-events-none absolute inset-0 opacity-[0.035] [background-image:repeating-linear-gradient(45deg,rgba(255,255,255,0.18)_0px,rgba(255,255,255,0.18)_1px,transparent_1px,transparent_8px)]" />
           <motion.div aria-hidden className="pointer-events-none absolute -top-24 -left-24 w-[40vw] h-[40vw] rounded-full bg-red-500/15 blur-3xl" style={{ x: glow1X, y: glow1Y }} />
           <motion.div aria-hidden className="pointer-events-none absolute -bottom-24 -right-24 w-[32vw] h-[32vw] rounded-full bg-purple-500/20 blur-3xl" style={{ x: glow2X, y: glow2Y }} />
+          <motion.div aria-hidden className="pointer-events-none absolute -top-40 left-1/4 w-[60vw] h-[60vw] rounded-full bg-red-500/10 blur-3xl mix-blend-screen"
+            animate={prefersReduced ? { x: 0, y: 0, scale: 1 } : { x: [0, -30, 20, 0], y: [0, 20, -10, 0], scale: [1, 1.06, 1] }}
+            transition={{ duration: 22, repeat: prefersReduced ? 0 : Infinity, repeatType: 'mirror', ease: 'easeInOut' }} />
+          <motion.div aria-hidden className="pointer-events-none absolute -bottom-48 right-[-10%] w-[50vw] h-[50vw] rounded-full bg-indigo-500/10 blur-3xl mix-blend-screen"
+            animate={prefersReduced ? { x: 0, y: 0, scale: 1 } : { x: [0, 25, -15, 0], y: [0, -15, 20, 0], scale: [1, 1.04, 1] }}
+            transition={{ duration: 24, repeat: prefersReduced ? 0 : Infinity, repeatType: 'mirror', ease: 'easeInOut' }} />
+          {/* Vignette and Noise overlays */}
+          <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(0,0,0,0)_60%,rgba(0,0,0,0.55)_100%)]" />
+          <svg aria-hidden className="pointer-events-none absolute inset-0 w-full h-full opacity-[0.04] mix-blend-overlay" role="presentation">
+            <filter id="heroNoise">
+              <feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="2" stitchTiles="stitch" />
+            </filter>
+            <rect width="100%" height="100%" filter="url(#heroNoise)" />
+          </svg>
+          {/* Starfield canvas (real 3D feel) */}
+          {!prefersReduced && <Starfield />}
+          
+          {/* Floating hero chips with inline popovers */}
+          <motion.div style={{ x: chip1X, y: chip1Y }}
+            animate={prefersReduced ? { y: 0 } : { y: [0, -6, 0] }}
+            transition={{ duration: 6, repeat: prefersReduced ? 0 : Infinity, repeatType: 'mirror', ease: 'easeInOut' }}
+            className="absolute top-24 left-3 sm:left-6 z-30">
+            <motion.button type="button" aria-expanded={activeChip === 'cctv'} onClick={() => setActiveChip(activeChip === 'cctv' ? null : 'cctv')}
+              whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.97 }}
+              className="inline-flex items-center gap-2 rounded-full bg-black/40 text-white border border-white/10 px-3 py-1.5 backdrop-blur-md text-xs hover:bg-black/55">
+              <IconMapper name="Camera" className="w-3.5 h-3.5 text-blue-300" />
+              <span>24/7 Monitoring</span>
+            </motion.button>
+            <AnimatePresence>
+              {activeChip === 'cctv' && (
+                <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 6 }}
+                  className="mt-2 w-64 rounded-xl border border-white/10 bg-black/70 text-white text-sm backdrop-blur-md p-3 shadow-xl">
+                  <div className="font-semibold mb-1">CCTV Surveillance</div>
+                  <div className="text-[12px] text-gray-200/90">24/7 live monitoring, cloud recording and smart analytics for proactive security.</div>
+                  <div className="mt-2 flex justify-end">
+                    <a href={safeRoute('public.services.show', 'cctv-surveillance', '/services/cctv-surveillance')} className="text-xs text-blue-300 hover:text-blue-200 underline">Learn more</a>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </motion.div>
+          <motion.div style={{ x: chip2X, y: chip2Y }}
+            animate={prefersReduced ? { y: 0 } : { y: [0, 8, 0] }}
+            transition={{ duration: 7.5, repeat: prefersReduced ? 0 : Infinity, repeatType: 'mirror', ease: 'easeInOut' }}
+            className="absolute bottom-24 left-4 sm:left-10 z-30">
+            <motion.button type="button" aria-expanded={activeChip === 'rapid'} onClick={() => setActiveChip(activeChip === 'rapid' ? null : 'rapid')}
+              whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.97 }}
+              className="inline-flex items-center gap-2 rounded-full bg-black/40 text-white border border-white/10 px-3 py-1.5 backdrop-blur-md text-xs hover:bg-black/55">
+              <IconMapper name="Flashlight" className="w-3.5 h-3.5 text-purple-300" />
+              <span>Rapid Response</span>
+            </motion.button>
+            <AnimatePresence>
+              {activeChip === 'rapid' && (
+                <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 6 }}
+                  className="mt-2 w-64 rounded-xl border border-white/10 bg-black/70 text-white text-sm backdrop-blur-md p-3 shadow-xl">
+                  <div className="font-semibold mb-1">Rapid Response</div>
+                  <div className="text-[12px] text-gray-200/90">On‑call response fleet, fast dispatch and on‑scene reporting when it matters.</div>
+                  <div className="mt-2 flex justify-end">
+                    <a href={safeRoute('public.services.show', 'rapid-response', '/services/rapid-response')} className="text-xs text-blue-300 hover:text-blue-200 underline">Learn more</a>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </motion.div>
+          <motion.div style={{ x: chip3X, y: chip3Y }}
+            animate={prefersReduced ? { y: 0 } : { y: [0, -5, 0] }}
+            transition={{ duration: 5.5, repeat: prefersReduced ? 0 : Infinity, repeatType: 'mirror', ease: 'easeInOut' }}
+            className="absolute top-1/2 -translate-y-1/2 right-2 sm:right-6 z-30">
+            <motion.button type="button" aria-expanded={activeChip === 'guards'} onClick={() => setActiveChip(activeChip === 'guards' ? null : 'guards')}
+              whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.97 }}
+              className="inline-flex items-center gap-2 rounded-full bg-black/40 text-white border border-white/10 px-3 py-1.5 backdrop-blur-md text-xs hover:bg-black/55">
+              <IconMapper name="Shield" className="w-3.5 h-3.5 text-emerald-300" />
+              <span>On‑site Guards</span>
+            </motion.button>
+            <AnimatePresence>
+              {activeChip === 'guards' && (
+                <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 6 }}
+                  className="mt-2 w-64 rounded-xl border border-white/10 bg-black/70 text-white text-sm backdrop-blur-md p-3 shadow-xl">
+                  <div className="font-semibold mb-1">Manned Guards</div>
+                  <div className="text-[12px] text-gray-200/90">Trained, vetted personnel with site‑specific SLAs and daily supervision.</div>
+                  <div className="mt-2 flex justify-end">
+                    <a href={safeRoute('public.services.show', 'manned-guards', '/services/manned-guards')} className="text-xs text-blue-300 hover:text-blue-200 underline">Learn more</a>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </motion.div>
+          <motion.div style={{ x: chip4X, y: chip4Y }}
+            animate={prefersReduced ? { y: 0 } : { y: [0, 7, 0] }}
+            transition={{ duration: 6.5, repeat: prefersReduced ? 0 : Infinity, repeatType: 'mirror', ease: 'easeInOut' }}
+            className="absolute bottom-24 right-4 sm:right-10 z-30">
+            <motion.button type="button" aria-expanded={activeChip === 'perimeter'} onClick={() => setActiveChip(activeChip === 'perimeter' ? null : 'perimeter')}
+              whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.97 }}
+              className="inline-flex items-center gap-2 rounded-full bg-black/40 text-white border border-white/10 px-3 py-1.5 backdrop-blur-md text-xs hover:bg-black/55">
+              <IconMapper name="MapPin" className="w-3.5 h-3.5 text-amber-300" />
+              <span>Perimeter Protection</span>
+            </motion.button>
+            <AnimatePresence>
+              {activeChip === 'perimeter' && (
+                <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 6 }}
+                  className="mt-2 w-64 rounded-xl border border-white/10 bg-black/70 text-white text-sm backdrop-blur-md p-3 shadow-xl">
+                  <div className="font-semibold mb-1">Perimeter Protection</div>
+                  <div className="text-[12px] text-gray-200/90">Access control, alarms, and perimeter sensors integrated into operations.</div>
+                  <div className="mt-2 flex justify-end">
+                    <a href={safeRoute('public.services.show', 'perimeter-protection', '/services/perimeter-protection')} className="text-xs text-blue-300 hover:text-blue-200 underline">Learn more</a>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </motion.div>
           <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            <div className="grid grid-cols-1 gap-12 items-center">
             <div className="space-y-8">
-              <div className="space-y-4">
-                <h1 className="text-5xl lg:text-6xl font-bold leading-tight">
+              <motion.div className="space-y-4" style={{ x: prefersReduced ? 0 : titleX, y: prefersReduced ? 0 : titleY }}>
+                <div className="relative">
+                  {/* Blob mask behind headline */}
+                  <motion.div aria-hidden className="pointer-events-none absolute -inset-x-16 -top-10 h-48 rounded-[100%] bg-gradient-to-r from-red-500/25 to-indigo-500/20 blur-2xl"
+                    style={{ x: prefersReduced ? 0 : gridX, y: prefersReduced ? 0 : gridY }} />
+                <h1 className="relative text-5xl lg:text-6xl font-bold leading-tight">
                   Advanced Security
-                  <span className="block text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400">
+                  <motion.span
+                    className="block text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400"
+                    animate={prefersReduced ? undefined : { backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'] }}
+                    transition={{ duration: 12, repeat: prefersReduced ? 0 : Infinity, ease: 'linear' }}
+                    style={{ backgroundSize: '200% 200%' }}
+                  >
                     Solutions
-                  </span>
+                  </motion.span>
                 </h1>
+                </div>
                 <p className="text-xl text-gray-300 leading-relaxed">
                   Professional security services with cutting-edge technology. 
                   Protect your business with trained guards, live monitoring, and intelligent analytics.
                 </p>
-              </div>
+              </motion.div>
               
               <div className="flex flex-col sm:flex-row gap-4">
-                <a 
+                <motion.a 
                   href="#intake" 
-                  className="inline-flex items-center justify-center gap-3 px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
+                  className="inline-flex items-center justify-center gap-3 px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-xl shadow-lg"
+                  whileHover={{ scale: 1.05, boxShadow: '0 10px 30px rgba(59,130,246,0.25)' }}
+                  whileTap={{ scale: 0.98 }}
                 >
                   <IconMapper name="Send" className="w-[clamp(18px,3vw,22px)] h-[clamp(18px,3vw,22px)]" />
                   Report an Issue
-                </a>
-                <button 
+                </motion.a>
+                <motion.button 
                   type="button"
                   onClick={() => setShowQuote(true)}
-                  className="inline-flex items-center justify-center gap-3 px-8 py-4 bg-white/10 backdrop-blur-sm text-white font-semibold rounded-xl border border-white/20 hover:bg-white/20 transition-all duration-300"
+                  className="inline-flex items-center justify-center gap-3 px-8 py-4 bg-white/10 backdrop-blur-sm text-white font-semibold rounded-xl border border-white/20"
+                  whileHover={{ scale: 1.04, backgroundColor: 'rgba(255,255,255,0.18)' }}
+                  whileTap={{ scale: 0.98 }}
                 >
                   <IconMapper name="Phone" className="w-[clamp(18px,3vw,22px)] h-[clamp(18px,3vw,22px)]" />
                   Get Quote
-                </button>
+                </motion.button>
               </div>
 
               {/* Animated Stats */}
@@ -259,65 +474,13 @@ export default function Home() {
               </div>
             </div>
 
-            <motion.div className="relative" style={{ rotateX: tiltX, rotateY: tiltY, transformPerspective: 900 }}>
-              <div className="absolute inset-0 bg-gradient-to-r from-red-500/20 to-red-300/10 rounded-3xl blur-3xl"></div>
-              <div className="relative">
-                <InteractiveHotspotImage imageUrl="/images/compound.png" showModal={false} onSelect={setSelected} />
-              </div>
-            </motion.div>
+            {/* Full-bleed mode: remove framed image card */}
           </div>
           </div>
         </div>
       </section>
 
-      <AnimatePresence>
-        {selected && (
-          <motion.section
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 12 }}
-            transition={{ duration: 0.25 }}
-            className="py-8 bg-white dark:bg-gray-900 border-t border-gray-100 dark:border-gray-800"
-          >
-            <div ref={spotlightRef} className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-              <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 p-6 md:p-8">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <div className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Highlighted service</div>
-                    <h3 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{selected.label}</h3>
-                  </div>
-                  <button onClick={() => setSelected(null)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">✕</button>
-                </div>
-                <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <ul className="space-y-2 text-gray-700 dark:text-gray-300">
-                    {(['cctv','guards','k9','rapid','perimeter','signage'].includes(selected?.id) ? (
-                      selected.id === 'cctv' ? ['24/7 monitoring & analytics','Cloud or on‑prem recording','Remote incident review'] :
-                      selected.id === 'guards' ? ['Vetted, trained manpower','Site-specific SLAs','Daily supervision/briefing'] :
-                      selected.id === 'k9' ? ['Deterrence patrols','Rapid response pairing','Certified handlers'] :
-                      selected.id === 'rapid' ? ['Rapid response fleet','Dispatch & escalation','On‑scene reporting'] :
-                      selected.id === 'perimeter' ? ['Access control & fencing','Visitor logs & audits','Alarm integrations'] :
-                      ['Brand presence & signage','Visitor confidence','Compliance-ready assets']
-                    ) : []).map((b, i) => (
-                      <li key={i} className="flex items-start gap-2">
-                        <span className="mt-1 w-2 h-2 rounded-full bg-red-500" />
-                        <span>{b}</span>
-                      </li>
-                    ))}
-                  </ul>
-                  <div className="rounded-xl border border-gray-200 dark:border-gray-800 p-4 bg-gray-50 dark:bg-gray-900">
-                    <img src="/images/compound.png" alt="Service" className="w-full h-40 object-cover rounded-lg opacity-90" />
-                  </div>
-                </div>
-                <div className="mt-6 flex justify-end">
-                  {selected?.slug && (
-                    <a href={route('public.services.show', selected.slug) as any} className="px-5 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700">Learn more</a>
-                  )}
-                </div>
-              </div>
-            </div>
-          </motion.section>
-        )}
-      </AnimatePresence>
+      {/* Full-bleed hero has no spotlight detail section */}
 
       
 
@@ -341,13 +504,17 @@ export default function Home() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, amount: 0.3 }}
                 transition={{ duration: 0.35, delay: index * 0.06 }}
-                className="group bg-white dark:bg-gray-950 rounded-2xl p-8 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2 border border-gray-100 dark:border-gray-800"
+                whileHover={prefersReduced ? undefined : { rotateX: -2, rotateY: 2, scale: 1.02 }}
+                whileTap={{ scale: 0.99 }}
+                style={{ transformPerspective: 800 }}
+                className="group relative bg-white dark:bg-gray-950 rounded-2xl p-8 shadow-lg hover:shadow-2xl transition-all duration-300 border border-gray-100 dark:border-gray-800"
               >
                 <div className={`w-16 h-16 bg-gradient-to-r ${feature.color} rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300`}>
                   <IconMapper name={feature.icon} className="w-[clamp(24px,3vw,32px)] h-[clamp(24px,3vw,32px)] text-white" />
                 </div>
                 <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">{feature.title}</h3>
                 <p className="text-gray-600 dark:text-gray-400 leading-relaxed">{feature.description}</p>
+                <div aria-hidden className="pointer-events-none absolute -top-1/3 -left-1/4 w-[140%] h-1/2 bg-gradient-to-r from-white/10 via-white/0 to-transparent rotate-6 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
               </motion.div>
             ))}
           </div>
@@ -369,7 +536,8 @@ export default function Home() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, amount: 0.4 }}
                 transition={{ duration: 0.35, delay: idx * 0.06 }}
-                className="text-center p-6 rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950"
+                whileHover={{ scale: 1.03 }}
+                className="text-center p-6 rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 shadow-sm hover:shadow-lg"
               >
                 <div className="text-3xl font-extrabold text-red-600">{stat.number}</div>
                 <div className="mt-1 text-sm text-gray-600 dark:text-gray-400">{stat.label}</div>
@@ -378,6 +546,8 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* Removed Explore Our Operations section in favor of hero hotspots */}
 
       {/* Testimonials Section */}
       <section className="py-20 bg-white dark:bg-gray-900">
@@ -399,7 +569,10 @@ export default function Home() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, amount: 0.4 }}
                 transition={{ duration: 0.35, delay: index * 0.06 }}
-                className="bg-gray-50 dark:bg-gray-950 rounded-2xl p-8 hover:shadow-lg transition-shadow duration-300 border border-gray-100 dark:border-gray-800"
+                whileHover={prefersReduced ? undefined : { rotateX: -1.5, rotateY: 1.5, scale: 1.02 }}
+                whileTap={{ scale: 0.99 }}
+                style={{ transformPerspective: 800 }}
+                className="bg-gray-50 dark:bg-gray-950 rounded-2xl p-8 hover:shadow-2xl transition-all duration-300 border border-gray-100 dark:border-gray-800"
               >
                 <div className="flex mb-4">
                   {[...Array(testimonial.rating)].map((_, i) => (

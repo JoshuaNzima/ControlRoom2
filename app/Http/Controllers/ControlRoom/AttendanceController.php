@@ -20,12 +20,40 @@ class AttendanceController extends Controller
             'notes' => ['nullable','string','max:500'],
             'time' => ['nullable','date_format:H:i'],
             'reason_code' => ['nullable','in:supervisor_unavailable,gps_issue,network_outage,device_failure,emergency,overtime,other'],
+            'backdate' => ['nullable','boolean'],
+            'backdate_reason' => ['nullable','string','max:255'],
         ]);
 
         $user = Auth::user();
 
+        $now = now();
+        $date = Carbon::today();
+        $backdateRequested = (bool) ($validated['backdate'] ?? false);
+
+        if ($backdateRequested && config('attendance.backdate.enabled', true)) {
+            $cutoff = config('attendance.backdate.cutoff', '06:00');
+            $cutoffTime = Carbon::today()->setTimeFromTimeString($cutoff);
+
+            // Only allow backdating until the configured cutoff time
+            if ($now->greaterThan($cutoffTime)) {
+                return back()->withErrors([
+                    'backdate' => 'Backdating is only allowed until '.$cutoff.' for the previous day.',
+                ]);
+            }
+
+            // We currently support a maximum of 1 day backdate
+            $maxDays = (int) config('attendance.backdate.max_days', 1);
+            if ($maxDays < 1) {
+                return back()->withErrors([
+                    'backdate' => 'Backdating is currently disabled.',
+                ]);
+            }
+
+            $date = Carbon::yesterday();
+        }
+
         $openAttendance = Attendance::where('guard_id', $validated['guard_id'])
-            ->whereDate('date', Carbon::today())
+            ->whereDate('date', $date)
             ->whereNull('check_out_time')
             ->first();
 
@@ -34,7 +62,7 @@ class AttendanceController extends Controller
         }
 
         $hasClosedToday = Attendance::where('guard_id', $validated['guard_id'])
-            ->whereDate('date', Carbon::today())
+            ->whereDate('date', $date)
             ->whereNotNull('check_out_time')
             ->exists();
 
@@ -53,22 +81,27 @@ class AttendanceController extends Controller
 
         $timeInput = $request->input('time');
         $checkInTime = $timeInput
-            ? Carbon::parse(Carbon::today()->format('Y-m-d') . ' ' . $timeInput)
-            : now();
+            ? Carbon::parse($date->format('Y-m-d') . ' ' . $timeInput)
+            : $now;
 
         $notes = $validated['notes'] ?? null;
         if (!empty($validated['reason_code'])) {
             $notes = '[reason: '.$validated['reason_code'].']'.($notes ? ' '.$notes : '');
         }
 
+        $backdateReason = $validated['backdate_reason'] ?? null;
+
         $attendance = new Attendance([
             'guard_id' => $validated['guard_id'],
             'supervisor_id' => $user?->id,
             'client_site_id' => $validated['client_site_id'],
-            'date' => Carbon::today(),
+            'date' => $date,
             'check_in_time' => $checkInTime,
             'check_in_notes' => $notes,
             'status' => $checkInTime->hour > 8 ? 'late' : 'present',
+            'backdated' => $backdateRequested,
+            'backdated_reason' => $backdateRequested ? $backdateReason : null,
+            'source' => $backdateRequested ? 'control_room_backdate' : 'control_room_manual',
         ]);
 
         $attendance->save();
@@ -81,6 +114,8 @@ class AttendanceController extends Controller
                 'time' => $attendance->check_in_time?->toIso8601String(),
                 'status' => $attendance->status,
                 'reason_code' => $validated['reason_code'] ?? null,
+                'backdated' => $attendance->backdated,
+                'backdated_reason' => $attendance->backdated_reason,
             ]));
         } catch (\Throwable $e) {}
 

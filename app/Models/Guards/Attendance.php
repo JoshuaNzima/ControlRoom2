@@ -25,6 +25,9 @@ class Attendance extends Model
         'check_out_notes',
         'check_in_photo',
         'check_out_photo',
+        'backdated',
+        'backdated_reason',
+        'source',
     ];
 
     protected $casts = [
@@ -33,6 +36,7 @@ class Attendance extends Model
         'check_out_time' => 'datetime',
         'hours_worked' => 'decimal:2',
         'overtime_hours' => 'decimal:2',
+        'backdated' => 'boolean',
     ];
 
     public function guardRelation(): BelongsTo

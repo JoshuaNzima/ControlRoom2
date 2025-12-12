@@ -29,6 +29,8 @@ export default function ManualCheckInModal({
   const [errors, setErrors] = React.useState<Record<string, string>>({});
   const [assignedSiteId, setAssignedSiteId] = React.useState<number | null>(null);
   const [assignedSiteLabel, setAssignedSiteLabel] = React.useState<string>('');
+  const [backdate, setBackdate] = React.useState<boolean>(false);
+  const [backdateReason, setBackdateReason] = React.useState<string>('');
 
   const loadSites = React.useCallback(async () => {
     try {
@@ -52,6 +54,8 @@ export default function ManualCheckInModal({
       setNotes('');
       setErrors({});
       setReasonCode('');
+      setBackdate(false);
+      setBackdateReason('');
       // Fetch guard to determine current assignment restriction
       if (guardId) {
         const url = route('control-room.guards.json', { guard: guardId });
@@ -88,6 +92,8 @@ export default function ManualCheckInModal({
       time: time || undefined,
       notes: notes || undefined,
       reason_code: reasonCode || undefined,
+      backdate: backdate ? 1 : 0,
+      backdate_reason: backdate ? (backdateReason || undefined) : undefined,
     }, {
       preserveScroll: true,
       onFinish: () => setSubmitting(false),
@@ -162,6 +168,32 @@ export default function ManualCheckInModal({
             )}
           </div>
           {errors.client_site_id && <div className="mt-2 text-xs text-red-600">{errors.client_site_id}</div>}
+        </div>
+
+        <div className="space-y-2">
+          <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200">
+            <input
+              type="checkbox"
+              checked={backdate}
+              onChange={(e) => setBackdate(e.target.checked)}
+              className="rounded border-gray-300 dark:border-gray-700"
+            />
+            <span>Mark for yesterday (backdate up to 1 day)</span>
+          </label>
+          {errors.backdate && <div className="text-xs text-red-600">{errors.backdate}</div>}
+          <p className="text-xs text-gray-500 dark:text-gray-400">
+            Use this if the sergeant reaches site after midnight but is confirming the previous day's shift. Backdating is only allowed for yesterday and within the configured cutoff time.
+          </p>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Backdate Reason (optional)</label>
+            <input
+              value={backdateReason}
+              onChange={(e) => setBackdateReason(e.target.value)}
+              disabled={!backdate}
+              placeholder="e.g. Arrived after 00:30, network outage, etc."
+              className="block w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-3 py-2 disabled:opacity-60"
+            />
+          </div>
         </div>
 
         <div>

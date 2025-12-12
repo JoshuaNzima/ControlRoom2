@@ -75,6 +75,8 @@ export default function Dashboard({
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [checkInTimeInput, setCheckInTimeInput] = useState<string>(new Date().toTimeString().slice(0, 5));
   const [checkOutTimeInput, setCheckOutTimeInput] = useState<string>(new Date().toTimeString().slice(0, 5));
+  const [backdate, setBackdate] = useState<boolean>(false);
+  const [backdateReason, setBackdateReason] = useState<string>('');
   
 
   useEffect(() => {
@@ -129,6 +131,8 @@ export default function Dashboard({
     setNotes('');
     setSelectedSite(activeScan?.site_id ?? null);
     setCheckInTimeInput(new Date().toTimeString().slice(0, 5));
+    setBackdate(false);
+    setBackdateReason('');
   };
 
   const handleCheckOut = (guard: Guard) => {
@@ -146,6 +150,12 @@ export default function Dashboard({
     if (notes) formData.append('notes', notes);
     if (photoFile) formData.append('photo', photoFile);
     if (checkInTimeInput) formData.append('time', checkInTimeInput);
+    if (backdate) {
+      formData.append('backdate', '1');
+      if (backdateReason) {
+        formData.append('backdate_reason', backdateReason);
+      }
+    }
     setSubmitting(true);
     router.post(route('supervisor.attendance.check-in'), formData, {
       forceFormData: true,
@@ -475,6 +485,30 @@ export default function Dashboard({
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
                   required
                 />
+              </div>
+              <div className="space-y-2">
+                <label className="inline-flex items-center gap-2 text-sm text-gray-700">
+                  <input
+                    type="checkbox"
+                    checked={backdate}
+                    onChange={(e) => setBackdate(e.target.checked)}
+                    className="rounded border-gray-300"
+                  />
+                  <span>Mark for yesterday (backdate up to 1 day)</span>
+                </label>
+                <p className="text-xs text-gray-500">
+                  Use this if you reached the site after midnight but are confirming the previous day's shift. Backdating is only allowed for yesterday and within the configured cutoff time.
+                </p>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Backdate Reason (optional)</label>
+                  <input
+                    value={backdateReason}
+                    onChange={(e) => setBackdateReason(e.target.value)}
+                    disabled={!backdate}
+                    placeholder="e.g. Arrived after 00:30, network outage, etc."
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg disabled:opacity-60 focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Photo *</label>

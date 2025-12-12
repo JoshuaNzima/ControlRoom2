@@ -21,6 +21,7 @@ export default function EditSiteModal({ open, onClose, clientId, siteId, onSaved
   const [loading, setLoading] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
   const [errors, setErrors] = React.useState<Record<string, string>>({});
+  const [showMap, setShowMap] = React.useState(true);
   const [form, setForm] = React.useState<any>({
     name: '',
     address: '',
@@ -181,18 +182,112 @@ export default function EditSiteModal({ open, onClose, clientId, siteId, onSaved
               </div>
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Location</label>
-                <div className="mt-2">
+                <div className="mt-2 space-y-2">
+                  <div className="flex items-center justify-between text-xs text-gray-600 dark:text-gray-400">
+                    <span>Use the map or enter coordinates manually.</span>
+                    <button
+                      type="button"
+                      onClick={() => setShowMap((v) => !v)}
+                      className="px-2 py-1 border rounded-md dark:border-gray-600 dark:text-gray-200"
+                    >
+                      {showMap ? 'Hide map' : 'Show map'}
+                    </button>
+                  </div>
+                  {showMap && (
                   <LocationPicker
                     value={form.latitude && form.longitude ? { lat: Number(form.latitude), lng: Number(form.longitude) } : null}
                     onChange={(c) => setForm({ ...form, latitude: c.lat.toFixed(6), longitude: c.lng.toFixed(6) })}
                     heightClassName="h-56"
                   />
+                  )}
                   <div className="mt-2 text-xs text-gray-600 dark:text-gray-400">
                     Lat range: -90 to 90 • Lng range: -180 to 180
                   </div>
                   {(errors.latitude || errors.longitude) && (
                     <div className="text-xs text-red-500 mt-1">{errors.latitude || errors.longitude}</div>
                   )}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Latitude</label>
+                      <input
+                        type="number"
+                        step="0.000001"
+                        min={-90}
+                        max={90}
+                        value={form.latitude}
+                        onChange={(e) => setForm({ ...form, latitude: e.target.value })}
+                        onPaste={(e) => {
+                          const text = e.clipboardData.getData('text') || '';
+                          const matches = text.match(/-?\d+(?:\.\d+)?/g) || [];
+                          if (matches.length >= 2) {
+                            const lat = Number(matches[0]);
+                            const lng = Number(matches[1]);
+                            if (!Number.isNaN(lat) && !Number.isNaN(lng)) {
+                              e.preventDefault();
+                              const clampedLat = Math.max(-90, Math.min(90, lat));
+                              const clampedLng = Math.max(-180, Math.min(180, lng));
+                              setForm({
+                                ...form,
+                                latitude: clampedLat.toFixed(6),
+                                longitude: clampedLng.toFixed(6),
+                              });
+                            }
+                          }
+                        }}
+                        onBlur={(e) => {
+                          const v = e.target.value;
+                          if (v === '') return;
+                          let n = Number(v);
+                          if (isNaN(n)) return;
+                          n = Math.max(-90, Math.min(90, n));
+                          setForm({ ...form, latitude: n.toFixed(6) });
+                        }}
+                        className="mt-1 w-full border rounded-md px-3 py-2 dark:bg-gray-900 dark:border-gray-700"
+                        placeholder="e.g. -13.962600"
+                      />
+                      {errors.latitude && <div className="text-xs text-red-500 mt-1">{errors.latitude}</div>}
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Longitude</label>
+                      <input
+                        type="number"
+                        step="0.000001"
+                        min={-180}
+                        max={180}
+                        value={form.longitude}
+                        onChange={(e) => setForm({ ...form, longitude: e.target.value })}
+                        onPaste={(e) => {
+                          const text = e.clipboardData.getData('text') || '';
+                          const matches = text.match(/-?\d+(?:\.\d+)?/g) || [];
+                          if (matches.length >= 2) {
+                            const lat = Number(matches[0]);
+                            const lng = Number(matches[1]);
+                            if (!Number.isNaN(lat) && !Number.isNaN(lng)) {
+                              e.preventDefault();
+                              const clampedLat = Math.max(-90, Math.min(90, lat));
+                              const clampedLng = Math.max(-180, Math.min(180, lng));
+                              setForm({
+                                ...form,
+                                latitude: clampedLat.toFixed(6),
+                                longitude: clampedLng.toFixed(6),
+                              });
+                            }
+                          }
+                        }}
+                        onBlur={(e) => {
+                          const v = e.target.value;
+                          if (v === '') return;
+                          let n = Number(v);
+                          if (isNaN(n)) return;
+                          n = Math.max(-180, Math.min(180, n));
+                          setForm({ ...form, longitude: n.toFixed(6) });
+                        }}
+                        className="mt-1 w-full border rounded-md px-3 py-2 dark:bg-gray-900 dark:border-gray-700"
+                        placeholder="e.g. 33.774100"
+                      />
+                      {errors.longitude && <div className="text-xs text-red-500 mt-1">{errors.longitude}</div>}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

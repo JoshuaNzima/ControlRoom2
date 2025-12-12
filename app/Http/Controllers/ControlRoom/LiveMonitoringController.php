@@ -129,12 +129,14 @@ class LiveMonitoringController extends Controller
     {
         $alerts = collect();
 
-        // Guards who checked in but haven't checked out after 12 hours
+        $overdueHours = (int) config('attendance.alerts.overdue_checkout_hours', 12);
+
+        // Guards who checked in but haven't checked out after the configured number of hours
         $overdueCheckouts = Attendance::with(['guardRelation', 'clientSite.client'])
             ->whereDate('date', Carbon::today())
             ->whereNotNull('check_in_time')
             ->whereNull('check_out_time')
-            ->where('check_in_time', '<', Carbon::now()->subHours(12))
+            ->where('check_in_time', '<', Carbon::now()->subHours($overdueHours))
             ->get()
             ->map(function ($attendance) {
                 return [

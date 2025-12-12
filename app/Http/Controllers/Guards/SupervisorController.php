@@ -313,11 +313,37 @@ class SupervisorController extends Controller
             'notes' => 'nullable|string',
             'time' => 'nullable|date_format:H:i',
             'photo' => (app()->environment('testing') ? 'nullable' : 'nullable') . '|image|max:5120',
+            'backdate' => 'nullable|boolean',
+            'backdate_reason' => 'nullable|string|max:255',
         ]);
 
         // Determine target site: prefer payload, else session lock
         $scan = session('active_checkpoint_scan');
         $siteId = $validated['client_site_id'] ?? ($scan['site_id'] ?? null);
+
+        $now = now();
+        $date = Carbon::today();
+        $backdateRequested = (bool) ($validated['backdate'] ?? false);
+
+        if ($backdateRequested && config('attendance.backdate.enabled', true)) {
+            $cutoff = config('attendance.backdate.cutoff', '06:00');
+            $cutoffTime = Carbon::today()->setTimeFromTimeString($cutoff);
+
+            if ($now->greaterThan($cutoffTime)) {
+                return back()->withErrors([
+                    'backdate' => 'Backdating is only allowed until '.$cutoff.' for the previous day.',
+                ]);
+            }
+
+            $maxDays = (int) config('attendance.backdate.max_days', 1);
+            if ($maxDays < 1) {
+                return back()->withErrors([
+                    'backdate' => 'Backdating is currently disabled.',
+                ]);
+            }
+
+            $date = Carbon::yesterday();
+        }
 
         // Require active site context when not in tests
         if (!app()->environment('testing')) {
@@ -329,9 +355,9 @@ class SupervisorController extends Controller
             }
         }
 
-        // Check if guard already has an attendance record for today
+        // Check if guard already has an attendance record for the target date
         $existingAttendance = Attendance::where('guard_id', $validated['guard_id'])
-            ->whereDate('date', Carbon::today())
+            ->whereDate('date', $date)
             ->first();
 
         if ($existingAttendance) {
@@ -341,18 +367,23 @@ class SupervisorController extends Controller
         // Determine check-in time (handle missing 'time' key safely)
         $timeInput = $request->input('time', null);
         $checkInTime = $timeInput
-            ? Carbon::parse(Carbon::today()->format('Y-m-d') . ' ' . $timeInput)
-            : now();
+            ? Carbon::parse($date->format('Y-m-d') . ' ' . $timeInput)
+            : $now;
+
+        $backdateReason = $validated['backdate_reason'] ?? null;
 
         // Create new attendance record
         $attendance = new Attendance([
             'guard_id' => $validated['guard_id'],
             'supervisor_id' => Auth::id(),
             'client_site_id' => $siteId,
-            'date' => Carbon::today(),
+            'date' => $date,
             'check_in_time' => $checkInTime,
             'check_in_notes' => $validated['notes'] ?? null,
             'status' => $checkInTime->hour > 8 ? 'late' : 'present',
+            'backdated' => $backdateRequested,
+            'backdated_reason' => $backdateRequested ? $backdateReason : null,
+            'source' => $backdateRequested ? 'supervisor_backdate' : 'supervisor_manual',
         ]);
 
         // Store check-in photo

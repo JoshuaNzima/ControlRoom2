@@ -139,7 +139,7 @@ export default function SuperAdminLayout({ title, children, user }: Props) {
 
             {/* Sidebar */}
             <div
-                className={`fixed top-0 left-0 bottom-0 flex flex-col w-64 bg-red-900 dark:bg-gray-950 text-white transform ${
+                className={`fixed top-0 left-0 bottom-0 flex flex-col w-72 bg-red-900 dark:bg-gray-950 text-white transform ${
                     sidebarOpen ? 'translate-x-0' : '-translate-x-full'
                 } md:translate-x-0 transition-transform duration-300 ease-in-out z-50`}
             >
@@ -167,7 +167,7 @@ export default function SuperAdminLayout({ title, children, user }: Props) {
                                 <Link
                                     key={item.name}
                                     href={item.href}
-                                    className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md ${
+                                    className={`group flex items-center px-3 py-2.5 text-sm font-medium rounded-md ${
                                         item.current
                                             ? 'bg-red-800 text-white dark:bg-gray-800'
                                             : 'text-red-100 hover:bg-red-800 hover:text-white dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white'
@@ -193,7 +193,7 @@ export default function SuperAdminLayout({ title, children, user }: Props) {
                                 <Link
                                     key={item.name}
                                     href={item.href}
-                                    className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md ${
+                                    className={`group flex items-center px-3 py-2.5 text-sm font-medium rounded-md ${
                                         item.current
                                             ? 'bg-red-800 text-white dark:bg-gray-800'
                                             : 'text-red-100 hover:bg-red-800 hover:text-white dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white'
@@ -240,7 +240,7 @@ export default function SuperAdminLayout({ title, children, user }: Props) {
             </div>
 
             {/* Main Content */}
-            <div className="md:pl-64">
+            <div className="md:pl-72">
                 {/* Mobile: keep compact bar, hide BaseShell header by using noHeader */}
                 <div className="sticky top-0 z-30 md:hidden pl-1 pt-1 sm:pl-3 sm:pt-3 bg-red-50 dark:bg-gray-900 border-b border-red-100 dark:border-gray-800">
                     <button
@@ -253,9 +253,9 @@ export default function SuperAdminLayout({ title, children, user }: Props) {
                     </button>
                 </div>
                 {/* Desktop header via BaseShell; hide header on mobile */}
-                <BaseShell title={title} fullScreen={false} noHeader>
+                <BaseShell title={title} fullScreen={false} noHeader containerClassName="space-y-6">
                     <header className="hidden md:block bg-white dark:bg-gray-800 border-b border-red-100 dark:border-gray-800 sticky top-0 z-30">
-                        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+                        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5">
                             <div className="flex items-center justify-between">
                                 <h1 className="text-xl font-bold text-red-900 dark:text-gray-100">{title}</h1>
                                 <div className="flex items-center gap-4">

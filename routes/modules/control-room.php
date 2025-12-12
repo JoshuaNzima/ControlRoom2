@@ -5,7 +5,7 @@ use Inertia\Inertia;
 
 Route::middleware(['auth'])->group(function () {
     // Allow specific roles or users with permission (admins excluded)
-    Route::middleware(['role_or_permission:control_room_operator|operations_officer|supervisor|manager|control.dashboard.view'])->prefix('control-room')->name('control-room.')->group(function () {
+    Route::middleware(['role_or_permission:control_room_operator|operations_officer|supervisor|manager|super_admin|control.dashboard.view'])->prefix('control-room')->name('control-room.')->group(function () {
 		Route::get('/dashboard', [\App\Http\Controllers\ControlRoomDashboardController::class, 'index'])->name('dashboard');
 		Route::get('/monitoring', [\App\Http\Controllers\ControlRoom\MonitoringController::class, 'index'])->name('monitoring');
 		Route::get('/monitoring/data', [\App\Http\Controllers\ControlRoom\MonitoringController::class, 'data'])->name('monitoring.data');
@@ -17,6 +17,7 @@ Route::middleware(['auth'])->group(function () {
         Route::resource('zones', \App\Http\Controllers\ControlRoom\ZoneController::class)->only(['index','store','update','destroy']);
         Route::get('zones/{zone}/assign', [\App\Http\Controllers\ControlRoom\ZoneController::class, 'assign'])->name('zones.assign');
         Route::post('zones/{zone}/assignments', [\App\Http\Controllers\ControlRoom\ZoneController::class, 'storeAssignment'])->name('zones.assignments.store');
+        Route::post('zones/{zone}/assignments/{assignment}/end', [\App\Http\Controllers\ControlRoom\ZoneController::class, 'endAssignment'])->name('zones.assignments.end');
         Route::delete('zones/{zone}/assignments/{assignment}', [\App\Http\Controllers\ControlRoom\ZoneController::class, 'unassign'])->name('zones.assignments.destroy');
         Route::get('zones/{zone}/reports', [\App\Http\Controllers\ControlRoom\ZoneController::class, 'reports'])->name('zones.reports');
         Route::get('zones/{zone}/map', [\App\Http\Controllers\ControlRoom\ZoneController::class, 'map'])->name('zones.map');
@@ -61,36 +62,36 @@ Route::middleware(['auth'])->group(function () {
             Route::get('/search', [\App\Http\Controllers\ControlRoom\GuardsController::class, 'search'])->name('search');
             Route::get('/{guard}/json', [\App\Http\Controllers\ControlRoom\GuardsController::class, 'showJson'])->name('json');
             Route::post('/', [\App\Http\Controllers\ControlRoom\GuardManageController::class, 'store'])
-                ->middleware(['role_or_permission:operations_officer|manager|control_room_operator'])
+                ->middleware(['role_or_permission:operations_officer|manager|control_room_operator|super_admin'])
                 ->name('store');
             Route::put('/{guard}', [\App\Http\Controllers\ControlRoom\GuardManageController::class, 'update'])
-                ->middleware(['role_or_permission:operations_officer|manager|control_room_operator'])
+                ->middleware(['role_or_permission:operations_officer|manager|control_room_operator|super_admin'])
                 ->name('update');
             Route::delete('/{guard}', [\App\Http\Controllers\ControlRoom\GuardManageController::class, 'destroy'])
-                ->middleware(['role_or_permission:operations_officer|manager'])
+                ->middleware(['role_or_permission:operations_officer|manager|super_admin'])
                 ->name('destroy');
             Route::post('/assign-supervisor', [\App\Http\Controllers\ControlRoom\GuardManageController::class, 'assignSupervisor'])
-                ->middleware(['role_or_permission:operations_officer|manager|control_room_operator'])
+                ->middleware(['role_or_permission:operations_officer|manager|control_room_operator|super_admin'])
                 ->name('assign-supervisor');
             Route::post('/unassign-supervisor', [\App\Http\Controllers\ControlRoom\GuardManageController::class, 'unassignSupervisor'])
-                ->middleware(['role_or_permission:operations_officer|manager|control_room_operator'])
+                ->middleware(['role_or_permission:operations_officer|manager|control_room_operator|super_admin'])
                 ->name('unassign-supervisor');
             Route::post('/assign-site', [\App\Http\Controllers\ControlRoom\GuardManageController::class, 'assignToSite'])
-                ->middleware(['role_or_permission:operations_officer|manager|control_room_operator'])
+                ->middleware(['role_or_permission:operations_officer|manager|control_room_operator|super_admin'])
                 ->name('assign-site');
             Route::post('/unassign-site', [\App\Http\Controllers\ControlRoom\GuardManageController::class, 'unassignFromSite'])
-                ->middleware(['role_or_permission:operations_officer|manager|control_room_operator'])
+                ->middleware(['role_or_permission:operations_officer|manager|control_room_operator|super_admin'])
                 ->name('unassign-site');
 
             // Status actions
             Route::post('/{guard}/suspend', [\App\Http\Controllers\ControlRoom\GuardManageController::class, 'suspend'])
-                ->middleware(['role_or_permission:operations_officer|manager|hr|hr_manager'])
+                ->middleware(['role_or_permission:operations_officer|manager|hr|hr_manager|super_admin'])
                 ->name('suspend');
             Route::post('/{guard}/reinstate', [\App\Http\Controllers\ControlRoom\GuardManageController::class, 'reinstate'])
-                ->middleware(['role_or_permission:operations_officer|manager|hr|hr_manager'])
+                ->middleware(['role_or_permission:operations_officer|manager|hr|hr_manager|super_admin'])
                 ->name('reinstate');
             Route::post('/{guard}/dismiss', [\App\Http\Controllers\ControlRoom\GuardManageController::class, 'dismiss'])
-                ->middleware(['role_or_permission:operations_officer|manager|hr|hr_manager'])
+                ->middleware(['role_or_permission:operations_officer|manager|hr|hr_manager|super_admin'])
                 ->name('dismiss');
         });
 		Route::get('/assignments', [\App\Http\Controllers\ControlRoom\AssignmentsController::class, 'index'])->name('assignments.index');

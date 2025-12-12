@@ -3,6 +3,7 @@ import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import ControlRoomLayout from '@/Layouts/ControlRoomLayout';
 import { Card, CardContent, CardHeader } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/Components/ui/dialog';
 
 export default function ZoneAssign() {
   const { zone, sites = [], guards = [], assignments = [] } = usePage().props as any;
@@ -12,9 +13,25 @@ export default function ZoneAssign() {
     start_date: '',
   });
 
+  const endForm = useForm<{ end_date: string }>({
+    end_date: new Date().toISOString().slice(0,10),
+  });
+  const [endFor, setEndFor] = React.useState<{ id: number; guard?: { id: number; name: string }; site?: { id: number; name: string } } | null>(null);
+
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     post(route('control-room.zones.assignments.store', zone.id), { onSuccess: () => reset() });
+  };
+
+  const onEndSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!endFor) return;
+    endForm.post(route('control-room.zones.assignments.end', [zone.id, endFor.id]), {
+      onSuccess: () => {
+        setEndFor(null);
+        endForm.reset('end_date');
+      }
+    });
   };
 
   return (
@@ -71,12 +88,31 @@ export default function ZoneAssign() {
                     <div className="font-medium">{a.guard?.name}</div>
                     <div className="text-xs text-gray-500">{a.site?.name} • since {a.start_date}</div>
                   </div>
-                  <Link href={route('control-room.zones.assignments.destroy', [zone.id, a.id])} method="delete" as="button" className="text-sm text-red-600">Unassign</Link>
+                  <Button size="sm" variant="destructive" onClick={() => { setEndFor(a); endForm.setData('end_date', new Date().toISOString().slice(0,10)); }}>End Assignment</Button>
                 </div>
               ))}
             </div>
           </CardContent>
         </Card>
+
+        <Dialog open={!!endFor} onOpenChange={(o) => { if (!o) setEndFor(null); }}>
+          <DialogContent className="sm:max-w-[480px]">
+            <DialogHeader>
+              <DialogTitle>End Assignment {endFor ? `• ${endFor.guard?.name} @ ${endFor.site?.name}` : ''}</DialogTitle>
+            </DialogHeader>
+            <form className="space-y-4" onSubmit={onEndSubmit}>
+              <div>
+                <label className="block text-sm font-medium mb-1">End Date</label>
+                <input type="date" value={endForm.data.end_date} onChange={(e) => endForm.setData('end_date', e.target.value)} className="w-full border rounded-md p-2 bg-white dark:bg-gray-800 dark:border-gray-600" />
+                {endForm.errors.end_date && <p className="text-sm text-red-600 mt-1">{endForm.errors.end_date}</p>}
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button type="button" variant="outline" onClick={() => setEndFor(null)}>Cancel</Button>
+                <Button type="submit" disabled={endForm.processing}>Confirm End</Button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
       </div>
     </ControlRoomLayout>
   );

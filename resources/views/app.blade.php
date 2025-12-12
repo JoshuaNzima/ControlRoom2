@@ -15,6 +15,10 @@
         <link rel="manifest" href="/manifest.webmanifest">
         <!-- Scripts -->
         @routes
+        <script>
+            window.appKey = @json(config('broadcasting.connections.pusher.key'));
+            window.pusherCluster = @json(config('broadcasting.connections.pusher.options.cluster'));
+        </script>
         {{-- Only include Vite dev client and page HMR when running locally. In production we must use the built assets. --}}
         @if(app()->isLocal())
             @viteReactRefresh

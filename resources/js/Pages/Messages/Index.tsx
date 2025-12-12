@@ -1,0 +1,79 @@
+import React, { useEffect, useState } from 'react';
+import { Head, router } from '@inertiajs/react';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import { Card, CardContent, CardHeader } from '@/Components/ui/card';
+import { Button } from '@/Components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/Components/ui/dialog';
+import NewConversationForm, { Agent } from './NewConversationForm';
+import ConversationList from './ConversationList';
+import Echo from 'laravel-echo';
+
+interface Props {
+  auth?: { user?: { name?: string } };
+  conversations: any[];
+  agents: Agent[];
+}
+
+const Index: React.FC<Props> = ({ auth, conversations = [], agents = [] }) => {
+  const [showNewDialog, setShowNewDialog] = useState(false);
+
+  useEffect(() => {
+    try {
+      const echo = new Echo({
+        broadcaster: 'pusher',
+        key: (window as any).appKey,
+        cluster: (window as any).pusherCluster,
+        forceTLS: true,
+      });
+      // Optionally listen to a global channel for notifications
+      (echo as any).private('emergencies').listen('EmergencyAlert', (e: any) => {
+        try {
+          const notification = new Notification('Emergency Alert!', {
+            body: `${e.message.sender.name} has reported an emergency`,
+            icon: '/emergency-icon.png',
+          });
+          notification.onclick = () => {
+            router.visit(route('messages.conversations.show', e.message.conversation_id));
+          };
+        } catch {}
+      });
+      return () => {
+        try { (echo as any).leave('emergencies'); } catch {}
+      };
+    } catch {}
+  }, []);
+
+  return (
+    <AuthenticatedLayout user={auth?.user as any}>
+      <Head title="Messages" />
+
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Messages</h1>
+          <Dialog open={showNewDialog} onOpenChange={setShowNewDialog}>
+            <DialogTrigger asChild>
+              <Button className="dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600">New Conversation</Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Start New Conversation</DialogTitle>
+              </DialogHeader>
+              <NewConversationForm onClose={() => setShowNewDialog(false)} agents={agents} />
+            </DialogContent>
+          </Dialog>
+        </div>
+
+        <Card className="dark:bg-gray-800 dark:border-gray-700">
+          <CardHeader>
+            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Recent Conversations</h3>
+          </CardHeader>
+          <CardContent>
+            <ConversationList conversations={conversations} />
+          </CardContent>
+        </Card>
+      </div>
+    </AuthenticatedLayout>
+  );
+};
+
+export default Index;

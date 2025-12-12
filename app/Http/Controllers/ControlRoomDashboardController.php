@@ -105,6 +105,8 @@ class ControlRoomDashboardController extends Controller
 
     private function getActiveAlerts()
     {
+        $overdueHours = (int) config('attendance.alerts.overdue_checkout_hours', 12);
+
         return [
             'high_priority' => DownReport::where('created_at', '>=', Carbon::today())
                 ->count(),
@@ -116,7 +118,7 @@ class ControlRoomDashboardController extends Controller
                 ->count(),
             'attendance_alerts' => Attendance::whereDate('date', Carbon::today())
                 ->whereNull('check_out_time')
-                ->where('check_in_time', '<', Carbon::now()->subHours(12))
+                ->where('check_in_time', '<', Carbon::now()->subHours($overdueHours))
                 ->count(),
             'camera_alerts' => CameraAlert::where('status', 'active')->count(),
         ];

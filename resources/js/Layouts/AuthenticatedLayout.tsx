@@ -39,8 +39,8 @@ export default function Authenticated({
                                     Dashboard
                                 </NavLink>
                                 <NavLink
-                                    href={route('control-room.messaging.index')}
-                                    active={window.location.pathname.startsWith(route('control-room.messaging.index'))}
+                                    href={route('messages.conversations.index')}
+                                    active={window.location.pathname.startsWith(route('messages.conversations.index'))}
                                 >
                                     Messaging
                                 </NavLink>
@@ -158,8 +158,8 @@ export default function Authenticated({
                             Dashboard
                         </ResponsiveNavLink>
                         <ResponsiveNavLink
-                            href={route('control-room.messaging.index')}
-                            active={window.location.pathname.startsWith(route('control-room.messaging.index'))}
+                            href={route('messages.conversations.index')}
+                            active={window.location.pathname.startsWith(route('messages.conversations.index'))}
                         >
                             Messaging
                         </ResponsiveNavLink>

@@ -13,6 +13,7 @@ class Kernel extends ConsoleKernel
         $schedule->command('prepayments:migrate')->daily();
         $schedule->command('attendance:auto-checkout')->everyFifteenMinutes();
         $schedule->command('zones:recalc-required-guards')->dailyAt('02:30');
+        $schedule->command('attendance:auto-mark-absent')->dailyAt('06:30');
     }
 
     protected function commands()

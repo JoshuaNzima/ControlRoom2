@@ -52,6 +52,7 @@ export default function AddClientModal({ open, onClose, services = [], zones = [
     },
     services: [] as Array<{ id: number; custom_price: number | null; quantity: number }>,
   });
+  const [showSiteMap, setShowSiteMap] = React.useState(true);
 
   useEffect(() => {
     const selectedServices = data.services || [];
@@ -298,12 +299,108 @@ export default function AddClientModal({ open, onClose, services = [], zones = [
               </div>
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-2">Location</label>
-                <LocationPicker
-                  value={data.site.latitude && data.site.longitude ? { lat: Number(data.site.latitude), lng: Number(data.site.longitude) } : null}
-                  onChange={(coords) => setData('site', { ...data.site, latitude: coords.lat.toFixed(6), longitude: coords.lng.toFixed(6) })}
-                  heightClassName="h-64"
-                />
-                <p className="text-xs text-gray-500 mt-1">Tap the map to set exact coordinates. Keeps consistency with dark mode.</p>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-xs text-gray-600">
+                    <span>Use the map or enter coordinates manually.</span>
+                    <button
+                      type="button"
+                      onClick={() => setShowSiteMap((v) => !v)}
+                      className="px-2 py-1 border rounded-md text-gray-700"
+                    >
+                      {showSiteMap ? 'Hide map' : 'Show map'}
+                    </button>
+                  </div>
+                  {showSiteMap && (
+                    <LocationPicker
+                      value={data.site.latitude && data.site.longitude ? { lat: Number(data.site.latitude), lng: Number(data.site.longitude) } : null}
+                      onChange={(coords) => setData('site', { ...data.site, latitude: coords.lat.toFixed(6), longitude: coords.lng.toFixed(6) })}
+                      heightClassName="h-64"
+                    />
+                  )}
+                </div>
+                <p className="text-xs text-gray-500 mt-1">Tap the map to set exact coordinates or enter them manually below.</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Latitude</label>
+                    <input
+                      type="number"
+                      step="0.000001"
+                      min={-90}
+                      max={90}
+                      value={data.site.latitude}
+                      onChange={(e) => setData('site', { ...data.site, latitude: e.target.value })}
+                      onPaste={(e) => {
+                        const text = e.clipboardData.getData('text') || '';
+                        const matches = text.match(/-?\d+(?:\.\d+)?/g) || [];
+                        if (matches.length >= 2) {
+                          const lat = Number(matches[0]);
+                          const lng = Number(matches[1]);
+                          if (!Number.isNaN(lat) && !Number.isNaN(lng)) {
+                            e.preventDefault();
+                            const clampedLat = Math.max(-90, Math.min(90, lat));
+                            const clampedLng = Math.max(-180, Math.min(180, lng));
+                            setData('site', {
+                              ...data.site,
+                              latitude: clampedLat.toFixed(6),
+                              longitude: clampedLng.toFixed(6),
+                            });
+                          }
+                        }
+                      }}
+                      onBlur={(e) => {
+                        const v = e.target.value;
+                        if (v === '') return;
+                        let n = Number(v);
+                        if (isNaN(n)) return;
+                        n = Math.max(-90, Math.min(90, n));
+                        setData('site', { ...data.site, latitude: n.toFixed(6) });
+                      }}
+                      className="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg"
+                      placeholder="e.g. -13.962600"
+                    />
+                    {(errors as any)['site.latitude'] && <p className="text-red-600 text-sm mt-1">{(errors as any)['site.latitude']}</p>}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Longitude</label>
+                    <input
+                      type="number"
+                      step="0.000001"
+                      min={-180}
+                      max={180}
+                      value={data.site.longitude}
+                      onChange={(e) => setData('site', { ...data.site, longitude: e.target.value })}
+                      onPaste={(e) => {
+                        const text = e.clipboardData.getData('text') || '';
+                        const matches = text.match(/-?\d+(?:\.\d+)?/g) || [];
+                        if (matches.length >= 2) {
+                          const lat = Number(matches[0]);
+                          const lng = Number(matches[1]);
+                          if (!Number.isNaN(lat) && !Number.isNaN(lng)) {
+                            e.preventDefault();
+                            const clampedLat = Math.max(-90, Math.min(90, lat));
+                            const clampedLng = Math.max(-180, Math.min(180, lng));
+                            setData('site', {
+                              ...data.site,
+                              latitude: clampedLat.toFixed(6),
+                              longitude: clampedLng.toFixed(6),
+                            });
+                          }
+                        }
+                      }}
+                      onBlur={(e) => {
+                        const v = e.target.value;
+                        if (v === '') return;
+                        let n = Number(v);
+                        if (isNaN(n)) return;
+                        n = Math.max(-180, Math.min(180, n));
+                        setData('site', { ...data.site, longitude: n.toFixed(6) });
+                      }}
+                      className="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg"
+                      placeholder="e.g. 33.774100"
+                    />
+                    {(errors as any)['site.longitude'] && <p className="text-red-600 text-sm mt-1">{(errors as any)['site.longitude']}</p>}
+                  </div>
+                </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Zone</label>

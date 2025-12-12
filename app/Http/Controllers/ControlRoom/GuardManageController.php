@@ -181,9 +181,21 @@ class GuardManageController extends Controller
 
         $startDate = $validated['start_date'] ?? now()->toDateString();
 
-        GuardAssignment::where('guard_id', $validated['guard_id'])
+        // If already actively assigned to the same site, do nothing
+        $alreadyAssigned = GuardAssignment::where('guard_id', $validated['guard_id'])
+            ->where('client_site_id', $validated['client_site_id'])
+            ->where('is_active', true)
             ->whereNull('end_date')
-            ->update(['end_date' => now()->toDateString(), 'is_active' => false]);
+            ->exists();
+        if ($alreadyAssigned) {
+            return back()->with('success', 'Guard already assigned to this site.');
+        }
+
+        // End any other active assignments for this guard
+        GuardAssignment::where('guard_id', $validated['guard_id'])
+            ->where('is_active', true)
+            ->whereNull('end_date')
+            ->update(['end_date' => $startDate, 'is_active' => false]);
 
         GuardAssignment::create([
             'guard_id' => $validated['guard_id'],

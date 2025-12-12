@@ -72,6 +72,7 @@ export default function ClientDetailsModal({ client, open, onClose, services = [
   const [confirmDeleteOpen, setConfirmDeleteOpen] = React.useState(false);
   const [deletingSiteId, setDeletingSiteId] = React.useState<number | null>(null);
   const [deleting, setDeleting] = React.useState(false);
+  const [showAddSiteMap, setShowAddSiteMap] = React.useState(true);
 
   const refreshClient = React.useCallback(async () => {
     try {
@@ -323,12 +324,100 @@ export default function ClientDetailsModal({ client, open, onClose, services = [
                     <div className="md:col-span-2">
                       <label className="block text-sm font-medium text-gray-700">Location</label>
                       <div className="mt-1">
-                        <LocationPicker
-                          value={data.latitude && data.longitude ? { lat: Number(data.latitude), lng: Number(data.longitude) } : null}
-                          onChange={(coords) => setData({ ...data, latitude: coords.lat.toFixed(6), longitude: coords.lng.toFixed(6) } as any)}
-                          heightClassName="h-56"
-                        />
-                        <p className="text-xs text-gray-500 mt-1">Tap the map to set exact coordinates. Dark mode supported.</p>
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between text-xs text-gray-600">
+                            <span>Use the map or enter coordinates manually.</span>
+                            <button
+                              type="button"
+                              onClick={() => setShowAddSiteMap((v) => !v)}
+                              className="px-2 py-1 border rounded-md text-gray-700"
+                            >
+                              {showAddSiteMap ? 'Hide map' : 'Show map'}
+                            </button>
+                          </div>
+                          {showAddSiteMap && (
+                            <LocationPicker
+                              value={data.latitude && data.longitude ? { lat: Number(data.latitude), lng: Number(data.longitude) } : null}
+                              onChange={(coords) => setData({ ...data, latitude: coords.lat.toFixed(6), longitude: coords.lng.toFixed(6) } as any)}
+                              heightClassName="h-56"
+                            />
+                          )}
+                        </div>
+                        <p className="text-xs text-gray-500 mt-1">Tap the map to set exact coordinates or enter them manually below.</p>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700">Latitude</label>
+                            <input
+                              type="number"
+                              step="0.000001"
+                              min={-90}
+                              max={90}
+                              value={data.latitude}
+                              onChange={(e) => setData('latitude', e.target.value)}
+                              onPaste={(e) => {
+                                const text = e.clipboardData.getData('text') || '';
+                                const matches = text.match(/-?\d+(?:\.\d+)?/g) || [];
+                                if (matches.length >= 2) {
+                                  const lat = Number(matches[0]);
+                                  const lng = Number(matches[1]);
+                                  if (!Number.isNaN(lat) && !Number.isNaN(lng)) {
+                                    e.preventDefault();
+                                    const clampedLat = Math.max(-90, Math.min(90, lat));
+                                    const clampedLng = Math.max(-180, Math.min(180, lng));
+                                    setData('latitude', clampedLat.toFixed(6));
+                                    setData('longitude', clampedLng.toFixed(6));
+                                  }
+                                }
+                              }}
+                              onBlur={(e) => {
+                                const v = e.target.value;
+                                if (v === '') return;
+                                let n = Number(v);
+                                if (isNaN(n)) return;
+                                n = Math.max(-90, Math.min(90, n));
+                                setData('latitude', n.toFixed(6));
+                              }}
+                              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                              placeholder="e.g. -13.962600"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700">Longitude</label>
+                            <input
+                              type="number"
+                              step="0.000001"
+                              min={-180}
+                              max={180}
+                              value={data.longitude}
+                              onChange={(e) => setData('longitude', e.target.value)}
+                              onPaste={(e) => {
+                                const text = e.clipboardData.getData('text') || '';
+                                const matches = text.match(/-?\d+(?:\.\d+)?/g) || [];
+                                if (matches.length >= 2) {
+                                  const lat = Number(matches[0]);
+                                  const lng = Number(matches[1]);
+                                  if (!Number.isNaN(lat) && !Number.isNaN(lng)) {
+                                    e.preventDefault();
+                                    const clampedLat = Math.max(-90, Math.min(90, lat));
+                                    const clampedLng = Math.max(-180, Math.min(180, lng));
+                                    setData('latitude', clampedLat.toFixed(6));
+                                    setData('longitude', clampedLng.toFixed(6));
+                                  }
+                                }
+                              }}
+                              onBlur={(e) => {
+                                const v = e.target.value;
+                                if (v === '') return;
+                                let n = Number(v);
+                                if (isNaN(n)) return;
+                                n = Math.max(-180, Math.min(180, n));
+                                setData('longitude', n.toFixed(6));
+                              }}
+                              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                              placeholder="e.g. 33.774100"
+                            />
+                          </div>
+                        </div>
                       </div>
                     </div>
                     <div className="md:col-span-2">

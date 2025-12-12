@@ -266,7 +266,7 @@ export default function Dashboard({
                     </a>
                   </Button>
                   <Button variant="outline" asChild className="h-auto py-3 flex flex-col items-center justify-center gap-2">
-                    <a href={route('control-room.messaging.index')}>
+                    <a href={route('messages.conversations.index')}>
                       <IconMapper name="MessageSquareText" className="w-5 h-5" />
                       <span>Messaging</span>
                     </a>

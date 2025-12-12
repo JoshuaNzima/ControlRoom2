@@ -16,6 +16,7 @@ type Guard = {
   status: string;
   supervisor?: { id: number; name: string } | null;
   today_attendance?: { check_in?: string | null; check_out?: string | null } | null;
+  active_assignment?: { site_id?: number | null; site_name?: string | null; client_name?: string | null } | null;
 };
 
 type PageProps = {
@@ -273,6 +274,7 @@ export default function GuardsIndex() {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Employee ID</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Supervisor</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Assignment</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Today</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
                 </tr>
@@ -300,6 +302,16 @@ export default function GuardsIndex() {
                       </span>
                     </td>
                     <td className="px-6 py-3 text-sm text-gray-700">{g.supervisor?.name || '-'}</td>
+                    <td className="px-6 py-3 text-sm text-gray-700">
+                      {g.active_assignment ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
+                          <span className="font-medium">{g.active_assignment.client_name || 'Client'}</span>
+                          <span className="text-xs text-indigo-600">• {g.active_assignment.site_name || 'Site'}</span>
+                        </span>
+                      ) : (
+                        <span className="text-gray-400">-</span>
+                      )}
+                    </td>
                     <td className="px-6 py-3 text-sm text-gray-700">
                       {g.today_attendance ? (
                         <span>
@@ -476,6 +488,7 @@ export default function GuardsIndex() {
           open={showAssign}
           guardId={currentGuardId}
           zones={zones}
+          currentAssignment={guardsProp.data.find((g: Guard) => g.id === currentGuardId)?.active_assignment || null}
           onClose={() => { setShowAssign(false); setCurrentGuardId(null); }}
           onSuccess={() => router.reload()}
         />

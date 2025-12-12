@@ -26,7 +26,7 @@ class GuardsController extends Controller
         }
         $dir = strtolower((string) $request->input('dir', 'asc')) === 'desc' ? 'desc' : 'asc';
 
-        $guards = Guard::with(['supervisor', 'todayAttendance'])
+        $guards = Guard::with(['supervisor', 'todayAttendance', 'activeAssignments.clientSite.client'])
             ->when($request->input('search'), function ($q, $search) {
                 $q->where(function ($qq) use ($search) {
                     $qq->where('name', 'like', "%{$search}%")
@@ -61,6 +61,15 @@ class GuardsController extends Controller
                         'check_in' => optional($g->todayAttendance->first()->check_in_time)->format('H:i'),
                         'check_out' => optional($g->todayAttendance->first()->check_out_time)->format('H:i'),
                     ] : null,
+                    'active_assignment' => (function() use ($g) {
+                        $a = $g->activeAssignments->first();
+                        if (!$a || !$a->clientSite) return null;
+                        return [
+                            'site_id' => $a->clientSite->id ?? null,
+                            'site_name' => $a->clientSite->name ?? null,
+                            'client_name' => optional($a->clientSite->client)->name,
+                        ];
+                    })(),
                 ];
             });
 
