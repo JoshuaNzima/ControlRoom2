@@ -17,6 +17,7 @@ type Shift = {
   sites?: number[];
   guards?: any[];
   supervisor?: { id: number; name: string } | null;
+  is_global?: boolean;
 };
 
 export default function ShiftsIndex() {
@@ -83,7 +84,7 @@ export default function ShiftsIndex() {
                 <div key={s.id} className="py-3 flex items-center justify-between">
                   <div>
                     <div className="font-medium">{s.name}</div>
-                    <div className="text-xs text-gray-500">{s.start_time} - {s.end_time} • Required guards: {s.required_guards}</div>
+                    <div className="text-xs text-gray-500">{s.start_time} - {s.end_time} • Required guards: {s.required_guards} {s.is_global ? '• General (all zones)' : ''}</div>
                   </div>
                   <div className="flex gap-2">
                     <button
@@ -152,6 +153,7 @@ type ShiftForm = {
   required_guards: number;
   sites: number[];
   status?: string;
+  is_global?: boolean;
 };
 
 interface CreateShiftModalProps {
@@ -170,6 +172,7 @@ function CreateShiftModal({ open, onClose, supervisors, sites }: CreateShiftModa
     supervisor_id: '',
     required_guards: 1,
     sites: [],
+    is_global: false,
   });
 
   const toggleSite = (siteId: number) => {
@@ -281,12 +284,27 @@ function CreateShiftModal({ open, onClose, supervisors, sites }: CreateShiftModa
             {errors.required_guards && <p className="text-sm text-red-600">{errors.required_guards}</p>}
           </div>
           <div className="sm:col-span-2">
+            <label className="inline-flex items-center gap-2 text-sm font-medium">
+              <input
+                type="checkbox"
+                checked={!!data.is_global}
+                onChange={(e) => {
+                  const checked = e.target.checked;
+                  setData('is_global', checked);
+                  if (checked) setData('sites', [] as any);
+                }}
+              />
+              <span>General shift (applies to all zones)</span>
+            </label>
+          </div>
+          <div className="sm:col-span-2">
             <label className="block text-sm font-medium">Sites</label>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-64 overflow-auto border rounded p-2">
               {sites.map((s: any) => (
                 <label key={s.id} className="flex items-center gap-2 text-sm">
                   <input
                     type="checkbox"
+                    disabled={!!data.is_global}
                     checked={(data.sites as any[]).includes(s.id)}
                     onChange={() => toggleSite(s.id)}
                   />
@@ -345,6 +363,7 @@ function EditShiftModal({ open, onClose, shift, supervisors, sites }: EditShiftM
     required_guards: shift.required_guards,
     sites: Array.isArray(shift.sites) ? (shift.sites as any[]) : [],
     status: shift.status ?? 'active',
+    is_global: !!shift.is_global,
   });
 
   const toggleSite = (siteId: number) => {
@@ -468,12 +487,27 @@ function EditShiftModal({ open, onClose, shift, supervisors, sites }: EditShiftM
             </select>
           </div>
           <div className="sm:col-span-2">
+            <label className="inline-flex items-center gap-2 text-sm font-medium">
+              <input
+                type="checkbox"
+                checked={!!data.is_global}
+                onChange={(e) => {
+                  const checked = e.target.checked;
+                  setData('is_global', checked);
+                  if (checked) setData('sites', [] as any);
+                }}
+              />
+              <span>General shift (applies to all zones)</span>
+            </label>
+          </div>
+          <div className="sm:col-span-2">
             <label className="block text-sm font-medium">Sites</label>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-64 overflow-auto border rounded p-2">
               {sites.map((s: any) => (
                 <label key={s.id} className="flex items-center gap-2 text-sm">
                   <input
                     type="checkbox"
+                    disabled={!!data.is_global}
                     checked={(data.sites as any[]).includes(s.id)}
                     onChange={() => toggleSite(s.id)}
                   />
@@ -525,6 +559,7 @@ function ViewShiftModal({ open, onClose, data }: ViewShiftModalProps) {
   const sitesMap = data.sitesMap || {};
 
   const sitesLabel = (() => {
+    if (shift.is_global) return 'General (all zones)';
     const ids = Array.isArray(shift.sites) ? shift.sites : [];
     if (ids.length === 0) return '';
     const names = ids.map((id: any) => sitesMap[id] || id).filter(Boolean);

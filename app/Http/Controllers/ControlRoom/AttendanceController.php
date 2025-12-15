@@ -16,7 +16,7 @@ class AttendanceController extends Controller
     {
         $validated = $request->validate([
             'guard_id' => ['required','integer','exists:guards,id'],
-            'client_site_id' => ['required','integer','exists:client_sites,id'],
+            'client_site_id' => ['nullable','integer','exists:client_sites,id'],
             'notes' => ['nullable','string','max:500'],
             'time' => ['nullable','date_format:H:i'],
             'reason_code' => ['nullable','in:supervisor_unavailable,gps_issue,network_outage,device_failure,emergency,overtime,other'],
@@ -72,10 +72,18 @@ class AttendanceController extends Controller
 
         $guard = Guard::with('assignments')->findOrFail($validated['guard_id']);
         $currentAssignment = $guard->currentAssignment();
-        $site = ClientSite::findOrFail($validated['client_site_id']);
-        if ($currentAssignment && (int) $currentAssignment->client_site_id !== (int) $site->id) {
-            if ($site->site_type !== 'office') {
-                return back()->withErrors(['client_site_id' => 'Selected site does not match guard\'s current assignment.']);
+        $siteId = $validated['client_site_id'] ?? null;
+        $site = $siteId ? ClientSite::findOrFail($siteId) : null;
+        if (!$site) {
+            // General (no site) check-in is only allowed for unassigned guards
+            if ($currentAssignment) {
+                return back()->withErrors(['client_site_id' => 'Guard is currently assigned to a site; select the assigned site.']);
+            }
+        } else {
+            if ($currentAssignment && (int) $currentAssignment->client_site_id !== (int) $site->id) {
+                if ($site->site_type !== 'office') {
+                    return back()->withErrors(['client_site_id' => 'Selected site does not match guard\'s current assignment.']);
+                }
             }
         }
 
@@ -94,14 +102,14 @@ class AttendanceController extends Controller
         $attendance = new Attendance([
             'guard_id' => $validated['guard_id'],
             'supervisor_id' => $user?->id,
-            'client_site_id' => $validated['client_site_id'],
+            'client_site_id' => $site?->id,
             'date' => $date,
             'check_in_time' => $checkInTime,
             'check_in_notes' => $notes,
             'status' => $checkInTime->hour > 8 ? 'late' : 'present',
             'backdated' => $backdateRequested,
             'backdated_reason' => $backdateRequested ? $backdateReason : null,
-            'source' => $backdateRequested ? 'control_room_backdate' : 'control_room_manual',
+            'source' => $backdateRequested ? 'control_room_backdate' : ($site ? 'control_room_manual' : 'control_room_general'),
         ]);
 
         $attendance->save();

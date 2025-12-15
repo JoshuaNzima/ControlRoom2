@@ -18,8 +18,10 @@ export default function ShiftsShow() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-sm text-gray-700 dark:text-gray-300">{shift.start_time} - {shift.end_time} • Required {shift.required_guards}</div>
-            <div className="text-sm text-gray-500">Sites: {Array.isArray(shift.sites) ? shift.sites.join(', ') : ''}</div>
+            <div className="text-sm text-gray-700 dark:text-gray-300">{shift.start_time} - {shift.end_time} • Required {shift.required_guards} {shift.is_global ? '• General (all zones)' : ''}</div>
+            {!shift.is_global && (
+              <div className="text-sm text-gray-500">Sites: {Array.isArray(shift.sites) ? shift.sites.join(', ') : ''}</div>
+            )}
           </CardContent>
         </Card>
 

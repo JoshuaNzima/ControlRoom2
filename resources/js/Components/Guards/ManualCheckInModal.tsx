@@ -21,7 +21,7 @@ export default function ManualCheckInModal({
   const [zoneId, setZoneId] = React.useState<string>('');
   const [loading, setLoading] = React.useState(false);
   const [sites, setSites] = React.useState<Site[]>([]);
-  const [selectedSite, setSelectedSite] = React.useState<number | ''>('');
+  const [selectedSite, setSelectedSite] = React.useState<number | '' | 'general'>('');
   const [time, setTime] = React.useState<string>('');
   const [notes, setNotes] = React.useState<string>('');
   const [submitting, setSubmitting] = React.useState(false);
@@ -88,7 +88,7 @@ export default function ManualCheckInModal({
     setSubmitting(true);
     router.post(route('control-room.attendance.check-in'), {
       guard_id: guardId,
-      client_site_id: selectedSite,
+      client_site_id: selectedSite === 'general' ? undefined : selectedSite,
       time: time || undefined,
       notes: notes || undefined,
       reason_code: reasonCode || undefined,
@@ -148,11 +148,21 @@ export default function ManualCheckInModal({
             <div className="mb-2 text-xs text-coin-700 dark:text-coin-400">Restricted to current assignment: {assignedSiteLabel}</div>
           )}
           <div className="max-h-56 overflow-y-auto rounded border border-gray-200 dark:border-gray-700">
-            {sites.length === 0 ? (
-              <div className="p-3 text-sm text-gray-500">{loading ? 'Loading...' : 'No sites found'}</div>
-            ) : (
-              <ul>
-                {sites.map(s => (
+            <ul>
+              <li>
+                <label className={`flex items-center gap-3 px-3 py-2 border-b last:border-0 border-gray-100 dark:border-gray-800 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 ${assignedSiteId ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                  <input type="radio" name="site" value="general" checked={selectedSite === 'general'}
+                    onChange={() => setSelectedSite('general')} disabled={!!assignedSiteId} />
+                  <div>
+                    <div className="text-sm font-medium text-gray-900 dark:text-gray-100">General (no site)</div>
+                    <div className="text-xs text-gray-500">For guards without a client/zone assignment</div>
+                  </div>
+                </label>
+              </li>
+              {sites.length === 0 ? (
+                <li className="p-3 text-sm text-gray-500">{loading ? 'Loading...' : 'No sites found'}</li>
+              ) : (
+                sites.map(s => (
                   <li key={s.id}>
                     <label className={`flex items-center gap-3 px-3 py-2 border-b last:border-0 border-gray-100 dark:border-gray-800 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 ${assignedSiteId && s.id !== assignedSiteId ? 'opacity-50 cursor-not-allowed' : ''}`}>
                       <input type="radio" name="site" value={s.id} checked={selectedSite === s.id}
@@ -163,9 +173,9 @@ export default function ManualCheckInModal({
                       </div>
                     </label>
                   </li>
-                ))}
-              </ul>
-            )}
+                ))
+              )}
+            </ul>
           </div>
           {errors.client_site_id && <div className="mt-2 text-xs text-red-600">{errors.client_site_id}</div>}
         </div>

@@ -43,21 +43,32 @@ class ShiftController extends Controller
 
     public function store(Request $request)
     {
-        $validated = $request->validate([
+        $rules = [
             'name' => 'required|string|max:255',
             'start_time' => 'required|date_format:H:i',
             'end_time' => 'required|date_format:H:i|after:start_time',
             'description' => 'nullable|string',
             'supervisor_id' => 'required|exists:users,id',
             'required_guards' => 'required|integer|min:1',
-            'sites' => 'required|array|min:1',
-            'sites.*' => 'integer|exists:client_sites,id',
-        ]);
+            'is_global' => 'sometimes|boolean',
+        ];
+
+        // When not global, require sites
+        if (!$request->boolean('is_global')) {
+            $rules['sites'] = 'required|array|min:1';
+            $rules['sites.*'] = 'integer|exists:client_sites,id';
+        } else {
+            $rules['sites'] = 'nullable|array';
+            $rules['sites.*'] = 'integer|exists:client_sites,id';
+        }
+
+        $validated = $request->validate($rules);
 
         $shift = Shift::create([
             ...$validated,
             'status' => 'active',
             'created_by' => auth()->id(),
+            'is_global' => (bool) ($validated['is_global'] ?? false),
         ]);
 
         return redirect()->route('control-room.shifts.index')
@@ -105,19 +116,29 @@ class ShiftController extends Controller
 
     public function update(Request $request, Shift $shift)
     {
-        $validated = $request->validate([
+        $rules = [
             'name' => 'required|string|max:255',
             'start_time' => 'required|date_format:H:i',
             'end_time' => 'required|date_format:H:i|after:start_time',
             'description' => 'nullable|string',
             'supervisor_id' => 'required|exists:users,id',
             'required_guards' => 'required|integer|min:1',
-            'sites' => 'required|array|min:1',
-            'sites.*' => 'integer|exists:client_sites,id',
             'status' => 'required|in:active,inactive,completed',
-        ]);
+            'is_global' => 'sometimes|boolean',
+        ];
+        if (!$request->boolean('is_global')) {
+            $rules['sites'] = 'required|array|min:1';
+            $rules['sites.*'] = 'integer|exists:client_sites,id';
+        } else {
+            $rules['sites'] = 'nullable|array';
+            $rules['sites.*'] = 'integer|exists:client_sites,id';
+        }
+        $validated = $request->validate($rules);
 
-        $shift->update($validated);
+        $shift->update([
+            ...$validated,
+            'is_global' => (bool) ($validated['is_global'] ?? false),
+        ]);
 
         return redirect()->route('control-room.shifts.index')
             ->withSuccess('Shift updated successfully.');

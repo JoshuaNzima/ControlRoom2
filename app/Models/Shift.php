@@ -21,10 +21,12 @@ class Shift extends Model
         'required_guards',
         'sites',
         'created_by',
+        'is_global',
     ];
 
     protected $casts = [
         'sites' => 'array',
+        'is_global' => 'boolean',
     ];
 
     public function supervisor(): BelongsTo

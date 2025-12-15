@@ -15,6 +15,7 @@ export default function ShiftsCreate() {
     supervisor_id: number | '';
     required_guards: number;
     sites: number[];
+    is_global: boolean;
   };
 
   const { data, setData, post, processing, errors } = useForm<ShiftForm>({
@@ -25,6 +26,7 @@ export default function ShiftsCreate() {
     supervisor_id: '',
     required_guards: 1,
     sites: [] as number[],
+    is_global: false,
   });
 
   const toggleSite = (siteId: number) => {
@@ -80,11 +82,21 @@ export default function ShiftsCreate() {
                 {errors.required_guards && <p className="text-sm text-red-600">{errors.required_guards}</p>}
               </div>
               <div className="sm:col-span-2">
+                <label className="inline-flex items-center gap-2 text-sm font-medium">
+                  <input type="checkbox" checked={data.is_global} onChange={(e) => {
+                    const checked = e.target.checked;
+                    setData('is_global', checked);
+                    if (checked) setData('sites', [] as any);
+                  }} />
+                  <span>General shift (applies to all zones)</span>
+                </label>
+              </div>
+              <div className="sm:col-span-2">
                 <label className="block text-sm font-medium">Sites</label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-64 overflow-auto border rounded p-2">
                   {sites.map((s: any) => (
                     <label key={s.id} className="flex items-center gap-2 text-sm">
-                      <input type="checkbox" checked={(data.sites as any[]).includes(s.id)} onChange={() => toggleSite(s.id)} />
+                      <input type="checkbox" disabled={data.is_global} checked={(data.sites as any[]).includes(s.id)} onChange={() => toggleSite(s.id)} />
                       <span>{s.name}</span>
                     </label>
                   ))}
