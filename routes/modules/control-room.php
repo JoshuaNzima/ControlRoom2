@@ -53,6 +53,29 @@ Route::middleware(['auth'])->group(function () {
 		Route::post('shifts/{shift}/assign-guard', [\App\Http\Controllers\ControlRoom\ShiftController::class, 'assignGuard'])->name('shifts.assign-guard');
 		Route::delete('shifts/{shift}/unassign-guard/{guard}', [\App\Http\Controllers\ControlRoom\ShiftController::class, 'unassignGuard'])->name('shifts.unassign-guard');
 		Route::get('shifts/{shift}/schedule', [\App\Http\Controllers\ControlRoom\ShiftController::class, 'schedule'])->name('shifts.schedule');
+
+		// Roster (Control Room manages guard off-days; holidays visible via events)
+		Route::prefix('roster')->name('roster.')->group(function () {
+			Route::get('/', [\App\Http\Controllers\ControlRoom\RosterController::class, 'index'])->name('index');
+			Route::get('/weekly', [\App\Http\Controllers\ControlRoom\RosterController::class, 'weekly'])->name('weekly');
+			Route::get('/weekly/data', [\App\Http\Controllers\ControlRoom\RosterController::class, 'weeklyData'])->name('weekly.data');
+			Route::get('/events', [\App\Http\Controllers\HR\LeaveController::class, 'events'])->name('events');
+			Route::post('/off-days', [\App\Http\Controllers\HR\LeaveController::class, 'storeOffDay'])->name('off-days.store');
+			Route::put('/off-days/{offDay}', [\App\Http\Controllers\HR\LeaveController::class, 'updateOffDay'])->name('off-days.update');
+			Route::delete('/off-days/{offDay}', [\App\Http\Controllers\HR\LeaveController::class, 'destroyOffDay'])->name('off-days.destroy');
+			Route::post('/generate-shifts', [\App\Http\Controllers\ControlRoom\RosterController::class, 'generateShifts'])->name('generate-shifts');
+			Route::post('/relief', [\App\Http\Controllers\ControlRoom\RosterController::class, 'assignRelief'])->name('relief.assign');
+			Route::post('/relief/bulk', [\App\Http\Controllers\ControlRoom\RosterController::class, 'assignReliefBulk'])->name('relief.assign-bulk');
+			Route::post('/relief/delete', [\App\Http\Controllers\ControlRoom\RosterController::class, 'deleteRelief'])->name('relief.delete');
+			Route::post('/off-days/bulk', [\App\Http\Controllers\ControlRoom\RosterController::class, 'offDaysBulk'])->name('off-days.bulk');
+
+			// Relief bundles (6 sites + 1 reliever)
+			Route::get('/bundles', [\App\Http\Controllers\ControlRoom\RosterController::class, 'bundles'])->name('bundles');
+			Route::post('/bundles', [\App\Http\Controllers\ControlRoom\RosterController::class, 'storeBundle'])->name('bundles.store');
+			Route::put('/bundles/{bundle}', [\App\Http\Controllers\ControlRoom\RosterController::class, 'updateBundle'])->name('bundles.update');
+			Route::delete('/bundles/{bundle}', [\App\Http\Controllers\ControlRoom\RosterController::class, 'destroyBundle'])->name('bundles.destroy');
+			Route::post('/bundles/{bundle}/apply-week', [\App\Http\Controllers\ControlRoom\RosterController::class, 'applyBundleWeek'])->name('bundles.apply-week');
+		});
 		
 		        // Control Room specific management routes (decoupled from Supervisor controllers)
         Route::get('/guards', [\App\Http\Controllers\ControlRoom\GuardsController::class, 'index'])->name('guards');

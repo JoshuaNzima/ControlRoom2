@@ -21,7 +21,7 @@ type Shift = {
 };
 
 export default function ShiftsIndex() {
-  const { shifts, supervisors = [], sites = [] } = usePage().props as any;
+  const { guardShifts = { data: [] }, scheduleShifts = { data: [] }, supervisors = [], sites = [] } = usePage().props as any;
 
   const [createOpen, setCreateOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
@@ -76,11 +76,30 @@ export default function ShiftsIndex() {
 
         <Card className="dark:bg-gray-800 dark:border-gray-700">
           <CardHeader>
-            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Recent Shifts</h3>
+            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Guard Shifts (Roster)</h3>
           </CardHeader>
           <CardContent>
             <div className="divide-y divide-gray-200 dark:divide-gray-700">
-              {shifts?.data?.map((s: any) => (
+              {guardShifts?.data?.map((s: any) => (
+                <div key={s.id} className="py-3 flex items-center justify-between">
+                  <div>
+                    <div className="font-medium">{s.guard_relation?.name || 'Guard'} • {s.client_site?.name || 'Site'}</div>
+                    <div className="text-xs text-gray-500">{s.date} • {s.start_time} - {s.end_time} • {s.shift_type}</div>
+                  </div>
+                  <div className="flex gap-2 text-xs text-gray-500">Scheduled</div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="dark:bg-gray-800 dark:border-gray-700">
+          <CardHeader>
+            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Shift Templates</h3>
+          </CardHeader>
+          <CardContent>
+            <div className="divide-y divide-gray-200 dark:divide-gray-700">
+              {scheduleShifts?.data?.map((s: any) => (
                 <div key={s.id} className="py-3 flex items-center justify-between">
                   <div>
                     <div className="font-medium">{s.name}</div>

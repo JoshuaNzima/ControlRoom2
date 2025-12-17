@@ -1,0 +1,761 @@
+import React, { useEffect, useMemo, useState } from 'react';
+import { Head, useForm, usePage, Link } from '@inertiajs/react';
+import ControlRoomLayout from '@/Layouts/ControlRoomLayout';
+import Modal from '@/Components/Modal';
+
+type DayKey = string; // YYYY-MM-DD
+
+type Site = { id: number; name: string };
+
+type GuardWeekly = {
+  id: number;
+  name: string;
+  employee_id?: string;
+  guard_type?: 'permanent' | 'standby' | 'reliever' | string;
+  sites: Record<DayKey, Site | null>;
+  off: Record<DayKey, boolean>;
+};
+
+type RelieverWeekly = {
+  id: number;
+  name: string;
+  employee_id?: string;
+  sites: Record<DayKey, Site | null>;
+};
+
+type WeeklyData = {
+  days: DayKey[];
+  guards: GuardWeekly[];
+  relievers: RelieverWeekly[];
+  sites: Site[];
+  active_sites?: Site[];
+};
+
+function formatYmd(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${dd}`;
+}
+
+function GenerateShiftsPanel({ weekStart, zoneId, supervisorId }: { weekStart: Date; zoneId: number | ''; supervisorId: number | '' }) {
+  const { data, setData, post, processing, errors, reset } = useForm<{ start: string; start_time: string; end_time: string; shift_type?: 'day' | 'night'; include_relievers?: boolean; zone_id?: number | ''; supervisor_id?: number | '' }>({
+    start: formatYmd(weekStart),
+    start_time: '06:00',
+    end_time: '18:00',
+    shift_type: 'day',
+    include_relievers: false,
+    zone_id: zoneId,
+    supervisor_id: supervisorId,
+  });
+
+  useEffect(() => {
+    setData('start', formatYmd(weekStart));
+    setData('zone_id', zoneId);
+    setData('supervisor_id', supervisorId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [weekStart.getTime(), zoneId, supervisorId]);
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    post(route('control-room.roster.generate-shifts'), {
+      onSuccess: () => {},
+    });
+  };
+
+  return (
+    <div className="border rounded-md dark:border-gray-800">
+      <div className="px-4 py-3 border-b dark:border-gray-800 bg-white dark:bg-gray-900">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-medium">Generate Shifts from Roster (Week of {weekStart.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })})</h3>
+        </div>
+      </div>
+      <div className="px-4 py-3 bg-white dark:bg-gray-900">
+        <form onSubmit={submit} className="grid grid-cols-1 sm:grid-cols-5 gap-3 items-end">
+          <div>
+            <label className="block text-sm">Start Time</label>
+            <input type="time" className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100" value={data.start_time} onChange={(e) => setData('start_time', e.target.value)} />
+          </div>
+          <div>
+            <label className="block text-sm">End Time</label>
+            <input type="time" className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100" value={data.end_time} onChange={(e) => setData('end_time', e.target.value)} />
+          </div>
+          <div>
+            <label className="block text-sm">Type</label>
+            <select className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100" value={data.shift_type as any} onChange={(e) => setData('shift_type', e.target.value as any)}>
+              <option value="day">Day</option>
+              <option value="night">Night</option>
+            </select>
+          </div>
+          <div className="flex items-center gap-2">
+            <label className="inline-flex items-center gap-2 text-sm mt-6">
+              <input type="checkbox" checked={!!data.include_relievers} onChange={(e) => setData('include_relievers', e.target.checked)} />
+              <span>Include relievers</span>
+            </label>
+          </div>
+          <div className="flex justify-end">
+            <button type="submit" disabled={processing || !data.start_time || !data.end_time} className="px-3 py-2 rounded-md bg-indigo-600 text-white hover:bg-indigo-700 text-sm">Generate</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function BundlesSection({ weekStart, zoneId, supervisorId, relievers, sites }: { weekStart: Date; zoneId: number | ''; supervisorId: number | ''; relievers: any[]; sites: Site[] }) {
+  const [bundles, setBundles] = useState<any[]>([]);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [editing, setEditing] = useState<any | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const loadBundles = async () => {
+    setLoading(true);
+    try {
+      const params: any = {};
+      if (zoneId) params.zone_id = zoneId;
+      if (supervisorId) params.supervisor_id = supervisorId;
+      const url = route('control-room.roster.bundles', params);
+      const res = await fetch(url, { headers: { Accept: 'application/json' } });
+      if (res.ok) {
+        const json = await res.json();
+        setBundles(json.bundles || []);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadBundles();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [zoneId, supervisorId]);
+
+  const applyWeek = async (bundleId: number) => {
+    const form = useForm<{ start: string }>({ start: formatYmd(weekStart) });
+    form.post(route('control-room.roster.bundles.apply-week', bundleId), {
+      preserveScroll: true,
+      onSuccess: () => {},
+    });
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-semibold">Bundles (6 sites + 1 reliever)</h3>
+        <button type="button" className="px-3 py-1.5 rounded-md bg-gray-800 text-white hover:bg-gray-700 text-sm" onClick={() => { setEditing(null); setCreateOpen(true); }}>New Bundle</button>
+      </div>
+      {loading && <div className="text-sm text-gray-500 dark:text-gray-400">Loading…</div>}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        {bundles.map((b) => (
+          <div key={b.id} className="border rounded-md p-3 dark:border-gray-800">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="font-medium">{b.name}</div>
+                <div className="text-xs text-gray-500">Reliever: {b.reliever?.name || '—'}</div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button type="button" className="text-xs px-2 py-1 rounded-md bg-gray-100 dark:bg-gray-800" onClick={() => { setEditing(b); setCreateOpen(true); }}>Edit</button>
+                <DeleteBundleButton id={b.id} onDone={loadBundles} />
+                <button type="button" className="text-xs px-2 py-1 rounded-md bg-indigo-600 text-white" onClick={() => applyWeek(b.id)}>Apply Week</button>
+              </div>
+            </div>
+            <div className="mt-2 text-xs text-gray-600 dark:text-gray-300">
+              Sites: {b.sites && b.sites.length ? b.sites.map((s: any) => s.name).join(', ') : '—'}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <BundleFormModal
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        initial={editing}
+        relievers={relievers}
+        sites={sites}
+        filters={{ zone_id: zoneId, supervisor_id: supervisorId }}
+        onSaved={() => { setCreateOpen(false); loadBundles(); }}
+      />
+    </div>
+  );
+}
+
+function DeleteBundleButton({ id, onDone }: { id: number; onDone: () => void }) {
+  const { post, processing } = useForm({});
+  const onDelete = () => {
+    if (!confirm('Delete this bundle?')) return;
+    post(route('control-room.roster.bundles.destroy', id), {
+      method: 'delete',
+      onSuccess: onDone,
+    } as any);
+  };
+  return (
+    <button type="button" className="text-xs px-2 py-1 rounded-md bg-red-600 text-white disabled:opacity-50" onClick={onDelete} disabled={processing}>Delete</button>
+  );
+}
+
+function BundleFormModal({ open, onClose, initial, relievers, sites, filters, onSaved }: { open: boolean; onClose: () => void; initial?: any; relievers: any[]; sites: Site[]; filters: { zone_id: number | ''; supervisor_id: number | '' }; onSaved: () => void }) {
+  const isEdit = !!initial;
+  const { data, setData, post, put, processing, errors, reset } = useForm<{ name: string; reliever_guard_id: number | ''; site_ids: number[]; zone_id?: number | ''; supervisor_id?: number | '' }>({
+    name: initial?.name || '',
+    reliever_guard_id: initial?.reliever?.id || ('' as any),
+    site_ids: (initial?.sites || []).map((s: any) => s.id) || [],
+    zone_id: filters.zone_id,
+    supervisor_id: filters.supervisor_id,
+  });
+
+  useEffect(() => {
+    if (open) {
+      setData('name', initial?.name || '');
+      setData('reliever_guard_id', initial?.reliever?.id || ('' as any));
+      setData('site_ids', (initial?.sites || []).map((s: any) => s.id));
+      setData('zone_id', filters.zone_id);
+      setData('supervisor_id', filters.supervisor_id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, initial, filters.zone_id, filters.supervisor_id]);
+
+  const toggleSite = (sid: number) => {
+    const set = new Set(data.site_ids as any[]);
+    if (set.has(sid)) set.delete(sid); else set.add(sid);
+    const arr = Array.from(set) as number[];
+    if (arr.length > 6) return; // enforce max 6
+    setData('site_ids', arr as any);
+  };
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (isEdit) {
+      put(route('control-room.roster.bundles.update', initial.id), {
+        onSuccess: onSaved,
+      });
+    } else {
+      post(route('control-room.roster.bundles'), {
+        onSuccess: onSaved,
+      });
+    }
+  };
+
+  return (
+    <Modal show={open} onClose={onClose} maxWidth="lg">
+      <div className="px-6 py-4 border-b flex items-center justify-between bg-white dark:bg-gray-900 dark:border-gray-800">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{isEdit ? 'Edit Bundle' : 'New Bundle'}</h2>
+        <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-200">✕</button>
+      </div>
+      <div className="px-6 py-4 bg-white dark:bg-gray-900">
+        <form className="grid grid-cols-1 gap-3" onSubmit={submit}>
+          <div>
+            <label className="block text-sm font-medium">Name</label>
+            <input className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100" value={data.name} onChange={(e) => setData('name', e.target.value)} />
+            {errors.name && <p className="text-xs text-red-600 mt-1">{errors.name}</p>}
+          </div>
+          <div>
+            <label className="block text-sm font-medium">Reliever</label>
+            <select className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100" value={data.reliever_guard_id as any} onChange={(e) => setData('reliever_guard_id', Number(e.target.value))}>
+              <option value="">Select reliever</option>
+              {relievers.map((r) => (
+                <option key={r.id} value={r.id}>{r.name} {r.employee_id ? `(${r.employee_id})` : ''}</option>
+              ))}
+            </select>
+            {errors.reliever_guard_id && <p className="text-xs text-red-600 mt-1">{errors.reliever_guard_id}</p>}
+          </div>
+          <div>
+            <label className="block text-sm font-medium">Sites (max 6)</label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-auto border rounded p-2 dark:border-gray-800">
+              {sites.map((s) => (
+                <label key={s.id} className="flex items-center gap-2 text-sm">
+                  <input type="checkbox" checked={(data.site_ids as any[]).includes(s.id)} onChange={() => toggleSite(s.id)} />
+                  <span>{s.name}</span>
+                </label>
+              ))}
+            </div>
+            {errors.site_ids && <p className="text-xs text-red-600 mt-1">{errors.site_ids}</p>}
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <button type="button" onClick={onClose} className="px-4 py-2 text-sm rounded-md bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700" disabled={processing}>Cancel</button>
+            <button type="submit" disabled={processing || !data.name || !data.reliever_guard_id || !(data.site_ids || []).length} className="px-4 py-2 text-sm rounded-md bg-indigo-600 text-white hover:bg-indigo-700">{processing ? 'Saving…' : 'Save'}</button>
+          </div>
+        </form>
+      </div>
+    </Modal>
+  );
+}
+
+function startOfWeekMonday(d: Date) {
+  const date = new Date(d);
+  const day = date.getDay(); // 0=Sun
+  const diff = (day === 0 ? -6 : 1) - day; // make Monday start
+  date.setDate(date.getDate() + diff);
+  date.setHours(0, 0, 0, 0);
+  return date;
+}
+
+export default function RosterWeekly() {
+  const { auth, initial_week_start, zones = [], supervisors = [] } = (usePage().props as any);
+  const [weekStart, setWeekStart] = useState<Date>(() => initial_week_start ? new Date(initial_week_start) : startOfWeekMonday(new Date()));
+  const [data, setData] = useState<WeeklyData | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [zoneId, setZoneId] = useState<number | ''>('');
+  const [supervisorId, setSupervisorId] = useState<number | ''>('');
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      const params: any = { start: formatYmd(weekStart) };
+      if (zoneId) params.zone_id = zoneId;
+      if (supervisorId) params.supervisor_id = supervisorId;
+      const url = route('control-room.roster.weekly.data', params);
+      const res = await fetch(url, { headers: { Accept: 'application/json' } });
+      if (res.ok) {
+        const json = await res.json();
+        setData(json as WeeklyData);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [weekStart.getTime()]);
+
+  const prevWeek = () => setWeekStart((d) => { const nd = new Date(d); nd.setDate(nd.getDate() - 7); return startOfWeekMonday(nd); });
+  const nextWeek = () => setWeekStart((d) => { const nd = new Date(d); nd.setDate(nd.getDate() + 7); return startOfWeekMonday(nd); });
+  const thisWeek = () => setWeekStart(startOfWeekMonday(new Date()));
+
+  return (
+    <ControlRoomLayout title="Weekly Roster" user={auth?.user as any}>
+      <Head title="Weekly Roster" />
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-xl font-semibold">Weekly Roster</h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400">Show guard off-days and reliever sites for each day.</p>
+          </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+          <div className="flex items-center gap-2">
+            <label className="text-sm text-gray-600 dark:text-gray-300 min-w-[70px]">Zone</label>
+            <select className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100" value={zoneId as any} onChange={(e) => setZoneId(e.target.value ? Number(e.target.value) : '')}>
+              <option value="">All zones</option>
+              {zones.map((z: any) => (<option key={z.id} value={z.id}>{z.name}</option>))}
+            </select>
+          </div>
+          <div className="flex items-center gap-2">
+            <label className="text-sm text-gray-600 dark:text-gray-300 min-w-[90px]">Supervisor</label>
+            <select className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100" value={supervisorId as any} onChange={(e) => setSupervisorId(e.target.value ? Number(e.target.value) : '')}>
+              <option value="">All supervisors</option>
+              {supervisors.map((s: any) => (<option key={s.id} value={s.id}>{s.name}</option>))}
+            </select>
+          </div>
+          <div className="flex items-center gap-2 md:justify-end">
+            <button onClick={load} className="px-3 py-1.5 rounded-md bg-indigo-600 text-white hover:bg-indigo-700">Apply</button>
+            <button onClick={() => { setZoneId(''); setSupervisorId(''); load(); }} className="px-3 py-1.5 rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700">Reset</button>
+          </div>
+        </div>
+          <div className="flex items-center gap-2">
+            <Link href={route('control-room.shifts.index')} className="px-3 py-1.5 rounded-md bg-gray-800 text-white hover:bg-gray-700 text-sm">View Guard Shifts</Link>
+            <button onClick={prevWeek} className="px-3 py-1.5 rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700">Prev</button>
+            <button onClick={thisWeek} className="px-3 py-1.5 rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700">This Week</button>
+            <button onClick={nextWeek} className="px-3 py-1.5 rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700">Next</button>
+          </div>
+        </div>
+
+        {loading && <div className="text-gray-500 dark:text-gray-400">Loading…</div>}
+
+        {data && (
+          <div className="space-y-8">
+            <GenerateShiftsPanel
+              weekStart={weekStart}
+              zoneId={zoneId}
+              supervisorId={supervisorId}
+            />
+            <GuardsTable data={data} onRefresh={load} />
+            <RelieversTable data={data} onRefresh={load} />
+            <BundlesSection
+              weekStart={weekStart}
+              zoneId={zoneId}
+              supervisorId={supervisorId}
+              relievers={(data.guards || []).filter((g: any) => (g.guard_type || 'permanent') === 'reliever')}
+              sites={data.sites}
+            />
+          </div>
+        )}
+      </div>
+    </ControlRoomLayout>
+  );
+}
+
+function GuardsTable({ data, onRefresh }: { data: WeeklyData; onRefresh: () => void }) {
+  const dayLabels = useMemo(() => data.days.map((d) => new Date(d).toLocaleDateString(undefined, { weekday: 'short' })), [data.days]);
+  const [offModal, setOffModal] = useState<{ open: boolean; guardId?: number; date?: string }>({ open: false });
+  const [selected, setSelected] = useState<Record<number, boolean>>({});
+  const [bulkOffOpen, setBulkOffOpen] = useState(false);
+
+  const toggleSel = (id: number) => setSelected((prev) => ({ ...prev, [id]: !prev[id] }));
+  const selectedIds = Object.entries(selected).filter(([_, v]) => !!v).map(([k]) => Number(k));
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-semibold">Assigned Guards</h3>
+        <div className="text-xs text-gray-500 dark:text-gray-400">Click a day to add off-day</div>
+      </div>
+      <div className="flex items-center justify-between">
+        <div className="text-xs text-gray-500 dark:text-gray-400">Select guards then bulk mark OFF</div>
+        <button disabled={!selectedIds.length} onClick={() => setBulkOffOpen(true)} className={`px-3 py-1.5 rounded-md text-white ${selectedIds.length ? 'bg-gray-800 hover:bg-gray-700' : 'bg-gray-400 cursor-not-allowed'}`}>Bulk Off-day</button>
+      </div>
+
+      <div className="overflow-x-auto border dark:border-gray-800 rounded-md">
+        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-800">
+          <thead className="bg-gray-50 dark:bg-gray-950">
+            <tr>
+              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400">Guard</th>
+              {dayLabels.map((lbl, idx) => (
+                <th key={idx} className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400">{lbl}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-200 dark:divide-gray-900 bg-white dark:bg-gray-900">
+            {data.guards.filter(g => (g.guard_type || 'permanent') !== 'reliever').map((g) => (
+              <tr key={g.id}>
+                <td className="px-3 py-2 text-sm font-medium whitespace-nowrap">
+                  <label className="inline-flex items-center gap-2">
+                    <input type="checkbox" checked={!!selected[g.id]} onChange={() => toggleSel(g.id)} />
+                    <span>{g.name} {g.employee_id ? <span className="text-xs text-gray-500">({g.employee_id})</span> : null}</span>
+                  </label>
+                </td>
+                {data.days.map((d) => {
+                  const off = !!g.off?.[d];
+                  const site = g.sites?.[d];
+                  return (
+                    <td key={d} className="px-3 py-2 text-sm">
+                      <button
+                        type="button"
+                        className={`inline-flex items-center gap-2 px-2 py-1 rounded-md border text-xs ${off ? 'bg-gray-800 text-gray-100 border-gray-700' : site ? 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100 border-gray-200 dark:border-gray-700' : 'bg-white dark:bg-gray-900 text-gray-500 border-gray-200 dark:border-gray-800'}`}
+                        onClick={() => setOffModal({ open: true, guardId: g.id, date: d })}
+                        title="Add off-day"
+                      >
+                        {off ? 'OFF' : (site ? site.name : '—')}
+                      </button>
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <AddOffDayModal
+        open={offModal.open}
+        onClose={() => setOffModal({ open: false })}
+        guardId={offModal.guardId}
+        date={offModal.date}
+        onSaved={() => { setOffModal({ open: false }); onRefresh(); }}
+      />
+
+      <BulkOffModal
+        open={bulkOffOpen}
+        onClose={() => setBulkOffOpen(false)}
+        guardIds={selectedIds}
+        onSaved={() => { setBulkOffOpen(false); onRefresh(); }}
+      />
+    </div>
+  );
+}
+
+function RelieversTable({ data, onRefresh }: { data: WeeklyData; onRefresh: () => void }) {
+  const dayLabels = useMemo(() => data.days.map((d) => new Date(d).toLocaleDateString(undefined, { weekday: 'short' })), [data.days]);
+  const [relModal, setRelModal] = useState<{ open: boolean; guardId?: number; date?: string; siteId?: number }>( { open: false } );
+  const [bulkRel, setBulkRel] = useState<{ open: boolean; guardId?: number }>({ open: false });
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-semibold">Relievers</h3>
+        <div className="text-xs text-gray-500 dark:text-gray-400">Click a day to assign a site</div>
+      </div>
+      <div className="overflow-x-auto border dark:border-gray-800 rounded-md">
+        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-800">
+          <thead className="bg-gray-50 dark:bg-gray-950">
+            <tr>
+              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400">Reliever</th>
+              {dayLabels.map((lbl, idx) => (
+                <th key={idx} className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400">{lbl}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-200 dark:divide-gray-900 bg-white dark:bg-gray-900">
+            {data.relievers.map((r) => (
+              <tr key={r.id}>
+                <td className="px-3 py-2 text-sm font-medium whitespace-nowrap">
+                  <div className="flex items-center gap-2">
+                    <span>{r.name} {r.employee_id ? <span className="text-xs text-gray-500">({r.employee_id})</span> : null}</span>
+                    <button type="button" className="px-2 py-1 text-xs rounded-md bg-indigo-600 text-white hover:bg-indigo-700" onClick={() => setBulkRel({ open: true, guardId: r.id })}>Bulk Assign Week</button>
+                  </div>
+                </td>
+                {data.days.map((d) => {
+                  const site = r.sites?.[d];
+                  return (
+                    <td key={d} className="px-3 py-2 text-sm">
+                      <button
+                        type="button"
+                        className={`inline-flex items-center gap-2 px-2 py-1 rounded-md border text-xs ${site ? 'bg-indigo-600 text-white border-indigo-700' : 'bg-white dark:bg-gray-900 text-gray-500 border-gray-200 dark:border-gray-800'}`}
+                        onClick={() => setRelModal({ open: true, guardId: r.id, date: d, siteId: site?.id })}
+                        title="Assign site"
+                      >
+                        {site ? site.name : 'Assign'}
+                      </button>
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <AssignReliefModal
+        open={relModal.open}
+        onClose={() => setRelModal({ open: false })}
+        guardId={relModal.guardId}
+        date={relModal.date}
+        initialSiteId={relModal.siteId}
+        sites={data.sites}
+        onSaved={() => { setRelModal({ open: false }); onRefresh(); }}
+      />
+
+      <BulkReliefModal
+        open={bulkRel.open}
+        onClose={() => setBulkRel({ open: false })}
+        guardId={bulkRel.guardId}
+        days={data.days}
+        initialMap={(() => {
+          const r = data.relievers.find(x => x.id === bulkRel.guardId);
+          return r?.sites || {};
+        })()}
+        sites={data.sites}
+        activeSites={data.active_sites || []}
+        onSaved={() => { setBulkRel({ open: false }); onRefresh(); }}
+      />
+    </div>
+  );
+}
+
+function AddOffDayModal({ open, onClose, guardId, date, onSaved }: { open: boolean; onClose: () => void; guardId?: number; date?: string; onSaved: () => void }) {
+  const { data, setData, post, processing, errors, reset } = useForm<{ guard_id: number | string; start_date: string; end_date?: string; reason?: string }>({
+    guard_id: guardId ?? ('' as any),
+    start_date: date ?? '',
+    end_date: '',
+    reason: '',
+  });
+
+  useEffect(() => {
+    setData('guard_id', guardId ?? ('' as any));
+    setData('start_date', date ?? '');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [guardId, date]);
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    post(route('control-room.roster.off-days.store'), {
+      onSuccess: () => { reset(); onSaved(); },
+    });
+  };
+
+  return (
+    <Modal show={open} onClose={onClose} maxWidth="sm">
+      <div className="px-6 py-4 border-b flex items-center justify-between bg-white dark:bg-gray-900 dark:border-gray-800">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Add Off Day</h2>
+        <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-200">✕</button>
+      </div>
+      <div className="px-6 py-4 bg-white dark:bg-gray-900">
+        <form className="grid grid-cols-1 gap-3" onSubmit={submit}>
+          <div>
+            <label className="block text-sm font-medium">Date</label>
+            <input type="date" className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100" value={data.start_date} onChange={(e) => setData('start_date', e.target.value)} />
+            {errors.start_date && <p className="text-xs text-red-600 mt-1">{errors.start_date}</p>}
+          </div>
+          <div>
+            <label className="block text-sm font-medium">Reason (optional)</label>
+            <input className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100" value={data.reason || ''} onChange={(e) => setData('reason', e.target.value)} />
+            {errors.reason && <p className="text-xs text-red-600 mt-1">{errors.reason}</p>}
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <button type="button" onClick={onClose} className="px-4 py-2 text-sm rounded-md bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700" disabled={processing}>Cancel</button>
+            <button type="submit" disabled={processing || !data.start_date} className="px-4 py-2 text-sm rounded-md bg-indigo-600 text-white hover:bg-indigo-700">{processing ? 'Saving…' : 'Save'}</button>
+          </div>
+        </form>
+      </div>
+    </Modal>
+  );
+}
+
+function AssignReliefModal({ open, onClose, guardId, date, initialSiteId, sites, onSaved }: { open: boolean; onClose: () => void; guardId?: number; date?: string; initialSiteId?: number; sites: Site[]; onSaved: () => void }) {
+  const { data, setData, post, processing, errors, reset } = useForm<{ guard_id: number | string; client_site_id: number | string; date: string; notes?: string }>({
+    guard_id: guardId ?? ('' as any),
+    client_site_id: initialSiteId ?? ('' as any),
+    date: date ?? '',
+    notes: '',
+  });
+
+  useEffect(() => {
+    setData('guard_id', guardId ?? ('' as any));
+    setData('client_site_id', initialSiteId ?? ('' as any));
+    setData('date', date ?? '');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [guardId, date, initialSiteId]);
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    post(route('control-room.roster.relief.assign'), {
+      onSuccess: () => { reset(); onSaved(); },
+    });
+  };
+
+  const clearAssignment = () => {
+    setData('guard_id', (guardId ?? '') as any);
+    setData('date', date ?? '');
+    post(route('control-room.roster.relief.delete'), {
+      preserveScroll: true,
+      onSuccess: () => { reset(); onSaved(); },
+    });
+  };
+
+  return (
+    <Modal show={open} onClose={onClose} maxWidth="sm">
+      <div className="px-6 py-4 border-b flex items-center justify-between bg-white dark:bg-gray-900 dark:border-gray-800">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Assign Reliever</h2>
+        <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-200">✕</button>
+      </div>
+      <div className="px-6 py-4 bg-white dark:bg-gray-900">
+        <form className="grid grid-cols-1 gap-3" onSubmit={submit}>
+          <div>
+            <label className="block text-sm font-medium">Date</label>
+            <input type="date" className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100" value={data.date} onChange={(e) => setData('date', e.target.value)} />
+            {errors.date && <p className="text-xs text-red-600 mt-1">{errors.date}</p>}
+          </div>
+          <div>
+            <label className="block text-sm font-medium">Site</label>
+            <select className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100" value={data.client_site_id as any} onChange={(e) => setData('client_site_id', Number(e.target.value))}>
+              <option value="">Select a site</option>
+              {sites.map((s) => (
+                <option key={s.id} value={s.id}>{s.name}</option>
+              ))}
+            </select>
+            {errors.client_site_id && <p className="text-xs text-red-600 mt-1">{errors.client_site_id}</p>}
+          </div>
+          <div>
+            <label className="block text-sm font-medium">Notes (optional)</label>
+            <input className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100" value={data.notes || ''} onChange={(e) => setData('notes', e.target.value)} />
+            {errors.notes && <p className="text-xs text-red-600 mt-1">{errors.notes}</p>}
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <button type="button" onClick={onClose} className="px-4 py-2 text-sm rounded-md bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700" disabled={processing}>Cancel</button>
+            {initialSiteId ? (
+              <button type="button" onClick={clearAssignment} className="px-4 py-2 text-sm rounded-md bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700" disabled={processing}>Clear</button>
+            ) : null}
+            <button type="submit" disabled={processing || !data.client_site_id || !data.date} className="px-4 py-2 text-sm rounded-md bg-indigo-600 text-white hover:bg-indigo-700">{processing ? 'Saving…' : 'Save'}</button>
+          </div>
+        </form>
+      </div>
+    </Modal>
+  );
+}
+
+function BulkOffModal({ open, onClose, guardIds, onSaved }: { open: boolean; onClose: () => void; guardIds: number[]; onSaved: () => void }) {
+  const { data, setData, post, processing, errors, reset } = useForm<{ guard_ids: number[]; date: string; reason?: string }>({
+    guard_ids: guardIds,
+    date: '',
+    reason: '',
+  });
+
+  useEffect(() => { setData('guard_ids', guardIds); }, [guardIds]);
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    post(route('control-room.roster.off-days.bulk'), {
+      onSuccess: () => { reset(); onSaved(); },
+    });
+  };
+
+  return (
+    <Modal show={open} onClose={onClose} maxWidth="sm">
+      <div className="px-6 py-4 border-b flex items-center justify-between bg-white dark:bg-gray-900 dark:border-gray-800">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Bulk Off-day</h2>
+        <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-200">✕</button>
+      </div>
+      <div className="px-6 py-4 bg-white dark:bg-gray-900">
+        <form className="grid grid-cols-1 gap-3" onSubmit={submit}>
+          <div>
+            <label className="block text-sm font-medium">Date</label>
+            <input type="date" className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100" value={data.date} onChange={(e) => setData('date', e.target.value)} />
+            {errors?.date && <p className="text-xs text-red-600 mt-1">{errors.date}</p>}
+          </div>
+          <div>
+            <label className="block text-sm font-medium">Reason (optional)</label>
+            <input className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100" value={data.reason || ''} onChange={(e) => setData('reason', e.target.value)} />
+            {errors?.reason && <p className="text-xs text-red-600 mt-1">{errors.reason}</p>}
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <button type="button" onClick={onClose} className="px-4 py-2 text-sm rounded-md bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700" disabled={processing}>Cancel</button>
+            <button type="submit" disabled={processing || !data.date || !guardIds.length} className="px-4 py-2 text-sm rounded-md bg-gray-800 text-white hover:bg-gray-700">{processing ? 'Saving…' : 'Save'}</button>
+          </div>
+        </form>
+      </div>
+    </Modal>
+  );
+}
+
+function BulkReliefModal({ open, onClose, guardId, days, initialMap, sites, activeSites, onSaved }: { open: boolean; onClose: () => void; guardId?: number; days: DayKey[]; initialMap: Record<DayKey, Site | null>; sites: Site[]; activeSites: Site[]; onSaved: () => void }) {
+  const { data, setData, post, processing, reset } = useForm<{ guard_id: number | string; day_site_map: Record<DayKey, number | ''> }>({
+    guard_id: guardId ?? ('' as any),
+    day_site_map: days.reduce((acc: any, d) => { acc[d] = initialMap?.[d]?.id || ''; return acc; }, {} as Record<DayKey, number | ''>),
+  });
+  const [onlyActive, setOnlyActive] = useState(true);
+
+  useEffect(() => {
+    setData('guard_id', guardId ?? ('' as any));
+    setData('day_site_map', days.reduce((acc: any, d) => { acc[d] = initialMap?.[d]?.id || ''; return acc; }, {} as Record<DayKey, number | ''>));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [guardId]);
+
+  const list = onlyActive ? activeSites : sites;
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    post(route('control-room.roster.relief.assign-bulk'), {
+      onSuccess: () => { reset(); onSaved(); },
+    });
+  };
+
+  return (
+    <Modal show={open} onClose={onClose} maxWidth="md">
+      <div className="px-6 py-4 border-b flex items-center justify-between bg-white dark:bg-gray-900 dark:border-gray-800">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Bulk Assign Reliever</h2>
+        <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-200">✕</button>
+      </div>
+      <div className="px-6 py-4 bg-white dark:bg-gray-900">
+        <form className="grid grid-cols-1 gap-3" onSubmit={submit}>
+          <label className="inline-flex items-center gap-2"><input type="checkbox" checked={onlyActive} onChange={(e) => setOnlyActive(e.target.checked)} /> <span className="text-sm">Only show active sites this week</span></label>
+          {days.map((d) => (
+            <div key={d} className="grid grid-cols-1 sm:grid-cols-3 gap-2 items-center">
+              <div className="text-sm text-gray-600 dark:text-gray-300">{new Date(d).toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}</div>
+              <div className="sm:col-span-2">
+                <select className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100" value={data.day_site_map[d] as any} onChange={(e) => setData('day_site_map', { ...data.day_site_map, [d]: e.target.value ? Number(e.target.value) : '' })}>
+                  <option value="">—</option>
+                  {list.map((s) => (<option key={s.id} value={s.id}>{s.name}</option>))}
+                </select>
+              </div>
+            </div>
+          ))}
+          <div className="flex justify-end gap-2 pt-2">
+            <button type="button" onClick={onClose} className="px-4 py-2 text-sm rounded-md bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700" disabled={processing}>Cancel</button>
+            <button type="submit" disabled={processing || !guardId} className="px-4 py-2 text-sm rounded-md bg-indigo-600 text-white hover:bg-indigo-700">{processing ? 'Saving…' : 'Save'}</button>
+          </div>
+        </form>
+      </div>
+    </Modal>
+  );
+}

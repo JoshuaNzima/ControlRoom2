@@ -3,7 +3,8 @@
 namespace App\Http\Controllers\ControlRoom;
 
 use App\Http\Controllers\Controller;
-use App\Models\Shift;
+use App\Models\Guards\Shift as GuardShift;
+use App\Models\Shift as ScheduleShift;
 use App\Models\User;
 use App\Models\Guards\Guard;
 use App\Models\Guards\ClientSite;
@@ -14,15 +15,20 @@ class ShiftController extends Controller
 {
     public function index()
     {
-        $shifts = Shift::with(['guards', 'supervisor'])
-            ->latest()
+        // Guard shifts (daily per-guard)
+        $guardShifts = GuardShift::with(['guardRelation', 'clientSite'])
+            ->orderByDesc('date')
             ->paginate(20);
+
+        // Schedule shifts (template/group shifts)
+        $scheduleShifts = ScheduleShift::latest()->paginate(20);
 
         $supervisors = User::role('supervisor')->select(['id','name'])->orderBy('name')->get();
         $sites = ClientSite::select(['id','name'])->orderBy('name')->get();
 
         return Inertia::render('ControlRoom/Shifts/Index', [
-            'shifts' => $shifts,
+            'guardShifts' => $guardShifts,
+            'scheduleShifts' => $scheduleShifts,
             'supervisors' => $supervisors,
             'sites' => $sites,
         ]);

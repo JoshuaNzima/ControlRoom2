@@ -46,6 +46,7 @@ export default function ControlRoomLayout({ title, children, user }: Props) {
   { name: 'Camera Systems', href: route('control-room.cameras.index'), icon: <IconMapper name="camera" className="h-6 w-6" />, current: false },
   { name: 'Zone Management', href: route('control-room.zones.index'), icon: <IconMapper name="map-pin" className="h-6 w-6" />, current: false },
   { name: 'Shift Management', href: route('control-room.shifts.index'), icon: <IconMapper name="clock" className="h-6 w-6" />, current: false },
+  { name: 'Roster', href: route('control-room.roster.weekly'), icon: <IconMapper name="calendar" className="h-6 w-6" />, current: isCurrent(route('control-room.roster.weekly')) },
   { name: 'Tickets', href: route('control-room.tickets.index'), icon: <IconMapper name="briefcase" className="h-6 w-6" />, current: false, badge: (()=>{ const n = Number(counters?.control_tickets_open||0); return n>0? String(n): undefined; })() },
   { name: 'Flags', href: route('control-room.flags.index'), icon: <IconMapper name="alert-triangle" className="h-6 w-6" />, current: false, badge: (()=>{ const n = Number(counters?.control_flags_pending||0); return n>0? String(n): undefined; })() },
   { name: 'Downs', href: route('control-room.downs.index'), icon: <IconMapper name="activity" className="h-6 w-6" />, current: false, badge: (()=>{ const n = Number(counters?.control_downs_active||0); return n>0? String(n): undefined; })() },

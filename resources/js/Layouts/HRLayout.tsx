@@ -38,7 +38,7 @@ export default function HRLayout({ title, children, user }: Props) {
   const nav: NavItem[] = [
     { name: 'Overview', href: route('hr.dashboard'), icon: <IconMapper name="layout-dashboard" className="h-6 w-6" />, current: isCurrent(route('hr.dashboard')) },
     { name: 'Employees', href: route('hr.employees.index'), icon: <IconMapper name="users" className="h-6 w-6" />, current: isCurrent(route('hr.employees.index')) },
-    { name: 'Leaves', href: route('hr.leaves'), icon: <IconMapper name="calendar" className="h-6 w-6" />, current: isCurrent(route('hr.leaves')) },
+    { name: 'Roster', href: route('hr.leaves'), icon: <IconMapper name="calendar" className="h-6 w-6" />, current: isCurrent(route('hr.leaves')) },
     { name: 'Training', href: route('hr.training'), icon: <IconMapper name="graduation-cap" className="h-6 w-6" />, current: isCurrent(route('hr.training')) },
     { name: 'Careers', href: route('hr.jobs.index'), icon: <IconMapper name="megaphone" className="h-6 w-6" />, current: isCurrent(route('hr.jobs.index')) },
     { name: 'Requisitions', href: route('requisitions.index'), icon: <IconMapper name="clipboard-list" className="h-6 w-6" />, current: isCurrent(route('requisitions.index')), badge: (()=>{ const n = Number(counters?.requisitions_my_open||0); return n>0? String(n): undefined; })() },
