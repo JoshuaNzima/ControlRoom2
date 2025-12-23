@@ -35,20 +35,22 @@ interface Props {
   budgets: { data: BudgetLite[]; meta?: any } | BudgetLite[];
   selectedTab?: 'requisitions' | 'budgets';
   requisitionsPending?: RequisitionLite[];
+  requisitionsExpired?: RequisitionLite[];
+  reqFilter?: 'pending' | 'expired';
 }
 
 interface RequisitionLite {
   id: number;
   title: string;
   amount?: number | string | null;
-  status: 'pending_admin' | 'needs_revision' | 'pending_disbursement' | 'disbursed';
+  status: 'pending_admin' | 'needs_revision' | 'pending_disbursement' | 'disbursed' | 'expired';
   requested_by?: number;
   requestedBy?: { id: number; name: string } | null;
   created_at?: string;
   needed_by?: string | null;
 }
 
-export default function AdminApprovalsIndex({ approvals = [], budgets, selectedTab = 'requisitions', requisitionsPending = [] }: Props) {
+export default function AdminApprovalsIndex({ approvals = [], budgets, selectedTab = 'requisitions', requisitionsPending = [], requisitionsExpired = [], reqFilter = 'pending' }: Props) {
   const [tab, setTab] = useState<'requisitions' | 'budgets'>(selectedTab);
   const [viewOpen, setViewOpen] = useState(false);
   const [viewing, setViewing] = useState<Approval | null>(null);
@@ -91,6 +93,16 @@ export default function AdminApprovalsIndex({ approvals = [], budgets, selectedT
     router.post(route('requisitions.decline', r.id), { notes_admin: reason }, { preserveScroll: true });
   };
 
+  const reqStatusColors: Record<string, string> = {
+    pending_admin: 'px-2 py-1 rounded text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-500/20 dark:text-yellow-200 border border-yellow-500/30',
+    needs_revision: 'px-2 py-1 rounded text-xs font-medium bg-red-100 text-red-800 dark:bg-red-500/10 dark:text-red-300 border border-red-500/30',
+    pending_disbursement: 'px-2 py-1 rounded text-xs font-medium bg-indigo-100 text-indigo-800 dark:bg-indigo-500/20 dark:text-indigo-200 border border-indigo-500/30',
+    disbursed: 'px-2 py-1 rounded text-xs font-medium bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-200 border border-emerald-500/30',
+    expired: 'px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700/40 dark:text-gray-300 border border-gray-300 dark:border-gray-600',
+  };
+
+  const reqs = reqFilter === 'expired' ? (requisitionsExpired || []) : (requisitionsPending || []);
+
   const doApprove = async (a: Approval) => {
     if (!confirm('Approve this requisition?')) return;
     router.post(route('admin.approvals.approve', a.id), {}, { preserveScroll: true });
@@ -129,6 +141,23 @@ export default function AdminApprovalsIndex({ approvals = [], budgets, selectedT
 
           {tab === 'requisitions' && (
             <div className="bg-white rounded-xl shadow overflow-hidden dark:bg-gray-900 dark:border dark:border-gray-800">
+              <div className="px-4 py-3 border-b dark:border-gray-800 flex flex-wrap items-center justify-between gap-2">
+                <div className="text-sm font-medium text-gray-900 dark:text-gray-100">Requisitions awaiting admin</div>
+                <div className="inline-flex rounded-full bg-gray-100 dark:bg-gray-800/60 p-1">
+                  <button
+                    onClick={() => router.get(route('admin.approvals.index'), { tab: 'requisitions', req_filter: 'pending' }, { preserveState: true, replace: true })}
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium ${reqFilter === 'pending' ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-gray-200 dark:text-gray-300 dark:hover:bg-gray-700/60'}`}
+                  >
+                    Pending
+                  </button>
+                  <button
+                    onClick={() => router.get(route('admin.approvals.index'), { tab: 'requisitions', req_filter: 'expired' }, { preserveState: true, replace: true })}
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium ${reqFilter === 'expired' ? 'bg-gray-700 text-white dark:bg-gray-600' : 'text-gray-700 hover:bg-gray-200 dark:text-gray-300 dark:hover:bg-gray-700/60'}`}
+                  >
+                    Expired
+                  </button>
+                </div>
+              </div>
               <table className="min-w-full">
                 <thead className="bg-gray-50 dark:bg-gray-800/60">
                   <tr>
@@ -140,7 +169,7 @@ export default function AdminApprovalsIndex({ approvals = [], budgets, selectedT
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
-                  {requisitionsPending.length > 0 ? requisitionsPending.map((r) => (
+                  {reqs.length > 0 ? reqs.map((r) => (
                     <tr key={r.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/60">
                       <td className="px-6 py-3 text-sm text-gray-900 dark:text-gray-100">
                         <div className="flex flex-col">
@@ -151,9 +180,7 @@ export default function AdminApprovalsIndex({ approvals = [], budgets, selectedT
                       <td className="px-6 py-3 text-sm text-gray-900 dark:text-gray-100">{r.amount != null ? formatCurrencyMWK(r.amount) : '-'}</td>
                       <td className="px-6 py-3 text-sm text-gray-700 dark:text-gray-300">{r.requestedBy?.name ?? (r.requested_by ? `User #${r.requested_by}` : '-')}</td>
                       <td className="px-6 py-3 text-sm">
-                        <span className="px-2 py-1 rounded text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-500/20 dark:text-yellow-200 border border-yellow-500/30">
-                          {String(r.status).replace('_', ' ')}
-                        </span>
+                        <span className={reqStatusColors[String(r.status)] || ''}>{String(r.status).replace('_', ' ')}</span>
                       </td>
                       <td className="px-6 py-3 text-sm">
                         <div className="flex flex-wrap items-center gap-3">
@@ -164,14 +191,18 @@ export default function AdminApprovalsIndex({ approvals = [], budgets, selectedT
                           >
                             View
                           </button>
-                          <button onClick={() => approveReq(r)} className="text-emerald-600 hover:text-emerald-800 dark:text-emerald-400 dark:hover:text-emerald-300">Approve</button>
-                          <button onClick={() => declineReq(r)} className="text-rose-600 hover:text-rose-800 dark:text-rose-400 dark:hover:text-rose-300">Decline</button>
+                          {reqFilter === 'pending' && (
+                            <>
+                              <button onClick={() => approveReq(r)} className="text-emerald-600 hover:text-emerald-800 dark:text-emerald-400 dark:hover:text-emerald-300">Approve</button>
+                              <button onClick={() => declineReq(r)} className="text-rose-600 hover:text-rose-800 dark:text-rose-400 dark:hover:text-rose-300">Decline</button>
+                            </>
+                          )}
                         </div>
                       </td>
                     </tr>
                   )) : (
                     <tr>
-                      <td colSpan={5} className="px-6 py-8 text-center text-gray-500 dark:text-gray-400">No requisitions pending admin approval.</td>
+                      <td colSpan={5} className="px-6 py-8 text-center text-gray-500 dark:text-gray-400">{reqFilter === 'expired' ? 'No expired requisitions.' : 'No requisitions pending admin approval.'}</td>
                     </tr>
                   )}
                 </tbody>

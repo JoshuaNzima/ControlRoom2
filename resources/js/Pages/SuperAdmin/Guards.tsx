@@ -119,7 +119,10 @@ export default function SuperAdminGuards({ guards, filters, supervisors = [], gr
   const openAdd = () => { setSelectedGuard(null); setShowAdd(true); };
   const openEdit = async (guardId: number) => {
     try {
-      const res = await fetch(route('admin.guards.json', guardId));
+      const res = await fetch(route('admin.guards.json', guardId), {
+        headers: { 'Accept': 'application/json' },
+        credentials: 'same-origin',
+      });
       const data = await res.json();
       setSelectedGuard(data);
       setShowEdit(true);
@@ -127,7 +130,10 @@ export default function SuperAdminGuards({ guards, filters, supervisors = [], gr
   };
   const openDetails = async (guardId: number) => {
     try {
-      const res = await fetch(route('admin.guards.json', guardId));
+      const res = await fetch(route('admin.guards.json', guardId), {
+        headers: { 'Accept': 'application/json' },
+        credentials: 'same-origin',
+      });
       const data = await res.json();
       setSelectedGuard(data);
       setShowDetails(true);
@@ -136,7 +142,10 @@ export default function SuperAdminGuards({ guards, filters, supervisors = [], gr
   const openAssign = (guardId: number) => { setSelectedGuard({ id: guardId }); setShowAssign(true); };
   const openPromote = async (guardId: number) => {
     try {
-      const res = await fetch(route('admin.guards.json', guardId));
+      const res = await fetch(route('admin.guards.json', guardId), {
+        headers: { 'Accept': 'application/json' },
+        credentials: 'same-origin',
+      });
       const data = await res.json();
       setSelectedGuard(data);
       setShowPromote(true);

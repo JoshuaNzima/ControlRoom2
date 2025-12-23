@@ -20,12 +20,21 @@ class ApprovalController extends Controller
             ->orderBy('stage')
             ->get();
 
-        // Requisitions awaiting admin approval
+        // Requisitions filtering for Admin Approvals page
+        $reqFilter = request()->input('req_filter', 'pending'); // pending|expired
         $requisitionsPending = Requisition::query()
             ->when(!$user->hasAnyRole(['admin','super_admin']), fn($q) => $q->whereRaw('1=0'))
             ->where('status', 'pending_admin')
             ->with('requestedBy')
             ->orderByDesc('created_at')
+            ->limit(100)
+            ->get();
+
+        $requisitionsExpired = Requisition::query()
+            ->when(!$user->hasAnyRole(['admin','super_admin']), fn($q) => $q->whereRaw('1=0'))
+            ->where('status', 'expired')
+            ->with('requestedBy')
+            ->orderByDesc('updated_at')
             ->limit(100)
             ->get();
 
@@ -40,7 +49,9 @@ class ApprovalController extends Controller
             'approvals' => $approvals,
             'budgets' => $budgets,
             'requisitionsPending' => $requisitionsPending,
+            'requisitionsExpired' => $requisitionsExpired,
             'selectedTab' => request()->input('tab', 'requisitions'),
+            'reqFilter' => $reqFilter,
         ]);
     }
 

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Head, Link, usePage, useForm, router } from '@inertiajs/react';
 import ControlRoomLayout from '@/Layouts/ControlRoomLayout';
 import { Card, CardContent, CardHeader } from '@/Components/ui/card';
@@ -12,7 +12,7 @@ type Shift = {
   end_time: string;
   description?: string | null;
   supervisor_id?: number | null;
-  required_guards: number;
+  required_guards?: number | null;
   status?: string;
   sites?: number[];
   guards?: any[];
@@ -21,7 +21,7 @@ type Shift = {
 };
 
 export default function ShiftsIndex() {
-  const { guardShifts = { data: [] }, scheduleShifts = { data: [] }, supervisors = [], sites = [] } = usePage().props as any;
+  const { guardShifts = { data: [] }, scheduleShifts = { data: [] }, supervisors = [], sites = [], zones = [], filters = {} } = usePage().props as any;
 
   const [createOpen, setCreateOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
@@ -29,6 +29,71 @@ export default function ShiftsIndex() {
   const [editingShift, setEditingShift] = useState<Shift | null>(null);
   const [viewData, setViewData] = useState<any | null>(null);
   const [loadingId, setLoadingId] = useState<number | null>(null);
+
+  const [search, setSearch] = useState<string>(filters.search ?? '');
+  const [zoneId, setZoneId] = useState<number | ''>(filters.zone_id ?? '');
+  const [supervisorId, setSupervisorId] = useState<number | ''>(filters.supervisor_id ?? '');
+  const [siteId, setSiteId] = useState<number | ''>(filters.site_id ?? '');
+  const [dateFrom, setDateFrom] = useState<string>(filters.date_from ?? '');
+  const [dateTo, setDateTo] = useState<string>(filters.date_to ?? '');
+  const [guardType, setGuardType] = useState<string>(filters.guard_type ?? '');
+
+  const storageKey = 'controlroom_shifts_filters';
+
+  useEffect(() => {
+    const hasServerFilters = !!(filters.search || filters.zone_id || filters.supervisor_id || filters.site_id || filters.date_from || filters.date_to || filters.guard_type);
+    if (!hasServerFilters) {
+      try {
+        const saved = localStorage.getItem(storageKey);
+        if (saved) {
+          const parsed = JSON.parse(saved || '{}');
+          const params: any = {};
+          if (parsed.search) params.search = parsed.search;
+          if (parsed.zone_id) params.zone_id = parsed.zone_id;
+          if (parsed.supervisor_id) params.supervisor_id = parsed.supervisor_id;
+          if (parsed.site_id) params.site_id = parsed.site_id;
+          if (parsed.date_from) params.date_from = parsed.date_from;
+          if (parsed.date_to) params.date_to = parsed.date_to;
+          if (Object.keys(params).length) {
+            setSearch(parsed.search || '');
+            setZoneId(parsed.zone_id || '');
+            setSupervisorId(parsed.supervisor_id || '');
+            setSiteId(parsed.site_id || '');
+            setDateFrom(parsed.date_from || '');
+            setDateTo(parsed.date_to || '');
+            setGuardType(parsed.guard_type || '');
+            router.get(route('control-room.shifts.index'), params, { preserveScroll: true, preserveState: true, replace: true });
+          }
+        }
+      } catch {}
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const applyFilters = () => {
+    const params: any = {};
+    if (search) params.search = search;
+    if (zoneId) params.zone_id = zoneId;
+    if (supervisorId) params.supervisor_id = supervisorId;
+    if (siteId) params.site_id = siteId;
+    if (dateFrom) params.date_from = dateFrom;
+    if (dateTo) params.date_to = dateTo;
+    if (guardType) params.guard_type = guardType;
+    try { localStorage.setItem(storageKey, JSON.stringify(params)); } catch {}
+    router.get(route('control-room.shifts.index'), params, { preserveScroll: true, preserveState: true, replace: true });
+  };
+
+  const resetFilters = () => {
+    setSearch('');
+    setZoneId('');
+    setSupervisorId('');
+    setSiteId('');
+    setDateFrom('');
+    setDateTo('');
+    setGuardType('');
+    try { localStorage.removeItem(storageKey); } catch {}
+    router.get(route('control-room.shifts.index'), {}, { preserveScroll: true, preserveState: true, replace: true });
+  };
 
   const openViewModal = async (id: number) => {
     setLoadingId(id);
@@ -75,6 +140,262 @@ export default function ShiftsIndex() {
         </div>
 
         <Card className="dark:bg-gray-800 dark:border-gray-700">
+          <CardContent>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 pt-4">
+              <div>
+                <label className="block text-sm font-medium">Search</label>
+                <input
+                  className="w-full border rounded-md p-2 bg-white dark:bg-gray-900 dark:text-gray-100"
+                  placeholder="Guard/Site/Shift name"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') applyFilters(); }}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium">Zone</label>
+                <select
+                  className="w-full border rounded-md p-2 bg-white dark:bg-gray-900 dark:text-gray-100"
+                  value={zoneId as any}
+                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setZoneId(e.target.value ? Number(e.target.value) : '')}
+                >
+                  <option value="">All</option>
+                  {zones.map((z: any) => (
+                    <option key={z.id} value={z.id}>{z.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium">Supervisor</label>
+                <select
+                  className="w-full border rounded-md p-2 bg-white dark:bg-gray-900 dark:text-gray-100"
+                  value={supervisorId as any}
+                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSupervisorId(e.target.value ? Number(e.target.value) : '')}
+                >
+                  <option value="">All</option>
+                  {supervisors.map((s: any) => (
+                    <option key={s.id} value={s.id}>{s.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium">Site</label>
+                <select
+                  className="w-full border rounded-md p-2 bg-white dark:bg-gray-900 dark:text-gray-100"
+                  value={siteId as any}
+                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSiteId(e.target.value ? Number(e.target.value) : '')}
+                >
+                  <option value="">All</option>
+                  {sites.map((s: any) => (
+                    <option key={s.id} value={s.id}>{s.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium">Guard Type</label>
+                <select
+                  className="w-full border rounded-md p-2 bg-white dark:bg-gray-900 dark:text-gray-100"
+                  value={guardType}
+                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setGuardType(e.target.value)}
+                >
+                  <option value="">All</option>
+                  <option value="permanent">Standard</option>
+                  <option value="standby">Standby</option>
+                  <option value="reliever">Reliever</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium">Date From</label>
+                <input
+                  type="date"
+                  className="w-full border rounded-md p-2 bg-white dark:bg-gray-900 dark:text-gray-100"
+                  value={dateFrom}
+                  onChange={(e) => setDateFrom(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium">Date To</label>
+                <input
+                  type="date"
+                  className="w-full border rounded-md p-2 bg-white dark:bg-gray-900 dark:text-gray-100"
+                  value={dateTo}
+                  onChange={(e) => setDateTo(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="flex items-center gap-2 pt-4">
+              <Button type="button" onClick={applyFilters} className="px-3 py-2">Apply</Button>
+              <button type="button" onClick={resetFilters} className="px-3 py-2 text-sm rounded-md bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600">Reset</button>
+            </div>
+            {Boolean(search || zoneId || supervisorId || siteId || dateFrom || dateTo || guardType) && (
+              <div className="flex flex-wrap items-center gap-2 pt-3">
+                <span className="text-xs text-gray-500 dark:text-gray-400 mr-1">Active:</span>
+                {search && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const next = { search: '', zone_id: zoneId, supervisor_id: supervisorId, site_id: siteId, date_from: dateFrom, date_to: dateTo } as any;
+                      setSearch('');
+                      const params: any = {};
+                      if (next.zone_id) params.zone_id = next.zone_id;
+                      if (next.supervisor_id) params.supervisor_id = next.supervisor_id;
+                      if (next.site_id) params.site_id = next.site_id;
+                      if (next.date_from) params.date_from = next.date_from;
+                      if (next.date_to) params.date_to = next.date_to;
+                      try { localStorage.setItem(storageKey, JSON.stringify(params)); } catch {}
+                      router.get(route('control-room.shifts.index'), params, { preserveScroll: true, preserveState: true, replace: true });
+                    }}
+                    className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-100 text-xs"
+                  >
+                    Search: {search}
+                    <span className="text-gray-500 dark:text-gray-300">×</span>
+                  </button>
+                )}
+                {guardType && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const next = { search, zone_id: zoneId, supervisor_id: supervisorId, site_id: siteId, date_from: dateFrom, date_to: dateTo, guard_type: '' } as any;
+                      setGuardType('');
+                      const params: any = {};
+                      if (next.search) params.search = next.search;
+                      if (next.zone_id) params.zone_id = next.zone_id;
+                      if (next.supervisor_id) params.supervisor_id = next.supervisor_id;
+                      if (next.site_id) params.site_id = next.site_id;
+                      if (next.date_from) params.date_from = next.date_from;
+                      if (next.date_to) params.date_to = next.date_to;
+                      try { localStorage.setItem(storageKey, JSON.stringify(params)); } catch {}
+                      router.get(route('control-room.shifts.index'), params, { preserveScroll: true, preserveState: true, replace: true });
+                    }}
+                    className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-100 text-xs"
+                  >
+                    Type: {guardType === 'permanent' ? 'Standard' : guardType.charAt(0).toUpperCase() + guardType.slice(1)}
+                    <span className="text-gray-500 dark:text-gray-300">×</span>
+                  </button>
+                )}
+                {zoneId && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const next = { search, zone_id: '', supervisor_id: supervisorId, site_id: siteId, date_from: dateFrom, date_to: dateTo, guard_type: guardType } as any;
+                      setZoneId('');
+                      const params: any = {};
+                      if (next.search) params.search = next.search;
+                      if (next.supervisor_id) params.supervisor_id = next.supervisor_id;
+                      if (next.site_id) params.site_id = next.site_id;
+                      if (next.date_from) params.date_from = next.date_from;
+                      if (next.date_to) params.date_to = next.date_to;
+                      if (next.guard_type) params.guard_type = next.guard_type;
+                      try { localStorage.setItem(storageKey, JSON.stringify(params)); } catch {}
+                      router.get(route('control-room.shifts.index'), params, { preserveScroll: true, preserveState: true, replace: true });
+                    }}
+                    className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-100 text-xs"
+                  >
+                    Zone: {(() => { const z = zones.find((x: any) => x.id === zoneId); return z ? z.name : zoneId; })()}
+                    <span className="text-gray-500 dark:text-gray-300">×</span>
+                  </button>
+                )}
+                {supervisorId && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const next = { search, zone_id: zoneId, supervisor_id: '', site_id: siteId, date_from: dateFrom, date_to: dateTo, guard_type: guardType } as any;
+                      setSupervisorId('');
+                      const params: any = {};
+                      if (next.search) params.search = next.search;
+                      if (next.zone_id) params.zone_id = next.zone_id;
+                      if (next.site_id) params.site_id = next.site_id;
+                      if (next.date_from) params.date_from = next.date_from;
+                      if (next.date_to) params.date_to = next.date_to;
+                      if (next.guard_type) params.guard_type = next.guard_type;
+                      try { localStorage.setItem(storageKey, JSON.stringify(params)); } catch {}
+                      router.get(route('control-room.shifts.index'), params, { preserveScroll: true, preserveState: true, replace: true });
+                    }}
+                    className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-100 text-xs"
+                  >
+                    Supervisor: {(() => { const z = supervisors.find((x: any) => x.id === supervisorId); return z ? z.name : supervisorId; })()}
+                    <span className="text-gray-500 dark:text-gray-300">×</span>
+                  </button>
+                )}
+                {siteId && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const next = { search, zone_id: zoneId, supervisor_id: supervisorId, site_id: '', date_from: dateFrom, date_to: dateTo, guard_type: guardType } as any;
+                      setSiteId('');
+                      const params: any = {};
+                      if (next.search) params.search = next.search;
+                      if (next.zone_id) params.zone_id = next.zone_id;
+                      if (next.supervisor_id) params.supervisor_id = next.supervisor_id;
+                      if (next.date_from) params.date_from = next.date_from;
+                      if (next.date_to) params.date_to = next.date_to;
+                      if (next.guard_type) params.guard_type = next.guard_type;
+                      try { localStorage.setItem(storageKey, JSON.stringify(params)); } catch {}
+                      router.get(route('control-room.shifts.index'), params, { preserveScroll: true, preserveState: true, replace: true });
+                    }}
+                    className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-100 text-xs"
+                  >
+                    Site: {(() => { const z = sites.find((x: any) => x.id === siteId); return z ? z.name : siteId; })()}
+                    <span className="text-gray-500 dark:text-gray-300">×</span>
+                  </button>
+                )}
+                {dateFrom && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const next = { search, zone_id: zoneId, supervisor_id: supervisorId, site_id: siteId, date_from: '', date_to: dateTo, guard_type: guardType } as any;
+                      setDateFrom('');
+                      const params: any = {};
+                      if (next.search) params.search = next.search;
+                      if (next.zone_id) params.zone_id = next.zone_id;
+                      if (next.supervisor_id) params.supervisor_id = next.supervisor_id;
+                      if (next.site_id) params.site_id = next.site_id;
+                      if (next.date_to) params.date_to = next.date_to;
+                      if (next.guard_type) params.guard_type = next.guard_type;
+                      try { localStorage.setItem(storageKey, JSON.stringify(params)); } catch {}
+                      router.get(route('control-room.shifts.index'), params, { preserveScroll: true, preserveState: true, replace: true });
+                    }}
+                    className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-100 text-xs"
+                  >
+                    From: {dateFrom}
+                    <span className="text-gray-500 dark:text-gray-300">×</span>
+                  </button>
+                )}
+                {dateTo && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const next = { search, zone_id: zoneId, supervisor_id: supervisorId, site_id: siteId, date_from: dateFrom, date_to: '', guard_type: guardType } as any;
+                      setDateTo('');
+                      const params: any = {};
+                      if (next.search) params.search = next.search;
+                      if (next.zone_id) params.zone_id = next.zone_id;
+                      if (next.supervisor_id) params.supervisor_id = next.supervisor_id;
+                      if (next.site_id) params.site_id = next.site_id;
+                      if (next.date_from) params.date_from = next.date_from;
+                      if (next.guard_type) params.guard_type = next.guard_type;
+                      try { localStorage.setItem(storageKey, JSON.stringify(params)); } catch {}
+                      router.get(route('control-room.shifts.index'), params, { preserveScroll: true, preserveState: true, replace: true });
+                    }}
+                    className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-100 text-xs"
+                  >
+                    To: {dateTo}
+                    <span className="text-gray-500 dark:text-gray-300">×</span>
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={resetFilters}
+                  className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-600 dark:text-gray-100 dark:hover:bg-gray-500 text-xs"
+                >
+                  Clear all
+                </button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="dark:bg-gray-800 dark:border-gray-700">
           <CardHeader>
             <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Guard Shifts (Roster)</h3>
           </CardHeader>
@@ -83,7 +404,14 @@ export default function ShiftsIndex() {
               {guardShifts?.data?.map((s: any) => (
                 <div key={s.id} className="py-3 flex items-center justify-between">
                   <div>
-                    <div className="font-medium">{s.guard_relation?.name || 'Guard'} • {s.client_site?.name || 'Site'}</div>
+                    <div className="font-medium flex items-center gap-2">
+                      <span>{s.guard_relation?.name || 'Guard'} • {s.client_site?.name || 'Site'}</span>
+                      {s.guard_relation?.guard_type && (
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${s.guard_relation.guard_type === 'reliever' ? 'bg-indigo-600 text-white' : s.guard_relation.guard_type === 'standby' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300' : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-100'}`}>
+                          {s.guard_relation.guard_type === 'permanent' ? 'Standard' : (s.guard_relation.guard_type.charAt(0).toUpperCase() + s.guard_relation.guard_type.slice(1))}
+                        </span>
+                      )}
+                    </div>
                     <div className="text-xs text-gray-500">{s.date} • {s.start_time} - {s.end_time} • {s.shift_type}</div>
                   </div>
                   <div className="flex gap-2 text-xs text-gray-500">Scheduled</div>
@@ -169,7 +497,6 @@ type ShiftForm = {
   end_time: string;
   description: string;
   supervisor_id: number | '';
-  required_guards: number;
   sites: number[];
   status?: string;
   is_global?: boolean;
@@ -189,10 +516,38 @@ function CreateShiftModal({ open, onClose, supervisors, sites }: CreateShiftModa
     end_time: '',
     description: '',
     supervisor_id: '',
-    required_guards: 1,
     sites: [],
     is_global: false,
   });
+
+  const [calcRequired, setCalcRequired] = useState<number | null>(null);
+  const [calcLoading, setCalcLoading] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    if (data.is_global || !(data.sites || []).length) {
+      setCalcRequired(null);
+      return;
+    }
+    const controller = new AbortController();
+    const run = async () => {
+      setCalcLoading(true);
+      try {
+        const base = route('control-room.shifts.required-guards');
+        const params = new URLSearchParams();
+        (data.sites as any[]).forEach((id) => params.append('sites[]', String(id)));
+        const res = await fetch(`${base}?${params.toString()}`, { signal: controller.signal });
+        if (res.ok) {
+          const json = await res.json();
+          setCalcRequired(Number(json.required_guards) || 0);
+        }
+      } catch {}
+      finally { setCalcLoading(false); }
+    };
+    run();
+    return () => controller.abort();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, data.is_global, (data.sites || []).join(',')]);
 
   const toggleSite = (siteId: number) => {
     const current = new Set(data.sites as any[]);
@@ -289,18 +644,11 @@ function CreateShiftModal({ open, onClose, supervisors, sites }: CreateShiftModa
             />
             {errors.end_time && <p className="text-sm text-red-600">{errors.end_time}</p>}
           </div>
-          <div>
-            <label className="block text-sm font-medium">Required Guards</label>
-            <input
-              type="number"
-              min={1}
-              className="w-full border rounded-md p-2"
-              value={data.required_guards as any}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                setData('required_guards', Number(e.target.value))
-              }
-            />
-            {errors.required_guards && <p className="text-sm text-red-600">{errors.required_guards}</p>}
+          <div className="sm:col-span-2 text-xs text-gray-500 dark:text-gray-400">
+            Required guards will be calculated automatically from selected site assignments.
+            {!data.is_global && (data.sites || []).length > 0 && (
+              <span className="ml-2">{calcLoading ? 'Calculating…' : `(Estimated: ${calcRequired ?? 0})`}</span>
+            )}
           </div>
           <div className="sm:col-span-2">
             <label className="inline-flex items-center gap-2 text-sm font-medium">
@@ -379,11 +727,39 @@ function EditShiftModal({ open, onClose, shift, supervisors, sites }: EditShiftM
     end_time: shift.end_time,
     description: shift.description ?? '',
     supervisor_id: shift.supervisor_id ?? '',
-    required_guards: shift.required_guards,
     sites: Array.isArray(shift.sites) ? (shift.sites as any[]) : [],
     status: shift.status ?? 'active',
     is_global: !!shift.is_global,
   });
+
+  const [calcRequired, setCalcRequired] = useState<number | null>(shift.required_guards ?? null);
+  const [calcLoading, setCalcLoading] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    if (data.is_global || !(data.sites || []).length) {
+      setCalcRequired(null);
+      return;
+    }
+    const controller = new AbortController();
+    const run = async () => {
+      setCalcLoading(true);
+      try {
+        const base = route('control-room.shifts.required-guards');
+        const params = new URLSearchParams();
+        (data.sites as any[]).forEach((id) => params.append('sites[]', String(id)));
+        const res = await fetch(`${base}?${params.toString()}`, { signal: controller.signal });
+        if (res.ok) {
+          const json = await res.json();
+          setCalcRequired(Number(json.required_guards) || 0);
+        }
+      } catch {}
+      finally { setCalcLoading(false); }
+    };
+    run();
+    return () => controller.abort();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, data.is_global, (data.sites || []).join(',')]);
 
   const toggleSite = (siteId: number) => {
     const current = new Set(data.sites as any[]);
@@ -480,18 +856,11 @@ function EditShiftModal({ open, onClose, shift, supervisors, sites }: EditShiftM
             />
             {errors.end_time && <p className="text-sm text-red-600">{errors.end_time}</p>}
           </div>
-          <div>
-            <label className="block text-sm font-medium">Required Guards</label>
-            <input
-              type="number"
-              min={1}
-              className="w-full border rounded-md p-2"
-              value={data.required_guards as any}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                setData('required_guards', Number(e.target.value))
-              }
-            />
-            {errors.required_guards && <p className="text-sm text-red-600">{errors.required_guards}</p>}
+          <div className="text-xs text-gray-500 dark:text-gray-400">
+            Required guards is calculated automatically from selected site assignments.
+            {!data.is_global && (data.sites || []).length > 0 && (
+              <span className="ml-2">{calcLoading ? 'Calculating…' : `(Estimated: ${calcRequired ?? 0})`}</span>
+            )}
           </div>
           <div>
             <label className="block text-sm font-medium">Status</label>

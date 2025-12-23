@@ -50,6 +50,7 @@ Route::middleware(['auth'])->group(function () {
 		
 		// Shift Management
 		Route::resource('shifts', \App\Http\Controllers\ControlRoom\ShiftController::class);
+		Route::get('shifts/required-guards', [\App\Http\Controllers\ControlRoom\ShiftController::class, 'requiredGuards'])->name('shifts.required-guards');
 		Route::post('shifts/{shift}/assign-guard', [\App\Http\Controllers\ControlRoom\ShiftController::class, 'assignGuard'])->name('shifts.assign-guard');
 		Route::delete('shifts/{shift}/unassign-guard/{guard}', [\App\Http\Controllers\ControlRoom\ShiftController::class, 'unassignGuard'])->name('shifts.unassign-guard');
 		Route::get('shifts/{shift}/schedule', [\App\Http\Controllers\ControlRoom\ShiftController::class, 'schedule'])->name('shifts.schedule');

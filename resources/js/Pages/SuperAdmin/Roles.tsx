@@ -27,7 +27,9 @@ const RoleCard = React.memo(function RoleCard({ role, permissions, users, toggli
   const [showAllPerms, setShowAllPerms] = useState(false);
   const PERM_SHOW_LIMIT = 6;
 
-  const displayedPermissions = (role.permissions ?? []).slice(0, showAllPerms ? undefined : PERM_SHOW_LIMIT);
+  // Use global permissions list for toggling; reflect active state from role.permissions
+  const allPermissions: Permission[] = (permissions?.data ?? permissions ?? []) as Permission[];
+  const displayedPermissions = showAllPerms ? allPermissions : allPermissions.slice(0, PERM_SHOW_LIMIT);
 
   return (
     <article aria-labelledby={`role-${role.id}-title`} className="bg-gray-50 dark:bg-gray-700/30 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 transition-all duration-150 hover:shadow-md">
@@ -71,10 +73,13 @@ const RoleCard = React.memo(function RoleCard({ role, permissions, users, toggli
                 )
               })}
 
-              {(role.permissions ?? []).length > PERM_SHOW_LIMIT && (
+              {allPermissions.length > PERM_SHOW_LIMIT && (
                 <button type="button" onClick={() => setShowAllPerms(prev => !prev)} className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600">
-                  {showAllPerms ? 'Show less' : `+${(role.permissions ?? []).length - PERM_SHOW_LIMIT} more`}
+                  {showAllPerms ? 'Show less' : `+${(allPermissions.length - PERM_SHOW_LIMIT)} more`}
                 </button>
+              )}
+              {allPermissions.length === 0 && (
+                <div className="text-sm text-gray-500 dark:text-gray-400">No permissions defined yet. Create one on the left.</div>
               )}
             </div>
           </section>
@@ -136,7 +141,17 @@ export default function Roles({ roles, permissions, users, flash = {} }: Props) 
 
   const deleteRole = useCallback((roleId: number, roleName: string) => { router.delete(`/superadmin/roles/${roleId}`) }, []);
 
-  const createPermission = (e: React.FormEvent) => { e.preventDefault(); if (!permissionForm.data.name.trim()) return permissionForm.setError('name', 'Please enter a permission name'); permissionForm.post('/superadmin/permissions', { onSuccess: () => { permissionForm.reset('name'); permissionNameRef.current?.focus() } }) };
+  const createPermission = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!permissionForm.data.name.trim()) return permissionForm.setError('name', 'Please enter a permission name');
+    permissionForm.post('/superadmin/permissions', {
+      onSuccess: () => {
+        permissionForm.reset('name');
+        permissionNameRef.current?.focus();
+        router.reload({ only: ['roles','permissions','users','flash'] });
+      },
+    });
+  };
 
   const togglePermission = useCallback((roleId: number, permName: string) => { setToggling(prev => ({ ...prev, [roleId]: true })); router.post(`/superadmin/roles/${roleId}/toggle-permission`, { permission: permName }, { preserveScroll: true, onFinish: () => setToggling(prev => { const copy = { ...prev }; delete copy[roleId]; return copy }) }) }, []);
 

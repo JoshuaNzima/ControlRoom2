@@ -19,6 +19,8 @@ class RequisitionController extends Controller
         $user = $request->user();
 
         $query = Requisition::query()->with(['requestedBy', 'approvedBy', 'disbursedBy', 'batch']);
+        $filter = $request->query('filter', 'all');
+        $pendingStatuses = ['pending_admin', 'needs_revision', 'pending_disbursement'];
 
         if ($user->hasAnyRole(['admin', 'super_admin'])) {
             // admins see everything
@@ -35,11 +37,19 @@ class RequisitionController extends Controller
             $query->where('requested_by', $user->id);
         }
 
-        $requisitions = $query->orderByDesc('created_at')->paginate(20);
+        // Optional filtering for list views
+        if ($filter === 'expired') {
+            $query->where('status', 'expired');
+        } elseif ($filter === 'pending') {
+            $query->whereIn('status', $pendingStatuses);
+        }
+
+        $requisitions = $query->orderByDesc('created_at')->paginate(20)->withQueryString();
 
         return Inertia::render('Requisitions/Index', [
             'requisitions' => $requisitions,
             'mode' => $request->query('mode', $user->hasAnyRole(['asset_manager','assets_manager']) ? 'disburse' : 'mine'),
+            'filter' => $filter,
             'auth' => [
                 'user' => [
                     'id' => $user->id,

@@ -50,6 +50,12 @@ export default function Authenticated({
                                 >
                                     Requisitions
                                 </NavLink>
+                                <NavLink
+                                    href={route('guards.index')}
+                                    active={window.location.pathname.startsWith(route('guards.index'))}
+                                >
+                                    Guards
+                                </NavLink>
                             </div>
                         </div>
 
@@ -168,6 +174,12 @@ export default function Authenticated({
                             active={window.location.pathname.startsWith(route('requisitions.index'))}
                         >
                             Requisitions
+                        </ResponsiveNavLink>
+                        <ResponsiveNavLink
+                            href={route('guards.index')}
+                            active={window.location.pathname.startsWith(route('guards.index'))}
+                        >
+                            Guards
                         </ResponsiveNavLink>
                     </div>
 

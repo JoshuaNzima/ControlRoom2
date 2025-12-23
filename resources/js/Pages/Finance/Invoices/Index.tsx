@@ -118,6 +118,15 @@ export default function InvoiceIndex({ invoices, summary, filters, clients, defa
     router.get(route('finance.invoices.index'));
   };
 
+  const setStatusAndFetch = (s: string) => {
+    setFilterStatus(s);
+    const params: any = {};
+    if (s) params.status = s;
+    if (startDate) params.start_date = startDate;
+    if (endDate) params.end_date = endDate;
+    router.get(route('finance.invoices.index'), params);
+  };
+
   const openEdit = async (id: number) => {
     setLoadingId(id);
     try {
@@ -178,6 +187,22 @@ export default function InvoiceIndex({ invoices, summary, filters, clients, defa
             >
               + New Invoice
             </button>
+          </div>
+
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            {['', ...statuses].map((s) => {
+              const active = (s === '' && !filterStatus) || s === filterStatus;
+              const label = s === '' ? 'All' : s.charAt(0).toUpperCase() + s.slice(1);
+              return (
+                <button
+                  key={s || 'all'}
+                  onClick={() => setStatusAndFetch(s)}
+                  className={`px-3 py-1.5 rounded-lg text-sm whitespace-nowrap ${active ? 'bg-indigo-600 text-white' : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-700 dark:hover:bg-gray-700'}`}
+                >
+                  {label}
+                </button>
+              );
+            })}
           </div>
 
           {/* Summary Cards */}
@@ -423,6 +448,7 @@ function CreateInvoiceModal({ open, onClose, clients, defaultBilling }: { open: 
   });
 
   const [lineItems, setLineItems] = useState<LineItem[]>(data.line_items as LineItem[]);
+  const [servicesLoading, setServicesLoading] = useState(false);
 
   useEffect(() => {
     if (!open || (data.invoice_number as string)) return;
@@ -443,6 +469,24 @@ function CreateInvoiceModal({ open, onClose, clients, defaultBilling }: { open: 
     setData('subtotal', subtotal);
     setData('tax_amount', taxAmount);
     setData('total_amount', total);
+  };
+
+  const loadClientServices = async () => {
+    const cid = Number(data.client_id);
+    if (!cid) return;
+    try {
+      setServicesLoading(true);
+      const url = `${route('finance.invoices.service-line-items')}?client_id=${encodeURIComponent(String(cid))}`;
+      const res = await fetch(url, { headers: { Accept: 'application/json' } });
+      if (!res.ok) return;
+      const json = await res.json();
+      const items = Array.isArray(json.items) ? json.items : [];
+      setLineItems(items);
+      setData('line_items', items as any);
+      updateTotals(items, data.tax_percentage as number, data.discount_amount as number);
+    } finally {
+      setServicesLoading(false);
+    }
   };
 
   const addItem = () => {
@@ -613,7 +657,17 @@ function CreateInvoiceModal({ open, onClose, clients, defaultBilling }: { open: 
             <div className="rounded-2xl border border-gray-200 dark:border-gray-700 shadow p-6 space-y-3 bg-white dark:bg-gray-900">
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Line Items</h3>
-                <button type="button" onClick={addItem} className="px-3 py-1.5 bg-emerald-600 text-white rounded-full text-sm hover:bg-emerald-700">+ Add Item</button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={loadClientServices}
+                    disabled={!data.client_id || servicesLoading}
+                    className={`px-3 py-1.5 rounded-full text-sm border ${(!data.client_id || servicesLoading) ? 'bg-gray-200 text-gray-500 border-gray-300 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700' : 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700'}`}
+                  >
+                    {servicesLoading ? 'Loading…' : 'Load Client Services'}
+                  </button>
+                  <button type="button" onClick={addItem} className="px-3 py-1.5 bg-emerald-600 text-white rounded-full text-sm hover:bg-emerald-700">+ Add Item</button>
+                </div>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
@@ -748,6 +802,7 @@ function EditInvoiceModal({ open, onClose, invoice }: { open: boolean; onClose: 
   });
 
   const [lineItems, setLineItems] = useState<LineItem[]>(data.line_items as LineItem[]);
+  const [servicesLoading, setServicesLoading] = useState(false);
 
   const updateTotals = (items: LineItem[], taxPercentage: number | string, discountAmount: number | string) => {
     const subtotal = items.reduce((sum, item) => sum + (Number(item.quantity) || 0) * (Number(item.unit_price) || 0), 0);
@@ -758,6 +813,25 @@ function EditInvoiceModal({ open, onClose, invoice }: { open: boolean; onClose: 
     sd('tax_amount', taxAmount);
     sd('total_amount', total);
     sd('line_items', items);
+  };
+
+  const loadClientServices = async () => {
+    const cid = Number((invoice as any).client_id || 0);
+    if (!cid) return;
+    try {
+      setServicesLoading(true);
+      const url = `${route('finance.invoices.service-line-items')}?client_id=${encodeURIComponent(String(cid))}`;
+      const res = await fetch(url, { headers: { Accept: 'application/json' } });
+      if (!res.ok) return;
+      const json = await res.json();
+      const items = Array.isArray(json.items) ? json.items : [];
+      setLineItems(items as any);
+      const sd = setData as any;
+      sd('line_items', items);
+      updateTotals(items as any, data.tax_percentage as any, data.discount_amount as any);
+    } finally {
+      setServicesLoading(false);
+    }
   };
 
   const addItem = () => {
@@ -853,7 +927,17 @@ function EditInvoiceModal({ open, onClose, invoice }: { open: boolean; onClose: 
         <div className="rounded-2xl border border-gray-200 dark:border-gray-700 shadow p-6 space-y-3 bg-white dark:bg-gray-900">
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Line Items</h3>
-            <button type="button" onClick={addItem} className="px-3 py-1.5 bg-emerald-600 text-white rounded-full text-sm hover:bg-emerald-700">+ Add Item</button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={loadClientServices}
+                disabled={!((invoice as any)?.client_id) || servicesLoading}
+                className={`px-3 py-1.5 rounded-full text-sm border ${(!((invoice as any)?.client_id) || servicesLoading) ? 'bg-gray-200 text-gray-500 border-gray-300 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700' : 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700'}`}
+              >
+                {servicesLoading ? 'Loading…' : 'Load Client Services'}
+              </button>
+              <button type="button" onClick={addItem} className="px-3 py-1.5 bg-emerald-600 text-white rounded-full text-sm hover:bg-emerald-700">+ Add Item</button>
+            </div>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">

@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Carbon;
 use Inertia\Inertia;
 use App\Mail\InvoiceMailable;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class InvoiceController extends Controller
 {
@@ -167,6 +168,32 @@ class InvoiceController extends Controller
         return Inertia::render('Finance/Invoices/Show', [
             'invoice' => $data,
         ]);
+    }
+
+    public function print(Request $request, Invoice $invoice)
+    {
+        $invoice->load('user', 'lineItems', 'client');
+
+        $data = $invoice->toArray();
+        if (isset($data['line_items'])) {
+            $data['lineItems'] = $data['line_items'];
+            unset($data['line_items']);
+        }
+
+        return Inertia::render('Finance/Invoices/Print', [
+            'invoice' => $data,
+        ]);
+    }
+
+    public function pdf(Request $request, Invoice $invoice)
+    {
+        $invoice->load('user', 'lineItems', 'client');
+        $file = sprintf('Invoice-%s.pdf', $invoice->invoice_number ?: $invoice->id);
+        $pdf = Pdf::loadView('pdf.invoice', [
+            'invoice' => $invoice,
+            'appName' => config('app.name'),
+        ])->setPaper('a4', 'portrait');
+        return $pdf->download($file);
     }
 
     /**

@@ -287,9 +287,10 @@ class RosterController extends Controller
         $data = $request->validate([
             'start' => ['required','date'],
             'start_time' => ['required','date_format:H:i'],
-            'end_time' => ['required','date_format:H:i','after:start_time'],
+            'end_time' => ['required','date_format:H:i'],
             'shift_type' => ['nullable','in:day,night'],
             'include_relievers' => ['nullable','boolean'],
+            'include_standby' => ['nullable','boolean'],
             'zone_id' => ['nullable','integer','exists:zones,id'],
             'supervisor_id' => ['nullable','integer','exists:users,id'],
         ]);
@@ -307,6 +308,9 @@ class RosterController extends Controller
         }
 
         $guards = $guardsQuery->orderBy('name')->get(['id','name','employee_id','guard_type']);
+
+        $includeRelievers = !empty($data['include_relievers']);
+        $includeStandby = array_key_exists('include_standby', $data) ? (bool) $data['include_standby'] : true;
 
         $guardIds = $guards->pluck('id');
 
@@ -339,13 +343,17 @@ class RosterController extends Controller
         }
 
         $created = 0; $skipped = 0;
+        $offdaySkips = 0; $overlapSkips = 0; $noSiteSkips = 0; $duplicateSkips = 0;
         foreach ($guards as $g) {
-            if (!$data['include_relievers'] && ($g->guard_type === 'reliever')) {
+            if (!$includeRelievers && ($g->guard_type === 'reliever')) {
+                continue;
+            }
+            if (!$includeStandby && ($g->guard_type === 'standby')) {
                 continue;
             }
             $gAssigns = $assignments->get($g->id) ?? collect();
             foreach ($days as $d) {
-                if (!empty($offMap[$g->id][$d])) { $skipped++; continue; }
+                if (!empty($offMap[$g->id][$d])) { $skipped++; $offdaySkips++; continue; }
                 // Find site covering day
                 $siteId = null;
                 foreach ($gAssigns as $a) {
@@ -353,18 +361,30 @@ class RosterController extends Controller
                     $aEnd = $a->end_date ? Carbon::parse($a->end_date)->toDateString() : '9999-12-31';
                     if ($d >= $aStart && $d <= $aEnd) { $siteId = $a->client_site_id; break; }
                 }
-                if (!$siteId) { $skipped++; continue; }
+                if (!$siteId) { $skipped++; $noSiteSkips++; continue; }
 
                 $startDt = Carbon::parse($d.' '.$data['start_time'].':00');
                 $endDt = Carbon::parse($d.' '.$data['end_time'].':00');
+                if ($endDt->lessThanOrEqualTo($startDt)) {
+                    // Overnight shift crosses into next day
+                    $endDt->addDay();
+                }
 
-                // Prevent duplicates: same guard, same site, same date & start_time
+                $overlap = GuardShift::where('guard_id', $g->id)
+                    ->whereDate('date', $d)
+                    ->where(function($q) use ($startDt, $endDt) {
+                        $q->where('start_time', '<', $endDt)
+                          ->where('end_time', '>', $startDt);
+                    })
+                    ->exists();
+                if ($overlap) { $skipped++; $overlapSkips++; continue; }
+
                 $exists = GuardShift::where('guard_id', $g->id)
                     ->where('client_site_id', $siteId)
                     ->whereDate('date', $d)
                     ->whereTime('start_time', $startDt->format('H:i:s'))
                     ->exists();
-                if ($exists) { $skipped++; continue; }
+                if ($exists) { $skipped++; $duplicateSkips++; continue; }
 
                 GuardShift::create([
                     'guard_id' => $g->id,
@@ -381,7 +401,7 @@ class RosterController extends Controller
             }
         }
 
-        return back()->with('success', "Shifts generated: {$created}, skipped: {$skipped}.");
+        return back()->with('success', "Shifts generated: {$created}, skipped: {$skipped} (Off-days: {$offdaySkips}, Overlaps: {$overlapSkips}, No assignment: {$noSiteSkips}, Duplicates: {$duplicateSkips}).");
     }
 
     // Bundles API

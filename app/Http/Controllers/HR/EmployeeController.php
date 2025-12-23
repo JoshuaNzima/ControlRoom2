@@ -50,7 +50,7 @@ class EmployeeController extends Controller
     {
         $validated = $request->validate([
             'role' => ['required', Rule::in(['sergeant','supervisor','zone_commander'])],
-            'zone_id' => ['required_if:role,zone_commander', 'integer', 'exists:zones,id'],
+            'zone_id' => ['nullable', 'required_if:role,zone_commander', 'integer', 'exists:zones,id'],
         ]);
 
         if (!$guard->email) {

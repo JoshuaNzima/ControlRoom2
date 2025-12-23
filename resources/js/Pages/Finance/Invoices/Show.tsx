@@ -92,12 +92,28 @@ export default function ShowInvoice({ invoice }: Props) {
                 Created on {formatDate(invoice.created_at)}
               </p>
             </div>
-            <Link
-              href={route('finance.invoices.index')}
-              className="text-indigo-600 hover:text-indigo-900 font-medium"
-            >
-              ← Back to Invoices
-            </Link>
+            <div className="flex items-center gap-3">
+              <Link
+                href={route('finance.invoices.index')}
+                className="text-indigo-600 hover:text-indigo-900 font-medium"
+              >
+                ← Back to Invoices
+              </Link>
+              <Link
+                href={route('finance.invoices.print', invoice.id)}
+                className="px-3 py-1.5 rounded-md bg-red-600 text-white hover:bg-red-700 font-medium"
+                target="_blank"
+                rel="noopener"
+              >
+                Print
+              </Link>
+              <Link
+                href={route('finance.invoices.pdf', invoice.id)}
+                className="px-3 py-1.5 rounded-md bg-gray-900 text-white hover:bg-gray-800 font-medium"
+              >
+                Download PDF
+              </Link>
+            </div>
           </div>
 
           {/* Main Card */}
@@ -123,7 +139,7 @@ export default function ShowInvoice({ invoice }: Props) {
 
             <div className="p-8 space-y-8">
               <div className="flex items-center gap-3 pb-4 border-b">
-                <img src="/images/coin-logo.png" alt="Logo" className="h-9 w-auto" onError={(e) => ((e.currentTarget.style.display='none'))} />
+                <img src="/images/Coin-logo.png" alt="Logo" className="h-9 w-auto" onError={(e) => ((e.currentTarget.style.display='none'))} />
                 <div className="text-emerald-700 font-semibold text-lg">Coin Security</div>
               </div>
               {/* Invoice and Client Details */}

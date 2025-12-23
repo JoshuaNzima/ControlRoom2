@@ -17,7 +17,7 @@ class GuardAssignmentController extends Controller
             ->orderBy('name')
             ->paginate(20);
 
-        $supervisors = User::role(['supervisor', 'manager'])
+        $supervisors = User::role(['supervisor', 'manager', 'sergeant', 'zone_commander'])
             ->where('status', 'active')
             ->orderBy('name')
             ->get();
@@ -38,8 +38,8 @@ class GuardAssignmentController extends Controller
 
         $supervisor = User::findOrFail($validated['supervisor_id']);
         
-        // Verify supervisor has correct role
-        if (!$supervisor->hasRole(['supervisor', 'manager'])) {
+        // Verify supervisor has an allowed supervisory role
+        if (!$supervisor->hasRole(['supervisor', 'manager', 'sergeant', 'zone_commander'])) {
             return back()->with('error', 'Selected user is not a supervisor.');
         }
 

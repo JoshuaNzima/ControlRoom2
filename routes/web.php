@@ -29,6 +29,9 @@ Route::get('/services/{slug}', [\App\Http\Controllers\Public\PageController::cla
 Route::get('/about', [\App\Http\Controllers\Public\PageController::class, 'about'])->name('public.about');
 Route::get('/careers', [\App\Http\Controllers\Public\PageController::class, 'careers'])->name('public.careers');
 Route::get('/privacy', [\App\Http\Controllers\Public\PageController::class, 'privacy'])->name('public.privacy');
+// Public policies (guest)
+Route::get('/policies', [\App\Http\Controllers\Public\PolicyController::class, 'index'])->name('public.policies.index');
+Route::get('/policies/{slug}', [\App\Http\Controllers\Public\PolicyController::class, 'show'])->name('public.policies.show');
 
 // Guest routes
 Route::middleware('guest')->group(function () {
@@ -138,8 +141,11 @@ Route::middleware(['auth', 'role:super_admin'])->prefix('superadmin')->name('sup
             ->orderBy($sort, $dir)
             ->paginate($perPage)
             ->withQueryString();
-        $supervisors = \App\Models\User::role(['supervisor', 'manager'])
-            ->where('status', 'active')
+        $supervisors = \App\Models\User::where('status', 'active')
+            ->whereHas('roles', function ($q) {
+                $q->whereIn('name', ['supervisor', 'manager', 'sergeant', 'zone_commander'])
+                  ->where('guard_name', 'web');
+            })
             ->orderBy('name')
             ->get(['id','name']);
         $grades = \App\Models\Guards\GuardGrade::orderBy('name')->get(['id','code','name']);
@@ -175,8 +181,11 @@ Route::middleware(['auth', 'role:super_admin'])->prefix('superadmin')->name('sup
             ->orderBy($sort, $dir)
             ->paginate($perPage)
             ->withQueryString();
-        $supervisors = \App\Models\User::role(['supervisor', 'manager'])
-            ->where('status', 'active')
+        $supervisors = \App\Models\User::where('status', 'active')
+            ->whereHas('roles', function ($q) {
+                $q->whereIn('name', ['supervisor', 'manager', 'sergeant', 'zone_commander'])
+                  ->where('guard_name', 'web');
+            })
             ->orderBy('name')
             ->get(['id','name']);
         $grades = \App\Models\Guards\GuardGrade::orderBy('name')->get(['id','code','name']);
@@ -363,6 +372,14 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/assignments/assign', [\App\Http\Controllers\Guards\AssignmentController::class, 'assign'])->name('assignments.assign');
         Route::delete('/assignments/unassign/{assignment}', [\App\Http\Controllers\Guards\AssignmentController::class, 'unassign'])->name('assignments.unassign');
     });
+
+    // Read-only Guards directory available to all authenticated users
+    Route::get('/guards', [\App\Http\Controllers\Guards\DirectoryController::class, 'index'])->name('guards.index');
+    Route::get('/guards/{guard}/json', [\App\Http\Controllers\Guards\DirectoryController::class, 'showJson'])->name('guards.json');
+
+    Route::post('shifts/precheck', [\App\Http\Controllers\ShiftPrecheckController::class, 'precheck'])
+        ->middleware(['role:supervisor'])
+        ->name('shifts.precheck');
 
     // Client routes are now moved to the admin group
     

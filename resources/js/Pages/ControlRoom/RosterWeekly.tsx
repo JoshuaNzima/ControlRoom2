@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Head, useForm, usePage, Link } from '@inertiajs/react';
 import ControlRoomLayout from '@/Layouts/ControlRoomLayout';
 import Modal from '@/Components/Modal';
+import useToast from '@/Components/ui/use-toast';
 
 type DayKey = string; // YYYY-MM-DD
 
@@ -38,13 +39,100 @@ function formatYmd(d: Date): string {
   return `${y}-${m}-${dd}`;
 }
 
+function StandbyTable({ data, onRefresh }: { data: WeeklyData; onRefresh: () => void }) {
+  const dayLabels = useMemo(() => data.days.map((d) => new Date(d).toLocaleDateString(undefined, { weekday: 'short' })), [data.days]);
+  const [offModal, setOffModal] = useState<{ open: boolean; guardId?: number; date?: string }>({ open: false });
+  const [selected, setSelected] = useState<Record<number, boolean>>({});
+  const [bulkOffOpen, setBulkOffOpen] = useState(false);
+
+  const toggleSel = (id: number) => setSelected((prev) => ({ ...prev, [id]: !prev[id] }));
+  const selectedIds = Object.entries(selected).filter(([_, v]) => !!v).map(([k]) => Number(k));
+
+  const standbyGuards = (data.guards || []).filter((g) => (g.guard_type || 'permanent') === 'standby');
+  if (!standbyGuards.length) return null;
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-semibold">Standby Guards</h3>
+        <div className="text-xs text-gray-500 dark:text-gray-400">Click a day to add off-day</div>
+      </div>
+      <div className="flex items-center justify-between">
+        <div className="text-xs text-gray-500 dark:text-gray-400">Select guards then bulk mark OFF</div>
+        <button disabled={!selectedIds.length} onClick={() => setBulkOffOpen(true)} className={`px-3 py-1.5 rounded-md text-white ${selectedIds.length ? 'bg-gray-800 hover:bg-gray-700' : 'bg-gray-400 cursor-not-allowed'}`}>Bulk Off-day</button>
+      </div>
+
+      <div className="overflow-x-auto border dark:border-gray-800 rounded-md">
+        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-800">
+          <thead className="bg-gray-50 dark:bg-gray-950">
+            <tr>
+              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400">Guard</th>
+              {dayLabels.map((lbl, idx) => (
+                <th key={idx} className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400">{lbl}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-200 dark:divide-gray-900 bg-white dark:bg-gray-900">
+            {standbyGuards.map((g) => (
+              <tr key={g.id}>
+                <td className="px-3 py-2 text-sm font-medium whitespace-nowrap">
+                  <label className="inline-flex items-center gap-2">
+                    <input type="checkbox" checked={!!selected[g.id]} onChange={() => toggleSel(g.id)} />
+                    <span className="inline-flex items-center gap-2">
+                      <span>{g.name} {g.employee_id ? <span className="text-xs text-gray-500">({g.employee_id})</span> : null}</span>
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300">Standby</span>
+                    </span>
+                  </label>
+                </td>
+                {data.days.map((d) => {
+                  const off = !!g.off?.[d];
+                  const site = g.sites?.[d];
+                  return (
+                    <td key={d} className="px-3 py-2 text-sm">
+                      <button
+                        type="button"
+                        className={`inline-flex items-center gap-2 px-2 py-1 rounded-md border text-xs ${off ? 'bg-gray-800 text-gray-100 border-gray-700' : site ? 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100 border-gray-200 dark:border-gray-700' : 'bg-white dark:bg-gray-900 text-gray-500 border-gray-200 dark:border-gray-800'}`}
+                        onClick={() => setOffModal({ open: true, guardId: g.id, date: d })}
+                        title="Add off-day"
+                      >
+                        {off ? 'OFF' : (site ? site.name : '—')}
+                      </button>
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <AddOffDayModal
+        open={offModal.open}
+        onClose={() => setOffModal({ open: false })}
+        guardId={offModal.guardId}
+        date={offModal.date}
+        onSaved={() => { setOffModal({ open: false }); onRefresh(); }}
+      />
+
+      <BulkOffModal
+        open={bulkOffOpen}
+        onClose={() => setBulkOffOpen(false)}
+        guardIds={selectedIds}
+        onSaved={() => { setBulkOffOpen(false); onRefresh(); }}
+      />
+    </div>
+  );
+}
+
 function GenerateShiftsPanel({ weekStart, zoneId, supervisorId }: { weekStart: Date; zoneId: number | ''; supervisorId: number | '' }) {
-  const { data, setData, post, processing, errors, reset } = useForm<{ start: string; start_time: string; end_time: string; shift_type?: 'day' | 'night'; include_relievers?: boolean; zone_id?: number | ''; supervisor_id?: number | '' }>({
+  const { toast } = useToast();
+  const { data, setData, post, processing } = useForm<{ start: string; start_time: string; end_time: string; shift_type?: 'day' | 'night'; include_relievers?: boolean; include_standby?: boolean; zone_id?: number | ''; supervisor_id?: number | '' }>({
     start: formatYmd(weekStart),
     start_time: '06:00',
     end_time: '18:00',
     shift_type: 'day',
     include_relievers: false,
+    include_standby: true,
     zone_id: zoneId,
     supervisor_id: supervisorId,
   });
@@ -59,7 +147,7 @@ function GenerateShiftsPanel({ weekStart, zoneId, supervisorId }: { weekStart: D
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     post(route('control-room.roster.generate-shifts'), {
-      onSuccess: () => {},
+      onSuccess: () => { toast({ title: 'Shifts generated', description: 'Guard shifts created from roster for the selected week.' }); },
     });
   };
 
@@ -71,7 +159,7 @@ function GenerateShiftsPanel({ weekStart, zoneId, supervisorId }: { weekStart: D
         </div>
       </div>
       <div className="px-4 py-3 bg-white dark:bg-gray-900">
-        <form onSubmit={submit} className="grid grid-cols-1 sm:grid-cols-5 gap-3 items-end">
+        <form onSubmit={submit} className="grid grid-cols-1 sm:grid-cols-6 gap-3 items-end">
           <div>
             <label className="block text-sm">Start Time</label>
             <input type="time" className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100" value={data.start_time} onChange={(e) => setData('start_time', e.target.value)} />
@@ -87,10 +175,18 @@ function GenerateShiftsPanel({ weekStart, zoneId, supervisorId }: { weekStart: D
               <option value="night">Night</option>
             </select>
           </div>
-          <div className="flex items-center gap-2">
-            <label className="inline-flex items-center gap-2 text-sm mt-6">
+          <div className="flex items-center gap-2 mt-6">
+            <button type="button" className="px-2 py-1 rounded-md bg-gray-100 dark:bg-gray-800 text-xs" onClick={() => { setData('shift_type','day'); setData('start_time','06:00'); setData('end_time','18:00'); }}>Day Preset</button>
+            <button type="button" className="px-2 py-1 rounded-md bg-gray-100 dark:bg-gray-800 text-xs" onClick={() => { setData('shift_type','night'); setData('start_time','18:00'); setData('end_time','06:00'); }}>Night Preset</button>
+          </div>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
+            <label className="inline-flex items-center gap-2 text-sm mt-2 sm:mt-6">
               <input type="checkbox" checked={!!data.include_relievers} onChange={(e) => setData('include_relievers', e.target.checked)} />
               <span>Include relievers</span>
+            </label>
+            <label className="inline-flex items-center gap-2 text-sm mt-1 sm:mt-6">
+              <input type="checkbox" checked={data.include_standby !== false} onChange={(e) => setData('include_standby', e.target.checked)} />
+              <span>Include standby</span>
             </label>
           </div>
           <div className="flex justify-end">
@@ -107,6 +203,8 @@ function BundlesSection({ weekStart, zoneId, supervisorId, relievers, sites }: {
   const [createOpen, setCreateOpen] = useState(false);
   const [editing, setEditing] = useState<any | null>(null);
   const [loading, setLoading] = useState(false);
+  const { toast } = useToast();
+  const applyForm = useForm<{ start: string }>({ start: formatYmd(weekStart) });
 
   const loadBundles = async () => {
     setLoading(true);
@@ -130,11 +228,15 @@ function BundlesSection({ weekStart, zoneId, supervisorId, relievers, sites }: {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [zoneId, supervisorId]);
 
+  useEffect(() => {
+    applyForm.setData('start', formatYmd(weekStart));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [weekStart.getTime()]);
+
   const applyWeek = async (bundleId: number) => {
-    const form = useForm<{ start: string }>({ start: formatYmd(weekStart) });
-    form.post(route('control-room.roster.bundles.apply-week', bundleId), {
+    applyForm.post(route('control-room.roster.bundles.apply-week', bundleId), {
       preserveScroll: true,
-      onSuccess: () => {},
+      onSuccess: () => { toast({ title: 'Bundle applied', description: 'Reliever rotation applied for the week.' }); },
     });
   };
 
@@ -181,11 +283,12 @@ function BundlesSection({ weekStart, zoneId, supervisorId, relievers, sites }: {
 
 function DeleteBundleButton({ id, onDone }: { id: number; onDone: () => void }) {
   const { post, processing } = useForm({});
+  const { toast } = useToast();
   const onDelete = () => {
     if (!confirm('Delete this bundle?')) return;
     post(route('control-room.roster.bundles.destroy', id), {
       method: 'delete',
-      onSuccess: onDone,
+      onSuccess: () => { onDone(); toast({ title: 'Bundle deleted' }); },
     } as any);
   };
   return (
@@ -195,7 +298,8 @@ function DeleteBundleButton({ id, onDone }: { id: number; onDone: () => void }) 
 
 function BundleFormModal({ open, onClose, initial, relievers, sites, filters, onSaved }: { open: boolean; onClose: () => void; initial?: any; relievers: any[]; sites: Site[]; filters: { zone_id: number | ''; supervisor_id: number | '' }; onSaved: () => void }) {
   const isEdit = !!initial;
-  const { data, setData, post, put, processing, errors, reset } = useForm<{ name: string; reliever_guard_id: number | ''; site_ids: number[]; zone_id?: number | ''; supervisor_id?: number | '' }>({
+  const { toast } = useToast();
+  const { data, setData, post, put, processing, errors } = useForm<{ name: string; reliever_guard_id: number | ''; site_ids: number[]; zone_id?: number | ''; supervisor_id?: number | '' }>({
     name: initial?.name || '',
     reliever_guard_id: initial?.reliever?.id || ('' as any),
     site_ids: (initial?.sites || []).map((s: any) => s.id) || [],
@@ -222,15 +326,27 @@ function BundleFormModal({ open, onClose, initial, relievers, sites, filters, on
     setData('site_ids', arr as any);
   };
 
+  const moveSite = (sid: number, dir: -1 | 1) => {
+    const arr = [...(data.site_ids as any[])];
+    const idx = arr.indexOf(sid);
+    if (idx === -1) return;
+    const ni = idx + dir;
+    if (ni < 0 || ni >= arr.length) return;
+    const tmp = arr[idx];
+    arr[idx] = arr[ni];
+    arr[ni] = tmp;
+    setData('site_ids', arr as any);
+  };
+
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     if (isEdit) {
       put(route('control-room.roster.bundles.update', initial.id), {
-        onSuccess: onSaved,
+        onSuccess: () => { toast({ title: 'Bundle updated' }); onSaved(); },
       });
     } else {
       post(route('control-room.roster.bundles'), {
-        onSuccess: onSaved,
+        onSuccess: () => { toast({ title: 'Bundle created' }); onSaved(); },
       });
     }
   };
@@ -270,6 +386,24 @@ function BundleFormModal({ open, onClose, initial, relievers, sites, filters, on
             </div>
             {errors.site_ids && <p className="text-xs text-red-600 mt-1">{errors.site_ids}</p>}
           </div>
+          <div>
+            <label className="block text-sm font-medium">Selected order</label>
+            <div className="space-y-2">
+              {(data.site_ids as any[]).map((sid) => {
+                const s = sites.find((x) => x.id === sid);
+                if (!s) return null;
+                return (
+                  <div key={sid} className="flex items-center justify-between text-sm border rounded p-2 dark:border-gray-800">
+                    <div>{s.name}</div>
+                    <div className="flex items-center gap-2">
+                      <button type="button" className="px-2 py-1 rounded-md bg-gray-100 dark:bg-gray-800" onClick={() => moveSite(sid, -1)}>↑</button>
+                      <button type="button" className="px-2 py-1 rounded-md bg-gray-100 dark:bg-gray-800" onClick={() => moveSite(sid, 1)}>↓</button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
           <div className="flex justify-end gap-2 pt-2">
             <button type="button" onClick={onClose} className="px-4 py-2 text-sm rounded-md bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700" disabled={processing}>Cancel</button>
             <button type="submit" disabled={processing || !data.name || !data.reliever_guard_id || !(data.site_ids || []).length} className="px-4 py-2 text-sm rounded-md bg-indigo-600 text-white hover:bg-indigo-700">{processing ? 'Saving…' : 'Save'}</button>
@@ -296,6 +430,7 @@ export default function RosterWeekly() {
   const [loading, setLoading] = useState(false);
   const [zoneId, setZoneId] = useState<number | ''>('');
   const [supervisorId, setSupervisorId] = useState<number | ''>('');
+  const [guardTypeFilter, setGuardTypeFilter] = useState<string>('');
 
   const load = async () => {
     setLoading(true);
@@ -350,8 +485,21 @@ export default function RosterWeekly() {
           </div>
           <div className="flex items-center gap-2 md:justify-end">
             <button onClick={load} className="px-3 py-1.5 rounded-md bg-indigo-600 text-white hover:bg-indigo-700">Apply</button>
-            <button onClick={() => { setZoneId(''); setSupervisorId(''); load(); }} className="px-3 py-1.5 rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700">Reset</button>
+            <button onClick={() => { setZoneId(''); setSupervisorId(''); setGuardTypeFilter(''); load(); }} className="px-3 py-1.5 rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700">Reset</button>
           </div>
+        </div>
+        <div className="mt-2 flex items-center gap-2">
+          <label className="text-sm text-gray-600 dark:text-gray-300 min-w-[90px]">Guard Type</label>
+          <select
+            className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100 max-w-xs"
+            value={guardTypeFilter}
+            onChange={(e) => setGuardTypeFilter(e.target.value)}
+          >
+            <option value="">All types</option>
+            <option value="permanent">Standard</option>
+            <option value="standby">Standby</option>
+            <option value="reliever">Reliever</option>
+          </select>
         </div>
           <div className="flex items-center gap-2">
             <Link href={route('control-room.shifts.index')} className="px-3 py-1.5 rounded-md bg-gray-800 text-white hover:bg-gray-700 text-sm">View Guard Shifts</Link>
@@ -370,8 +518,15 @@ export default function RosterWeekly() {
               zoneId={zoneId}
               supervisorId={supervisorId}
             />
-            <GuardsTable data={data} onRefresh={load} />
-            <RelieversTable data={data} onRefresh={load} />
+            {(!guardTypeFilter || guardTypeFilter === 'permanent') && (
+              <GuardsTable data={data} onRefresh={load} />
+            )}
+            {(!guardTypeFilter || guardTypeFilter === 'standby') && (
+              <StandbyTable data={data} onRefresh={load} />
+            )}
+            {(!guardTypeFilter || guardTypeFilter === 'reliever') && (
+              <RelieversTable data={data} onRefresh={load} />
+            )}
             <BundlesSection
               weekStart={weekStart}
               zoneId={zoneId}
@@ -417,12 +572,15 @@ function GuardsTable({ data, onRefresh }: { data: WeeklyData; onRefresh: () => v
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200 dark:divide-gray-900 bg-white dark:bg-gray-900">
-            {data.guards.filter(g => (g.guard_type || 'permanent') !== 'reliever').map((g) => (
+            {data.guards.filter(g => ((g.guard_type || 'permanent') === 'permanent')).map((g) => (
               <tr key={g.id}>
                 <td className="px-3 py-2 text-sm font-medium whitespace-nowrap">
                   <label className="inline-flex items-center gap-2">
                     <input type="checkbox" checked={!!selected[g.id]} onChange={() => toggleSel(g.id)} />
-                    <span>{g.name} {g.employee_id ? <span className="text-xs text-gray-500">({g.employee_id})</span> : null}</span>
+                    <span className="inline-flex items-center gap-2">
+                      <span>{g.name} {g.employee_id ? <span className="text-xs text-gray-500">({g.employee_id})</span> : null}</span>
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200">Permanent</span>
+                    </span>
                   </label>
                 </td>
                 {data.days.map((d) => {

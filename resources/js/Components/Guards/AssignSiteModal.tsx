@@ -35,8 +35,12 @@ export default function AssignSiteModal({
       if (search) params.set('search', search);
       if (zoneId) params.set('zone_id', zoneId);
       const listRoute = scope === 'admin' ? 'admin.clients.sites.json' : 'control-room.clients.sites.json';
-      const url = `${route(listRoute)}?${params.toString()}`;
-      const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+      const qs = params.toString();
+      const url = qs ? `${route(listRoute)}?${qs}` : route(listRoute);
+      const res = await fetch(url, {
+        headers: { 'Accept': 'application/json' },
+        credentials: 'same-origin',
+      });
       if (!res.ok) { setSites([]); return; }
       const data = await res.json();
       setSites(Array.isArray(data) ? (data as Site[]) : []);

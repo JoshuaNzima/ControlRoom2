@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\Models\Permission;
+use Spatie\Permission\PermissionRegistrar;
 use App\Models\User;
 use Illuminate\Support\Str;
 
@@ -72,6 +73,7 @@ class RoleController extends Controller
     {
         $request->validate(['name' => 'required|string|max:150']);
         Permission::firstOrCreate(['name' => $request->name, 'guard_name' => 'web']);
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
         return back()->with('success', 'Permission created');
     }
 
@@ -81,6 +83,7 @@ class RoleController extends Controller
             return back()->with('error', 'Cannot delete core permission');
         }
         $permission->delete();
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
         return back()->with('success', 'Permission deleted');
     }
 
@@ -94,6 +97,7 @@ class RoleController extends Controller
         } else {
             $role->givePermissionTo($permission);
         }
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
         return back();
     }
 

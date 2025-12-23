@@ -84,10 +84,14 @@ export default function HRJobs() {
               <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Careers</h1>
               <p className="text-gray-600 dark:text-gray-400 mt-1">Manage public job postings</p>
             </div>
-            <button onClick={() => setOpenCreate(true)} className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-red-600 to-red-500 text-white rounded-lg font-medium">
-              <IconMapper name="Plus" className="w-4 h-4" />
-              New Job
-            </button>
+            <div className="flex items-center gap-2">
+              <Link href={route('hr.jobs.applicants')} className="text-sm px-3 py-1.5 rounded-md bg-gray-100 text-gray-800 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700">Applicants</Link>
+              <Link href={route('hr.jobs.interviews')} className="text-sm px-3 py-1.5 rounded-md bg-gray-100 text-gray-800 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700">Interviews</Link>
+              <button onClick={() => setOpenCreate(true)} className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-red-600 to-red-500 text-white rounded-lg font-medium">
+                <IconMapper name="Plus" className="w-4 h-4" />
+                New Job
+              </button>
+            </div>
           </div>
 
           <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 md:p-6 mb-4">

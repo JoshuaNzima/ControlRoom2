@@ -35,6 +35,10 @@ Route::middleware(['auth', 'role:super_admin|finance_officer|accountant|finance|
             ->name('invoices.next-number');
         Route::get('invoices/service-line-items', [\App\Http\Controllers\Finance\InvoiceController::class, 'serviceLineItems'])
             ->name('invoices.service-line-items');
+        Route::get('invoices/{invoice}/pdf', [\App\Http\Controllers\Finance\InvoiceController::class, 'pdf'])
+            ->name('invoices.pdf');
+        Route::get('invoices/{invoice}/print', [\App\Http\Controllers\Finance\InvoiceController::class, 'print'])
+            ->name('invoices.print');
         Route::resource('invoices', \App\Http\Controllers\Finance\InvoiceController::class);
         Route::post('invoices/{invoice}/send', [\App\Http\Controllers\Finance\InvoiceController::class, 'send'])
             ->name('invoices.send');

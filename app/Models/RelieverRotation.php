@@ -24,7 +24,7 @@ class RelieverRotation extends Model
         'date' => 'date',
     ];
 
-    public function guard(): BelongsTo
+    public function guardRelation(): BelongsTo
     {
         return $this->belongsTo(Guard::class);
     }

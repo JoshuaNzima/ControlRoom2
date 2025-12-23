@@ -13,6 +13,7 @@ const badgeColors: Record<string, string> = {
   needs_revision: 'bg-red-500/10 text-red-300 border border-red-500/40',
   pending_disbursement: 'bg-indigo-500/20 text-indigo-200 border border-indigo-500/40',
   disbursed: 'bg-emerald-500/20 text-emerald-200 border border-emerald-500/40',
+  expired: 'bg-gray-700/40 text-gray-300 border border-gray-600',
 };
 
 export default function RequisitionShow({ requisition }: RequisitionShowProps) {

@@ -12,6 +12,9 @@ use Illuminate\Database\Eloquent\Relations\Relation;
 use PDO;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Session;
+use Spatie\Permission\Models\Role;
+use Spatie\Permission\Models\Permission;
+use Spatie\Permission\PermissionRegistrar;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -109,6 +112,18 @@ class AppServiceProvider extends ServiceProvider
         } catch (\Throwable $e) {
             // Don't break the app if this shim fails; it's only an optional convenience
             // for local sqlite environments. Fail silently.
+        }
+
+        try {
+            $clear = function () {
+                try { app(PermissionRegistrar::class)->forgetCachedPermissions(); } catch (\Throwable $e) {}
+            };
+            Role::saved($clear);
+            Role::deleted($clear);
+            Permission::saved($clear);
+            Permission::deleted($clear);
+        } catch (\Throwable $e) {
+            // swallow
         }
     }
 }

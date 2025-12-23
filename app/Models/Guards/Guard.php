@@ -44,8 +44,6 @@ class Guard extends Model
         'next_of_kin_phone',
         'status',
         'guard_type',
-        'employee_role',
-        'children_names',
         'guard_grade_id',
         'home_village',
         'home_ta',
@@ -57,6 +55,7 @@ class Guard extends Model
         'hire_date',
         'notes',
         'photo',
+        'last_known_location',
         'supervisor_id',
     ];
 
@@ -66,9 +65,10 @@ class Guard extends Model
         'qualifications' => 'array',
         'languages' => 'array',
         'dependents_count' => 'integer',
+        'last_known_location' => 'array',
     ];
 
-    protected $appends = ['status_color', 'is_on_duty'];
+    protected $appends = ['status_color', 'is_on_duty', 'photo_url'];
 
     protected static function booted(): void
     {
@@ -85,6 +85,12 @@ class Guard extends Model
             $candidate = 'G-' . now()->format('ym') . '-' . sprintf('%04d', random_int(0, 9999));
         } while (self::where('employee_id', $candidate)->exists());
         return $candidate;
+    }
+
+    public function getPhotoUrlAttribute(): ?string
+    {
+        if (empty($this->photo)) return null;
+        return asset('storage/' . ltrim($this->photo, '/'));
     }
 
     public function supervisor(): BelongsTo
@@ -180,9 +186,7 @@ class Guard extends Model
 
     public function currentShift()
     {
-        return $this->hasOne(Shift::class)
-            ->whereIn('status', ['scheduled', 'in_progress'])
-            ->whereDate('date', today());
+        return $this->hasOne(Shift::class)->where('is_active', true);
     }
 
     public function currentSite()

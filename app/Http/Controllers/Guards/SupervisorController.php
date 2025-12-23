@@ -129,8 +129,8 @@ class SupervisorController extends Controller
             ->map(fn($site) => [
                 'id' => $site->id,
                 'name' => $site->name,
-                'client_name' => $site->client->name,
-                'full_name' => $site->client->name . ' - ' . $site->name,
+                'client_name' => $site->client?->name ?? 'Unknown',
+                'full_name' => ($site->client?->name ?? 'Unknown') . ' - ' . $site->name,
             ]);
 
         // Analytics data - 7 day trends
@@ -159,8 +159,8 @@ class SupervisorController extends Controller
             ->get()
             ->map(fn($shift) => [
                 'id' => $shift->id,
-                'guard_name' => $shift->guard->name ?? 'Unknown',
-                'site_name' => $shift->clientSite->name ?? 'Unknown',
+                'guard_name' => $shift->guard?->name ?? 'Unknown',
+                'site_name' => $shift->clientSite?->name ?? 'Unknown',
                 'type' => ucfirst($shift->shift_type),
                 'start_time' => $shift->start_time ? Carbon::parse($shift->start_time)->format('M d, H:i') : 'N/A',
                 'end_time' => $shift->end_time ? Carbon::parse($shift->end_time)->format('H:i') : null,
@@ -241,7 +241,7 @@ class SupervisorController extends Controller
                 ],
                 'site' => $record->clientSite ? [
                     'name' => $record->clientSite->name,
-                    'client_name' => $record->clientSite->client->name ?? 'Unknown',
+                    'client_name' => $record->clientSite->client?->name ?? 'Unknown',
                 ] : null,
                 'check_in_time' => $record->check_in_time ? Carbon::parse($record->check_in_time)->format('H:i') : null,
                 'check_out_time' => $record->check_out_time ? Carbon::parse($record->check_out_time)->format('H:i') : null,

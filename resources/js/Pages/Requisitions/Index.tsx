@@ -20,7 +20,7 @@ export interface Requisition {
   title: string;
   description?: string | null;
   category?: 'general' | 'fuel' | 'vehicle_hire' | string;
-  status: 'pending_admin' | 'needs_revision' | 'pending_disbursement' | 'disbursed';
+  status: 'pending_admin' | 'needs_revision' | 'pending_disbursement' | 'disbursed' | 'expired';
   needed_by?: string | null;
   amount?: number | string | null;
   created_at: string;
@@ -49,6 +49,7 @@ type RequisitionsIndexProps = PageProps<{
     links?: PaginationLink[];
   };
   mode?: 'disburse' | 'mine' | string;
+  filter?: 'all' | 'pending' | 'expired' | string;
 }>;
 
 const statusColors: Record<string, string> = {
@@ -60,9 +61,11 @@ const statusColors: Record<string, string> = {
     'bg-indigo-100 text-indigo-800 border border-indigo-200 dark:bg-indigo-500/20 dark:text-indigo-200 dark:border-indigo-500/40',
   disbursed:
     'bg-emerald-100 text-emerald-800 border border-emerald-200 dark:bg-emerald-500/20 dark:text-emerald-200 dark:border-emerald-500/40',
+  expired:
+    'bg-gray-100 text-gray-800 border border-gray-200 dark:bg-gray-700/40 dark:text-gray-300 dark:border-gray-600',
 };
 
-export default function RequisitionsIndex({ requisitions, auth, mode: initialMode }: RequisitionsIndexProps) {
+export default function RequisitionsIndex({ requisitions, auth, mode: initialMode, filter: initialFilter }: RequisitionsIndexProps) {
   const roles = (auth.user.roles ?? []) as string[];
   const isAdmin = roles.includes('admin') || roles.includes('super_admin');
   const isAssetManager = roles.includes('asset_manager') || roles.includes('assets_manager');
@@ -72,6 +75,7 @@ export default function RequisitionsIndex({ requisitions, auth, mode: initialMod
   const [openEdit, setOpenEdit] = React.useState(false);
   const { push } = useNotification();
   const mode: 'disburse' | 'mine' = (initialMode === 'mine' ? 'mine' : 'disburse');
+  const selectedFilter: 'all' | 'pending' | 'expired' = (initialFilter === 'expired' ? 'expired' : (initialFilter === 'pending' ? 'pending' : 'all'));
   const [showBatch, setShowBatch] = React.useState(false);
   const [showHistory, setShowHistory] = React.useState(false);
 
@@ -119,6 +123,34 @@ export default function RequisitionsIndex({ requisitions, auth, mode: initialMod
                     preserveState
                   >
                     My Requests
+                  </Link>
+                </div>
+              )}
+              {(isAdmin || !isAssetManager || (isAssetManager && mode === 'mine')) && (
+                <div className="mt-2 inline-flex rounded-full bg-gray-100 dark:bg-gray-800/40 p-1">
+                  <Link
+                    href={route('requisitions.index', (isAssetManager ? { mode, filter: 'all' } : { filter: 'all' }))}
+                    className={`px-3 py-1.5 rounded-full text-xs sm:text-sm font-medium ${selectedFilter === 'all' ? 'bg-gray-900 text-white dark:bg-gray-700' : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700/60'}`}
+                    preserveScroll
+                    preserveState
+                  >
+                    All
+                  </Link>
+                  <Link
+                    href={route('requisitions.index', (isAssetManager ? { mode, filter: 'pending' } : { filter: 'pending' }))}
+                    className={`px-3 py-1.5 rounded-full text-xs sm:text-sm font-medium ${selectedFilter === 'pending' ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700/60'}`}
+                    preserveScroll
+                    preserveState
+                  >
+                    Pending
+                  </Link>
+                  <Link
+                    href={route('requisitions.index', (isAssetManager ? { mode, filter: 'expired' } : { filter: 'expired' }))}
+                    className={`px-3 py-1.5 rounded-full text-xs sm:text-sm font-medium ${selectedFilter === 'expired' ? 'bg-gray-700 text-white dark:bg-gray-600' : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700/60'}`}
+                    preserveScroll
+                    preserveState
+                  >
+                    Expired
                   </Link>
                 </div>
               )}

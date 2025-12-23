@@ -13,7 +13,6 @@ export default function ShiftsEdit() {
     end_time: string;
     description: string;
     supervisor_id: number | '';
-    required_guards: number;
     sites: number[];
     status: string;
     is_global: boolean;
@@ -25,7 +24,6 @@ export default function ShiftsEdit() {
     end_time: shift.end_time,
     description: shift.description ?? '',
     supervisor_id: shift.supervisor_id ?? '',
-    required_guards: shift.required_guards,
     sites: Array.isArray(shift.sites) ? shift.sites : [],
     status: shift.status,
     is_global: !!shift.is_global,
@@ -78,11 +76,7 @@ export default function ShiftsEdit() {
                 <input type="time" className="w-full border rounded-md p-2" value={data.end_time} onChange={(e) => setData('end_time', e.target.value)} />
                 {errors.end_time && <p className="text-sm text-red-600">{errors.end_time}</p>}
               </div>
-              <div>
-                <label className="block text-sm font-medium">Required Guards</label>
-                <input type="number" min={1} className="w-full border rounded-md p-2" value={data.required_guards as any} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setData('required_guards', Number(e.target.value))} />
-                {errors.required_guards && <p className="text-sm text-red-600">{errors.required_guards}</p>}
-              </div>
+              <div className="sm:col-span-2 text-xs text-gray-500 dark:text-gray-400">Required guards is calculated automatically from selected site assignments.</div>
               <div className="sm:col-span-2">
                 <label className="inline-flex items-center gap-2 text-sm font-medium">
                   <input type="checkbox" checked={data.is_global} onChange={(e) => {

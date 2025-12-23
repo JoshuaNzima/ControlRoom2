@@ -14,6 +14,7 @@ class Kernel extends ConsoleKernel
         $schedule->command('attendance:auto-checkout')->everyFifteenMinutes();
         $schedule->command('zones:recalc-required-guards')->dailyAt('02:30');
         $schedule->command('attendance:auto-mark-absent')->dailyAt('06:30');
+        $schedule->command('requisitions:expire-pending')->dailyAt('01:30');
     }
 
     protected function commands()
