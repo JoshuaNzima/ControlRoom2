@@ -5,6 +5,9 @@ namespace App\Http\Controllers\HR;
 use App\Http\Controllers\Controller;
 use App\Models\Interview;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Notification;
+use App\Models\User;
+use App\Notifications\GenericDbNotification;
 
 class InterviewController extends Controller
 {
@@ -19,7 +22,7 @@ class InterviewController extends Controller
             'notes' => ['nullable','string'],
         ]);
 
-        Interview::create([
+        $interview = Interview::create([
             'job_application_id' => $validated['job_application_id'],
             'scheduled_at' => $validated['scheduled_at'],
             'interviewer_id' => $validated['interviewer_id'] ?? null,
@@ -28,7 +31,33 @@ class InterviewController extends Controller
             'status' => 'scheduled',
             'notes' => $validated['notes'] ?? null,
         ]);
-
+        // Notify careers managers and interviewer
+        try {
+            $interview->loadMissing('application.jobPosting');
+            $title = $interview->application?->jobPosting?->title;
+            $candidate = $interview->application?->candidate_name;
+            $when = optional($interview->scheduled_at)->toDateTimeString();
+            $payload = [
+                'title' => 'Interview Scheduled',
+                'message' => trim(($candidate ?: 'Candidate') . ($title ? ' • '.$title : '') . ($when ? ' • '.$when : '')),
+                'url' => route('hr.jobs.interviews'),
+            ];
+            $recipients = User::permission('hr.careers.manage')->get();
+            if ($recipients->isEmpty()) {
+                $recipients = User::role('super_admin')->get();
+            }
+            if ($recipients->isNotEmpty()) {
+                Notification::send($recipients, new GenericDbNotification($payload));
+            }
+            if ($interview->interviewer_id) {
+                $interviewer = User::find($interview->interviewer_id);
+                if ($interviewer) {
+                    Notification::send($interviewer, new GenericDbNotification($payload));
+                }
+            }
+        } catch (\Throwable $e) {
+            // swallow
+        }
         return back()->with('success', 'Interview scheduled');
     }
 
@@ -44,6 +73,34 @@ class InterviewController extends Controller
         ]);
 
         $interview->update($validated);
+
+        // Notify on important updates
+        try {
+            $interview->loadMissing('application.jobPosting');
+            $title = $interview->application?->jobPosting?->title;
+            $candidate = $interview->application?->candidate_name;
+            $when = optional($interview->scheduled_at)->toDateTimeString();
+            $payload = [
+                'title' => 'Interview Updated',
+                'message' => trim(($candidate ?: 'Candidate') . ($title ? ' • '.$title : '') . ($when ? ' • '.$when : '')), 
+                'url' => route('hr.jobs.interviews'),
+            ];
+            $recipients = User::permission('hr.careers.manage')->get();
+            if ($recipients->isEmpty()) {
+                $recipients = User::role('super_admin')->get();
+            }
+            if ($recipients->isNotEmpty()) {
+                Notification::send($recipients, new GenericDbNotification($payload));
+            }
+            if ($interview->interviewer_id) {
+                $interviewer = User::find($interview->interviewer_id);
+                if ($interviewer) {
+                    Notification::send($interviewer, new GenericDbNotification($payload));
+                }
+            }
+        } catch (\Throwable $e) {
+            // swallow
+        }
 
         return back()->with('success', 'Interview updated');
     }

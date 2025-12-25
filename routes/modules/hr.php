@@ -18,6 +18,10 @@ Route::middleware(['auth'])->group(function () {
 		Route::get('/employees', [\App\Http\Controllers\HR\EmployeeController::class, 'index'])->name('employees.index');
 		Route::post('/guards/{guard}/promote', [\App\Http\Controllers\HR\EmployeeController::class, 'promote'])->name('guards.promote');
 		Route::get('/training', [\App\Http\Controllers\HR\TrainingController::class, 'index'])->name('training');
+		// Medical Schemes (view)
+		Route::get('/medical', [\App\Http\Controllers\HR\MedicalSchemeController::class, 'index'])->name('medical.index');
+		// Pensions (view)
+		Route::get('/pensions', [\App\Http\Controllers\HR\PensionController::class, 'index'])->name('pensions.index');
 	});
 
 	// HR Careers Management (separate permission)
@@ -28,10 +32,13 @@ Route::middleware(['auth'])->group(function () {
 		Route::delete('/jobs/{jobPosting}', [\App\Http\Controllers\HR\JobPostingController::class, 'destroy'])->name('jobs.destroy');
 		Route::post('/jobs/{jobPosting}/publish', [\App\Http\Controllers\HR\JobPostingController::class, 'publish'])->name('jobs.publish');
 		Route::post('/jobs/{jobPosting}/unpublish', [\App\Http\Controllers\HR\JobPostingController::class, 'unpublish'])->name('jobs.unpublish');
+        Route::get('/jobs/export', [\App\Http\Controllers\HR\JobPostingController::class, 'export'])->name('jobs.export');
 
 		// Careers subpages
 		Route::get('/jobs/applicants', [\App\Http\Controllers\HR\ApplicantsController::class, 'index'])->name('jobs.applicants');
 		Route::get('/jobs/interviews', [\App\Http\Controllers\HR\InterviewsController::class, 'index'])->name('jobs.interviews');
+        Route::get('/jobs/applicants/export', [\App\Http\Controllers\HR\ApplicantsController::class, 'export'])->name('jobs.applicants.export');
+        Route::get('/jobs/interviews/export', [\App\Http\Controllers\HR\InterviewsController::class, 'export'])->name('jobs.interviews.export');
 
 		// Job applications
 		Route::post('/job-applications', [\App\Http\Controllers\HR\JobApplicationController::class, 'store'])->name('job-applications.store');
@@ -106,6 +113,24 @@ Route::middleware(['auth'])->group(function () {
 		Route::post('/benefits/{benefit}/enroll', [\App\Http\Controllers\HR\HrBenefitController::class, 'enroll'])->name('benefits.enroll');
 		Route::post('/benefit-enrollments/{enrollment}/cancel', [\App\Http\Controllers\HR\HrBenefitController::class, 'cancelEnrollment'])->name('benefits.enrollments.cancel');
 		Route::get('/benefits/enrollments/export', [\App\Http\Controllers\HR\HrBenefitController::class, 'enrollmentsExport'])->name('benefits.enrollments.export');
+
+		// Medical Scheme (manage)
+		Route::post('/medical/schemes', [\App\Http\Controllers\HR\MedicalSchemeController::class, 'storeScheme'])->name('medical.schemes.store');
+		Route::put('/medical/schemes/{scheme}', [\App\Http\Controllers\HR\MedicalSchemeController::class, 'updateScheme'])->name('medical.schemes.update');
+		Route::delete('/medical/schemes/{scheme}', [\App\Http\Controllers\HR\MedicalSchemeController::class, 'destroyScheme'])->name('medical.schemes.destroy');
+		Route::post('/medical/memberships', [\App\Http\Controllers\HR\MedicalSchemeController::class, 'storeMembership'])->name('medical.memberships.store');
+		Route::put('/medical/memberships/{membership}', [\App\Http\Controllers\HR\MedicalSchemeController::class, 'updateMembership'])->name('medical.memberships.update');
+		Route::delete('/medical/memberships/{membership}', [\App\Http\Controllers\HR\MedicalSchemeController::class, 'destroyMembership'])->name('medical.memberships.destroy');
+		Route::get('/medical/memberships/export', [\App\Http\Controllers\HR\MedicalSchemeController::class, 'membershipsExport'])->name('medical.memberships.export');
+
+		// Pensions (manage)
+		Route::post('/pensions/schemes', [\App\Http\Controllers\HR\PensionController::class, 'storeScheme'])->name('pensions.schemes.store');
+		Route::put('/pensions/schemes/{scheme}', [\App\Http\Controllers\HR\PensionController::class, 'updateScheme'])->name('pensions.schemes.update');
+		Route::delete('/pensions/schemes/{scheme}', [\App\Http\Controllers\HR\PensionController::class, 'destroyScheme'])->name('pensions.schemes.destroy');
+		Route::post('/pensions/enrollments', [\App\Http\Controllers\HR\PensionController::class, 'storeEnrollment'])->name('pensions.enrollments.store');
+		Route::put('/pensions/enrollments/{enrollment}', [\App\Http\Controllers\HR\PensionController::class, 'updateEnrollment'])->name('pensions.enrollments.update');
+		Route::delete('/pensions/enrollments/{enrollment}', [\App\Http\Controllers\HR\PensionController::class, 'destroyEnrollment'])->name('pensions.enrollments.destroy');
+		Route::get('/pensions/enrollments/export', [\App\Http\Controllers\HR\PensionController::class, 'enrollmentsExport'])->name('pensions.enrollments.export');
 
 		// Compensation (Phase 2)
 		Route::get('/compensation', [\App\Http\Controllers\HR\CompensationController::class, 'index'])->name('compensation.index');

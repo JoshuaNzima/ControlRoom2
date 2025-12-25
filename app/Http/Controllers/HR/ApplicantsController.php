@@ -67,4 +67,56 @@ class ApplicantsController extends Controller
             ],
         ]);
     }
+
+    public function export(Request $request)
+    {
+        $search = (string) $request->query('search', '');
+        $status = (string) $request->query('status', '');
+        $jobId = $request->query('job');
+
+        $query = JobApplication::query()->with('jobPosting:id,title');
+        if ($status !== '') {
+            $query->where('status', $status);
+        }
+        if (!empty($jobId)) {
+            $query->where('job_posting_id', $jobId);
+        }
+        if ($search !== '') {
+            $query->where(function ($q) use ($search) {
+                $q->where('candidate_name', 'like', "%$search%")
+                  ->orWhere('email', 'like', "%$search%")
+                  ->orWhere('phone', 'like', "%$search%")
+                  ->orWhereHas('jobPosting', function ($qa) use ($search) {
+                      $qa->where('title', 'like', "%$search%");
+                  });
+            });
+        }
+
+        $items = $query->orderByDesc('created_at')->get();
+
+        $filename = 'hr_applicants_' . now()->format('Ymd_His') . '.csv';
+        $rows = [];
+        $rows[] = ['ID','Candidate','Email','Phone','Status','Job','Created At'];
+        foreach ($items as $a) {
+            $rows[] = [
+                $a->id,
+                $a->candidate_name,
+                $a->email,
+                $a->phone,
+                $a->status,
+                optional($a->jobPosting)->title,
+                optional($a->created_at)->toDateTimeString(),
+            ];
+        }
+
+        $callback = function () use ($rows) {
+            $FH = fopen('php://output', 'w');
+            foreach ($rows as $r) fputcsv($FH, $r);
+            fclose($FH);
+        };
+
+        return response()->streamDownload($callback, $filename, [
+            'Content-Type' => 'text/csv',
+        ]);
+    }
 }

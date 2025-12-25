@@ -28,6 +28,33 @@ Route::middleware(['auth', 'role:super_admin,asset_manager'])
             Route::post('/{dispatch}/return', [\App\Http\Controllers\Admin\VehicleDispatchController::class, 'returnVehicle'])->name('return');
         });
 
+        // Utilization logs
+        Route::prefix('utilization')->name('utilization.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Admin\VehicleUtilizationController::class, 'index'])->name('index');
+            Route::post('/', [\App\Http\Controllers\Admin\VehicleUtilizationController::class, 'store'])->name('store');
+            Route::put('/{log}', [\App\Http\Controllers\Admin\VehicleUtilizationController::class, 'update'])->name('update');
+            Route::delete('/{log}', [\App\Http\Controllers\Admin\VehicleUtilizationController::class, 'destroy'])->name('destroy');
+            Route::get('/export', [\App\Http\Controllers\Admin\VehicleUtilizationController::class, 'export'])->name('export');
+        });
+
+        // Fuel logs
+        Route::prefix('fuel')->name('fuel.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Admin\VehicleFuelLogController::class, 'index'])->name('index');
+            Route::post('/', [\App\Http\Controllers\Admin\VehicleFuelLogController::class, 'store'])->name('store');
+            Route::put('/{log}', [\App\Http\Controllers\Admin\VehicleFuelLogController::class, 'update'])->name('update');
+            Route::delete('/{log}', [\App\Http\Controllers\Admin\VehicleFuelLogController::class, 'destroy'])->name('destroy');
+            Route::get('/export', [\App\Http\Controllers\Admin\VehicleFuelLogController::class, 'export'])->name('export');
+        });
+
+        // Maintenance logs
+        Route::prefix('maintenance')->name('maintenance.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Admin\VehicleMaintenanceLogController::class, 'index'])->name('index');
+            Route::post('/', [\App\Http\Controllers\Admin\VehicleMaintenanceLogController::class, 'store'])->name('store');
+            Route::put('/{log}', [\App\Http\Controllers\Admin\VehicleMaintenanceLogController::class, 'update'])->name('update');
+            Route::delete('/{log}', [\App\Http\Controllers\Admin\VehicleMaintenanceLogController::class, 'destroy'])->name('destroy');
+            Route::get('/export', [\App\Http\Controllers\Admin\VehicleMaintenanceLogController::class, 'export'])->name('export');
+        });
+
         // Settings
         Route::get('/settings', [\App\Http\Controllers\Admin\AssetSettingController::class, 'index'])->name('settings');
         Route::post('/settings', [\App\Http\Controllers\Admin\AssetSettingController::class, 'update'])->name('settings.update');

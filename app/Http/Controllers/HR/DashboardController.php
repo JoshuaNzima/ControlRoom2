@@ -17,6 +17,8 @@ use App\Models\HR\ChecklistTemplate;
 use App\Models\HR\HrBenefitEnrollment;
 use App\Models\HR\HrCompChange;
 use App\Models\HR\HrSafetyIncident;
+use App\Models\HR\HrMedicalMembership;
+use App\Models\HR\HrPensionEnrollment;
 use Carbon\Carbon;
 use Carbon\CarbonPeriod;
 use Illuminate\Http\Request;
@@ -448,11 +450,17 @@ class DashboardController extends Controller
                 'benefits' => [
                     'active_enrollments' => $benefitsActive,
                 ],
+                'medical' => [
+                    'active_memberships' => HrMedicalMembership::where('status','active')->count(),
+                ],
                 'compensation' => [
                     'pending_changes' => $compPending,
                 ],
                 'safety' => [
                     'open_incidents' => $safetyOpen,
+                ],
+                'pensions' => [
+                    'active_enrollments' => HrPensionEnrollment::where('status','active')->count(),
                 ],
             ],
             'upcoming_holidays' => $upcomingHolidays,

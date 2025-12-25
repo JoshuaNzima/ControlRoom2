@@ -101,4 +101,45 @@ class JobPostingController extends Controller
         ]);
         return back()->with('success', 'Job posting moved to draft.');
     }
+
+    public function export(Request $request)
+    {
+        $query = JobPosting::query()
+            ->when($request->get('status'), fn($q, $s) => $q->where('status', $s))
+            ->when($request->get('search'), function ($q, $s) {
+                $q->where(function ($qq) use ($s) {
+                    $qq->where('title', 'like', "%{$s}%")
+                       ->orWhere('location', 'like', "%{$s}%");
+                });
+            })
+            ->latest('posted_at')
+            ->latest();
+
+        $items = $query->get(['id','title','location','type','status','posted_at','apply_email']);
+
+        $filename = 'hr_jobs_' . now()->format('Ymd_His') . '.csv';
+        $rows = [];
+        $rows[] = ['ID','Title','Location','Type','Status','Posted At','Apply Email'];
+        foreach ($items as $it) {
+            $rows[] = [
+                $it->id,
+                $it->title,
+                $it->location,
+                $it->type,
+                $it->status,
+                optional($it->posted_at)->toDateTimeString(),
+                $it->apply_email,
+            ];
+        }
+
+        $callback = function () use ($rows) {
+            $FH = fopen('php://output', 'w');
+            foreach ($rows as $r) fputcsv($FH, $r);
+            fclose($FH);
+        };
+
+        return response()->streamDownload($callback, $filename, [
+            'Content-Type' => 'text/csv',
+        ]);
+    }
 }

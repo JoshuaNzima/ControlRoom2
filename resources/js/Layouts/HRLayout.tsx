@@ -42,6 +42,8 @@ export default function HRLayout({ title, children, user }: Props) {
     { name: 'Training', href: route('hr.training'), icon: <IconMapper name="graduation-cap" className="h-6 w-6" />, current: isCurrent(route('hr.training')) },
     { name: 'Careers', href: route('hr.jobs.index'), icon: <IconMapper name="megaphone" className="h-6 w-6" />, current: isCurrent(route('hr.jobs.index')) },
     { name: 'Benefits', href: route('hr.benefits.index'), icon: <IconMapper name="gift" className="h-6 w-6" />, current: isCurrent(route('hr.benefits.index')) },
+    { name: 'Medical', href: route('hr.medical.index'), icon: <IconMapper name="stethoscope" className="h-6 w-6" />, current: isCurrent(route('hr.medical.index')) },
+    { name: 'Pensions', href: route('hr.pensions.index'), icon: <IconMapper name="banknote" className="h-6 w-6" />, current: isCurrent(route('hr.pensions.index')) },
     { name: 'Compensation', href: route('hr.compensation.index'), icon: <IconMapper name="dollar-sign" className="h-6 w-6" />, current: isCurrent(route('hr.compensation.index')) },
     { name: 'Safety', href: route('hr.safety.index'), icon: <IconMapper name="shield" className="h-6 w-6" />, current: isCurrent(route('hr.safety.index')) },
     { name: 'Policies', href: route('hr.policies.index'), icon: <IconMapper name="file-text" className="h-6 w-6" />, current: isCurrent(route('hr.policies.index')) },

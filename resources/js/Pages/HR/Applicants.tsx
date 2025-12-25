@@ -59,6 +59,7 @@ export default function Applicants() {
             <div className="flex items-center gap-2">
               <Link href={route('hr.jobs.index')} className="text-sm px-3 py-1.5 rounded-md bg-gray-100 text-gray-800 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700">Jobs</Link>
               <Link href={route('hr.jobs.interviews')} className="text-sm px-3 py-1.5 rounded-md bg-gray-100 text-gray-800 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700">Interviews</Link>
+              <a href={route('hr.jobs.applicants.export', { search, status, job })} className="text-sm px-3 py-1.5 rounded-md bg-gray-100 text-gray-800 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700">Export CSV</a>
               <button onClick={() => setOpenCreate(true)} className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-red-600 to-red-500 text-white rounded-lg font-medium">
                 <IconMapper name="Plus" className="w-4 h-4" />
                 Add Application

@@ -7,6 +7,9 @@ use Inertia\Inertia;
 use App\Models\Vehicle;
 use App\Models\Equipment;
 use App\Models\Requisition;
+use App\Models\VehicleUtilizationLog;
+use App\Models\VehicleFuelLog;
+use App\Models\VehicleMaintenanceLog;
 use Illuminate\Support\Facades\DB;
 
 class AssetManagementController extends Controller
@@ -34,6 +37,15 @@ class AssetManagementController extends Controller
             'lost' => Equipment::where('status', 'lost')->count(),
         ];
 
+        // 30-day activity metrics
+        $from = now()->subDays(30)->startOfDay();
+        $utilHours = (float) VehicleUtilizationLog::where('date', '>=', $from)->sum('hours');
+        $utilKm = (int) VehicleUtilizationLog::where('date', '>=', $from)->sum('kilometers');
+        $fuelLiters = (float) VehicleFuelLog::where('date', '>=', $from)->sum('liters');
+        $fuelCost = (float) VehicleFuelLog::where('date', '>=', $from)->sum('cost');
+        $maintCost = (float) VehicleMaintenanceLog::where('date', '>=', $from)->sum('cost');
+        $maintDowntime = (int) VehicleMaintenanceLog::where('date', '>=', $from)->sum('down_time_hours');
+
         $summary = [
             'total_assets' => $totalVehicles + $totalEquipment,
             'in_service_assets' => $inServiceVehicles + $inServiceEquipment,
@@ -45,6 +57,13 @@ class AssetManagementController extends Controller
             'assigned_equipment' => $assignedEquipment,
             'vehicle_status_counts' => $vehicleStatusCounts,
             'equipment_status_counts' => $equipmentStatusCounts,
+            // Activity (last 30 days)
+            'util_hours_30d' => round($utilHours, 2),
+            'util_km_30d' => (int) $utilKm,
+            'fuel_liters_30d' => round($fuelLiters, 2),
+            'fuel_cost_30d' => round($fuelCost, 2),
+            'maint_cost_30d' => round($maintCost, 2),
+            'maint_downtime_30d' => (int) $maintDowntime,
         ];
 
         $pendingDisbursement = Requisition::query()

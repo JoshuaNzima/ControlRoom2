@@ -80,4 +80,49 @@ class InterviewsController extends Controller
             ],
         ]);
     }
+
+    public function export(Request $request)
+    {
+        $status = (string) $request->query('status', '');
+        $from = $request->query('from');
+        $to = $request->query('to');
+
+        $query = Interview::query()->with(['application:id,job_posting_id,candidate_name,status','application.jobPosting:id,title']);
+        if ($status !== '') {
+            $query->where('status', $status);
+        }
+        if (!empty($from)) {
+            $query->where('scheduled_at', '>=', Carbon::parse($from)->startOfDay());
+        }
+        if (!empty($to)) {
+            $query->where('scheduled_at', '<=', Carbon::parse($to)->endOfDay());
+        }
+
+        $items = $query->orderBy('scheduled_at', 'desc')->get();
+
+        $filename = 'hr_interviews_' . now()->format('Ymd_His') . '.csv';
+        $rows = [];
+        $rows[] = ['ID','Candidate','Job','Scheduled At','Mode','Location/Link','Status'];
+        foreach ($items as $iv) {
+            $rows[] = [
+                $iv->id,
+                optional($iv->application)->candidate_name,
+                optional(optional($iv->application)->jobPosting)->title,
+                optional($iv->scheduled_at)->toDateTimeString(),
+                $iv->mode,
+                $iv->location_or_link,
+                $iv->status,
+            ];
+        }
+
+        $callback = function () use ($rows) {
+            $FH = fopen('php://output', 'w');
+            foreach ($rows as $r) fputcsv($FH, $r);
+            fclose($FH);
+        };
+
+        return response()->streamDownload($callback, $filename, [
+            'Content-Type' => 'text/csv',
+        ]);
+    }
 }

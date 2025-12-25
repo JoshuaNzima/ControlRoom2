@@ -5,6 +5,9 @@ namespace App\Http\Controllers\HR;
 use App\Http\Controllers\Controller;
 use App\Models\JobApplication;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Notification;
+use App\Models\User;
+use App\Notifications\GenericDbNotification;
 
 class JobApplicationController extends Controller
 {
@@ -29,6 +32,25 @@ class JobApplicationController extends Controller
             'resume_url' => $validated['resume_url'] ?? null,
             'notes' => $validated['notes'] ?? null,
         ]);
+
+        // Notify careers managers of new application
+        try {
+            $recipients = User::permission('hr.careers.manage')->get();
+            if ($recipients->isEmpty()) {
+                $recipients = User::role('super_admin')->get();
+            }
+            if ($recipients->isNotEmpty()) {
+                $application->loadMissing('jobPosting:id,title');
+                $payload = [
+                    'title' => 'New Job Application',
+                    'message' => sprintf('%s applied%s', $application->candidate_name ?? 'Candidate', $application->jobPosting ? ' for '.$application->jobPosting->title : ''),
+                    'url' => route('hr.jobs.applicants'),
+                ];
+                Notification::send($recipients, new GenericDbNotification($payload));
+            }
+        } catch (\Throwable $e) {
+            // swallow
+        }
 
         return back()->with('success', 'Application created');
     }

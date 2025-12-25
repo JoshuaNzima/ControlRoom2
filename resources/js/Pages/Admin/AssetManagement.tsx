@@ -15,6 +15,22 @@ interface Summary {
   assigned_equipment: number;
   vehicle_status_counts: { active: number; maintenance: number; retired: number };
   equipment_status_counts: { active: number; maintenance: number; retired: number; lost: number };
+  // Last 30 days metrics
+  util_hours_30d?: number;
+  util_km_30d?: number;
+  fuel_liters_30d?: number;
+  fuel_cost_30d?: number;
+  maint_cost_30d?: number;
+  maint_downtime_30d?: number;
+}
+
+function Mini({ title, value }: { title: string; value: string | number }) {
+  return (
+    <div className="rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-3">
+      <div className="text-xs text-gray-500 dark:text-gray-400">{title}</div>
+      <div className="mt-1 text-lg font-semibold text-gray-900 dark:text-gray-100">{value}</div>
+    </div>
+  );
 }
 
 interface RequisitionLite {
@@ -83,6 +99,20 @@ export default function AssetManagement({ auth = {}, summary, pendingDisbursemen
               ]}
               pct={pct}
             />
+          </div>
+
+          <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">Last 30 days</h3>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+              <Mini title="Utilization (hrs)" value={Number(summary.util_hours_30d || 0).toLocaleString()} />
+              <Mini title="Utilization (km)" value={Number(summary.util_km_30d || 0).toLocaleString()} />
+              <Mini title="Fuel (L)" value={Number(summary.fuel_liters_30d || 0).toLocaleString()} />
+              <Mini title="Fuel Cost" value={formatCurrencyMWK(Number(summary.fuel_cost_30d || 0))} />
+              <Mini title="Maint. Cost" value={formatCurrencyMWK(Number(summary.maint_cost_30d || 0))} />
+              <Mini title="Downtime (hrs)" value={Number(summary.maint_downtime_30d || 0).toLocaleString()} />
+            </div>
           </div>
 
           <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4">

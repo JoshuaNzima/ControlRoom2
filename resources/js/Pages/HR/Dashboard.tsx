@@ -40,6 +40,8 @@ export default function HRDashboard() {
   const benefits = metrics?.benefits || {};
   const compensation = metrics?.compensation || {};
   const safety = metrics?.safety || {};
+  const medical = metrics?.medical || {};
+  const pensions = metrics?.pensions || {};
 
   const initialWindow = metrics?.window?.param || '30d';
   const initialTrend = metrics?.window?.trend || 'week';
@@ -176,6 +178,22 @@ export default function HRDashboard() {
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 <MiniStat label="Open Incidents" value={safety?.open_incidents || 0} />
+              </div>
+            </div>
+            <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4">
+              <div className="flex items-center justify-between mb-2">
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Medical</h2>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                <MiniStat label="Active Memberships" value={medical?.active_memberships || 0} />
+              </div>
+            </div>
+            <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4">
+              <div className="flex items-center justify-between mb-2">
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Pensions</h2>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                <MiniStat label="Active Enrollments" value={pensions?.active_enrollments || 0} />
               </div>
             </div>
           </div>
