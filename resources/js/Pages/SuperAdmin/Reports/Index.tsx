@@ -7,7 +7,7 @@ export default function ReportsIndex() {
   const cards = [
     { title: 'Manage Reports', icon: 'Wrench', href: route('superadmin.reports.manage') },
     { title: 'All Reports', icon: 'BarChart2', href: route('reports.index') },
-    { title: 'Activity Logs', icon: 'Clock', href: route('reports.activity-logs') },
+    { title: 'Activity Logs', icon: 'Clock', href: route('superadmin.logs') },
   ];
 
   return (

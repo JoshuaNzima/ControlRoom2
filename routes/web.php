@@ -8,8 +8,7 @@ use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\Guards\SupervisorController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\CounterController;
-use App\Http\Controllers\Admin\DashboardController;
-use App\Http\Controllers\Admin\{DashboardController as AdminDashboard, UserController};
+use App\Http\Controllers\SuperAdmin\SystemController;
 use App\Models\Role;
 // Installer routes
 Route::middleware('web')->group(function () {
@@ -205,9 +204,12 @@ Route::middleware(['auth', 'role:super_admin'])->prefix('superadmin')->name('sup
     Route::get('/backup', fn() => Inertia::render('SuperAdmin/Backup'))->name('backup');
     
     // System Monitoring
-    Route::get('/logs', fn() => Inertia::render('SuperAdmin/Logs'))->name('logs');
-    Route::get('/audit', fn() => Inertia::render('SuperAdmin/Audit'))->name('audit');
-    Route::get('/maintenance', fn() => Inertia::render('SuperAdmin/Maintenance'))->name('maintenance');
+    Route::get('/logs', [SystemController::class, 'logsIndex'])->name('logs');
+    Route::get('/logs/data', [SystemController::class, 'logsData'])->name('logs.data');
+    Route::get('/logs/download', [SystemController::class, 'logsDownload'])->name('logs.download');
+    Route::get('/audit', [SystemController::class, 'auditIndex'])->name('audit');
+    Route::get('/audit/data', [SystemController::class, 'auditData'])->name('audit.data');
+    Route::get('/maintenance', [SystemController::class, 'maintenanceIndex'])->name('maintenance');
     Route::get('/cache', fn() => Inertia::render('SuperAdmin/Cache'))->name('cache');
     
         Route::get('/roles', [App\Http\Controllers\SuperAdmin\RoleController::class, 'index'])->name('roles.index');
@@ -220,6 +222,11 @@ Route::middleware(['auth', 'role:super_admin'])->prefix('superadmin')->name('sup
         Route::post('/roles/{role}/toggle-permission', [App\Http\Controllers\SuperAdmin\RoleController::class, 'togglePermission'])->name('roles.togglePermission');
         Route::post('/roles/{role}/assign-user', [App\Http\Controllers\SuperAdmin\RoleController::class, 'assignUser'])->name('roles.assignUser');
         Route::post('/roles/{role}/remove-user', [App\Http\Controllers\SuperAdmin\RoleController::class, 'removeUser'])->name('roles.removeUser');
+
+    // Backups
+    Route::post('/backup/run', [SystemController::class, 'backupRun'])->name('backup.run');
+    Route::get('/backups', [SystemController::class, 'backupsList'])->name('backups.list');
+    Route::get('/backups/{file}/download', [SystemController::class, 'backupDownload'])->name('backups.download');
 });
 
 // Include all module routes
@@ -388,8 +395,7 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/guards/assign-supervisor', [App\Http\Controllers\Admin\GuardAssignmentController::class, 'assignToSupervisor'])->name('guards.assign-supervisor');
     Route::post('/guards/unassign-supervisor', [App\Http\Controllers\Admin\GuardAssignmentController::class, 'unassignFromSupervisor'])->name('guards.unassign-supervisor');
     
-    // Admin User Management
-    Route::resource('users', UserController::class);
+    // Admin User Management routes exist under the admin prefix in routes/modules/admin.php
 
     // Cross-module: One-time Expense Request (simple alias to Finance expense store)
     Route::get('/request/expense', function() {

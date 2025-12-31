@@ -26,6 +26,13 @@ export default function SuperAdminLayout({ title, children, user }: Props) {
     const [sidebarOpen, setSidebarOpen] = React.useState(false);
     const [logoOk, setLogoOk] = React.useState<boolean>(true);
     const { counters } = useCounters();
+    const pathOf = (name: string) => {
+        try {
+            return new URL((window as any).route(name), window.location.origin).pathname;
+        } catch {
+            try { return new URL((route as any)(name), window.location.origin).pathname; } catch { return ''; }
+        }
+    };
     const roleDisplay = (() => {
         const r: any = (user as any)?.roles;
         if (Array.isArray(r) && r.length) return String(r[0]).replaceAll('_', ' ');
@@ -34,14 +41,14 @@ export default function SuperAdminLayout({ title, children, user }: Props) {
     })();
 
     const modules: ModuleNavItem[] = [
-        { name: 'Dashboard', href: route('superadmin.dashboard'), icon: <IconMapper name="Home" size={24} />, current: window.location.pathname === route('superadmin.dashboard') },
-        { name: 'HR', href: route('superadmin.hr.index'), icon: <IconMapper name="Users2" size={24} />, current: window.location.pathname === route('superadmin.hr.index') },
-        { name: 'Finance', href: route('superadmin.finance.index'), icon: <IconMapper name="DollarSign" size={24} />, current: window.location.pathname === route('superadmin.finance.index') },
-        { name: 'Clients', href: route('superadmin.clients.index'), icon: <IconMapper name="Building2" size={24} />, current: window.location.pathname === route('superadmin.clients.index') },
-        { name: 'Control Room', href: route('superadmin.control-room.index'), icon: <IconMapper name="Monitor" size={24} />, current: window.location.pathname === route('superadmin.control-room.index') },
-        { name: 'Assets', href: route('superadmin.assets.index'), icon: <IconMapper name="Package" size={24} />, current: window.location.pathname === route('superadmin.assets.index') },
-        { name: 'Reports', href: route('superadmin.reports.index'), icon: <IconMapper name="BarChart2" size={24} />, current: window.location.pathname === route('superadmin.reports.index') },
-        { name: 'Modules', href: route('superadmin.modules'), icon: <IconMapper name="Puzzle" size={24} />, current: window.location.pathname === route('superadmin.modules') },
+        { name: 'Dashboard', href: route('superadmin.dashboard'), icon: <IconMapper name="Home" size={24} />, current: window.location.pathname === pathOf('superadmin.dashboard') },
+        { name: 'HR', href: route('superadmin.hr.index'), icon: <IconMapper name="Users2" size={24} />, current: window.location.pathname === pathOf('superadmin.hr.index') },
+        { name: 'Finance', href: route('superadmin.finance.index'), icon: <IconMapper name="DollarSign" size={24} />, current: window.location.pathname === pathOf('superadmin.finance.index') },
+        { name: 'Clients', href: route('superadmin.clients.index'), icon: <IconMapper name="Building2" size={24} />, current: window.location.pathname === pathOf('superadmin.clients.index') },
+        { name: 'Control Room', href: route('superadmin.control-room.index'), icon: <IconMapper name="Monitor" size={24} />, current: window.location.pathname === pathOf('superadmin.control-room.index') },
+        { name: 'Assets', href: route('superadmin.assets.index'), icon: <IconMapper name="Package" size={24} />, current: window.location.pathname === pathOf('superadmin.assets.index') },
+        { name: 'Reports', href: route('superadmin.reports.index'), icon: <IconMapper name="BarChart2" size={24} />, current: window.location.pathname === pathOf('superadmin.reports.index') },
+        { name: 'Modules', href: route('superadmin.modules'), icon: <IconMapper name="Puzzle" size={24} />, current: window.location.pathname === pathOf('superadmin.modules') },
     ];
 
     const systemNav: ModuleNavItem[] = [
@@ -49,80 +56,80 @@ export default function SuperAdminLayout({ title, children, user }: Props) {
             name: 'System Health', 
             href: route('superadmin.maintenance'), 
             icon: <IconMapper name="Server" size={24} />, 
-            current: window.location.pathname === route('superadmin.maintenance') 
+            current: window.location.pathname === pathOf('superadmin.maintenance') 
         },
         { 
             name: 'Security', 
             href: route('superadmin.security'), 
             icon: <IconMapper name="Shield" size={24} />, 
-            current: window.location.pathname === route('superadmin.security') 
+            current: window.location.pathname === pathOf('superadmin.security') 
         },
         {
             name: 'My Requisitions',
             href: route('requisitions.index'),
             icon: <IconMapper name="ClipboardList" size={24} />,
-            current: window.location.pathname === route('requisitions.index'),
+            current: window.location.pathname === pathOf('requisitions.index'),
             badge: (() => { const n = Number(counters?.requisitions_my_open || 0); return n > 0 ? String(n) : undefined; })()
         },
         {
             name: 'Budgets',
             href: route('budgets.index'),
             icon: <IconMapper name="PieChart" size={24} />,
-            current: window.location.pathname === route('budgets.index')
+            current: window.location.pathname === pathOf('budgets.index')
         },
         {
             name: 'Roles & Permissions',
             href: route('superadmin.roles.index'),
             icon: <IconMapper name="Users2" size={24} />,
-            current: window.location.pathname === route('superadmin.roles.index')
+            current: window.location.pathname === pathOf('superadmin.roles.index')
         },
         {
             name: 'Users',
             href: route('superadmin.users'),
             icon: <IconMapper name="Users2" size={24} />,
-            current: window.location.pathname === route('superadmin.users')
+            current: window.location.pathname === pathOf('superadmin.users')
         },
         {
             name: 'Guards',
             href: route('superadmin.guards'),
             icon: <IconMapper name="ShieldCheck" size={24} />,
-            current: window.location.pathname === route('superadmin.guards')
+            current: window.location.pathname === pathOf('superadmin.guards')
         },
         {
             name: 'Drivers',
             href: route('superadmin.drivers'),
             icon: <IconMapper name="Truck" size={24} />,
-            current: window.location.pathname === route('superadmin.drivers')
+            current: window.location.pathname === pathOf('superadmin.drivers')
         },
         { 
             name: 'Settings', 
             href: route('superadmin.settings'), 
             icon: <IconMapper name="Settings" size={24} />, 
-            current: window.location.pathname === route('superadmin.settings') 
+            current: window.location.pathname === pathOf('superadmin.settings') 
         },
         {
             name: 'Logs',
             href: route('superadmin.logs'),
             icon: <IconMapper name="ClipboardList" size={24} />,
-            current: window.location.pathname === route('superadmin.logs')
+            current: window.location.pathname === pathOf('superadmin.logs')
         },
         {
             name: 'Audit Trail',
             href: route('superadmin.audit'),
             icon: <IconMapper name="Search" size={24} />,
-            current: window.location.pathname === route('superadmin.audit')
+            current: window.location.pathname === pathOf('superadmin.audit')
         },
         {
             name: 'Cache',
             href: route('superadmin.cache'),
             icon: <IconMapper name="Trash2" size={24} />,
-            current: window.location.pathname === route('superadmin.cache')
+            current: window.location.pathname === pathOf('superadmin.cache')
         },
         {
             name: 'Backup',
             href: route('superadmin.backup'),
             icon: <IconMapper name="HardDrive" size={24} />,
-            current: window.location.pathname === route('superadmin.backup')
+            current: window.location.pathname === pathOf('superadmin.backup')
         },
     ];
 

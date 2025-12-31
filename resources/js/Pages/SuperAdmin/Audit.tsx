@@ -2,12 +2,22 @@ import React from 'react';
 import { Head } from '@inertiajs/react';
 import SuperAdminLayout from '@/Layouts/SuperAdminLayout';
 import IconMapper from '@/Components/IconMapper';
+import { route } from 'ziggy-js';
 
 interface Props {
   auth?: any;
+  entries?: Array<{ model: string; id: number; who?: string; action: string; at?: string }>;
 }
 
-const Audit: React.FC<Props> = ({ auth }) => {
+const Audit: React.FC<Props> = ({ auth, entries = [] }) => {
+  const [data, setData] = React.useState(entries);
+  const refresh = async () => {
+    try {
+      const res = await fetch(route('superadmin.audit.data'));
+      const json = await res.json();
+      setData(Array.isArray(json?.entries) ? json.entries : []);
+    } catch (e) {}
+  };
   return (
     <SuperAdminLayout title="Audit Trail" user={auth?.user}>
       <Head title="Audit Trail" />
@@ -18,11 +28,28 @@ const Audit: React.FC<Props> = ({ auth }) => {
             <IconMapper name="Search" size={28} />
             <h1 className="text-2xl font-bold">Audit Trail</h1>
           </div>
-          <p className="mt-2 text-sm text-red-100">Track critical user actions. Hook to backend that queries activity logs table.</p>
+          <p className="mt-2 text-sm text-red-100">Track critical user actions.</p>
         </div>
 
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-red-100 dark:border-gray-700 p-5">
-          <div className="text-sm text-gray-600 dark:text-gray-400">No audit entries. Implement backend and props to populate this view.</div>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Recent Activity</h2>
+            <button onClick={refresh} className="px-3 py-1.5 rounded bg-rose-600 hover:bg-rose-700 text-white text-sm">Refresh</button>
+          </div>
+          {data.length === 0 ? (
+            <div className="text-sm text-gray-600 dark:text-gray-400">No audit entries available.</div>
+          ) : (
+            <ul className="divide-y divide-gray-200 dark:divide-gray-700">
+              {data.map((e, i) => (
+                <li key={i} className="py-2 flex items-center justify-between">
+                  <div className="text-sm">
+                    <div className="text-gray-900 dark:text-gray-100 font-medium">{e.who || 'System'} <span className="text-gray-500 font-normal">{e.action}</span></div>
+                    <div className="text-xs text-gray-500">{e.model}#{e.id} • {e.at ? new Date(e.at).toLocaleString() : ''}</div>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       </div>
     </SuperAdminLayout>

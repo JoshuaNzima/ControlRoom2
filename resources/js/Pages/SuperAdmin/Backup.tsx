@@ -1,13 +1,39 @@
 import React from 'react';
-import { Head } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 import SuperAdminLayout from '@/Layouts/SuperAdminLayout';
 import IconMapper from '@/Components/IconMapper';
+import { route } from 'ziggy-js';
 
 interface Props {
   auth?: any;
 }
 
 const Backup: React.FC<Props> = ({ auth }) => {
+  const [files, setFiles] = React.useState<Array<{ name: string; size: number; modified_at: string }>>([]);
+  const [running, setRunning] = React.useState(false);
+
+  const load = async () => {
+    try {
+      const res = await fetch(route('superadmin.backups.list'));
+      const data = await res.json();
+      setFiles(Array.isArray(data?.files) ? data.files : []);
+    } catch (e) {
+      setFiles([]);
+    }
+  };
+
+  React.useEffect(() => { load(); }, []);
+
+  const runBackup = async () => {
+    if (!confirm('Start a new backup now? This may take a while.')) return;
+    try {
+      setRunning(true);
+      await router.post(route('superadmin.backup.run'), {}, { preserveScroll: true });
+    } finally {
+      setRunning(false);
+      setTimeout(load, 2000);
+    }
+  };
   return (
     <SuperAdminLayout title="Backup" user={auth?.user}>
       <Head title="Backup" />
@@ -26,19 +52,35 @@ const Backup: React.FC<Props> = ({ auth }) => {
             <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Create Backup</h2>
             <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">One-click full database backup.</p>
             <button
-              disabled
-              className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-gray-300 dark:bg-gray-700 text-gray-700 dark:text-gray-300 cursor-not-allowed"
-              title="Hook this to a POST endpoint that triggers backup: e.g. Artisan backup:run"
+              onClick={runBackup}
+              disabled={running}
+              className={`mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-lg ${running ? 'bg-gray-400 dark:bg-gray-600 cursor-wait' : 'bg-rose-600 hover:bg-rose-700'} text-white`}
             >
-              <IconMapper name="Play" size={18} />
-              Backup Now (wire backend)
+              <IconMapper name={running ? 'Loader2' : 'Play'} size={18} />
+              {running ? 'Running…' : 'Backup Now'}
             </button>
           </div>
 
           <div className="bg-white dark:bg-gray-800 rounded-xl border border-red-100 dark:border-gray-700 p-6">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Recent Backups</h2>
             <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">List and download recent backup files.</p>
-            <div className="mt-3 text-sm text-gray-500 dark:text-gray-400">No backups to display.</div>
+            <div className="mt-3 text-sm text-gray-500 dark:text-gray-400">
+              {files.length === 0 ? (
+                <div>No backups to display.</div>
+              ) : (
+                <ul className="divide-y divide-gray-200 dark:divide-gray-700">
+                  {files.map((f, i) => (
+                    <li key={i} className="py-2 flex items-center justify-between">
+                      <div>
+                        <div className="text-gray-900 dark:text-gray-100 font-medium">{f.name}</div>
+                        <div className="text-xs text-gray-500">{(f.size / 1024 / 1024).toFixed(2)} MB • {new Date(f.modified_at).toLocaleString()}</div>
+                      </div>
+                      <a href={route('superadmin.backups.download', { file: f.name })} className="text-xs text-rose-600 hover:underline">Download</a>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
           </div>
         </div>
       </div>

@@ -126,7 +126,7 @@ class GuardsController extends Controller
         }
         $dir = strtolower((string) $request->input('dir', 'asc')) === 'desc' ? 'desc' : 'asc';
 
-        $guards = Guard::with(['supervisor', 'zone', 'grade', 'todayAttendance'])
+        $guards = Guard::with(['supervisor', 'grade', 'activeAssignments.clientSite.client'])
             ->when($request->input('search'), function ($q, $search) {
                 $q->where(function ($qq) use ($search) {
                     $qq->where('name', 'like', "%{$search}%")
@@ -158,19 +158,21 @@ class GuardsController extends Controller
 
         return response()->streamDownload(function () use ($guards) {
             $out = fopen('php://output', 'w');
-            fputcsv($out, ['ID', 'Employee ID', 'Name', 'Status', 'Zone', 'Grade', 'Supervisor', 'On Duty']);
+            fputcsv($out, ['ID', 'Employee ID', 'Name', 'ID Number', 'Status', 'Grade', 'Supervisor', 'Client', 'Site']);
             foreach ($guards as $g) {
-                $today = $g->todayAttendance->first();
-                $onDuty = $today && $today->check_in_time && !$today->check_out_time ? 'yes' : 'no';
+                $a = $g->activeAssignments->first();
+                $clientName = $a && $a->clientSite && $a->clientSite->client ? $a->clientSite->client->name : null;
+                $siteName = $a && $a->clientSite ? $a->clientSite->name : null;
                 fputcsv($out, [
                     $g->id,
                     $g->employee_id,
                     $g->name,
+                    $g->id_number,
                     $g->status,
-                    optional($g->zone)->name,
                     optional($g->grade)->name,
                     optional($g->supervisor)->name,
-                    $onDuty,
+                    $clientName,
+                    $siteName,
                 ]);
             }
             fclose($out);

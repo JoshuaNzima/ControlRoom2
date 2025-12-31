@@ -9,13 +9,30 @@ use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
 use Spatie\Permission\Traits\HasPermissions;
 use Illuminate\Support\Collection;
+use Spatie\Activitylog\Traits\LogsActivity;
+use Spatie\Activitylog\LogOptions;
 
 class User extends Authenticatable
 {
     use HasApiTokens, HasFactory, Notifiable;
+    use LogsActivity;
     use HasRoles, HasPermissions {
         HasRoles::hasRole insteadof HasPermissions;
         HasRoles::hasPermissionTo insteadof HasPermissions;
+    }
+
+    public function getDescriptionForEvent(string $eventName): string
+    {
+        return 'user.' . $eventName;
+    }
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->useLogName('user')
+            ->logOnly(['name', 'email', 'status', 'zone_id'])
+            ->logOnlyDirty()
+            ->dontSubmitEmptyLogs();
     }
 
     /**

@@ -15,6 +15,9 @@ class Kernel extends ConsoleKernel
         $schedule->command('zones:recalc-required-guards')->dailyAt('02:30');
         $schedule->command('attendance:auto-mark-absent')->dailyAt('06:30');
         $schedule->command('requisitions:expire-pending')->dailyAt('01:30');
+        $schedule->command('backup:run --only-files --disable-notifications')->dailyAt('02:00');
+        $schedule->command('backup:clean')->dailyAt('03:00');
+        $schedule->command('backup:monitor')->dailyAt('08:00');
     }
 
     protected function commands()
