@@ -2,6 +2,9 @@ import React from 'react';
 import { Head, useForm, router } from '@inertiajs/react';
 import AssetManagementLayout from '@/Layouts/AssetManagementLayout';
 
+const assetFieldClassName =
+  'w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-3 py-2 focus:border-red-500 focus:ring-1 focus:ring-red-500';
+
 interface Settings {
   asset_tag_prefix: string;
   vehicle_tag_prefix: string;
@@ -40,7 +43,7 @@ export default function AssetSettings({ auth = {}, settings }: Props) {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Asset tag prefix</label>
                   <input
-                    className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 py-2"
+                    className={assetFieldClassName}
                     value={data.asset_tag_prefix}
                     onChange={(e) => setData('asset_tag_prefix', e.target.value)}
                   />
@@ -49,7 +52,7 @@ export default function AssetSettings({ auth = {}, settings }: Props) {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Vehicle tag prefix</label>
                   <input
-                    className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 py-2"
+                    className={assetFieldClassName}
                     value={data.vehicle_tag_prefix}
                     onChange={(e) => setData('vehicle_tag_prefix', e.target.value)}
                   />
@@ -60,7 +63,7 @@ export default function AssetSettings({ auth = {}, settings }: Props) {
                   <input
                     type="number"
                     min={0}
-                    className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 py-2"
+                    className={assetFieldClassName}
                     value={data.service_interval_days}
                     onChange={(e) => setData('service_interval_days', Number(e.target.value) || 0)}
                   />
@@ -72,7 +75,7 @@ export default function AssetSettings({ auth = {}, settings }: Props) {
                     type="checkbox"
                     checked={!!data.require_checkout_confirmation}
                     onChange={(e) => setData('require_checkout_confirmation', e.target.checked)}
-                    className="h-4 w-4 rounded border-gray-300 text-red-600 focus:ring-red-500"
+                    className="h-4 w-4 rounded border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-red-600 focus:ring-2 focus:ring-red-500"
                   />
                   <label htmlFor="checkout_confirm" className="text-sm text-gray-700 dark:text-gray-300">Require checkout confirmation</label>
                 </div>
@@ -80,7 +83,13 @@ export default function AssetSettings({ auth = {}, settings }: Props) {
             </div>
 
             <div className="flex justify-end gap-3">
-              <button type="submit" disabled={processing} className="px-4 py-2 rounded-md bg-red-600 text-white hover:bg-red-700 disabled:opacity-50">Save Settings</button>
+              <button
+                type="submit"
+                disabled={processing}
+                className="w-full sm:w-auto px-4 py-2 rounded-md bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950"
+              >
+                Save Settings
+              </button>
             </div>
           </form>
         </div>

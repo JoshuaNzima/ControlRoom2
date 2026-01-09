@@ -42,7 +42,7 @@ export default function ZoneAssign() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Assign Guards to {zone.name}</h3>
-              <Link href={route('control-room.zones.index')} className="text-sm text-indigo-600">Back to Zones</Link>
+              <Link href={route('control-room.zones.index')} className="text-sm text-coin-700 hover:text-coin-800 dark:text-coin-300 dark:hover:text-coin-200">Back to Zones</Link>
             </div>
           </CardHeader>
           <CardContent>

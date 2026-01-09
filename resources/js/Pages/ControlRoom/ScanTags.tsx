@@ -103,23 +103,27 @@ export default function ScanTags() {
     <ControlRoomLayout title="Scan Tags">
       <Head title="Scan Tags" />
 
-      <div className="bg-white rounded-xl shadow p-6">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-bold">Recent Scan Tags</h2>
-          <div className="flex space-x-2">
+      <div className="rounded-xl border border-gray-200 bg-white shadow-sm shadow-black/5 p-4 sm:p-6 dark:border-gray-800 dark:bg-gray-900/60 dark:shadow-none">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
+          <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Recent Scan Tags</h2>
+          <div className="flex w-full sm:w-auto gap-2">
             <button
               onClick={() => setViewMode('table')}
-              className={`px-4 py-2 rounded ${
-                viewMode === 'table' ? 'bg-indigo-600 text-white' : 'bg-gray-200'
-              }`}
+              className={`flex-1 sm:flex-none px-4 py-2 rounded-lg text-sm font-medium transition ${
+                viewMode === 'table'
+                  ? 'bg-coin-700 text-white hover:bg-coin-600'
+                  : 'bg-gray-100 text-gray-800 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700'
+             }`}
             >
               Table
             </button>
             <button
               onClick={() => setViewMode('map')}
-              className={`px-4 py-2 rounded ${
-                viewMode === 'map' ? 'bg-indigo-600 text-white' : 'bg-gray-200'
-              }`}
+              className={`flex-1 sm:flex-none px-4 py-2 rounded-lg text-sm font-medium transition ${
+                viewMode === 'map'
+                  ? 'bg-coin-700 text-white hover:bg-coin-600'
+                  : 'bg-gray-100 text-gray-800 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700'
+             }`}
             >
               Map
             </button>
@@ -135,26 +139,26 @@ export default function ScanTags() {
 
         {viewMode === 'table' ? (
           <div className="overflow-x-auto">
-            <table className="w-full text-left">
-              <thead>
+            <table className="min-w-[900px] w-full text-left">
+              <thead className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
                 <tr>
-                  <th className="py-2">Time</th>
-                  <th className="py-2">Site</th>
-                  <th className="py-2">Client</th>
-                  <th className="py-2">Supervisor</th>
-                  <th className="py-2">Location</th>
-                  <th className="py-2">Quality</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wide whitespace-nowrap">Time</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wide whitespace-nowrap">Site</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wide whitespace-nowrap">Client</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wide whitespace-nowrap">Supervisor</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wide whitespace-nowrap">Location</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wide whitespace-nowrap">Quality</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                 {filteredTags.map((t: ScanTag) => (
-                  <tr key={t.id} className="border-t">
-                    <td className="py-3 text-sm">{format(new Date(t.tags.scanned_at), 'PPp')}</td>
-                    <td className="py-3 text-sm">{t.tags.site_name}</td>
-                    <td className="py-3 text-sm">{t.tags.client_name}</td>
-                    <td className="py-3 text-sm">{t.tags.supervisor_id || 'N/A'}</td>
-                    <td className="py-3 text-sm">{t.tags.latitude.toFixed(6)}, {t.tags.longitude.toFixed(6)}</td>
-                    <td className="py-3 text-sm">{t.tags.location_quality}</td>
+                  <tr key={t.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/60">
+                    <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-200 whitespace-nowrap">{format(new Date(t.tags.scanned_at), 'PPp')}</td>
+                    <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-200 whitespace-nowrap">{t.tags.site_name}</td>
+                    <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-200 whitespace-nowrap">{t.tags.client_name}</td>
+                    <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-200 whitespace-nowrap">{t.tags.supervisor_id || 'N/A'}</td>
+                    <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-200 whitespace-nowrap">{t.tags.latitude.toFixed(6)}, {t.tags.longitude.toFixed(6)}</td>
+                    <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-200 whitespace-nowrap">{t.tags.location_quality}</td>
                   </tr>
                 ))}
               </tbody>

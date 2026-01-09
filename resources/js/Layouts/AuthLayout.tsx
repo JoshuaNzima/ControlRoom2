@@ -4,8 +4,8 @@ import { PropsWithChildren } from 'react';
 
 export default function AuthLayout({ children }: PropsWithChildren) {
     return (
-        <div className="min-h-screen flex flex-col bg-red-50 dark:bg-gray-900">
-            <div className="w-full px-6 py-4 flex items-center justify-between bg-white dark:bg-gray-800 border-b border-red-100 dark:border-gray-800 sticky top-0 z-30">
+        <div className="min-h-screen flex flex-col bg-red-50 dark:bg-gray-950">
+            <div className="w-full px-6 py-4 flex items-center justify-between border-b border-red-100 bg-white/95 backdrop-blur-sm dark:border-gray-800 dark:bg-gray-950/80 sticky top-0 z-30">
                 <Link href="/" className="flex items-center gap-3">
                     <img src="/images/Coin-logo.png" alt="CoinSec" className="h-10 w-auto" />
                     <span className="font-semibold text-red-900 dark:text-gray-100">CoinSec</span>

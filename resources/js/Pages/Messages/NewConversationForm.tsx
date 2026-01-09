@@ -52,15 +52,15 @@ const NewConversationForm: React.FC<Props> = ({ onClose, agents = [] }) => {
   };
 
   return (
-    <Form>
-      <form onSubmit={handleSubmit} className="space-y-4">
+    <Form onSubmit={handleSubmit} className="space-y-4">
         <FormField>
           <FormLabel>Conversation Type</FormLabel>
           <FormControl>
-            <div className="flex space-x-4">
+            <div className="flex flex-col sm:flex-row gap-2">
               <Button
                 type="button"
                 variant={data.type === 'direct' ? 'default' : 'outline'}
+                className="w-full sm:w-auto"
                 onClick={() => setData('type', 'direct')}
               >
                 Direct Message
@@ -68,6 +68,7 @@ const NewConversationForm: React.FC<Props> = ({ onClose, agents = [] }) => {
               <Button
                 type="button"
                 variant={data.type === 'group' ? 'default' : 'outline'}
+                className="w-full sm:w-auto"
                 onClick={() => setData('type', 'group')}
               >
                 Group Chat
@@ -101,7 +102,7 @@ const NewConversationForm: React.FC<Props> = ({ onClose, agents = [] }) => {
                     : 'Select participants'}
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-[300px] p-0">
+              <PopoverContent className="w-[calc(100vw-2rem)] sm:w-[300px] p-0">
                 <Command>
                   <CommandInput placeholder="Search users..." />
                   <CommandEmpty>No users found.</CommandEmpty>
@@ -111,9 +112,16 @@ const NewConversationForm: React.FC<Props> = ({ onClose, agents = [] }) => {
                         <CommandItem
                           key={agent.id}
                           onSelect={() => {
-                            const participants: Array<string | number> = (data.participants || []).includes(agent.id)
-                              ? (data.participants || []).filter((id: string | number) => id !== agent.id)
-                              : [...(data.participants || []), agent.id];
+                            const existing = data.participants || [];
+                            const has = existing.includes(agent.id);
+                            if (data.type === 'direct') {
+                              setData('participants', has ? [] : [agent.id]);
+                              setOpen(false);
+                              return;
+                            }
+                            const participants: Array<string | number> = has
+                              ? existing.filter((id: string | number) => id !== agent.id)
+                              : [...existing, agent.id];
                             setData('participants', participants);
                           }}
                         >
@@ -123,7 +131,7 @@ const NewConversationForm: React.FC<Props> = ({ onClose, agents = [] }) => {
                           />
                           <span>{agent.name}</span>
                           {agent.status && (
-                            <Badge className={agent.status === 'available' ? 'bg-green-100 text-green-800 ml-2' : 'bg-gray-100 text-gray-800 ml-2'}>
+                            <Badge className={agent.status === 'available' ? 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-200 ml-2' : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200 ml-2'}>
                               {agent.status}
                             </Badge>
                           )}
@@ -154,20 +162,20 @@ const NewConversationForm: React.FC<Props> = ({ onClose, agents = [] }) => {
           </div>
         </FormField>
 
-        <div className="flex justify-end space-x-2">
+        <div className="flex flex-col-reverse sm:flex-row justify-end gap-2">
           <Button
             type="button"
             variant="outline"
+            className="w-full sm:w-auto"
             onClick={onClose}
             disabled={processing}
           >
             Cancel
           </Button>
-          <Button type="submit" disabled={processing} className="dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600">
+          <Button type="submit" disabled={processing} className="w-full sm:w-auto dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600">
             Create Conversation
           </Button>
         </div>
-      </form>
     </Form>
   );
 };

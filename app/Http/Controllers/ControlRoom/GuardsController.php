@@ -36,6 +36,7 @@ class GuardsController extends Controller
             ->when($request->input('status'), function ($q, $status) {
                 $q->where('status', $status);
             })
+            ->profileStatus($request->input('profile_status'))
             ->when($request->input('zone_id'), function ($q, $zoneId) {
                 $q->where('zone_id', (int) $zoneId);
             })
@@ -51,16 +52,21 @@ class GuardsController extends Controller
             ->paginate($perPage)
             ->withQueryString()
             ->through(function ($g) {
+				$today = $g->todayAttendance?->first();
                 return [
                     'id' => $g->id,
                     'name' => $g->name,
                     'employee_id' => $g->employee_id,
                     'status' => $g->status,
+                    'is_profile_complete' => (bool) $g->is_profile_complete,
+                    'profile_missing_fields' => $g->profile_missing_fields,
                     'supervisor' => $g->supervisor ? ['id' => $g->supervisor->id, 'name' => $g->supervisor->name] : null,
-                    'today_attendance' => $g->todayAttendance?->first() ? [
-                        'check_in' => optional($g->todayAttendance->first()->check_in_time)->format('H:i'),
-                        'check_out' => optional($g->todayAttendance->first()->check_out_time)->format('H:i'),
-                    ] : null,
+					'today_attendance' => $today ? [
+						'check_in' => optional($today->check_in_time)->format('H:i'),
+						'check_out' => optional($today->check_out_time)->format('H:i'),
+						'status' => $today->status,
+						'source' => $today->source,
+					] : null,
                     'active_assignment' => (function() use ($g) {
                         $a = $g->activeAssignments->first();
                         if (!$a || !$a->clientSite) return null;
@@ -75,7 +81,7 @@ class GuardsController extends Controller
 
         return Inertia::render('ControlRoom/Guards/Index', [
             'guards' => $guards,
-            'filters' => $request->only(['search','status','zone_id','grade_id','on_duty','sort','dir','per_page']),
+            'filters' => $request->only(['search','status','profile_status','zone_id','grade_id','on_duty','sort','dir','per_page']),
             'supervisors' => User::role(['supervisor','manager','operations_officer'])->orderBy('name')->get(['id','name']),
             'clients' => Client::orderBy('name')->get(['id','name']),
             'grades' => GuardGrade::orderBy('name')->get(['id','code','name']),
@@ -139,6 +145,7 @@ class GuardsController extends Controller
             ->when($request->input('employee_role'), function ($q, $role) {
                 $q->where('employee_role', $role);
             })
+            ->profileStatus($request->input('profile_status'))
             ->when($request->input('zone_id'), function ($q, $zoneId) {
                 $q->where('zone_id', (int) $zoneId);
             })

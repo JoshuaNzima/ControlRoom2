@@ -89,14 +89,14 @@ export default function Assignments({ guards, sites }: AssignmentsProps) {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">My Guard Assignments</h1>
-          <p className="text-gray-600">Assign your guards to client locations</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">My Guard Assignments</h1>
+          <p className="text-gray-600 dark:text-gray-300">Assign your guards to client locations</p>
         </div>
 
         {/* Unassigned Guards */}
         {unassignedGuards.length > 0 && (
-          <div className="bg-yellow-50 border-2 border-yellow-300 rounded-xl p-6">
-            <h3 className="font-bold text-yellow-900 mb-4">
+          <div className="bg-yellow-50 dark:bg-yellow-900/20 border-2 border-yellow-300 dark:border-yellow-800 rounded-xl p-6">
+            <h3 className="font-bold text-yellow-900 dark:text-yellow-200 mb-4">
               Unassigned Guards ({unassignedGuards.length})
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -104,11 +104,11 @@ export default function Assignments({ guards, sites }: AssignmentsProps) {
                 <button
                   key={guard.id}
                   onClick={() => setSelectedGuard(guard)}
-                  className="p-4 bg-white rounded-lg border-2 border-yellow-200 hover:border-yellow-400 transition text-left"
+                  className="p-4 bg-white dark:bg-gray-900 rounded-lg border-2 border-yellow-200 dark:border-yellow-800 hover:border-yellow-400 dark:hover:border-yellow-700 transition text-left"
                 >
-                  <h4 className="font-semibold text-gray-900">{guard.name}</h4>
-                  <p className="text-sm text-gray-600">{guard.employee_id}</p>
-                  <p className="text-xs text-yellow-600 mt-2">Click to assign</p>
+                  <h4 className="font-semibold text-gray-900 dark:text-gray-100">{guard.name}</h4>
+                  <p className="text-sm text-gray-600 dark:text-gray-300">{guard.employee_id}</p>
+                  <p className="text-xs text-yellow-600 dark:text-yellow-300 mt-2">Click to assign</p>
                 </button>
               ))}
             </div>
@@ -116,17 +116,17 @@ export default function Assignments({ guards, sites }: AssignmentsProps) {
         )}
 
         {/* Assigned Guards */}
-        <div className="bg-white rounded-xl shadow-lg p-6">
-          <h3 className="font-bold text-gray-900 mb-4">
+        <div className="bg-white dark:bg-gray-900/60 border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm shadow-black/5 dark:shadow-none p-6">
+          <h3 className="font-bold text-gray-900 dark:text-gray-100 mb-4">
             Assigned Guards ({assignedGuards.length})
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {assignedGuards.map((guard) => (
-              <div key={guard.id} className="p-4 border-2 border-green-200 bg-green-50 rounded-lg">
+              <div key={guard.id} className="p-4 border-2 border-green-200 dark:border-green-900/40 bg-green-50 dark:bg-green-900/20 rounded-lg">
                 <div className="flex items-start justify-between mb-3">
                   <div>
-                    <h4 className="font-semibold text-gray-900">{guard.name}</h4>
-                    <p className="text-sm text-gray-600">{guard.employee_id}</p>
+                    <h4 className="font-semibold text-gray-900 dark:text-gray-100">{guard.name}</h4>
+                    <p className="text-sm text-gray-600 dark:text-gray-300">{guard.employee_id}</p>
                   </div>
                   <span className={`px-3 py-1 rounded-full text-xs font-bold ${
                     guard.current_assignment?.assignment_type === 'permanent'
@@ -138,19 +138,19 @@ export default function Assignments({ guards, sites }: AssignmentsProps) {
                     {guard.current_assignment?.assignment_type}
                   </span>
                 </div>
-                <div className="bg-white rounded p-3 mb-3">
-                  <p className="font-medium text-gray-900">
+                <div className="bg-white dark:bg-gray-900 rounded p-3 mb-3 border border-gray-100 dark:border-gray-800">
+                  <p className="font-medium text-gray-900 dark:text-gray-100">
                     {guard.current_assignment?.client_name}
                   </p>
-                  <p className="text-sm text-gray-600">{guard.current_assignment?.site_name}</p>
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="text-sm text-gray-600 dark:text-gray-300">{guard.current_assignment?.site_name}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                     Since: {guard.current_assignment?.start_date}
                   </p>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-col sm:flex-row gap-2">
                   <button
                     onClick={() => setSelectedGuard(guard)}
-                    className="flex-1 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium"
+                    className="flex-1 px-4 py-2 bg-coin-700 hover:bg-coin-600 text-white rounded-lg text-sm font-medium"
                   >
                     Reassign
                   </button>
@@ -170,21 +170,21 @@ export default function Assignments({ guards, sites }: AssignmentsProps) {
       {/* Assignment Modal */}
       {selectedGuard && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full">
-            <div className="px-6 py-4 border-b">
-              <h3 className="text-xl font-bold text-gray-900">
+          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-2xl max-w-md w-full text-gray-900 dark:text-gray-100">
+            <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-800">
+              <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">
                 Assign {selectedGuard.name}
               </h3>
             </div>
             <form onSubmit={handleAssign} className="p-6 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Client Site *
                 </label>
                 <select
                   value={formData.client_site_id}
                   onChange={(e) => setFormData({...formData, client_site_id: e.target.value})}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
                   required
                 >
                   <option value="">Select site...</option>
@@ -195,13 +195,13 @@ export default function Assignments({ guards, sites }: AssignmentsProps) {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Assignment Type *
                 </label>
                 <select
                   value={formData.assignment_type}
                   onChange={(e) => setFormData({...formData, assignment_type: e.target.value as 'permanent' | 'temporary' | 'relief'})}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
                 >
                   <option value="permanent">Permanent</option>
                   <option value="temporary">Temporary</option>
@@ -210,45 +210,45 @@ export default function Assignments({ guards, sites }: AssignmentsProps) {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Start Date *
                 </label>
                 <input
                   type="date"
                   value={formData.start_date}
                   onChange={(e) => setFormData({...formData, start_date: e.target.value})}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   End Date (Optional)
                 </label>
                 <input
                   type="date"
                   value={formData.end_date}
                   onChange={(e) => setFormData({...formData, end_date: e.target.value})}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
                   min={formData.start_date}
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Notes
                 </label>
                 <textarea
                   value={formData.notes}
                   onChange={(e) => setFormData({...formData, notes: e.target.value})}
                   rows={3}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
                   placeholder="Any special instructions..."
                 />
               </div>
 
-              <div className="flex gap-3">
+              <div className="flex flex-col sm:flex-row gap-3">
                 <button
                   type="submit"
                   className="flex-1 px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-bold"
@@ -258,7 +258,7 @@ export default function Assignments({ guards, sites }: AssignmentsProps) {
                 <button
                   type="button"
                   onClick={() => setSelectedGuard(null)}
-                  className="px-6 py-3 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-bold"
+                  className="px-6 py-3 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-bold dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-100"
                 >
                   Cancel
                 </button>

@@ -5,6 +5,8 @@ import { Card } from '@/Components/ui/card';
 import IconMapper from '@/Components/IconMapper';
 import { formatCurrencyMWK } from '@/Components/format';
 import { Button } from '@/Components/ui/button';
+import PageHeader from '@/Components/ui/page-header';
+import EmptyState from '@/Components/ui/empty-state';
 import { ResponsiveContainer, LineChart, Line, CartesianGrid, XAxis, YAxis, Tooltip, AreaChart, Area, BarChart, Bar } from 'recharts';
 import QRCodeGenerator from '@/Components/QRCodeGenerator';
 
@@ -108,17 +110,20 @@ export default function Dashboard({
       <Head title="Admin Dashboard" />
 
       <Card className="p-6 bg-white dark:bg-gray-800 border dark:border-gray-700">
-        <div className="mb-4 flex items-center justify-between">
-          <h1 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-gray-100">KPI Summary</h1>
-          <div className="hidden md:flex items-center gap-2">
-            <Button size="sm" variant="outline" asChild>
-              <a href={route('admin.payments.index')}>Payments</a>
-            </Button>
-            <Button size="sm" variant="outline" asChild>
-              <a href={route('admin.approvals.index')}>Approvals</a>
-            </Button>
-          </div>
-        </div>
+        <PageHeader
+          title="KPI Summary"
+          description="A quick snapshot of outstanding items and operational KPIs."
+          actions={(
+            <div className="hidden md:flex items-center gap-2">
+              <Button size="sm" variant="outline" asChild>
+                <a href={route('admin.payments.index')}>Payments</a>
+              </Button>
+              <Button size="sm" variant="outline" asChild>
+                <a href={route('admin.approvals.index')}>Approvals</a>
+              </Button>
+            </div>
+          )}
+        />
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
           <div className="p-4 rounded-lg border bg-gradient-to-br from-red-50 to-red-100 dark:from-gray-800 dark:to-gray-800 dark:border-gray-700">
             <div className="flex items-center justify-between mb-1">
@@ -141,19 +146,19 @@ export default function Dashboard({
             </div>
             <div className="text-lg md:text-2xl font-bold text-yellow-900 dark:text-yellow-300">{paymentsSummary?.clients_with_outstanding || 0}{paymentsSummary?.total_clients ? ` / ${paymentsSummary?.total_clients}` : ''}</div>
           </div>
-          <div className="p-4 rounded-lg border bg-gradient-to-br from-blue-50 to-blue-100 dark:from-gray-800 dark:to-gray-800 dark:border-gray-700">
+          <div className="p-4 rounded-lg border bg-gradient-to-br from-coin-50 to-coin-100 dark:from-gray-800 dark:to-gray-800 dark:border-gray-700">
             <div className="flex items-center justify-between mb-1">
-              <span className="text-xs font-medium text-blue-900 dark:text-blue-300">Approvals Pending</span>
-              <IconMapper name="CheckCircle2" className="w-4 h-4 text-blue-500" />
+              <span className="text-xs font-medium text-coin-900 dark:text-coin-300">Approvals Pending</span>
+              <IconMapper name="CheckCircle2" className="w-4 h-4 text-coin-600" />
             </div>
-            <div className="text-lg md:text-2xl font-bold text-blue-900 dark:text-blue-300">{approvalsPending ?? 0}</div>
+            <div className="text-lg md:text-2xl font-bold text-coin-900 dark:text-coin-300">{approvalsPending ?? 0}</div>
           </div>
-          <div className="p-4 rounded-lg border bg-gradient-to-br from-indigo-50 to-indigo-100 dark:from-gray-800 dark:to-gray-800 dark:border-gray-700">
+          <div className="p-4 rounded-lg border bg-gradient-to-br from-coin-50 to-coin-100 dark:from-gray-800 dark:to-gray-800 dark:border-gray-700">
             <div className="flex items-center justify-between mb-1">
-              <span className="text-xs font-medium text-indigo-900 dark:text-indigo-300">Guards On Duty</span>
-              <IconMapper name="Shield" className="w-4 h-4 text-indigo-500" />
+              <span className="text-xs font-medium text-coin-900 dark:text-coin-300">Guards On Duty</span>
+              <IconMapper name="Shield" className="w-4 h-4 text-coin-600" />
             </div>
-            <div className="text-lg md:text-2xl font-bold text-indigo-900 dark:text-indigo-300">{Number(kpis?.control_room?.guards_on_duty ?? stats.on_duty_today ?? 0)}</div>
+            <div className="text-lg md:text-2xl font-bold text-coin-900 dark:text-coin-300">{Number(kpis?.control_room?.guards_on_duty ?? stats.on_duty_today ?? 0)}</div>
           </div>
           <div className="p-4 rounded-lg border bg-gradient-to-br from-orange-50 to-orange-100 dark:from-gray-800 dark:to-gray-800 dark:border-gray-700">
             <div className="flex items-center justify-between mb-1">
@@ -204,13 +209,13 @@ export default function Dashboard({
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-              <Card className="p-4 bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 dark:bg-gray-800 dark:border-gray-700">
+              <Card className="p-4 bg-gradient-to-br from-coin-50 to-coin-100 border-coin-200 dark:bg-gray-800 dark:border-gray-700">
                 <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-sm font-medium text-blue-900 dark:text-blue-300">Total Clients</h3>
-                  <IconMapper name="Users" className="w-5 h-5 text-blue-500" />
+                  <h3 className="text-sm font-medium text-coin-900 dark:text-coin-300">Total Clients</h3>
+                  <IconMapper name="Users" className="w-5 h-5 text-coin-600" />
                 </div>
-                <p className="text-2xl font-bold text-blue-900 dark:text-blue-300">{paymentsSummary?.total_clients ?? 0}</p>
-                <p className="text-sm text-blue-700 dark:text-blue-300/80 mt-1">Active accounts</p>
+                <p className="text-2xl font-bold text-coin-900 dark:text-coin-300">{paymentsSummary?.total_clients ?? 0}</p>
+                <p className="text-sm text-coin-700 dark:text-coin-300/80 mt-1">Active accounts</p>
               </Card>
 
               <Card className="p-4 bg-gradient-to-br from-green-50 to-green-100 border-green-200 dark:bg-gray-800 dark:border-gray-700">
@@ -291,7 +296,7 @@ export default function Dashboard({
                 <div className="space-y-3">
                   {recentActivity.filter(a => a.type === 'client').slice(0, 3).length > 0 ? (
                     recentActivity.filter(a => a.type === 'client').slice(0, 3).map((activity) => (
-                      <div key={activity.id} className="flex items-center justify-between p-3 rounded-lg border bg-white">
+                      <div key={activity.id} className="flex items-center justify-between p-3 rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900/60">
                         <div>
                           <div className="text-sm font-medium text-gray-900">{activity.message}</div>
                           <div className="text-xs text-gray-500">{activity.time}</div>
@@ -314,7 +319,7 @@ export default function Dashboard({
               <div className="flex items-center gap-3">
                 <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Zone Coverage</h1>
                 <button
-                  className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm transition ${showZoneHero ? 'bg-red-100 text-red-700 hover:bg-red-200' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                  className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm transition ${showZoneHero ? 'bg-coin-100 text-coin-900 hover:bg-coin-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700'}`}
                   onClick={() => setShowZoneHero(!showZoneHero)}
                   aria-expanded={showZoneHero}
                 >
@@ -355,15 +360,15 @@ export default function Dashboard({
                       <AreaChartFixed data={zoneCoverage}>
                         <defs>
                           <linearGradient id="coverage" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#6366f1" stopOpacity={0.8} />
-                            <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                            <stop offset="5%" stopColor="#e04b3f" stopOpacity={0.8} />
+                            <stop offset="95%" stopColor="#e04b3f" stopOpacity={0} />
                           </linearGradient>
                         </defs>
                         <CartesianGridFixed strokeDasharray="3 3" />
                         <XAxisFixed dataKey="date" />
                         <YAxisFixed domain={[0, 100]} tickFormatter={(v: any) => `${v}%`} />
                         <TooltipFixed formatter={(v: any) => `${v}%`} />
-                        <AreaFixed type="monotone" dataKey="coverage" stroke="#6366f1" fillOpacity={1} fill="url(#coverage)" />
+                        <AreaFixed type="monotone" dataKey="coverage" stroke="#e04b3f" fillOpacity={1} fill="url(#coverage)" />
                       </AreaChartFixed>
                     </ResponsiveContainerFixed>
                   </div>
@@ -451,7 +456,7 @@ export default function Dashboard({
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Today’s guards and sites coverage across all zones</p>
               </div>
               <button
-                className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm transition ${showCoverageCards ? 'bg-red-100 text-red-700 hover:bg-red-200' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm transition ${showCoverageCards ? 'bg-coin-100 text-coin-900 hover:bg-coin-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700'}`}
                 onClick={() => setShowCoverageCards(!showCoverageCards)}
                 aria-expanded={showCoverageCards}
                 aria-controls="coverage-summary-content"
@@ -492,7 +497,7 @@ export default function Dashboard({
                       <XAxisFixed dataKey="name" />
                       <YAxisFixed domain={[0, 100]} tickFormatter={(v: any) => `${v}%`} />
                       <TooltipFixed formatter={(v: any) => `${v}%`} />
-                      <BarFixed dataKey="value" fill="#6366f1" radius={[8, 8, 0, 0]} />
+                      <BarFixed dataKey="value" fill="#e04b3f" radius={[8, 8, 0, 0]} />
                     </BarChartFixed>
                   </ResponsiveContainerFixed>
                 </div>
@@ -600,12 +605,12 @@ export default function Dashboard({
                 <h2 className="text-lg font-semibold dark:text-gray-100">Recent Activity</h2>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Latest events across the platform</p>
               </div>
-              <button className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm transition ${showRecent ? 'bg-red-100 text-red-700 hover:bg-red-200' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`} onClick={() => setShowRecent(!showRecent)} aria-expanded={showRecent}>{showRecent ? 'Hide' : 'Show'}</button>
+              <button className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm transition ${showRecent ? 'bg-coin-100 text-coin-900 hover:bg-coin-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700'}`} onClick={() => setShowRecent(!showRecent)} aria-expanded={showRecent}>{showRecent ? 'Hide' : 'Show'}</button>
             </div>
             {showRecent && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
               {(recentActivity || []).length === 0 && (
-                <p className="text-sm text-gray-500 dark:text-gray-400">No recent activity</p>
+                <EmptyState title="No recent activity" description="When actions happen across the platform, they will show up here." />
               )}
               {(recentActivity || []).map((item: Activity) => (
                 <div key={item.id} className="flex items-center justify-between p-3 rounded-lg border bg-white dark:bg-gray-800 dark:border-gray-700">
@@ -625,9 +630,9 @@ export default function Dashboard({
 
 function Stat({ label, value, trend }: { label: string; value?: number | string; trend?: string }) {
   return (
-    <div className="p-4 rounded-lg border bg-white">
-      <div className="text-xs text-gray-500">{label}</div>
-      <div className="text-2xl font-bold text-gray-900">{value ?? 0}</div>
+    <div className="p-4 rounded-lg border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-950/40">
+      <div className="text-xs text-gray-500 dark:text-gray-400">{label}</div>
+      <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{value ?? 0}</div>
     </div>
   );
 }
@@ -635,18 +640,18 @@ function Stat({ label, value, trend }: { label: string; value?: number | string;
 function Health({ name, status }: { name: string; status: string | number | undefined }) {
   const ok = typeof status === 'string' ? status === 'healthy' : (status ?? 0) > 50;
   return (
-    <div className={`p-4 rounded-lg border ${ok ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
-      <div className="text-xs text-gray-500">{name}</div>
-      <div className="text-sm font-semibold text-gray-900">{String(status)}</div>
+    <div className={`p-4 rounded-lg border ${ok ? 'border-emerald-200 bg-emerald-50 dark:border-emerald-500/30 dark:bg-emerald-500/10' : 'border-red-200 bg-red-50 dark:border-red-500/30 dark:bg-red-500/10'}`}>
+      <div className="text-xs text-gray-500 dark:text-gray-400">{name}</div>
+      <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">{String(status)}</div>
     </div>
   );
 }
 
 function ClickableStat({ label, value, routeName }: { label: string; value?: number | string; routeName: string }) {
   return (
-    <button onClick={() => window.location.href = route(routeName)} className="text-left p-4 rounded-lg border bg-white hover:bg-gray-50 transition">
-      <div className="text-xs text-gray-500">{label}</div>
-      <div className="text-2xl font-bold text-gray-900">{value ?? 0}</div>
+    <button onClick={() => window.location.href = route(routeName)} className="text-left p-4 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 transition dark:border-gray-800 dark:bg-gray-950/40 dark:hover:bg-gray-900">
+      <div className="text-xs text-gray-500 dark:text-gray-400">{label}</div>
+      <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{value ?? 0}</div>
     </button>
   );
 }
@@ -658,10 +663,10 @@ function KpiSection({ title, subtitle = '', data = {}, items = [] as KpiItem[], 
     <Card className="p-6">
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h2 className="text-lg font-semibold">{title}</h2>
-          {subtitle && <p className="text-xs text-gray-500 mt-1">{subtitle}</p>}
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{title}</h2>
+          {subtitle && <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{subtitle}</p>}
         </div>
-        <button className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm transition ${open ? 'bg-red-100 text-red-700 hover:bg-red-200' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`} onClick={() => setOpen(!open)} aria-expanded={open}>{open ? 'Hide' : 'Show'}</button>
+        <button className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm transition ${open ? 'bg-coin-100 text-coin-900 hover:bg-coin-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700'}`} onClick={() => setOpen(!open)} aria-expanded={open}>{open ? 'Hide' : 'Show'}</button>
       </div>
       {open && (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
@@ -671,17 +676,17 @@ function KpiSection({ title, subtitle = '', data = {}, items = [] as KpiItem[], 
             const display = isCurrency ? formatCurrencyMWK(Number(rawValue)) : `${i.prefix ?? ''}${rawValue}${i.suffix ?? ''}`;
             const content = (
               <>
-                <div className="text-xs text-gray-500">{i.label}</div>
-                <div className="text-xl font-bold text-gray-900">{display}</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">{i.label}</div>
+                <div className="text-xl font-bold text-gray-900 dark:text-gray-100">{display}</div>
               </>
             );
             const routeName = linkMap[i.key];
             return routeName ? (
-              <button key={i.key} onClick={() => window.location.href = route(routeName)} className="text-left p-4 rounded-lg border bg-white hover:bg-gray-50 transition">
+              <button key={i.key} onClick={() => window.location.href = route(routeName)} className="text-left p-4 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 transition dark:border-gray-800 dark:bg-gray-950/40 dark:hover:bg-gray-900">
                 {content}
               </button>
             ) : (
-              <div key={i.key} className="p-4 rounded-lg border bg-white">{content}</div>
+              <div key={i.key} className="p-4 rounded-lg border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-950/40">{content}</div>
             );
           })}
         </div>

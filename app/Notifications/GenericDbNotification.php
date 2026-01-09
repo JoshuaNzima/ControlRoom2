@@ -7,6 +7,7 @@ use Illuminate\Notifications\Notification;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use App\Notifications\Channels\WhatsAppChannel;
 use App\Notifications\Channels\SmsChannel;
+use Illuminate\Notifications\Messages\MailMessage;
 
 class GenericDbNotification extends Notification implements ShouldQueue
 {
@@ -22,6 +23,9 @@ class GenericDbNotification extends Notification implements ShouldQueue
     public function via(object $notifiable): array
     {
         $channels = ['database'];
+        if (!empty($this->payload['mail'])) {
+            $channels[] = 'mail';
+        }
         if (config('services.whatsapp.enabled')) {
             $channels[] = WhatsAppChannel::class;
         }
@@ -52,5 +56,22 @@ class GenericDbNotification extends Notification implements ShouldQueue
         $url = (string)($this->payload['url'] ?? '');
         $body = trim($title . (strlen($message) ? ': '.$message : '') . (strlen($url) ? ' '.$url : ''));
         return $body;
+    }
+
+    public function toMail(object $notifiable): MailMessage
+    {
+        $title = (string)($this->payload['title'] ?? 'Notification');
+        $message = (string)($this->payload['message'] ?? '');
+        $url = (string)($this->payload['url'] ?? '');
+        $mail = (new MailMessage)
+            ->subject($title)
+            ->greeting('Hello ' . ($notifiable->name ?? ''));
+        if (strlen($message)) {
+            $mail->line($message);
+        }
+        if (strlen($url)) {
+            $mail->action('View', $url);
+        }
+        return $mail;
     }
 }

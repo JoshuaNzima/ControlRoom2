@@ -7,6 +7,8 @@ import Modal from '@/Components/Modal';
 import GuardForm from '@/Components/Guards/GuardForm';
 import { GuardFormData } from '@/types/guards';
 import AssignSiteModal from '@/Components/Guards/AssignSiteModal';
+import ConfirmModal from '@/Components/ConfirmModal';
+import ReasonModal from '@/Components/ReasonModal';
 
 interface Guard {
   id: number;
@@ -84,6 +86,22 @@ export default function SuperAdminDrivers({ guards, filters, supervisors = [], g
   const [photoCreate, setPhotoCreate] = React.useState<File | null>(null);
   const [photoEdit, setPhotoEdit] = React.useState<File | null>(null);
   const [selectedGuardIds, setSelectedGuardIds] = React.useState<number[]>([]);
+  // Confirm & Reason modals
+  const [confirmOpen, setConfirmOpen] = React.useState(false);
+  const [confirmTitle, setConfirmTitle] = React.useState('');
+  const [confirmMessage, setConfirmMessage] = React.useState('');
+  const [confirmAction, setConfirmAction] = React.useState<() => void>(() => {});
+  const [reasonOpen, setReasonOpen] = React.useState(false);
+  const [reasonTitle, setReasonTitle] = React.useState('');
+  const [reasonMessage, setReasonMessage] = React.useState('');
+  const [reasonSubmit, setReasonSubmit] = React.useState<((reason: string) => void) | null>(null);
+
+  const openConfirm = (title: string, message: string, action: () => void) => {
+    setConfirmTitle(title); setConfirmMessage(message); setConfirmAction(() => action); setConfirmOpen(true);
+  };
+  const openReason = (title: string, message: string, submit: (reason: string) => void) => {
+    setReasonTitle(title); setReasonMessage(message); setReasonSubmit(() => submit); setReasonOpen(true);
+  };
 
   const applyFilters = () => {
     const query: Record<string, any> = {
@@ -240,6 +258,8 @@ export default function SuperAdminDrivers({ guards, filters, supervisors = [], g
                 <option value="active">Active</option>
                 <option value="inactive">Inactive</option>
                 <option value="suspended">Suspended</option>
+                <option value="dismissed">Dismissed</option>
+                <option value="absconded">Absconded</option>
               </select>
             </div>
             <div>
@@ -339,7 +359,15 @@ export default function SuperAdminDrivers({ guards, filters, supervisors = [], g
                   <td className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">{g.supervisor?.name || 'Unassigned'}</td>
                   <td className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">{g.phone || 'N/A'}</td>
                   <td className="px-6 py-4">
-                    <span className={`px-3 py-1 rounded-full text-xs font-semibold ${g.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
+                    <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                      g.status === 'active'
+                        ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100'
+                        : g.status === 'suspended'
+                        ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100'
+                        : g.status === 'absconded'
+                        ? 'bg-rose-100 text-rose-800 dark:bg-rose-900 dark:text-rose-100'
+                        : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-100'
+                    }`}>
                       {g.status || 'Active'}
                     </span>
                   </td>
@@ -370,7 +398,7 @@ export default function SuperAdminDrivers({ guards, filters, supervisors = [], g
                         <IconMapper name="UserPlus" size={18} />
                       </button>
                       <button
-                        onClick={() => { if (confirm('Delete this driver?')) { router.delete(route('admin.guards.destroy', { guard: g.id })); } }}
+                        onClick={() => openConfirm('Delete driver', `Are you sure you want to delete ${g.name}?`, () => router.delete(route('admin.guards.destroy', { guard: g.id })))}
                         className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition"
                         title="Delete"
                         aria-label="Delete"
@@ -378,22 +406,28 @@ export default function SuperAdminDrivers({ guards, filters, supervisors = [], g
                         <IconMapper name="Trash" size={18} />
                       </button>
                       <button
-                        onClick={async () => {
-                          const newStatus = g.status === 'active' ? 'suspended' : 'active';
-                          if (!confirm(`Set status to ${newStatus}?`)) return;
-                          setLoadingId(g.id);
-                          try {
-                            await router.put(route('admin.guards.update', { guard: g.id }), { status: newStatus });
-                            push(`Driver ${g.name} set to ${newStatus}`);
-                          } catch (e) {
-                            push('Failed to update driver status');
-                          } finally {
-                            setLoadingId(null);
-                          }
+                        onClick={() => {
+                          const isSuspending = g.status === 'active';
+                          openConfirm(
+                            `${isSuspending ? 'Suspend' : 'Reinstate'} driver`,
+                            `${isSuspending ? 'Suspend' : 'Reinstate'} ${g.name}?`,
+                            async () => {
+                              setLoadingId(g.id);
+                              try {
+                                const routeName = isSuspending ? 'admin.guards.suspend' : 'admin.guards.reinstate';
+                                await router.post(route(routeName, { guard: g.id }), {});
+                                push(`Driver ${g.name} ${isSuspending ? 'suspended' : 'reinstated'}`);
+                              } catch (e) {
+                                push('Failed to update driver status');
+                              } finally {
+                                setLoadingId(null);
+                              }
+                            }
+                          );
                         }}
-                        className="p-2 text-yellow-600 hover:bg-yellow-50 rounded-lg transition"
-                        title={g.status === 'active' ? 'Suspend driver' : 'Activate driver'}
-                        aria-label={g.status === 'active' ? 'Suspend driver' : 'Activate driver'}
+                        className="p-2 text-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 rounded-lg transition"
+                        title={g.status === 'active' ? 'Suspend driver' : 'Reinstate driver'}
+                        aria-label={g.status === 'active' ? 'Suspend driver' : 'Reinstate driver'}
                         disabled={loadingId === g.id}
                       >
                         {loadingId === g.id ? (
@@ -401,6 +435,44 @@ export default function SuperAdminDrivers({ guards, filters, supervisors = [], g
                         ) : (
                           <IconMapper name={g.status === 'active' ? 'PauseCircle' : 'PlayCircle'} size={18} />
                         )}
+                      </button>
+                      <button
+                        onClick={() => openReason('Dismiss Driver', `Provide a reason (optional) for dismissing ${g.name}`, async (reason: string) => {
+                          setLoadingId(g.id);
+                          try {
+                            await router.post(route('admin.guards.dismiss', { guard: g.id }), { reason });
+                            push(`Driver ${g.name} dismissed`);
+                          } catch (e) {
+                            push('Failed to dismiss driver');
+                          } finally {
+                            setLoadingId(null);
+                          }
+                        })}
+                        className="p-2 text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-800 rounded-lg transition"
+                        title="Dismiss driver"
+                        aria-label="Dismiss driver"
+                        disabled={loadingId === g.id}
+                      >
+                        Dismiss
+                      </button>
+                      <button
+                        onClick={() => openReason('Mark as Absconded', `Provide a reason (optional) for marking ${g.name} as absconded`, async (reason: string) => {
+                          setLoadingId(g.id);
+                          try {
+                            await router.post(route('admin.guards.abscond', { guard: g.id }), { reason });
+                            push(`Driver ${g.name} marked absconded`);
+                          } catch (e) {
+                            push('Failed to mark absconded');
+                          } finally {
+                            setLoadingId(null);
+                          }
+                        })}
+                        className="p-2 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-lg transition"
+                        title="Mark as absconded"
+                        aria-label="Mark as absconded"
+                        disabled={loadingId === g.id}
+                      >
+                        Abscond
                       </button>
                     </div>
                   </td>
@@ -591,6 +663,23 @@ export default function SuperAdminDrivers({ guards, filters, supervisors = [], g
             </div>
           </form>
         </Modal>
+
+        {/* Confirm & Reason Modals */}
+        <ConfirmModal
+          open={confirmOpen}
+          title={confirmTitle}
+          message={confirmMessage}
+          onConfirm={() => { setConfirmOpen(false); confirmAction(); }}
+          onCancel={() => setConfirmOpen(false)}
+        />
+        <ReasonModal
+          open={reasonOpen}
+          title={reasonTitle}
+          message={reasonMessage}
+          confirmLabel="Submit"
+          onConfirm={(reason) => { setReasonOpen(false); reasonSubmit && reasonSubmit(reason); }}
+          onCancel={() => setReasonOpen(false)}
+        />
       </div>
     </SuperAdminLayout>
   );

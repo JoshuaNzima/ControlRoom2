@@ -55,9 +55,10 @@ class AttendanceController extends Controller
         $openAttendance = Attendance::where('guard_id', $validated['guard_id'])
             ->whereDate('date', $date)
             ->whereNull('check_out_time')
+            ->orderByDesc('id')
             ->first();
 
-        if ($openAttendance) {
+        if ($openAttendance && $openAttendance->check_in_time) {
             return back()->withErrors(['guard_id' => 'Guard already has an active check-in']);
         }
 
@@ -99,20 +100,41 @@ class AttendanceController extends Controller
 
         $backdateReason = $validated['backdate_reason'] ?? null;
 
-        $attendance = new Attendance([
-            'guard_id' => $validated['guard_id'],
-            'supervisor_id' => $user?->id,
-            'client_site_id' => $site?->id,
-            'date' => $date,
-            'check_in_time' => $checkInTime,
-            'check_in_notes' => $notes,
-            'status' => $checkInTime->hour > 8 ? 'late' : 'present',
-            'backdated' => $backdateRequested,
-            'backdated_reason' => $backdateRequested ? $backdateReason : null,
-            'source' => $backdateRequested ? 'control_room_backdate' : ($site ? 'control_room_manual' : 'control_room_general'),
-        ]);
+        if ($openAttendance && !$openAttendance->check_in_time) {
+            $attendance = $openAttendance;
 
-        $attendance->save();
+            if ($attendance->client_site_id && $site?->id && (int) $attendance->client_site_id !== (int) $site->id) {
+                if ($site->site_type !== 'office') {
+                    return back()->withErrors(['client_site_id' => 'Existing attendance is for a different site.']);
+                }
+            }
+
+            $attendance->supervisor_id = $user?->id;
+            $attendance->client_site_id = $site?->id;
+            $attendance->check_in_time = $checkInTime;
+            $attendance->check_in_notes = trim(($attendance->check_in_notes ?: '') . ($notes ? ' ' . $notes : ''));
+            $attendance->status = $checkInTime->hour > 8 ? 'late' : 'present';
+            $attendance->backdated = $backdateRequested;
+            $attendance->backdated_reason = $backdateRequested ? $backdateReason : null;
+            $attendance->source = $backdateRequested ? 'control_room_backdate' : ($site ? 'control_room_manual' : 'control_room_general');
+
+            $attendance->save();
+        } else {
+            $attendance = new Attendance([
+                'guard_id' => $validated['guard_id'],
+                'supervisor_id' => $user?->id,
+                'client_site_id' => $site?->id,
+                'date' => $date,
+                'check_in_time' => $checkInTime,
+                'check_in_notes' => $notes,
+                'status' => $checkInTime->hour > 8 ? 'late' : 'present',
+                'backdated' => $backdateRequested,
+                'backdated_reason' => $backdateRequested ? $backdateReason : null,
+                'source' => $backdateRequested ? 'control_room_backdate' : ($site ? 'control_room_manual' : 'control_room_general'),
+            ]);
+
+            $attendance->save();
+        }
 
         try {
             event(new \App\Events\AttendanceUpdated($attendance->id, 'Manual check-in from control room', [
@@ -144,7 +166,7 @@ class AttendanceController extends Controller
             ->whereNull('check_out_time')
             ->first();
 
-        if (!$attendance) {
+        if (!$attendance || !$attendance->check_in_time) {
             return back()->withErrors(['guard_id' => 'No active check-in found for this guard']);
         }
 
@@ -180,4 +202,65 @@ class AttendanceController extends Controller
 
         return back()->with('success', 'Guard checked out successfully');
     }
+
+	public function markAbsent(Request $request)
+	{
+		$validated = $request->validate([
+			'guard_id' => ['required','integer','exists:guards,id'],
+			'notes' => ['nullable','string','max:500'],
+		]);
+
+		$date = Carbon::today();
+		$attendance = Attendance::where('guard_id', $validated['guard_id'])
+			->whereDate('date', $date)
+			->whereNull('check_out_time')
+			->orderByDesc('id')
+			->first();
+
+		$notes = $validated['notes'] ?? null;
+
+		if ($attendance) {
+			if ($attendance->check_in_time) {
+				return back()->withErrors(['guard_id' => 'Guard is already checked in; cannot mark absent.']);
+			}
+
+			$attendance->status = 'absent';
+			$attendance->supervisor_id = Auth::id();
+			$attendance->check_in_notes = trim(($attendance->check_in_notes ?: '') . ' Marked absent by control room.' . ($notes ? ' ' . $notes : ''));
+			$attendance->source = 'control_room_mark_absent';
+			$attendance->save();
+		} else {
+			$guard = Guard::with('assignments')->findOrFail($validated['guard_id']);
+			$currentAssignment = $guard->currentAssignment();
+			$attendance = new Attendance([
+				'guard_id' => $validated['guard_id'],
+				'supervisor_id' => Auth::id(),
+				'client_site_id' => $currentAssignment?->client_site_id,
+				'date' => $date,
+				'check_in_time' => null,
+				'check_out_time' => null,
+				'hours_worked' => 0,
+				'overtime_hours' => 0,
+				'status' => 'absent',
+				'check_in_notes' => trim('Marked absent by control room.' . ($notes ? ' ' . $notes : '')),
+				'backdated' => false,
+				'backdated_reason' => null,
+				'source' => 'control_room_mark_absent',
+			]);
+			$attendance->save();
+		}
+
+		try {
+			event(new \App\Events\AttendanceUpdated($attendance->id, 'Marked absent by control room', [
+				'supervisor_id' => Auth::id(),
+				'guard_id' => $attendance->guard_id,
+				'client_site_id' => $attendance->client_site_id,
+				'date' => $attendance->date?->toDateString(),
+				'status' => $attendance->status,
+				'source' => $attendance->source,
+			]));
+		} catch (\Throwable $e) {}
+
+		return back()->with('success', 'Guard marked absent.');
+	}
 }

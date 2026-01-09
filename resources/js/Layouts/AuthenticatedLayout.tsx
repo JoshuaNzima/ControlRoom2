@@ -27,7 +27,7 @@ export default function Authenticated({
                         <div className="flex">
                             <div className="flex shrink-0 items-center">
                                 <Link href="/">
-                                    <ApplicationLogo className="block h-9 w-auto fill-current text-gray-800" />
+                                    <ApplicationLogo className="block h-9 w-auto fill-current text-gray-800 dark:text-gray-100" />
                                 </Link>
                             </div>
 
@@ -69,7 +69,7 @@ export default function Authenticated({
                                         <span className="inline-flex rounded-md">
                                             <button
                                                 type="button"
-                                                className="inline-flex items-center rounded-md border border-transparent bg-white px-3 py-2 text-sm font-medium leading-4 text-gray-500 transition duration-150 ease-in-out hover:text-gray-700 focus:outline-none"
+                                                className="inline-flex items-center rounded-md border border-transparent bg-white px-3 py-2 text-sm font-medium leading-4 text-gray-500 transition duration-150 ease-in-out hover:text-gray-700 focus:outline-none dark:bg-gray-800 dark:text-gray-200 dark:hover:text-gray-100"
                                             >
                                                 {pageUser.name}
 
@@ -114,7 +114,7 @@ export default function Authenticated({
                                         (previousState) => !previousState,
                                     )
                                 }
-                                className="inline-flex items-center justify-center rounded-md p-2 text-gray-400 transition duration-150 ease-in-out hover:bg-gray-100 hover:text-gray-500 focus:bg-gray-100 focus:text-gray-500 focus:outline-none"
+                                className="inline-flex items-center justify-center rounded-md p-2 text-gray-400 transition duration-150 ease-in-out hover:bg-gray-100 hover:text-gray-500 focus:bg-gray-100 focus:text-gray-500 focus:outline-none dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-gray-100 dark:focus:bg-gray-700 dark:focus:text-gray-100"
                             >
                                 <svg
                                     className="h-6 w-6"
@@ -183,12 +183,12 @@ export default function Authenticated({
                         </ResponsiveNavLink>
                     </div>
 
-                    <div className="border-t border-gray-200 pb-1 pt-4">
+                    <div className="border-t border-gray-200 dark:border-gray-800 pb-1 pt-4">
                         <div className="px-4">
-                            <div className="text-base font-medium text-gray-800">
+                            <div className="text-base font-medium text-gray-800 dark:text-gray-100">
                                 {pageUser.name}
                             </div>
-                            <div className="text-sm font-medium text-gray-500">
+                            <div className="text-sm font-medium text-gray-500 dark:text-gray-400">
                                 {pageUser.email}
                             </div>
                         </div>

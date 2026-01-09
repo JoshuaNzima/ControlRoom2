@@ -4,6 +4,7 @@ namespace App\Http\Controllers\ControlRoom;
 
 use App\Http\Controllers\Controller;
 use App\Models\Incident;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -73,15 +74,39 @@ class IncidentController extends Controller
 
     public function show(Incident $incident)
     {
-        $incident->load(['reporter', 'assignedTo', 'guardRelation', 'client', 'clientSite', 'comments.user']);
+        $incident->load(['reporter', 'assignedTo', 'guardRelation', 'client', 'clientSite', 'comments.user', 'resolvedBy']);
 
         return Inertia::render('ControlRoom/Incidents/Show', [
             'incident' => $incident,
         ]);
     }
 
+    public function print(Request $request, Incident $incident)
+    {
+        $incident->load(['reporter', 'assignedTo', 'guardRelation', 'client', 'clientSite', 'comments.user', 'resolvedBy']);
+
+        return Inertia::render('ControlRoom/Incidents/Print', [
+            'incident' => $incident,
+        ]);
+    }
+
+    public function pdf(Request $request, Incident $incident)
+    {
+        $incident->load(['reporter', 'assignedTo', 'guardRelation', 'client', 'clientSite', 'comments.user', 'resolvedBy']);
+
+        $file = sprintf('Incident-%s.pdf', $incident->id);
+        $pdf = Pdf::loadView('pdf.incident', [
+            'incident' => $incident,
+            'appName' => config('app.name'),
+        ])->setPaper('a4', 'portrait');
+
+        return $pdf->download($file);
+    }
+
     public function edit(Incident $incident)
     {
+        $incident->load(['client', 'clientSite']);
+
         return Inertia::render('ControlRoom/Incidents/Edit', [
             'incident' => $incident,
         ]);
@@ -95,10 +120,17 @@ class IncidentController extends Controller
             'severity' => 'required|in:low,medium,high,critical',
             'description' => 'required|string',
             'location' => 'required|string|max:255',
-            'status' => 'required|in:open,in_progress,resolved,closed',
+            'status' => 'required|in:open,in_progress,escalated,resolved,closed',
             'client_id' => 'nullable|exists:clients,id',
             'client_site_id' => 'nullable|exists:client_sites,id',
         ]);
+
+        if (($validated['client_id'] ?? null) === null && ($validated['client_site_id'] ?? null)) {
+            $site = \App\Models\ClientSite::find($validated['client_site_id']);
+            if ($site) {
+                $validated['client_id'] = $site->client_id;
+            }
+        }
 
         $incident->update($validated);
 

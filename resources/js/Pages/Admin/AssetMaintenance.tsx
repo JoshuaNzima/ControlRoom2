@@ -2,6 +2,9 @@ import React, { useMemo, useState } from 'react';
 import { Head, router, useForm, usePage } from '@inertiajs/react';
 import AssetManagementLayout from '@/Layouts/AssetManagementLayout';
 
+const assetFieldClassName =
+  'w-full rounded-md border border-gray-300 dark:border-gray-700 px-3 py-2 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:border-red-500 focus:ring-1 focus:ring-red-500';
+
 export default function AssetMaintenance() {
   const { auth, logs, vehicles, filters }: any = usePage().props;
   const [vehicleId, setVehicleId] = useState<number>(filters?.vehicle_id || 0);
@@ -25,38 +28,53 @@ export default function AssetMaintenance() {
             </div>
             <div className="flex flex-wrap gap-2">
               <a href={route('assets.maintenance.export', { vehicle_id: vehicleId })} className="inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium bg-white dark:bg-gray-800 text-red-800 dark:text-gray-100 border border-red-200 dark:border-gray-700 hover:bg-red-50 dark:hover:bg-gray-700">Export CSV</a>
-              <button onClick={() => setOpenCreate(true)} className="inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium bg-red-600 text-white hover:bg-red-700">New Log</button>
+              <button
+                onClick={() => setOpenCreate(true)}
+                className="inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium bg-red-600 text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950"
+              >
+                New Log
+              </button>
             </div>
           </div>
 
           <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4 md:p-6">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-              <select value={vehicleId} onChange={(e) => setVehicleId(parseInt(e.target.value))} className="w-full rounded-md border border-gray-300 dark:border-gray-700 px-3 py-2 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+              <select value={vehicleId} onChange={(e) => setVehicleId(parseInt(e.target.value))} className={assetFieldClassName}>
                 <option value={0}>All Vehicles</option>
                 {(vehicles || []).map((v: any) => (
                   <option key={v.id} value={v.id}>{v.tag} {v.make || ''} {v.model || ''}</option>
                 ))}
               </select>
-              <select value={perPage} onChange={(e) => setPerPage(parseInt(e.target.value))} className="w-full rounded-md border border-gray-300 dark:border-gray-700 px-3 py-2 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+              <select value={perPage} onChange={(e) => setPerPage(parseInt(e.target.value))} className={assetFieldClassName}>
                 {[15,25,50].map((n) => <option key={n} value={n}>{n}/page</option>)}
               </select>
               <div className="flex gap-3">
-                <button onClick={doFilter} className="px-4 py-2 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200">Filter</button>
-                <button onClick={reset} className="px-4 py-2 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200">Reset</button>
+                <button
+                  onClick={doFilter}
+                  className="px-4 py-2 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950"
+                >
+                  Filter
+                </button>
+                <button
+                  onClick={reset}
+                  className="px-4 py-2 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950"
+                >
+                  Reset
+                </button>
               </div>
             </div>
           </div>
 
           <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-x-auto">
-            <table className="min-w-full text-sm">
-              <thead className="bg-gray-50 dark:bg-gray-800">
+            <table className="min-w-[980px] w-full text-sm">
+              <thead className="bg-gray-50 dark:bg-gray-950 border-b border-gray-200 dark:border-gray-800">
                 <tr>
-                  <th className="px-4 py-2 text-left">Date</th>
-                  <th className="px-4 py-2 text-left">Vehicle</th>
-                  <th className="px-4 py-2 text-left">Type</th>
-                  <th className="px-4 py-2 text-left">Vendor</th>
-                  <th className="px-4 py-2 text-left">Cost</th>
-                  <th className="px-4 py-2 text-left">Down Time (hrs)</th>
+                  <th className="px-3 sm:px-4 py-2 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wide">Date</th>
+                  <th className="px-3 sm:px-4 py-2 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wide">Vehicle</th>
+                  <th className="px-3 sm:px-4 py-2 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wide">Type</th>
+                  <th className="px-3 sm:px-4 py-2 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wide">Vendor</th>
+                  <th className="px-3 sm:px-4 py-2 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wide">Cost</th>
+                  <th className="px-3 sm:px-4 py-2 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wide">Down Time (hrs)</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
@@ -73,7 +91,7 @@ export default function AssetMaintenance() {
               </tbody>
             </table>
             {(logs?.meta?.last_page ?? 1) > 1 && (
-              <div className="bg-gray-50 dark:bg-gray-800 px-4 py-3 flex justify-center gap-2">
+              <div className="bg-gray-50 dark:bg-gray-950 px-4 py-3 flex flex-wrap justify-center gap-2 border-t border-gray-200 dark:border-gray-800">
                 {(links || []).map((link: any, idx: number) => (
                   <a key={idx} href={link.url || '#'} className={`px-3 py-1 rounded text-xs ${link.active ? 'bg-red-600 text-white' : 'bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800'}`} dangerouslySetInnerHTML={{ __html: link.label }} />
                 ))}
@@ -104,18 +122,20 @@ function CreateMaintenanceModal({ open, onClose, vehicles }: { open: boolean; on
     post(route('assets.maintenance.store'), { onSuccess: () => { reset(); onClose(); } });
   };
 
+  const handleClose = () => { if (!processing) onClose(); };
+
   return (
     <div className={`fixed inset-0 z-50 ${open ? 'block' : 'hidden'}`}>
-      <div className="fixed inset-0 bg-black/40" onClick={onClose} />
+      <div className="fixed inset-0 bg-black/40" onClick={handleClose} />
       <div className="fixed inset-x-0 bottom-0 md:inset-0 md:m-auto md:max-w-xl bg-white dark:bg-gray-900 rounded-t-2xl md:rounded-2xl shadow-lg">
         <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between">
           <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">New Maintenance Log</div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">✕</button>
+          <button onClick={handleClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">✕</button>
         </div>
         <form onSubmit={submit} className="px-6 py-4 grid grid-cols-1 gap-3">
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Vehicle</label>
-            <select required className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100" value={data.vehicle_id as any} onChange={(e) => setData('vehicle_id', e.target.value ? Number(e.target.value) : '' as any)}>
+            <select required className={assetFieldClassName} value={data.vehicle_id as any} onChange={(e) => setData('vehicle_id', e.target.value ? Number(e.target.value) : '' as any)}>
               <option value="">Select vehicle…</option>
               {vehicles.map((v: any) => <option key={v.id} value={v.id}>{v.tag} {v.make || ''} {v.model || ''}</option>)}
             </select>
@@ -123,35 +143,35 @@ function CreateMaintenanceModal({ open, onClose, vehicles }: { open: boolean; on
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Date</label>
-            <input type="date" required className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100" value={data.date} onChange={(e) => setData('date', e.target.value)} />
+            <input type="date" required className={assetFieldClassName} value={data.date} onChange={(e) => setData('date', e.target.value)} />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Type</label>
-              <input className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100" value={data.type} onChange={(e) => setData('type', e.target.value)} />
+              <input className={assetFieldClassName} value={data.type} onChange={(e) => setData('type', e.target.value)} />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Vendor</label>
-              <input className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100" value={data.vendor} onChange={(e) => setData('vendor', e.target.value)} />
+              <input className={assetFieldClassName} value={data.vendor} onChange={(e) => setData('vendor', e.target.value)} />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Cost</label>
-              <input type="number" step="0.01" className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100" value={data.cost} onChange={(e) => setData('cost', e.target.value)} />
+              <input type="number" step="0.01" className={assetFieldClassName} value={data.cost} onChange={(e) => setData('cost', e.target.value)} />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Down time (hrs)</label>
-              <input type="number" className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100" value={data.down_time_hours} onChange={(e) => setData('down_time_hours', e.target.value)} />
+              <input type="number" className={assetFieldClassName} value={data.down_time_hours} onChange={(e) => setData('down_time_hours', e.target.value)} />
             </div>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Notes</label>
-            <textarea className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100" rows={3} value={data.notes} onChange={(e) => setData('notes', e.target.value)} />
+            <textarea className={assetFieldClassName} rows={3} value={data.notes} onChange={(e) => setData('notes', e.target.value)} />
           </div>
-          <div className="flex justify-end gap-2 pt-2">
-            <button type="button" onClick={onClose} className="px-4 py-2 text-sm rounded-md bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-100 hover:bg-gray-300 dark:hover:bg-gray-600" disabled={processing}>Cancel</button>
-            <button type="submit" disabled={processing} className="px-4 py-2 text-sm rounded-md bg-red-600 text-white hover:bg-red-700 disabled:bg-gray-400">Save</button>
+          <div className="flex flex-col sm:flex-row justify-end gap-2 pt-2">
+            <button type="button" onClick={handleClose} className="w-full sm:w-auto px-4 py-2 text-sm rounded-md bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-100 hover:bg-gray-300 dark:hover:bg-gray-600" disabled={processing}>Cancel</button>
+            <button type="submit" disabled={processing} className="w-full sm:w-auto px-4 py-2 text-sm rounded-md bg-red-600 text-white hover:bg-red-700 disabled:bg-gray-400 dark:disabled:bg-gray-700">Save</button>
           </div>
         </form>
       </div>

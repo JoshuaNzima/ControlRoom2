@@ -46,8 +46,22 @@ class GuardController extends Controller
             ->when(request('status'), function($q, $status) {
                 $q->where('status', $status);
             })
+            ->profileStatus(request('profile_status'))
             ->orderBy('name')
-            ->paginate(20);
+            ->paginate(20)
+            ->withQueryString();
+
+        $guards->getCollection()->transform(function ($g) {
+            return [
+                'id' => $g->id,
+                'name' => $g->name,
+                'employee_id' => $g->employee_id,
+                'phone' => $g->phone,
+                'status' => $g->status,
+                'supervisor' => $g->supervisor ? ['id' => $g->supervisor->id, 'name' => $g->supervisor->name] : null,
+                'is_profile_complete' => (bool) $g->is_profile_complete,
+            ];
+        });
 
         $user = auth()->user();
         $canAssignSupervisor = $user ? $user->can('assign_guard_supervisor') : false;
@@ -64,7 +78,7 @@ class GuardController extends Controller
 
         return Inertia::render('Admin/Guards/Index', [
             'guards' => $guards,
-            'filters' => request()->only(['search', 'status']),
+            'filters' => request()->only(['search', 'status', 'profile_status']),
             'canAssignSupervisor' => $canAssignSupervisor,
             'canViewSupervisor' => $canViewSupervisor,
             'supervisors' => $supervisors,
@@ -102,6 +116,12 @@ class GuardController extends Controller
 
     public function store(Request $request)
     {
+        $request->merge([
+            'id_number' => ($v = trim((string) $request->input('id_number'))) !== '' ? $v : null,
+            'emergency_contact_name' => ($v = trim((string) $request->input('emergency_contact_name'))) !== '' ? $v : null,
+            'emergency_contact_phone' => ($v = trim((string) $request->input('emergency_contact_phone'))) !== '' ? $v : null,
+        ]);
+
         $validated = $request->validate([
             'employee_id' => 'nullable|string|unique:guards,employee_id',
             'name' => 'required|string|max:255',
@@ -135,7 +155,7 @@ class GuardController extends Controller
             'dependents_count' => 'nullable|integer|min:0',
             'children_names' => 'nullable|string',
             'notes' => 'nullable|string',
-            'status' => 'required|in:active,inactive,suspended',
+            'status' => 'required|in:active,inactive,suspended,dismissed,absconded',
             'employee_role' => 'nullable|in:guard,driver',
             'photo' => 'nullable|image|max:5120',
             // Optional quick assignment by client only
@@ -230,6 +250,12 @@ class GuardController extends Controller
     public function update(Request $request, Guard $guard)
     {
         $this->authorize('update', $guard);
+
+        $request->merge([
+            'id_number' => ($v = trim((string) $request->input('id_number'))) !== '' ? $v : null,
+            'emergency_contact_name' => ($v = trim((string) $request->input('emergency_contact_name'))) !== '' ? $v : null,
+            'emergency_contact_phone' => ($v = trim((string) $request->input('emergency_contact_phone'))) !== '' ? $v : null,
+        ]);
         
         $rules = [
             'employee_id' => 'nullable|string|unique:guards,employee_id,' . $guard->id,
@@ -264,7 +290,7 @@ class GuardController extends Controller
             'dependents_count' => 'nullable|integer|min:0',
             'children_names' => 'nullable|string',
             'notes' => 'nullable|string',
-            'status' => 'required|in:active,inactive,suspended',
+            'status' => 'required|in:active,inactive,suspended,dismissed,absconded',
             'employee_role' => 'nullable|in:guard,driver',
             'photo' => 'nullable|image|max:5120',
         ];
@@ -304,6 +330,39 @@ class GuardController extends Controller
 
         return redirect()->back()
             ->withSuccess('Guard updated successfully.');
+    }
+
+    public function suspend(Guard $guard)
+    {
+        // Admins can set status directly
+        $guard->update(['status' => 'suspended']);
+        return redirect()->back()->withSuccess('Guard suspended.');
+    }
+
+    public function reinstate(Guard $guard)
+    {
+        $guard->update(['status' => 'active']);
+        return redirect()->back()->withSuccess('Guard reinstated.');
+    }
+
+    public function dismiss(Request $request, Guard $guard)
+    {
+        $request->validate(['reason' => ['nullable','string','max:500']]);
+        $guard->update([
+            'status' => 'dismissed',
+            'notes' => trim(($guard->notes ? ($guard->notes."\n") : '') . 'Dismissed: ' . ($request->input('reason') ?? '')),
+        ]);
+        return redirect()->back()->withSuccess('Guard dismissed.');
+    }
+
+    public function abscond(Request $request, Guard $guard)
+    {
+        $request->validate(['reason' => ['nullable','string','max:500']]);
+        $guard->update([
+            'status' => 'absconded',
+            'notes' => trim(($guard->notes ? ($guard->notes."\n") : '') . 'Absconded: ' . ($request->input('reason') ?? '')),
+        ]);
+        return redirect()->back()->withSuccess('Guard marked as absconded.');
     }
 
     public function apiShow(Guard $guard)

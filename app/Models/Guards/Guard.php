@@ -68,7 +68,7 @@ class Guard extends Model
         'last_known_location' => 'array',
     ];
 
-    protected $appends = ['status_color', 'is_on_duty', 'photo_url'];
+    protected $appends = ['status_color', 'is_on_duty', 'photo_url', 'is_profile_complete', 'profile_missing_fields'];
 
     protected static function booted(): void
     {
@@ -91,6 +91,28 @@ class Guard extends Model
     {
         if (empty($this->photo)) return null;
         return asset('storage/' . ltrim($this->photo, '/'));
+    }
+
+    public function getProfileMissingFieldsAttribute(): array
+    {
+        $missing = [];
+
+        if (blank($this->id_number)) {
+            $missing[] = 'id_number';
+        }
+        if (blank($this->emergency_contact_name)) {
+            $missing[] = 'emergency_contact_name';
+        }
+        if (blank($this->emergency_contact_phone)) {
+            $missing[] = 'emergency_contact_phone';
+        }
+
+        return $missing;
+    }
+
+    public function getIsProfileCompleteAttribute(): bool
+    {
+        return count($this->profile_missing_fields) === 0;
     }
 
     public function supervisor(): BelongsTo
@@ -186,7 +208,15 @@ class Guard extends Model
 
     public function currentShift()
     {
-        return $this->hasOne(Shift::class)->where('is_active', true);
+        return $this->hasOne(Shift::class)
+            ->whereIn('status', ['scheduled', 'in_progress'])
+            ->where(function ($q) {
+                $q->whereDate('date', today())
+                  ->orWhere(function ($q2) {
+                      $q2->whereDate('date', today()->subDay())
+                         ->where('status', 'in_progress');
+                  });
+            });
     }
 
     public function currentSite()
@@ -210,6 +240,8 @@ class Guard extends Model
             'active' => 'green',
             'inactive' => 'gray',
             'suspended' => 'red',
+            'dismissed' => 'gray',
+            'absconded' => 'red',
             default => 'gray',
         };
     }
@@ -230,5 +262,27 @@ class Guard extends Model
         return $query->whereHas('todayAttendance', function ($q) {
             $q->whereNotNull('check_in_time')->whereNull('check_out_time');
         });
+    }
+
+    public function scopeProfileStatus($query, ?string $status)
+    {
+        $status = $status ? strtolower(trim($status)) : null;
+
+        if ($status === 'complete') {
+            return $query
+                ->whereNotNull('id_number')->where('id_number', '!=', '')
+                ->whereNotNull('emergency_contact_name')->where('emergency_contact_name', '!=', '')
+                ->whereNotNull('emergency_contact_phone')->where('emergency_contact_phone', '!=', '');
+        }
+
+        if ($status === 'incomplete') {
+            return $query->where(function ($q) {
+                $q->whereNull('id_number')->orWhere('id_number', '')
+                  ->orWhereNull('emergency_contact_name')->orWhere('emergency_contact_name', '')
+                  ->orWhereNull('emergency_contact_phone')->orWhere('emergency_contact_phone', '');
+            });
+        }
+
+        return $query;
     }
 }

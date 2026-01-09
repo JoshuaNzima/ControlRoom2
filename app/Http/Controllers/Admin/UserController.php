@@ -11,6 +11,8 @@ use Spatie\Permission\Models\Role;
 use App\Models\Zone;
 use App\Notifications\ZoneCommanderUnassigned;
 use Illuminate\Support\Facades\Notification as NotificationFacade;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\WelcomeEmail;
 
 class UserController extends Controller
 {
@@ -86,6 +88,11 @@ class UserController extends Controller
         ]);
 
         $user->assignRole($validated['role']);
+
+        // Send welcome email (best-effort)
+        try {
+            Mail::to($user->email)->send(new WelcomeEmail($user));
+        } catch (\Throwable $e) {}
 
         return redirect()->route('admin.users.index')
             ->with('success', 'User created successfully.');

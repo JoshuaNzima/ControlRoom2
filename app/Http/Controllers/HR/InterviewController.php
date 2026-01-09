@@ -6,8 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Models\Interview;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Mail;
 use App\Models\User;
 use App\Notifications\GenericDbNotification;
+use App\Mail\InterviewScheduled;
 
 class InterviewController extends Controller
 {
@@ -31,7 +33,15 @@ class InterviewController extends Controller
             'status' => 'scheduled',
             'notes' => $validated['notes'] ?? null,
         ]);
-        // Notify careers managers and interviewer
+
+        try {
+            $interview->loadMissing('application:id,email,candidate_name,job_posting_id', 'application.jobPosting:id,title');
+            $candidateEmail = $interview->application?->email;
+            if (!empty($candidateEmail)) {
+                Mail::to($candidateEmail)->send(new InterviewScheduled($interview));
+            }
+        } catch (\Throwable $e) {
+        }
         try {
             $interview->loadMissing('application.jobPosting');
             $title = $interview->application?->jobPosting?->title;
@@ -41,6 +51,7 @@ class InterviewController extends Controller
                 'title' => 'Interview Scheduled',
                 'message' => trim(($candidate ?: 'Candidate') . ($title ? ' • '.$title : '') . ($when ? ' • '.$when : '')),
                 'url' => route('hr.jobs.interviews'),
+                'mail' => true,
             ];
             $recipients = User::permission('hr.careers.manage')->get();
             if ($recipients->isEmpty()) {
@@ -56,7 +67,6 @@ class InterviewController extends Controller
                 }
             }
         } catch (\Throwable $e) {
-            // swallow
         }
         return back()->with('success', 'Interview scheduled');
     }
@@ -74,7 +84,6 @@ class InterviewController extends Controller
 
         $interview->update($validated);
 
-        // Notify on important updates
         try {
             $interview->loadMissing('application.jobPosting');
             $title = $interview->application?->jobPosting?->title;
@@ -99,7 +108,6 @@ class InterviewController extends Controller
                 }
             }
         } catch (\Throwable $e) {
-            // swallow
         }
 
         return back()->with('success', 'Interview updated');

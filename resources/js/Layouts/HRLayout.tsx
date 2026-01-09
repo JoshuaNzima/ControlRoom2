@@ -55,7 +55,7 @@ export default function HRLayout({ title, children, user }: Props) {
   return (
     <div className="min-h-screen bg-red-50 dark:bg-gray-900">
       <Head title={title} />
-      <div className={`fixed inset-0 bg-red-800 bg-opacity-50 z-40 md:hidden ${sidebarOpen ? 'block' : 'hidden'}`} onClick={() => setSidebarOpen(false)} />
+      <div className={`fixed inset-0 bg-red-800 bg-opacity-50 dark:bg-gray-900 dark:bg-opacity-70 z-40 md:hidden ${sidebarOpen ? 'block' : 'hidden'}`} onClick={() => setSidebarOpen(false)} />
       <div className={`fixed top-0 left-0 bottom-0 flex flex-col w-64 bg-red-900 dark:bg-gray-950 text-white transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 transition-transform duration-300 ease-in-out z-50`}>
         <div className="flex-1 flex flex-col pt-5 pb-4 overflow-y-auto">
           <div className="flex items-center flex-shrink-0 px-4">
@@ -84,14 +84,20 @@ export default function HRLayout({ title, children, user }: Props) {
         </div>
       </div>
       <div className="md:pl-64">
-        <div className="sticky top-0 z-10 pl-1 pt-1 sm:pl-3 sm:pt-3 bg-red-50 dark:bg-gray-900 border-b border-red-100 dark:border-gray-800">
-          <button type="button" className="-ml-0.5 -mt-0.5 h-12 w-12 inline-flex items-center justify-center rounded-md text-red-700 hover:text-red-900 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-red-500 md:hidden" onClick={() => setSidebarOpen(true)}>
-            <span className="sr-only">Open sidebar</span>
-            <IconMapper name="menu" className="h-6 w-6" />
-          </button>
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 pb-3">
-            <div className="flex items-center justify-between">
-              <h1 className="text-xl font-semibold text-red-900 dark:text-gray-100">{title}</h1>
+        <div className="sticky top-0 z-30 border-b border-red-100 bg-white/95 backdrop-blur-sm dark:border-gray-800 dark:bg-gray-950/80">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-3">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3 min-w-0">
+                <button
+                  type="button"
+                  className="h-10 w-10 inline-flex items-center justify-center rounded-md text-red-700 hover:bg-red-100 hover:text-red-900 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-coin-600 md:hidden"
+                  onClick={() => setSidebarOpen(true)}
+                >
+                  <span className="sr-only">Open sidebar</span>
+                  <IconMapper name="menu" className="h-6 w-6" />
+                </button>
+                <h1 className="text-xl font-semibold text-red-900 dark:text-gray-100 truncate">{title}</h1>
+              </div>
               <div className="flex items-center gap-4">
                 <NotificationBell />
                 <QuickBudgetButton />

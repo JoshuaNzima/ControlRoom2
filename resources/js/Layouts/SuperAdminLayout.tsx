@@ -7,6 +7,7 @@ import BaseShell from './BaseShell';
 import QuickRequisitionButton from '@/Components/Requisitions/QuickRequisitionButton';
 import QuickBudgetButton from '@/Components/Budgets/QuickBudgetButton';
 import useCounters from '@/Hooks/useCounters';
+import { useTheme } from '@/Providers/ThemeProvider';
 
 interface Props {
     title: string;
@@ -26,6 +27,7 @@ export default function SuperAdminLayout({ title, children, user }: Props) {
     const [sidebarOpen, setSidebarOpen] = React.useState(false);
     const [logoOk, setLogoOk] = React.useState<boolean>(true);
     const { counters } = useCounters();
+    const { theme, toggle } = useTheme();
     const pathOf = (name: string) => {
         try {
             return new URL((window as any).route(name), window.location.origin).pathname;
@@ -248,32 +250,38 @@ export default function SuperAdminLayout({ title, children, user }: Props) {
 
             {/* Main Content */}
             <div className="md:pl-72">
-                {/* Mobile: keep compact bar, hide BaseShell header by using noHeader */}
-                <div className="sticky top-0 z-30 md:hidden pl-1 pt-1 sm:pl-3 sm:pt-3 bg-red-50 dark:bg-gray-900 border-b border-red-100 dark:border-gray-800">
-                    <button
-                        type="button"
-                        className="-ml-0.5 -mt-0.5 h-12 w-12 inline-flex items-center justify-center rounded-md text-red-700 hover:text-red-900 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-red-500"
-                        onClick={() => setSidebarOpen(true)}
-                    >
-                        <span className="sr-only">Open sidebar</span>
-                        <IconMapper name="Menu" size={24} />
-                    </button>
-                </div>
-                {/* Desktop header via BaseShell; hide header on mobile */}
-                <BaseShell title={title} fullScreen={false} noHeader containerClassName="space-y-6">
-                    <header className="hidden md:block bg-white dark:bg-gray-800 border-b border-red-100 dark:border-gray-800 sticky top-0 z-30">
-                        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5">
-                            <div className="flex items-center justify-between">
-                                <h1 className="text-xl font-bold text-red-900 dark:text-gray-100">{title}</h1>
-                                <div className="flex items-center gap-4">
-                                    <NotificationBell />
+                <div className="sticky top-0 z-30 border-b border-red-100 bg-white/95 backdrop-blur-sm dark:border-gray-800 dark:bg-gray-950/80">
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-3">
+                        <div className="flex items-center justify-between gap-3">
+                            <div className="flex items-center gap-3 min-w-0">
+                                <button
+                                    type="button"
+                                    className="h-10 w-10 inline-flex items-center justify-center rounded-md text-red-700 hover:bg-red-100 hover:text-red-900 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-coin-600 md:hidden"
+                                    onClick={() => setSidebarOpen(true)}
+                                >
+                                    <span className="sr-only">Open sidebar</span>
+                                    <IconMapper name="Menu" size={24} />
+                                </button>
+                                <h1 className="text-xl font-semibold text-red-900 dark:text-gray-100 truncate">{title}</h1>
+                            </div>
+                            <div className="flex items-center gap-4">
+                                <NotificationBell />
+                                <div className="hidden sm:flex items-center gap-4">
                                     <QuickBudgetButton />
                                     <QuickRequisitionButton />
                                 </div>
+                                <button onClick={toggle} className="text-sm px-3 py-1 rounded-md bg-red-100 text-red-800 hover:bg-red-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700">
+                                    {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
+                                </button>
                             </div>
                         </div>
-                    </header>
-                    {children}
+                    </div>
+                </div>
+
+                <BaseShell noHeader fullScreen={false} containerClassName="space-y-6">
+                    <div className="animate-slideUp transition-all-smooth">
+                        {children}
+                    </div>
                 </BaseShell>
             </div>
         </div>

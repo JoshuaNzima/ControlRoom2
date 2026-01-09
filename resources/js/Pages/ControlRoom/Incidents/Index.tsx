@@ -39,6 +39,7 @@ const IncidentsIndex = ({ auth, incidents }: IncidentsIndexProps) => {
     switch (status) {
       case 'open': return 'bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100';
       case 'in_progress': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-100';
+      case 'escalated': return 'bg-coin-100 text-coin-900 dark:bg-coin-900/30 dark:text-coin-200';
       case 'resolved': return 'bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100';
       case 'closed': return 'bg-gray-100 text-gray-800 dark:bg-gray-600 dark:text-gray-100';
       default: return 'bg-gray-100 text-gray-800 dark:bg-gray-600 dark:text-gray-100';
@@ -51,10 +52,10 @@ const IncidentsIndex = ({ auth, incidents }: IncidentsIndexProps) => {
 
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex justify-between items-center">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Incident Management</h1>
           <Link href={route('control-room.incidents.create')}>
-            <Button className="dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600">
+            <Button className="w-full sm:w-auto dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600">
               Create New Incident
             </Button>
           </Link>
@@ -136,11 +137,11 @@ const IncidentsIndex = ({ auth, incidents }: IncidentsIndexProps) => {
             <div className="space-y-4">
               {incidents.data.map((incident) => (
                 <div key={incident.id} className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
-                  <div className="flex items-start justify-between">
+                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                     <div className="flex-1">
-                      <div className="flex items-center space-x-2 mb-2">
+                      <div className="flex flex-wrap items-center gap-2 mb-2">
                         <Link href={route('control-room.incidents.show', incident.id)}>
-                          <h4 className="font-medium text-gray-900 dark:text-gray-100 hover:text-blue-600 dark:hover:text-blue-400">
+                          <h4 className="font-medium text-gray-900 dark:text-gray-100 hover:text-coin-700 dark:hover:text-coin-200">
                             {incident.title}
                           </h4>
                         </Link>
@@ -163,14 +164,14 @@ const IncidentsIndex = ({ auth, incidents }: IncidentsIndexProps) => {
                         <span className="font-medium"> Created:</span> {new Date(incident.created_at).toLocaleDateString()}
                       </div>
                     </div>
-                    <div className="flex space-x-2 ml-4">
+                    <div className="flex flex-col sm:flex-row gap-2 sm:ml-4">
                       <Link href={route('control-room.incidents.show', incident.id)}>
-                        <Button size="sm" variant="outline" className="dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-600">
+                        <Button size="sm" variant="outline" className="w-full sm:w-auto dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-600">
                           View
                         </Button>
                       </Link>
                       <Link href={route('control-room.incidents.edit', incident.id)}>
-                        <Button size="sm" variant="outline" className="dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-600">
+                        <Button size="sm" variant="outline" className="w-full sm:w-auto dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-600">
                           Edit
                         </Button>
                       </Link>

@@ -3,19 +3,19 @@ import * as React from 'react';
 type ButtonVariant = 'default' | 'outline' | 'destructive' | 'ghost' | 'link' | 'secondary';
 type ButtonSize = 'sm' | 'md' | 'lg' | 'icon';
 
-interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
   variant?: ButtonVariant;
   size?: ButtonSize;
   asChild?: boolean;
-}
+};
 
 const variantClasses: Record<ButtonVariant, string> = {
-  default: 'bg-red-600 hover:bg-red-700 text-white',
-  outline: 'border border-red-200 text-red-800 hover:bg-red-50',
-  destructive: 'bg-red-700 hover:bg-red-800 text-white',
-  ghost: 'text-red-800 hover:bg-red-50',
-  link: 'text-red-700 hover:text-red-800 underline-offset-2 hover:underline',
-  secondary: 'bg-gray-200 hover:bg-gray-300 text-gray-800 dark:bg-gray-700 dark:text-gray-100',
+  default: 'bg-coin-700 hover:bg-coin-600 text-white shadow-sm shadow-black/10 dark:shadow-black/40',
+  outline: 'border border-coin-200 text-coin-800 hover:bg-coin-50 dark:border-gray-800 dark:text-gray-100 dark:hover:bg-gray-900',
+  destructive: 'bg-red-700 hover:bg-red-600 text-white shadow-sm shadow-black/10 dark:shadow-black/40',
+  ghost: 'text-coin-800 hover:bg-coin-50 dark:text-gray-100 dark:hover:bg-gray-900',
+  link: 'text-coin-700 hover:text-coin-800 underline-offset-2 hover:underline dark:text-coin-300 dark:hover:text-coin-200',
+  secondary: 'bg-gray-100 hover:bg-gray-200 text-gray-900 dark:bg-gray-900 dark:hover:bg-gray-800 dark:text-gray-100',
 };
 
 const sizeClasses: Record<ButtonSize, string> = {
@@ -27,7 +27,7 @@ const sizeClasses: Record<ButtonSize, string> = {
 
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className = '', variant = 'default', size = 'md', asChild = false, children, ...props }, ref) => {
-    const classes = `inline-flex items-center justify-center rounded-lg font-medium transition ${variantClasses[variant]} ${sizeClasses[size]} ${className}`;
+    const classes = `inline-flex items-center justify-center rounded-lg font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-coin-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-gray-950 disabled:opacity-50 disabled:pointer-events-none ${variantClasses[variant]} ${sizeClasses[size]} ${className}`;
     
     if (asChild && React.isValidElement(children)) {
       return React.cloneElement(children, { 

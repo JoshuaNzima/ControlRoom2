@@ -6,6 +6,7 @@ import RequisitionSummary from '@/Components/Requisitions/RequisitionSummary';
 import EditProfileModal from '@/Components/Profile/EditProfileModal';
 import ChangePasswordModal from '@/Components/Profile/ChangePasswordModal';
 import AvatarModal from '@/Components/Profile/AvatarModal';
+import EmptyState from '@/Components/ui/empty-state';
 // Account deletion removed for regular users
 
 interface Commission {
@@ -44,7 +45,7 @@ export default function ProfileDashboard() {
   };
 
   return (
-    <AuthenticatedLayout header={<h2 className="text-xl font-bold text-red-900 dark:text-gray-100">My Dashboard</h2>}>
+    <AuthenticatedLayout header={<h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">My Dashboard</h2>}>
       <Head title="My Dashboard" />
       <div className="py-6">
         <div className="mx-auto max-w-7xl sm:px-6 lg:px-8 space-y-4">
@@ -52,19 +53,19 @@ export default function ProfileDashboard() {
           <div className="flex gap-2 overflow-x-auto px-2">
             <button
               onClick={() => setTab('profile')}
-              className={`px-3 py-1.5 rounded-md text-sm ${tab === 'profile' ? 'bg-indigo-600 text-white' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border dark:border-gray-700'}`}
+              className={`px-3 py-1.5 rounded-md text-sm ${tab === 'profile' ? 'bg-coin-700 text-white' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-700'}`}
             >
               Profile
             </button>
             <button
               onClick={() => setTab('commissions')}
-              className={`px-3 py-1.5 rounded-md text-sm ${tab === 'commissions' ? 'bg-indigo-600 text-white' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border dark:border-gray-700'}`}
+              className={`px-3 py-1.5 rounded-md text-sm ${tab === 'commissions' ? 'bg-coin-700 text-white' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-700'}`}
             >
               Commissions
             </button>
             <button
               onClick={() => setTab('payroll')}
-              className={`px-3 py-1.5 rounded-md text-sm ${tab === 'payroll' ? 'bg-indigo-600 text-white' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border dark:border-gray-700'}`}
+              className={`px-3 py-1.5 rounded-md text-sm ${tab === 'payroll' ? 'bg-coin-700 text-white' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-700'}`}
             >
               Payroll
             </button>
@@ -120,7 +121,7 @@ export default function ProfileDashboard() {
                 <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-800 font-semibold text-gray-900 dark:text-gray-100">Pending Commissions</div>
                 <div className="p-4 divide-y divide-gray-100 dark:divide-gray-800">
                   {(commissions?.pending || []).length === 0 && (
-                    <div className="text-sm text-gray-500 dark:text-gray-400">No pending commissions.</div>
+                    <EmptyState title="No pending commissions" description="New pending commissions will show up here." size="sm" contentClassName="py-4" />
                   )}
                   {(commissions?.pending || []).map((c: Commission) => (
                     <div key={c.id} className="py-3 flex items-center justify-between gap-3">
@@ -141,7 +142,7 @@ export default function ProfileDashboard() {
                 <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-800 font-semibold text-gray-900 dark:text-gray-100">Recent Commissions</div>
                 <div className="p-4 divide-y divide-gray-100 dark:divide-gray-800">
                   {(commissions?.recent || []).length === 0 && (
-                    <div className="text-sm text-gray-500 dark:text-gray-400">No recent commissions.</div>
+                    <EmptyState title="No recent commissions" description="Your latest commission activity will show here." size="sm" contentClassName="py-4" />
                   )}
                   {(commissions?.recent || []).map((c: Commission) => (
                     <div key={c.id} className="py-3 flex items-center justify-between gap-3">
@@ -149,7 +150,7 @@ export default function ProfileDashboard() {
                         <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{c.source || 'Referral'} {c.client_id ? `• Client #${c.client_id}` : ''}</div>
                         <div className="text-xs text-gray-500 dark:text-gray-400">{c.status === 'claimed' ? `Claimed ${c.claimed_at ? new Date(c.claimed_at).toLocaleString() : ''}` : 'Rejected'}</div>
                       </div>
-                      <div className={`text-sm font-semibold ${c.status === 'claimed' ? 'text-emerald-600' : 'text-rose-600'}`}>{currency(c.amount)}</div>
+                      <div className={`text-sm font-semibold ${c.status === 'claimed' ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>{currency(c.amount)}</div>
                     </div>
                   ))}
                 </div>
@@ -178,7 +179,7 @@ export default function ProfileDashboard() {
                   <div className="mt-2 text-2xl font-semibold text-gray-900 dark:text-gray-100">{currency(payroll?.totals?.net_total || 0)}</div>
                 </div>
               </div>
-              <div className="bg-blue-50 dark:bg-gray-800 rounded-xl border border-blue-200 dark:border-gray-700 p-4 text-sm text-blue-800 dark:text-gray-200">
+              <div className="bg-coin-50 dark:bg-gray-800 rounded-xl border border-coin-200 dark:border-gray-700 p-4 text-sm text-coin-900 dark:text-gray-200">
                 Payroll figures reflect processed runs recorded in the system.
               </div>
             </div>

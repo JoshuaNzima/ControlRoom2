@@ -15,6 +15,12 @@ class GuardManageController extends Controller
 {
     public function store(Request $request)
     {
+        $request->merge([
+            'id_number' => ($v = trim((string) $request->input('id_number'))) !== '' ? $v : null,
+            'emergency_contact_name' => ($v = trim((string) $request->input('emergency_contact_name'))) !== '' ? $v : null,
+            'emergency_contact_phone' => ($v = trim((string) $request->input('emergency_contact_phone'))) !== '' ? $v : null,
+        ]);
+
         $validated = $request->validate([
             'employee_id' => 'nullable|string|unique:guards,employee_id',
             'name' => 'required|string|max:255',
@@ -24,17 +30,17 @@ class GuardManageController extends Controller
             'residence_address' => 'nullable|string',
             'residence_city' => 'nullable|string',
             'residence_district' => 'nullable|string',
-            'id_number' => 'required|string|unique:guards,id_number',
+            'id_number' => 'nullable|string|unique:guards,id_number',
             'date_of_birth' => 'required|date',
             'gender' => 'required|in:male,female,other',
             'marital_status' => 'nullable|in:single,married,divorced,widowed',
-            'emergency_contact_name' => 'required|string|max:255',
-            'emergency_contact_phone' => 'required|string|max:20',
+            'emergency_contact_name' => 'nullable|string|max:255',
+            'emergency_contact_phone' => 'nullable|string|max:20',
             'supervisor_id' => 'nullable|exists:users,id',
             'hire_date' => 'nullable|date',
             'guard_type' => 'required|in:permanent,standby,reliever',
             'guard_grade_id' => 'nullable|exists:guard_grades,id',
-            'status' => 'required|in:active,inactive,suspended',
+            'status' => 'required|in:active,inactive,suspended,dismissed,absconded',
             'notes' => 'nullable|string',
             'children_names' => 'nullable|string',
             'photo' => 'nullable|image|max:5120',
@@ -93,6 +99,12 @@ class GuardManageController extends Controller
 
     public function update(Request $request, Guard $guard)
     {
+        $request->merge([
+            'id_number' => ($v = trim((string) $request->input('id_number'))) !== '' ? $v : null,
+            'emergency_contact_name' => ($v = trim((string) $request->input('emergency_contact_name'))) !== '' ? $v : null,
+            'emergency_contact_phone' => ($v = trim((string) $request->input('emergency_contact_phone'))) !== '' ? $v : null,
+        ]);
+
         $validated = $request->validate([
             'employee_id' => 'nullable|string|unique:guards,employee_id,' . $guard->id,
             'name' => 'required|string|max:255',
@@ -102,17 +114,17 @@ class GuardManageController extends Controller
             'residence_address' => 'nullable|string',
             'residence_city' => 'nullable|string',
             'residence_district' => 'nullable|string',
-            'id_number' => 'required|string|unique:guards,id_number,' . $guard->id,
+            'id_number' => 'nullable|string|unique:guards,id_number,' . $guard->id,
             'date_of_birth' => 'required|date',
             'gender' => 'required|in:male,female,other',
             'marital_status' => 'nullable|in:single,married,divorced,widowed',
-            'emergency_contact_name' => 'required|string|max:255',
-            'emergency_contact_phone' => 'required|string|max:20',
+            'emergency_contact_name' => 'nullable|string|max:255',
+            'emergency_contact_phone' => 'nullable|string|max:20',
             'supervisor_id' => 'nullable|exists:users,id',
             'hire_date' => 'nullable|date',
             'guard_type' => 'required|in:permanent,standby,reliever',
             'guard_grade_id' => 'nullable|exists:guard_grades,id',
-            'status' => 'required|in:active,inactive,suspended',
+            'status' => 'required|in:active,inactive,suspended,dismissed,absconded',
             'notes' => 'nullable|string',
             'children_names' => 'nullable|string',
             'photo' => 'nullable|image|max:5120',
@@ -227,6 +239,7 @@ class GuardManageController extends Controller
     public function suspend(Guard $guard)
     {
         $this->authorizeOps();
+        $this->ensureInZone($guard);
         $guard->update(['status' => 'suspended']);
         return back()->with('success', 'Guard suspended.');
     }
@@ -234,6 +247,7 @@ class GuardManageController extends Controller
     public function reinstate(Guard $guard)
     {
         $this->authorizeOps();
+        $this->ensureInZone($guard);
         $guard->update(['status' => 'active']);
         return back()->with('success', 'Guard reinstated.');
     }
@@ -241,21 +255,50 @@ class GuardManageController extends Controller
     public function dismiss(Request $request, Guard $guard)
     {
         $this->authorizeOps();
+        $this->ensureInZone($guard);
         $request->validate(['reason' => 'nullable|string|max:500']);
         $guard->update([
-            'status' => 'inactive',
+            'status' => 'dismissed',
             'notes' => trim(($guard->notes ? ($guard->notes."\n") : '') . 'Dismissed: ' . ($request->input('reason') ?? '')),
         ]);
         return back()->with('success', 'Guard dismissed.');
+    }
+
+    public function abscond(Request $request, Guard $guard)
+    {
+        $this->authorizeOps();
+        $this->ensureInZone($guard);
+        $request->validate(['reason' => 'nullable|string|max:500']);
+        $guard->update([
+            'status' => 'absconded',
+            'notes' => trim(($guard->notes ? ($guard->notes."\n") : '') . 'Absconded: ' . ($request->input('reason') ?? '')),
+        ]);
+        return back()->with('success', 'Guard marked as absconded.');
     }
 
     protected function authorizeOps(): void
     {
         if (!auth()->check()) abort(403);
         $u = auth()->user();
-        if (!$u->hasAnyRole(['operations_officer','manager','super_admin','hr','hr_manager']) && !$u->can('hr.employees.manage')) {
+        if (!$u->hasAnyRole(['operations_officer','manager','super_admin','hr','hr_manager','zone_commander']) && !$u->can('hr.employees.manage')) {
             abort(403);
         }
+    }
+
+    protected function ensureInZone(Guard $guard): void
+    {
+        $u = auth()->user();
+        if (!$u || !$u->hasRole('zone_commander')) return;
+        $inZone = false;
+        if (!empty($guard->zone_id) && !empty($u->zone_id)) {
+            $inZone = (int)$guard->zone_id === (int)$u->zone_id;
+        }
+        if (!$inZone && !empty($u->zone_id)) {
+            $inZone = $guard->assignments()->where('is_active', true)
+                ->whereHas('clientSite', function ($q) use ($u) { $q->where('zone_id', $u->zone_id); })
+                ->exists();
+        }
+        if (!$inZone) abort(403);
     }
 
     private function generateGuardEmployeeId(): string

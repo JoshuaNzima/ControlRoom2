@@ -209,14 +209,14 @@ export default function PaymentsIndex({
       <Head title="Payments Checker" />
 
       <Modal show={prepayModalOpen} onClose={() => setPrepayModalOpen(false)} maxWidth="sm">
-        <div className="p-4">
+        <div className="p-4 text-gray-900 dark:text-gray-100">
           <h3 className="text-lg font-semibold mb-2">Prepay Month</h3>
-          <div className="mb-2 text-sm text-gray-600">Enter an amount to prepay for the selected future month. Leave blank to prepay the full month rate.</div>
+          <div className="mb-2 text-sm text-gray-600 dark:text-gray-300">Enter an amount to prepay for the selected future month. Leave blank to prepay the full month rate.</div>
           <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">MWK</span>
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400">MWK</span>
             <input
               type="text"
-              className="w-full pl-12 pr-3 py-2 border rounded mb-3 text-right"
+              className="w-full pl-12 pr-3 py-2 border rounded mb-3 text-right bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
               value={prepayAmountInput}
               onChange={(e) => {
                 const value = e.target.value.replace(/[^0-9.]/g, '');
@@ -228,7 +228,7 @@ export default function PaymentsIndex({
             />
           </div>
           {prepayAmountInput && (
-            <div className="mb-3 text-sm text-gray-600 text-right">
+            <div className="mb-3 text-sm text-gray-600 dark:text-gray-300 text-right">
               {formatCurrencyMWK(parseFloat(prepayAmountInput) || 0)}
             </div>
           )}
@@ -304,13 +304,13 @@ export default function PaymentsIndex({
           {/* Main Payments Table Card */}
           <Card className="relative">
             {/* Sticky toolbar */}
-            <div className="sticky top-0 z-10 bg-white border-b">
+            <div className="sticky top-0 z-10 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
               <div className="p-4">
                 <div className="flex items-center justify-between mb-4">
-                  <h1 className="text-xl font-semibold text-gray-900">Client Payments</h1>
+                  <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Client Payments</h1>
                   <div className="flex items-center gap-2">
                     <Button variant="outline" onClick={() => handleYearChange(-1)}>&laquo; {selectedYear - 1}</Button>
-                    <div className="text-lg font-bold w-24 text-center">{selectedYear}</div>
+                    <div className="text-lg font-bold w-24 text-center text-gray-900 dark:text-gray-100">{selectedYear}</div>
                     <Button variant="outline" onClick={() => handleYearChange(1)}>{selectedYear + 1} &raquo;</Button>
                   </div>
                 </div>
@@ -322,14 +322,14 @@ export default function PaymentsIndex({
                       <input
                         type="text"
                         placeholder="Search clients..."
-                        className="w-full pr-10 px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full pr-10 px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-coin-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                         value={searchText}
                         onChange={(e) => setSearchText(e.target.value)}
                       />
                       {searchText && (
                         <button
                           onClick={() => clearFilter('search')}
-                          className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                          className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
                           aria-label="Clear search"
                         >
                           ×
@@ -340,9 +340,9 @@ export default function PaymentsIndex({
                     {/* Filter controls */}
                     <div className="flex flex-wrap items-center gap-4">
                       <div className="flex items-center gap-2">
-                        <label className="text-sm text-gray-600">Zone</label>
+                        <label className="text-sm text-gray-600 dark:text-gray-300">Zone</label>
                         <select
-                          className="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-coin-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                           value={String(filters.zone_id ?? '')}
                           onChange={(e) => handleFilterChange({ zone_id: e.target.value, page: 1 })}
                         >
@@ -354,9 +354,9 @@ export default function PaymentsIndex({
                       </div>
 
                       <div className="flex items-center gap-2">
-                        <label className="text-sm text-gray-600">Per page</label>
+                        <label className="text-sm text-gray-600 dark:text-gray-300">Per page</label>
                         <select
-                          className="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-coin-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                           value={String(filters.per_page ?? 20)}
                           onChange={(e) => handleFilterChange({ per_page: e.target.value, page: 1 })}
                         >
@@ -368,9 +368,9 @@ export default function PaymentsIndex({
                       </div>
 
                       <div className="flex items-center gap-2">
-                        <label className="text-sm text-gray-600">Status</label>
+                        <label className="text-sm text-gray-600 dark:text-gray-300">Status</label>
                         <select
-                          className="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-coin-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                           value={filters.status}
                           onChange={(e) => handleFilterChange({ status: e.target.value as 'all' | 'late' | 'paid', page: 1 })}
                         >
@@ -387,7 +387,7 @@ export default function PaymentsIndex({
                     {filters.zone_id && (
                       <button
                         onClick={() => clearFilter('zone_id')}
-                        className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-blue-50 text-sm text-blue-700 hover:bg-blue-100"
+                        className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-coin-50 dark:bg-coin-900/30 text-sm text-coin-800 dark:text-coin-200 hover:bg-coin-100 dark:hover:bg-coin-900/50"
                       >
                         Zone: {zones.find(z => String(z.id) === String(filters.zone_id))?.name ?? filters.zone_id}
                         <span className="ml-1">×</span>
@@ -396,7 +396,7 @@ export default function PaymentsIndex({
                     {filters.status !== 'all' && (
                       <button
                         onClick={() => clearFilter('status')}
-                        className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-blue-50 text-sm text-blue-700 hover:bg-blue-100"
+                        className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-coin-50 dark:bg-coin-900/30 text-sm text-coin-800 dark:text-coin-200 hover:bg-coin-100 dark:hover:bg-coin-900/50"
                       >
                         Status: {filters.status}
                         <span className="ml-1">×</span>
@@ -405,7 +405,7 @@ export default function PaymentsIndex({
                     {String(filters.per_page) !== '20' && (
                       <button
                         onClick={() => clearFilter('per_page')}
-                        className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-blue-50 text-sm text-blue-700 hover:bg-blue-100"
+                        className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-coin-50 dark:bg-coin-900/30 text-sm text-coin-800 dark:text-coin-200 hover:bg-coin-100 dark:hover:bg-coin-900/50"
                       >
                         {filters.per_page} per page
                         <span className="ml-1">×</span>
@@ -414,7 +414,7 @@ export default function PaymentsIndex({
                     {filters.search && (
                       <button
                         onClick={() => clearFilter('search')}
-                        className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-blue-50 text-sm text-blue-700 hover:bg-blue-100"
+                        className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-coin-50 dark:bg-coin-900/30 text-sm text-coin-800 dark:text-coin-200 hover:bg-coin-100 dark:hover:bg-coin-900/50"
                       >
                         "{filters.search}"
                         <span className="ml-1">×</span>
@@ -426,16 +426,98 @@ export default function PaymentsIndex({
             </div>
 
             <div className="p-4">
-              <div className="relative overflow-x-auto sm:overflow-x-visible">
+              <div className="md:hidden space-y-3">
+                {clientData.map((c: Client) => {
+                  const clientPayments = payments[String(c.id)] || {} as Record<number, MonthState>;
+                  const monthlyRate = (c as any).monthly_rate ?? 0;
+                  const summary = (summaries || {})[String(c.id)] || null;
+                  const startDate = c.contract_start_date ? new Date(c.contract_start_date) : (c.created_at ? new Date(c.created_at) : null);
+                  const billingStartMonth = startDate ? startDate.getMonth() : -1;
+                  const billingStartYear = startDate ? startDate.getFullYear() : 0;
+                  const isOverdue = flags[String(c.id)];
+                  const outstandingMonths = summary?.outstanding_months ?? 0;
+
+                  return (
+                    <div
+                      key={c.id}
+                      className={`rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/60 p-4 ${isOverdue ? 'ring-1 ring-red-500/30' : ''}`}
+                      title={isOverdue ? `${outstandingMonths} months overdue` : ''}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className={`text-sm font-semibold break-words ${isOverdue ? 'text-red-900 dark:text-red-300' : 'text-gray-900 dark:text-gray-100'}`}>{c.name}</div>
+                          {isOverdue && (
+                            <div className="mt-1 text-xs text-red-700 dark:text-red-300">
+                              {outstandingMonths} months overdue
+                            </div>
+                          )}
+                        </div>
+                        {isOverdue && (
+                          <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                        )}
+                      </div>
+
+                      <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
+                        <div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">Expected</div>
+                          <div className="font-semibold text-gray-900 dark:text-gray-100">{formatCurrencyMWK(summary?.expected_amount ?? (monthlyRate || 0))}</div>
+                        </div>
+                        <div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">Paid</div>
+                          <div className="font-semibold text-gray-900 dark:text-gray-100">{formatCurrencyMWK(summary?.total_paid ?? Object.values(clientPayments).reduce((sum, s) => sum + (s?.amount_paid || 0), 0))}</div>
+                        </div>
+                        <div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">Outstanding</div>
+                          <div className={`font-semibold ${isOverdue ? 'text-red-700 dark:text-red-400' : 'text-red-600 dark:text-red-400'}`}>{formatCurrencyMWK(summary?.outstanding_amount ?? 0)}</div>
+                        </div>
+                      </div>
+
+                      <div className="mt-4 grid grid-cols-2 gap-2">
+                        {months.map((m, idx) => {
+                          const month = idx + 1;
+                          const paid = !!clientPayments[month]?.paid;
+                          const prepaid = !!(clientPayments[month]?.prepaid_amount && clientPayments[month]?.prepaid_amount > 0);
+                          const isBillingStart = selectedYear === billingStartYear && month === billingStartMonth + 1;
+                          const isBeforeBillingStart = startDate ? (
+                            selectedYear < billingStartYear ||
+                            (selectedYear === billingStartYear && month <= billingStartMonth)
+                          ) : false;
+
+                          return (
+                            <div
+                              key={month}
+                              className={`flex items-center justify-between gap-2 rounded-lg border px-3 py-2 ${isBeforeBillingStart ? 'border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/40' : 'border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950/40'} ${isBillingStart ? 'ring-1 ring-coin-500/40' : ''}`}
+                            >
+                              <div className="text-xs font-medium text-gray-600 dark:text-gray-300">{m}</div>
+                              <button
+                                onClick={() => toggle(c.id, month)}
+                                disabled={isBeforeBillingStart}
+                                className={`inline-flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold transition ${isBeforeBillingStart ? 'bg-gray-50 dark:bg-gray-700 text-gray-300 dark:text-gray-500 cursor-not-allowed' : paid ? 'bg-green-500 text-white' : (prepaid ? 'bg-blue-500 text-white hover:bg-blue-600' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600')} ${isBillingStart ? 'ring-2 ring-coin-500' : ''}`}
+                                aria-pressed={paid}
+                                title={prepaid ? `Prepaid: ${formatCurrencyMWK(clientPayments[month]?.prepaid_amount || 0)}` : (isBillingStart ? 'Billing Start' : undefined)}
+                              >
+                                {paid ? '✓' : (prepaid ? 'P' : '')}
+                                {isBillingStart && !paid ? '★' : ''}
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="hidden md:block relative overflow-x-auto sm:overflow-x-visible">
                 <table className="border min-w-[820px] sm:min-w-full">
                   <thead>
-                    <tr className="bg-gray-50">
+                    <tr className="bg-gray-50 dark:bg-gray-800">
                       <th 
                         onClick={() => handleFilterChange({ 
                           sort_field: 'name',
                           sort_direction: filters.sort_field === 'name' && filters.sort_direction === 'asc' ? 'desc' : 'asc'
                         })}
-                        className="sticky left-0 z-20 px-3 py-2 text-left text-xs font-semibold text-gray-600 border cursor-pointer hover:bg-gray-50 bg-white dark:bg-gray-900 w-[200px] min-w-[200px] max-w-[260px]"
+                        className="sticky left-0 z-20 px-3 py-2 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 border cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 bg-white dark:bg-gray-900 w-[200px] min-w-[200px] max-w-[260px]"
                       >
                         <div className="flex items-center gap-2">
                           Client
@@ -443,27 +525,27 @@ export default function PaymentsIndex({
                         </div>
                       </th>
                       {months.map((m, idx) => (
-                        <th key={m} className="px-2 py-2 text-xs font-semibold text-gray-600 border text-center min-w-[56px] w-[56px]">{m}</th>
+                        <th key={m} className="px-2 py-2 text-xs font-semibold text-gray-600 dark:text-gray-300 border text-center min-w-[56px] w-[56px]">{m}</th>
                       ))}
                       <th
                         onClick={() => handleFilterChange({
                           sort_field: 'expected_amount',
                           sort_direction: filters.sort_field === 'expected_amount' && filters.sort_direction === 'asc' ? 'desc' : 'asc'
                         })}
-                        className="hidden sm:table-cell px-2 py-2 text-xs font-semibold text-gray-600 border text-center cursor-pointer hover:bg-gray-50"
+                        className="hidden sm:table-cell px-2 py-2 text-xs font-semibold text-gray-600 dark:text-gray-300 border text-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700"
                       >
                         <div className="flex items-center justify-center gap-2">
                           Expected Amount
                           <SortIcon direction={filters.sort_field === 'expected_amount' ? filters.sort_direction : null} />
                         </div>
                       </th>
-                      <th className="hidden sm:table-cell px-2 py-2 text-xs font-semibold text-gray-600 border text-center">Amount Paid</th>
+                      <th className="hidden sm:table-cell px-2 py-2 text-xs font-semibold text-gray-600 dark:text-gray-300 border text-center">Amount Paid</th>
                       <th
                         onClick={() => handleFilterChange({
                           sort_field: 'outstanding_amount',
                           sort_direction: filters.sort_field === 'outstanding_amount' && filters.sort_direction === 'asc' ? 'desc' : 'asc'
                         })}
-                        className="hidden sm:table-cell px-2 py-2 text-xs font-semibold text-gray-600 border text-center cursor-pointer hover:bg-gray-50"
+                        className="hidden sm:table-cell px-2 py-2 text-xs font-semibold text-gray-600 dark:text-gray-300 border text-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700"
                       >
                         <div className="flex items-center justify-center gap-2">
                           Outstanding
@@ -510,9 +592,9 @@ export default function PaymentsIndex({
                                   disabled={isBeforeBillingStart}
                                   className={`
                                     inline-flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold transition
-                                    ${isBeforeBillingStart ? 'bg-gray-50 text-gray-300 cursor-not-allowed' : 
-                                      paid ? 'bg-green-500 text-white' : (prepaid ? 'bg-blue-500 text-white hover:bg-blue-600' : 'bg-gray-100 text-gray-600 hover:bg-gray-200')}
-                                    ${isBillingStart ? 'ring-2 ring-blue-500' : ''}
+                                    ${isBeforeBillingStart ? 'bg-gray-50 dark:bg-gray-700 text-gray-300 dark:text-gray-500 cursor-not-allowed' : 
+                                      paid ? 'bg-green-500 text-white' : (prepaid ? 'bg-blue-500 text-white hover:bg-blue-600' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600')}
+                                    ${isBillingStart ? 'ring-2 ring-coin-500' : ''}
                                   `}
                                   aria-pressed={paid}
                                   aria-label={`Mark ${months[idx]} paid for ${c.name}`}

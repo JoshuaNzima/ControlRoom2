@@ -41,14 +41,6 @@ class SupervisorController extends Controller
                 'badge' => 'Reliever',
                 'icon' => '🔄',
             ],
-            'on_leave' => [
-                'label' => 'On Leave',
-                'count' => 0,
-                'description' => 'Temporary absence',
-                'color' => 'yellow',
-                'badge' => 'On Leave',
-                'icon' => '✈️',
-            ],
             'resigned' => [
                 'label' => 'Resigned',
                 'count' => Guard::where('status', 'inactive')
@@ -61,7 +53,7 @@ class SupervisorController extends Controller
             ],
             'dismissed' => [
                 'label' => 'Dismissed',
-                'count' => Guard::where('status', 'suspended')
+                'count' => Guard::where('status', 'dismissed')
                     ->where('updated_at', '>=', now()->subYear())
                     ->count(),
                 'description' => 'Past 12 months',
@@ -71,7 +63,9 @@ class SupervisorController extends Controller
             ],
             'absconded' => [
                 'label' => 'Absconded',
-                'count' => 0,
+                'count' => Guard::where('status', 'absconded')
+                    ->where('updated_at', '>=', now()->subYear())
+                    ->count(),
                 'description' => 'Past 12 months',
                 'color' => 'red',
                 'badge' => 'Absconded',
@@ -84,7 +78,7 @@ class SupervisorController extends Controller
 
         // Today's attendance summary
         $attendanceToday = [
-            'present' => Attendance::whereDate('date', $date)->count(),
+            'present' => Attendance::whereDate('date', $date)->whereIn('status', ['present','late'])->count(),
             'on_duty' => Attendance::whereDate('date', $date)
                 ->whereNotNull('check_in_time')
                 ->whereNull('check_out_time')
@@ -93,7 +87,7 @@ class SupervisorController extends Controller
                 ->whereNotNull('check_in_time')
                 ->whereNotNull('check_out_time')
                 ->count(),
-            'absent' => Guard::active()->count() - Attendance::whereDate('date', $date)->count(),
+            'absent' => Attendance::whereDate('date', $date)->where('status', 'absent')->count(),
         ];
 
         // Get supervisor's active guards with attendance
@@ -263,7 +257,7 @@ class SupervisorController extends Controller
                 'total' => Attendance::whereDate('date', $date)->count(),
                 'present' => Attendance::whereDate('date', $date)->where('status', 'present')->count(),
                 'late' => Attendance::whereDate('date', $date)->where('status', 'late')->count(),
-                'absent' => Guard::active()->count() - Attendance::whereDate('date', $date)->count(),
+                'absent' => Attendance::whereDate('date', $date)->where('status', 'absent')->count(),
             ],
             'activeScan' => session('active_checkpoint_scan'),
         ]);
@@ -360,7 +354,7 @@ class SupervisorController extends Controller
             ->whereDate('date', $date)
             ->first();
 
-        if ($existingAttendance) {
+        if ($existingAttendance && $existingAttendance->check_in_time) {
             return back()->withErrors(['message' => 'Guard has already checked in today']);
         }
 
@@ -372,27 +366,44 @@ class SupervisorController extends Controller
 
         $backdateReason = $validated['backdate_reason'] ?? null;
 
-        // Create new attendance record
-        $attendance = new Attendance([
-            'guard_id' => $validated['guard_id'],
-            'supervisor_id' => Auth::id(),
-            'client_site_id' => $siteId,
-            'date' => $date,
-            'check_in_time' => $checkInTime,
-            'check_in_notes' => $validated['notes'] ?? null,
-            'status' => $checkInTime->hour > 8 ? 'late' : 'present',
-            'backdated' => $backdateRequested,
-            'backdated_reason' => $backdateRequested ? $backdateReason : null,
-            'source' => $backdateRequested ? 'supervisor_backdate' : 'supervisor_manual',
-        ]);
+        if ($existingAttendance && !$existingAttendance->check_in_time) {
+            $attendance = $existingAttendance;
+            $attendance->supervisor_id = Auth::id();
+            $attendance->client_site_id = $siteId;
+            $attendance->check_in_time = $checkInTime;
+            $attendance->check_in_notes = trim(($attendance->check_in_notes ?: '') . (($validated['notes'] ?? null) ? ' ' . $validated['notes'] : ''));
+            $attendance->status = $checkInTime->hour > 8 ? 'late' : 'present';
+            $attendance->backdated = $backdateRequested;
+            $attendance->backdated_reason = $backdateRequested ? $backdateReason : null;
+            $attendance->source = $backdateRequested ? 'supervisor_backdate' : 'supervisor_manual';
 
-        // Store check-in photo
-        if ($request->hasFile('photo')) {
-            $path = $request->file('photo')->store('attendance/'.now()->format('Y-m-d'), 'public');
-            $attendance->check_in_photo = $path;
+            if ($request->hasFile('photo')) {
+                $path = $request->file('photo')->store('attendance/'.now()->format('Y-m-d'), 'public');
+                $attendance->check_in_photo = $path;
+            }
+
+            $attendance->save();
+        } else {
+            $attendance = new Attendance([
+                'guard_id' => $validated['guard_id'],
+                'supervisor_id' => Auth::id(),
+                'client_site_id' => $siteId,
+                'date' => $date,
+                'check_in_time' => $checkInTime,
+                'check_in_notes' => $validated['notes'] ?? null,
+                'status' => $checkInTime->hour > 8 ? 'late' : 'present',
+                'backdated' => $backdateRequested,
+                'backdated_reason' => $backdateRequested ? $backdateReason : null,
+                'source' => $backdateRequested ? 'supervisor_backdate' : 'supervisor_manual',
+            ]);
+
+            if ($request->hasFile('photo')) {
+                $path = $request->file('photo')->store('attendance/'.now()->format('Y-m-d'), 'public');
+                $attendance->check_in_photo = $path;
+            }
+
+            $attendance->save();
         }
-
-        $attendance->save();
 
         return back()->with('success', 'Guard checked in successfully');
     }
@@ -413,7 +424,7 @@ class SupervisorController extends Controller
             ->whereNull('check_out_time')
             ->first();
 
-        if (!$attendance) {
+        if (!$attendance || !$attendance->check_in_time) {
             return back()->withErrors(['message' => 'No active check-in found for this guard']);
         }
 

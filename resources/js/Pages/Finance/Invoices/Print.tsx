@@ -51,7 +51,7 @@ export default function PrintInvoice({ invoice }: { invoice: Invoice }) {
         <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="font-semibold">Invoice {invoice.invoice_number}</div>
           <div className="flex gap-2">
-            <button onClick={() => window.print()} className="px-3 py-1.5 rounded-md bg-red-600 text-white hover:bg-red-700">Print</button>
+            <button onClick={() => window.print()} className="px-3 py-1.5 rounded-md bg-coin-600 text-white hover:bg-coin-700">Print</button>
             <button onClick={() => history.back()} className="px-3 py-1.5 rounded-md bg-gray-200 text-gray-800 hover:bg-gray-300 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700">Back</button>
           </div>
         </div>
@@ -132,7 +132,7 @@ export default function PrintInvoice({ invoice }: { invoice: Invoice }) {
             )}
             <div className="flex justify-between text-base font-bold border-t mt-2 pt-2 border-gray-200 dark:border-gray-700">
               <span>Total</span>
-              <span className="text-indigo-600 dark:text-indigo-400">{formatCurrency(invoice.total_amount)}</span>
+              <span className="text-coin-700 dark:text-coin-200">{formatCurrency(invoice.total_amount)}</span>
             </div>
           </div>
         </section>

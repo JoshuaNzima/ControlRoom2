@@ -38,18 +38,18 @@ function getStatusClasses(status: string): { banner: string; badge: string } {
   switch (status) {
     case 'approved':
       return {
-        banner: 'bg-emerald-50 border-emerald-100 text-emerald-800',
-        badge: 'bg-emerald-100 text-emerald-800',
+        banner: 'bg-emerald-50 border-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:border-emerald-800 dark:text-emerald-100',
+        badge: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200',
       };
     case 'rejected':
       return {
-        banner: 'bg-red-50 border-red-100 text-red-800',
-        badge: 'bg-red-100 text-red-800',
+        banner: 'bg-red-50 border-red-100 text-red-800 dark:bg-red-900/30 dark:border-red-800 dark:text-red-100',
+        badge: 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-200',
       };
     default:
       return {
-        banner: 'bg-yellow-50 border-yellow-100 text-yellow-800',
-        badge: 'bg-yellow-100 text-yellow-800',
+        banner: 'bg-amber-50 border-amber-100 text-amber-800 dark:bg-amber-900/30 dark:border-amber-800 dark:text-amber-100',
+        badge: 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200',
       };
   }
 }
@@ -79,7 +79,7 @@ export default function ApprovalShow({ approval }: Props) {
       <Head title="Approval" />
       <div className="py-6">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
-          <div className="flex items-start justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
             <div>
               <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Requisition approval</h1>
               <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
@@ -91,16 +91,16 @@ export default function ApprovalShow({ approval }: Props) {
             </div>
             <Link
               href={route(prefix + '.approvals.index')}
-              className="text-sm font-medium text-red-600 hover:text-red-800"
+              className="w-full sm:w-auto inline-flex items-center justify-center text-sm font-medium text-coin-700 hover:text-coin-800 dark:text-coin-300 dark:hover:text-coin-200"
             >
               Back to approvals
             </Link>
           </div>
 
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+          <div className="rounded-xl border border-gray-200 bg-white shadow-sm shadow-black/5 overflow-hidden dark:border-gray-800 dark:bg-gray-900/60 dark:shadow-none">
             <div
               className={
-                'px-6 py-4 border-b flex items-center justify-between ' + statusClasses.banner
+                'px-4 sm:px-6 py-4 border-b flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 ' + statusClasses.banner
               }
             >
               <div>
@@ -122,7 +122,7 @@ export default function ApprovalShow({ approval }: Props) {
               {expense && (
                 <div className="text-right">
                   <div className="text-xs text-gray-600 dark:text-gray-300 uppercase">Amount</div>
-                  <div className="mt-1 text-2xl font-bold text-emerald-600">
+                  <div className="mt-1 text-2xl font-bold text-emerald-600 dark:text-emerald-300">
                     {formatCurrency(expense.amount)}
                   </div>
                   {expense.status && (
@@ -145,7 +145,7 @@ export default function ApprovalShow({ approval }: Props) {
                   </div>
                   <div>
                     <div className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Category</div>
-                    <span className="inline-flex items-center px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-900 text-blue-800 dark:text-blue-100 text-xs font-medium">
+                    <span className="inline-flex items-center px-3 py-1 rounded-full bg-coin-100 dark:bg-coin-900/30 text-coin-800 dark:text-coin-200 text-xs font-medium">
                       {expense.category
                         ? String(expense.category).replace(/_/g, ' ')
                         : 'Uncategorised'}
@@ -166,7 +166,7 @@ export default function ApprovalShow({ approval }: Props) {
                 </div>
               )}
 
-              <div className="border-t pt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="border-t border-gray-200 dark:border-gray-800 pt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <div className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Approval stage</div>
                   <div className="text-sm text-gray-900 dark:text-gray-100">
@@ -179,7 +179,7 @@ export default function ApprovalShow({ approval }: Props) {
                 </div>
               </div>
 
-              <div className="border-t pt-6 space-y-3">
+              <div className="border-t border-gray-200 dark:border-gray-800 pt-6 space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="text-sm font-medium text-gray-700 dark:text-gray-300">Comments</div>
                   {!isPending && (
@@ -187,7 +187,7 @@ export default function ApprovalShow({ approval }: Props) {
                   )}
                 </div>
                 <textarea
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:bg-gray-900 dark:text-gray-100"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-coin-500 dark:bg-gray-900 dark:text-gray-100"
                   rows={4}
                   value={comments}
                   onChange={(e) => setComments(e.target.value)}
@@ -196,7 +196,7 @@ export default function ApprovalShow({ approval }: Props) {
               </div>
 
               {(approval.created_at || approval.updated_at) && (
-                <div className="border-t pt-4 grid grid-cols-1 md:grid-cols-2 gap-4 text-xs text-gray-600 dark:text-gray-400">
+                <div className="border-t border-gray-200 dark:border-gray-800 pt-4 grid grid-cols-1 md:grid-cols-2 gap-4 text-xs text-gray-600 dark:text-gray-400">
                   {approval.created_at && (
                     <div>
                       <div className="font-medium">Created</div>
@@ -213,25 +213,25 @@ export default function ApprovalShow({ approval }: Props) {
               )}
             </div>
 
-            <div className="px-6 py-4 border-t bg-gray-50 dark:bg-gray-900 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+            <div className="px-4 sm:px-6 py-4 border-t border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
               <div className="text-xs text-gray-500 dark:text-gray-400">
                 {isPending
                   ? 'Review the expense details, add an optional comment, then approve or reject.'
                   : 'No further action is required on this approval.'}
               </div>
               {isPending && (
-                <div className="flex gap-3">
+                <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
                   <button
                     type="button"
                     onClick={() => handleAction('reject')}
-                    className="px-4 py-2 rounded-lg text-sm font-medium bg-red-600 text-white hover:bg-red-700"
+                    className="w-full sm:w-auto inline-flex items-center justify-center px-4 py-2 rounded-lg text-sm font-medium bg-red-600 text-white hover:bg-red-700"
                   >
                     Reject
                   </button>
                   <button
                     type="button"
                     onClick={() => handleAction('approve')}
-                    className="px-4 py-2 rounded-lg text-sm font-medium bg-emerald-600 text-white hover:bg-emerald-700"
+                    className="w-full sm:w-auto inline-flex items-center justify-center px-4 py-2 rounded-lg text-sm font-medium bg-emerald-600 text-white hover:bg-emerald-700"
                   >
                     Approve
                   </button>

@@ -162,11 +162,11 @@ export default function InvoiceIndex({ invoices, summary, filters, clients, defa
 
   const getStatusColor = (status: string) => {
     const colors: Record<string, string> = {
-      draft: 'bg-gray-100 text-gray-800',
-      sent: 'bg-blue-100 text-blue-800',
-      paid: 'bg-green-100 text-green-800',
-      overdue: 'bg-red-100 text-red-800',
-      cancelled: 'bg-yellow-100 text-yellow-800',
+      draft: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200',
+      sent: 'bg-coin-100 text-coin-800 dark:bg-coin-900/30 dark:text-coin-200',
+      paid: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200',
+      overdue: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200',
+      cancelled: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200',
     };
     return colors[status] || 'bg-gray-100 text-gray-800';
   };
@@ -178,12 +178,12 @@ export default function InvoiceIndex({ invoices, summary, filters, clients, defa
       <div className="py-6">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
           {/* Header */}
-          <div className="flex justify-between items-center">
-            <h1 className="text-3xl font-bold text-gray-900">Invoices</h1>
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Invoices</h1>
             <button
               type="button"
               onClick={() => setCreateOpen(true)}
-              className="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
+              className="w-full sm:w-auto inline-flex items-center justify-center px-4 py-2 bg-coin-700 text-white rounded-lg hover:bg-coin-600 transition"
             >
               + New Invoice
             </button>
@@ -197,7 +197,7 @@ export default function InvoiceIndex({ invoices, summary, filters, clients, defa
                 <button
                   key={s || 'all'}
                   onClick={() => setStatusAndFetch(s)}
-                  className={`px-3 py-1.5 rounded-lg text-sm whitespace-nowrap ${active ? 'bg-indigo-600 text-white' : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-700 dark:hover:bg-gray-700'}`}
+                  className={`px-3 py-1.5 rounded-lg text-sm whitespace-nowrap ${active ? 'bg-coin-700 text-white' : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-700 dark:hover:bg-gray-700'}`}
                 >
                   {label}
                 </button>
@@ -207,44 +207,44 @@ export default function InvoiceIndex({ invoices, summary, filters, clients, defa
 
           {/* Summary Cards */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="bg-white rounded-lg shadow p-6">
-              <p className="text-sm text-gray-600 mb-2">Total Invoiced</p>
-              <p className="text-3xl font-bold text-gray-900">
+            <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg shadow p-6">
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Total Invoiced</p>
+              <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">
                 {formatCurrency(summary.total)}
               </p>
             </div>
-            <div className="bg-white rounded-lg shadow p-6">
-              <p className="text-sm text-gray-600 mb-2">Paid</p>
-              <p className="text-3xl font-bold text-green-600">
+            <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg shadow p-6">
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Paid</p>
+              <p className="text-3xl font-bold text-green-600 dark:text-green-400">
                 {formatCurrency(summary.paid)}
               </p>
             </div>
-            <div className="bg-white rounded-lg shadow p-6">
-              <p className="text-sm text-gray-600 mb-2">Unpaid</p>
-              <p className="text-3xl font-bold text-yellow-600">
+            <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg shadow p-6">
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Unpaid</p>
+              <p className="text-3xl font-bold text-yellow-600 dark:text-yellow-400">
                 {formatCurrency(summary.unpaid)}
               </p>
             </div>
-            <div className="bg-white rounded-lg shadow p-6">
-              <p className="text-sm text-gray-600 mb-2">Overdue</p>
-              <p className="text-3xl font-bold text-red-600">
+            <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg shadow p-6">
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Overdue</p>
+              <p className="text-3xl font-bold text-red-600 dark:text-red-400">
                 {summary.overdue} invoices
               </p>
             </div>
           </div>
 
           {/* Filters */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Filters</h2>
+          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg shadow p-6">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Filters</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Status
                 </label>
                 <select
                   value={filterStatus}
                   onChange={(e) => setFilterStatus(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-coin-500"
                 >
                   <option value="">All Status</option>
                   {statuses.map((status) => (
@@ -255,44 +255,44 @@ export default function InvoiceIndex({ invoices, summary, filters, clients, defa
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Start Date
                 </label>
                 <input
                   type="date"
                   value={startDate}
                   onChange={(e) => setStartDate(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-coin-500"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   End Date
                 </label>
                 <input
                   type="date"
                   value={endDate}
                   onChange={(e) => setEndDate(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-coin-500"
                 />
               </div>
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
               <button
                 onClick={handleFilter}
-                className="inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition text-sm"
+                className="w-full sm:w-auto inline-flex items-center justify-center px-4 py-2 bg-coin-700 text-white rounded-lg hover:bg-coin-600 transition text-sm"
               >
                 Apply Filters
               </button>
               <button
                 onClick={handleClearFilters}
-                className="inline-flex items-center px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition text-sm"
+                className="w-full sm:w-auto inline-flex items-center justify-center px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition text-sm dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700"
               >
                 Clear Filters
               </button>
               <button
                 onClick={handleExportCsv}
-                className="inline-flex items-center px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition text-sm"
+                className="w-full sm:w-auto inline-flex items-center justify-center px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition text-sm"
               >
                 Export CSV
               </button>
@@ -300,66 +300,117 @@ export default function InvoiceIndex({ invoices, summary, filters, clients, defa
           </div>
 
           {/* Invoices Table */}
-          <div className="bg-white rounded-lg shadow overflow-hidden">
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b">
+          <div className="md:hidden space-y-3">
+            {invoices.data.length > 0 ? (
+              invoices.data.map((invoice) => (
+                <div key={invoice.id} className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg shadow p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">{invoice.invoice_number}</div>
+                      <div className="text-sm text-gray-600 dark:text-gray-300 truncate">{invoice.client_name}</div>
+                    </div>
+                    <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(invoice.status)}`}>
+                      {invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1)}
+                    </span>
+                  </div>
+
+                  <div className="mt-3 grid grid-cols-1 gap-2 text-sm">
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-gray-500 dark:text-gray-400">Amount</span>
+                      <span className="font-semibold text-gray-900 dark:text-gray-100">{formatCurrency(invoice.total_amount)}</span>
+                    </div>
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-gray-500 dark:text-gray-400">Due</span>
+                      <span className="text-gray-700 dark:text-gray-200">{formatDate(invoice.due_date)}</span>
+                    </div>
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-gray-500 dark:text-gray-400">Created By</span>
+                      <span className="text-gray-700 dark:text-gray-200 truncate">{invoice.user?.name}</span>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <Link
+                      href={route('finance.invoices.show', invoice.id)}
+                      className="px-3 py-1.5 rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700"
+                    >
+                      View
+                    </Link>
+                    {invoice.status === 'draft' && (
+                      <button
+                        type="button"
+                        onClick={() => openEdit(invoice.id)}
+                        className="px-3 py-1.5 rounded-md bg-coin-700 text-white hover:bg-coin-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                        disabled={loadingId === invoice.id}
+                      >
+                        {loadingId === invoice.id ? 'Opening…' : 'Edit'}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg shadow p-6 text-center text-gray-500 dark:text-gray-400">
+                No invoices found.
+              </div>
+            )}
+          </div>
+
+          <div className="hidden md:block bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg shadow overflow-x-auto">
+            <table className="min-w-[900px] w-full">
+              <thead className="bg-gray-50 dark:bg-gray-950 border-b border-gray-200 dark:border-gray-800">
                 <tr>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
+                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">
                     Invoice #
                   </th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
+                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">
                     Client
                   </th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
+                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">
                     Amount
                   </th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
+                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">
                     Due Date
                   </th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
+                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">
                     Status
                   </th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
+                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">
                     Created By
                   </th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
+                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">
                     Actions
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y">
+              <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
                 {invoices.data.length > 0 ? (
                   invoices.data.map((invoice) => (
-                    <tr key={invoice.id} className="hover:bg-gray-50 transition">
-                      <td className="px-6 py-4 text-sm font-medium text-indigo-600">
+                    <tr key={invoice.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/60 transition">
+                      <td className="px-6 py-4 text-sm font-medium text-coin-700 dark:text-coin-200">
                         {invoice.invoice_number}
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-900">
+                      <td className="px-6 py-4 text-sm text-gray-900 dark:text-gray-100">
                         {invoice.client_name}
                       </td>
-                      <td className="px-6 py-4 text-sm font-semibold text-gray-900">
+                      <td className="px-6 py-4 text-sm font-semibold text-gray-900 dark:text-gray-100">
                         {formatCurrency(invoice.total_amount)}
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-600">
+                      <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-300">
                         {formatDate(invoice.due_date)}
                       </td>
                       <td className="px-6 py-4 text-sm">
-                        <span
-                          className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(
-                            invoice.status
-                          )}`}
-                        >
-                          {invoice.status.charAt(0).toUpperCase() +
-                            invoice.status.slice(1)}
+                        <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(invoice.status)}`}>
+                          {invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1)}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-600">
+                      <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-300">
                         {invoice.user.name}
                       </td>
                       <td className="px-6 py-4 text-sm space-x-2">
                         <Link
                           href={route('finance.invoices.show', invoice.id)}
-                          className="text-indigo-600 hover:text-indigo-900 font-medium"
+                          className="text-coin-700 hover:text-coin-800 dark:text-coin-200 dark:hover:text-coin-100 font-medium"
                         >
                           View
                         </Link>
@@ -367,7 +418,7 @@ export default function InvoiceIndex({ invoices, summary, filters, clients, defa
                           <button
                             type="button"
                             onClick={() => openEdit(invoice.id)}
-                            className="text-blue-600 hover:text-blue-900 font-medium disabled:opacity-50"
+                            className="text-coin-700 hover:text-coin-800 dark:text-coin-200 dark:hover:text-coin-100 font-medium disabled:opacity-50"
                             disabled={loadingId === invoice.id}
                           >
                             {loadingId === invoice.id ? 'Opening…' : 'Edit'}
@@ -378,7 +429,7 @@ export default function InvoiceIndex({ invoices, summary, filters, clients, defa
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={7} className="px-6 py-8 text-center text-gray-500">
+                    <td colSpan={7} className="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
                       No invoices found.
                     </td>
                   </tr>
@@ -389,15 +440,15 @@ export default function InvoiceIndex({ invoices, summary, filters, clients, defa
 
           {/* Pagination */}
           {invoices.meta && invoices.meta.last_page > 1 && (
-            <div className="flex justify-center gap-2">
+            <div className="flex flex-wrap justify-center gap-2">
               {invoices.links && invoices.links.map((link: any, index: number) => (
                 <Link
                   key={index}
                   href={link.url}
                   className={`px-3 py-2 rounded ${
                     link.active
-                      ? 'bg-indigo-600 text-white'
-                      : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                      ? 'bg-coin-700 text-white'
+                      : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 dark:bg-gray-900 dark:text-gray-200 dark:border-gray-700 dark:hover:bg-gray-800'
                   }`}
                   dangerouslySetInnerHTML={{ __html: link.label }}
                 />
@@ -569,7 +620,7 @@ function CreateInvoiceModal({ open, onClose, clients, defaultBilling }: { open: 
                           if ((j as any)?.invoice_number) setData('invoice_number', (j as any).invoice_number);
                         } catch {}
                       }}
-                      className="px-3 py-2 rounded-lg border text-sm bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
+                      className="px-3 py-2 rounded-lg border text-sm bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-200 dark:border-emerald-800 dark:hover:bg-emerald-900/40"
                       title="Auto-generate"
                     >
                       Auto
@@ -662,7 +713,7 @@ function CreateInvoiceModal({ open, onClose, clients, defaultBilling }: { open: 
                     type="button"
                     onClick={loadClientServices}
                     disabled={!data.client_id || servicesLoading}
-                    className={`px-3 py-1.5 rounded-full text-sm border ${(!data.client_id || servicesLoading) ? 'bg-gray-200 text-gray-500 border-gray-300 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700' : 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700'}`}
+                    className={`px-3 py-1.5 rounded-full text-sm border ${(!data.client_id || servicesLoading) ? 'bg-gray-200 text-gray-500 border-gray-300 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700' : 'bg-coin-700 text-white border-coin-700 hover:bg-coin-600'}`}
                   >
                     {servicesLoading ? 'Loading…' : 'Load Client Services'}
                   </button>
@@ -757,7 +808,7 @@ function CreateInvoiceModal({ open, onClose, clients, defaultBilling }: { open: 
               </div>
               <div className="flex justify-between items-center border-t pt-4 text-lg font-bold">
                 <span className="text-gray-900 dark:text-gray-100">Total Due</span>
-                <span className="text-indigo-600">{formatCurrency(Number(data.total_amount as any))}</span>
+                <span className="text-coin-700 dark:text-coin-200">{formatCurrency(Number(data.total_amount as any))}</span>
               </div>
             </div>
           </div>
@@ -774,8 +825,8 @@ function CreateInvoiceModal({ open, onClose, clients, defaultBilling }: { open: 
               />
             </div>
             <div className="flex gap-3">
-              <button type="button" onClick={onClose} className="flex-1 px-4 py-3 rounded-xl bg-gray-100 text-gray-700 hover:bg-gray-200">Cancel</button>
-              <button type="submit" disabled={processing} className="flex-1 px-4 py-3 rounded-xl bg-red-600 text-white hover:bg-red-700">{processing ? 'Saving…' : 'Save Invoice'}</button>
+              <button type="button" onClick={onClose} className="flex-1 px-4 py-3 rounded-xl bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700">Cancel</button>
+              <button type="submit" disabled={processing} className="flex-1 px-4 py-3 rounded-xl bg-coin-700 text-white hover:bg-coin-600">{processing ? 'Saving…' : 'Save Invoice'}</button>
             </div>
           </aside>
         </div>
@@ -932,62 +983,114 @@ function EditInvoiceModal({ open, onClose, invoice }: { open: boolean; onClose: 
                 type="button"
                 onClick={loadClientServices}
                 disabled={!((invoice as any)?.client_id) || servicesLoading}
-                className={`px-3 py-1.5 rounded-full text-sm border ${(!((invoice as any)?.client_id) || servicesLoading) ? 'bg-gray-200 text-gray-500 border-gray-300 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700' : 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700'}`}
+                className={`px-3 py-1.5 rounded-full text-sm border ${(!((invoice as any)?.client_id) || servicesLoading) ? 'bg-gray-200 text-gray-500 border-gray-300 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700' : 'bg-coin-700 text-white border-coin-700 hover:bg-coin-600'}`}
               >
                 {servicesLoading ? 'Loading…' : 'Load Client Services'}
               </button>
               <button type="button" onClick={addItem} className="px-3 py-1.5 bg-emerald-600 text-white rounded-full text-sm hover:bg-emerald-700">+ Add Item</button>
             </div>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-gray-50 dark:bg-gray-800">
-                <tr>
-                  <th className="px-3 py-2 text-left text-gray-700 dark:text-gray-300">Description</th>
-                  <th className="px-3 py-2 text-right text-gray-700 dark:text-gray-300 w-24">Qty</th>
-                  <th className="px-3 py-2 text-right text-gray-700 dark:text-gray-300 w-32">Unit Price</th>
-                  <th className="px-3 py-2 text-right text-gray-700 dark:text-gray-300 w-32">Total</th>
-                  <th className="px-3 py-2 text-center text-gray-700 dark:text-gray-300 w-16">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                {lineItems.map((item, i) => (
-                  <tr key={i}>
-                    <td className="px-3 py-2">
+          <div className="overflow-x-auto md:overflow-x-hidden">
+            <div className="md:hidden">
+              {lineItems.map((item, i) => (
+                <div key={i} className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 shadow p-4 mb-4">
+                  <div className="grid grid-cols-1 gap-3">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 dark:text-gray-300">Description</label>
                       <input
                         value={item.description}
                         onChange={(e) => updateItem(i, 'description', e.target.value)}
-                        className="w-full px-2 py-1 rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
+                        className="mt-1 w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100"
                         placeholder="Describe the service or product"
                       />
-                    </td>
-                    <td className="px-3 py-2 text-right">
-                      <input
-                        type="number"
-                        min={1}
-                        value={item.quantity}
-                        onChange={(e) => updateItem(i, 'quantity', e.target.value)}
-                        className="w-full px-2 py-1 rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-right text-gray-900 dark:text-gray-100"
-                      />
-                    </td>
-                    <td className="px-3 py-2 text-right">
-                      <input
-                        type="number"
-                        min={0}
-                        step="0.01"
-                        value={item.unit_price}
-                        onChange={(e) => updateItem(i, 'unit_price', e.target.value)}
-                        className="w-full px-2 py-1 rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-right text-gray-900 dark:text-gray-100"
-                      />
-                    </td>
-                    <td className="px-3 py-2 text-right font-semibold text-gray-900 dark:text-gray-100">{formatCurrency((Number(item.quantity) || 0) * (Number(item.unit_price) || 0))}</td>
-                    <td className="px-3 py-2 text-center">
-                      <button type="button" onClick={() => removeItem(i)} className="text-red-600 hover:text-red-800 text-xs font-medium">Remove</button>
-                    </td>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 dark:text-gray-300">Quantity</label>
+                        <input
+                          type="number"
+                          min={1}
+                          value={item.quantity}
+                          onChange={(e) => updateItem(i, 'quantity', e.target.value)}
+                          className="mt-1 w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 dark:text-gray-300">Unit Price</label>
+                        <input
+                          type="number"
+                          min={0}
+                          step="0.01"
+                          value={item.unit_price}
+                          onChange={(e) => updateItem(i, 'unit_price', e.target.value)}
+                          className="mt-1 w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-sm text-gray-600 dark:text-gray-300">Line total</span>
+                      <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">{formatCurrency((Number(item.quantity) || 0) * (Number(item.unit_price) || 0))}</span>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 flex items-center justify-end">
+                    <button type="button" onClick={() => removeItem(i)} className="text-red-600 hover:text-red-800 text-xs font-medium">Remove</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="hidden md:block">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50 dark:bg-gray-800">
+                  <tr>
+                    <th className="px-3 py-2 text-left text-gray-700 dark:text-gray-300">Description</th>
+                    <th className="px-3 py-2 text-right text-gray-700 dark:text-gray-300 w-24">Qty</th>
+                    <th className="px-3 py-2 text-right text-gray-700 dark:text-gray-300 w-32">Unit Price</th>
+                    <th className="px-3 py-2 text-right text-gray-700 dark:text-gray-300 w-32">Total</th>
+                    <th className="px-3 py-2 text-center text-gray-700 dark:text-gray-300 w-16">Action</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                  {lineItems.map((item, i) => (
+                    <tr key={i}>
+                      <td className="px-3 py-2">
+                        <input
+                          value={item.description}
+                          onChange={(e) => updateItem(i, 'description', e.target.value)}
+                          className="w-full px-2 py-1 rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
+                          placeholder="Describe the service or product"
+                        />
+                      </td>
+                      <td className="px-3 py-2 text-right">
+                        <input
+                          type="number"
+                          min={1}
+                          value={item.quantity}
+                          onChange={(e) => updateItem(i, 'quantity', e.target.value)}
+                          className="w-full px-2 py-1 rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-right text-gray-900 dark:text-gray-100"
+                        />
+                      </td>
+                      <td className="px-3 py-2 text-right">
+                        <input
+                          type="number"
+                          min={0}
+                          step="0.01"
+                          value={item.unit_price}
+                          onChange={(e) => updateItem(i, 'unit_price', e.target.value)}
+                          className="w-full px-2 py-1 rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-right text-gray-900 dark:text-gray-100"
+                        />
+                      </td>
+                      <td className="px-3 py-2 text-right font-semibold text-gray-900 dark:text-gray-100">{formatCurrency((Number(item.quantity) || 0) * (Number(item.unit_price) || 0))}</td>
+                      <td className="px-3 py-2 text-center">
+                        <button type="button" onClick={() => removeItem(i)} className="text-red-600 hover:text-red-800 text-xs font-medium">Remove</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
 
@@ -1027,13 +1130,13 @@ function EditInvoiceModal({ open, onClose, invoice }: { open: boolean; onClose: 
           </div>
           <div className="flex justify-between items-center border-t pt-4 text-lg font-bold">
             <span className="text-gray-900 dark:text-gray-100">Total Due</span>
-            <span className="text-indigo-600">{formatCurrency(Number(data.total_amount as any))}</span>
+            <span className="text-coin-700 dark:text-coin-200">{formatCurrency(Number(data.total_amount as any))}</span>
           </div>
         </div>
 
         <div className="flex gap-3">
-          <button type="button" onClick={onClose} className="flex-1 px-4 py-3 rounded-xl bg-gray-100 text-gray-700 hover:bg-gray-200">Cancel</button>
-          <button type="submit" disabled={processing} className="flex-1 px-4 py-3 rounded-xl bg-red-600 text-white hover:bg-red-700">{processing ? 'Saving…' : 'Save Changes'}</button>
+          <button type="button" onClick={onClose} className="flex-1 px-4 py-3 rounded-xl bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700">Cancel</button>
+          <button type="submit" disabled={processing} className="flex-1 px-4 py-3 rounded-xl bg-coin-700 text-white hover:bg-coin-600">{processing ? 'Saving…' : 'Save Changes'}</button>
         </div>
       </form>
     </Modal>

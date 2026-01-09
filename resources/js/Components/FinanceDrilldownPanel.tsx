@@ -1,4 +1,6 @@
 import React from 'react';
+import Skeleton from '@/Components/ui/skeleton';
+import EmptyState from '@/Components/ui/empty-state';
 
 type Invoice = { id: number; invoice_number?: string | null; amount: number; status?: string; date?: string; user?: string | null };
 type Expense = { id: number; amount: number; category?: string; status?: string; date?: string; user?: string | null; notes?: string | null };
@@ -46,6 +48,8 @@ export default function FinanceDrilldownPanel({ open, title, data, onClose }: Pr
 
   if (!open) return null;
 
+  const isLoading = data == null;
+
   const invoices = (data?.invoices ?? []).slice();
   const expenses = (data?.expenses ?? []).slice();
 
@@ -75,28 +79,74 @@ export default function FinanceDrilldownPanel({ open, title, data, onClose }: Pr
   };
 
   return (
-    <div className="fixed right-0 top-0 bottom-0 z-50 w-full md:w-1/3 bg-white dark:bg-gray-800 shadow-lg overflow-auto">
-      <div className="p-4 border-b flex items-center justify-between">
+    <div className="fixed right-0 top-0 bottom-0 z-50 w-full md:w-1/3 overflow-auto border-l border-gray-200 bg-white shadow-xl shadow-black/10 dark:border-gray-800 dark:bg-gray-950 dark:shadow-black/40">
+      <div className="p-4 border-b border-gray-200 dark:border-gray-800 bg-white/80 backdrop-blur-sm dark:bg-gray-950/80 flex items-center justify-between">
         <div>
-          <div className="font-semibold">{title || 'Details'}</div>
-          <div className="text-xs text-gray-500">{data?.totals ? `Invoices: ${formatCurrency(data.totals.invoices_total || 0)} • Requisitions: ${formatCurrency(data.totals.expenses_total || 0)}` : ''}</div>
+          <div className="font-semibold text-gray-900 dark:text-gray-100">{title || 'Details'}</div>
+          {isLoading ? (
+            <div className="mt-1 flex gap-2">
+              <Skeleton className="h-3 w-40" />
+            </div>
+          ) : (
+            <div className="text-xs text-gray-500 dark:text-gray-400">
+              {data?.totals ? `Invoices: ${formatCurrency(data.totals.invoices_total || 0)} • Requisitions: ${formatCurrency(data.totals.expenses_total || 0)}` : ''}
+            </div>
+          )}
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={() => downloadCSV(`${title || 'drilldown'}-invoices.csv`, data?.invoices ?? [])} className="text-sm px-2 py-1 bg-gray-100 rounded">CSV Invoices</button>
-          <button onClick={() => downloadCSV(`${title || 'drilldown'}-requisitions.csv`, data?.expenses ?? [])} className="text-sm px-2 py-1 bg-gray-100 rounded">CSV Requisitions</button>
-          <button onClick={onClose} className="text-sm px-2 py-1 bg-red-100 text-red-800 rounded">Close</button>
+          <button
+            disabled={isLoading || (data?.invoices?.length ?? 0) === 0}
+            onClick={() => downloadCSV(`${title || 'drilldown'}-invoices.csv`, data?.invoices ?? [])}
+            className="text-sm px-2 py-1 rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:pointer-events-none dark:border-gray-800 dark:bg-gray-950 dark:text-gray-200 dark:hover:bg-gray-900"
+          >
+            CSV Invoices
+          </button>
+          <button
+            disabled={isLoading || (data?.expenses?.length ?? 0) === 0}
+            onClick={() => downloadCSV(`${title || 'drilldown'}-requisitions.csv`, data?.expenses ?? [])}
+            className="text-sm px-2 py-1 rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:pointer-events-none dark:border-gray-800 dark:bg-gray-950 dark:text-gray-200 dark:hover:bg-gray-900"
+          >
+            CSV Requisitions
+          </button>
+          <button
+            onClick={onClose}
+            className="text-sm px-2 py-1 rounded-lg bg-coin-700 text-white hover:bg-coin-600"
+          >
+            Close
+          </button>
         </div>
       </div>
 
       <div className="p-4">
         <div className="flex gap-2 mb-3">
-          <button className={`px-3 py-1 rounded ${tab === 'invoices' ? 'bg-red-800 text-white' : 'bg-gray-100'}`} onClick={() => { setTab('invoices'); setPage(1); }}>Invoices ({invoices.length})</button>
-          <button className={`px-3 py-1 rounded ${tab === 'expenses' ? 'bg-red-800 text-white' : 'bg-gray-100'}`} onClick={() => { setTab('expenses'); setPage(1); }}>Requisitions ({expenses.length})</button>
+          <button
+            disabled={isLoading}
+            className={`px-3 py-1 rounded-lg text-sm font-medium disabled:opacity-50 ${tab === 'invoices'
+              ? 'bg-coin-700 text-white'
+              : 'bg-gray-100 text-gray-800 hover:bg-gray-200 dark:bg-gray-900 dark:text-gray-100 dark:hover:bg-gray-800'}`}
+            onClick={() => { setTab('invoices'); setPage(1); }}
+          >
+            Invoices ({isLoading ? '—' : invoices.length})
+          </button>
+          <button
+            disabled={isLoading}
+            className={`px-3 py-1 rounded-lg text-sm font-medium disabled:opacity-50 ${tab === 'expenses'
+              ? 'bg-coin-700 text-white'
+              : 'bg-gray-100 text-gray-800 hover:bg-gray-200 dark:bg-gray-900 dark:text-gray-100 dark:hover:bg-gray-800'}`}
+            onClick={() => { setTab('expenses'); setPage(1); }}
+          >
+            Requisitions ({isLoading ? '—' : expenses.length})
+          </button>
         </div>
 
         <div className="mb-3 flex items-center gap-2">
-          <div className="text-sm text-gray-600">Sort by:</div>
-          <select value={sortKey} onChange={(e) => setSortKey(e.target.value)} className="px-2 py-1 border rounded">
+          <div className="text-sm text-gray-600 dark:text-gray-300">Sort by:</div>
+          <select
+            disabled={isLoading}
+            value={sortKey}
+            onChange={(e) => setSortKey(e.target.value)}
+            className="px-2 py-1 rounded-lg border border-gray-200 bg-white text-sm text-gray-900 shadow-sm shadow-black/5 disabled:opacity-50 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-100 dark:shadow-none"
+          >
             {tab === 'invoices' ? (
               <>
                 <option value="date">Date</option>
@@ -111,28 +161,69 @@ export default function FinanceDrilldownPanel({ open, title, data, onClose }: Pr
               </>
             )}
           </select>
-          <button onClick={() => setSortDir(sortDir === 'asc' ? 'desc' : 'asc')} className="px-2 py-1 border rounded">{sortDir === 'asc' ? 'Asc' : 'Desc'}</button>
+          <button
+            disabled={isLoading}
+            onClick={() => setSortDir(sortDir === 'asc' ? 'desc' : 'asc')}
+            className="px-2 py-1 rounded-lg border border-gray-200 bg-white text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-200 dark:hover:bg-gray-900"
+          >
+            {sortDir === 'asc' ? 'Asc' : 'Desc'}
+          </button>
         </div>
 
         <div>
-          <ul className="divide-y">
-            {visible.map((r: any) => (
-              <li key={r.id} className="py-2 flex justify-between">
-                <div>
-                  <div className="text-sm font-medium">{tab === 'invoices' ? `#${r.invoice_number ?? r.id}` : r.category ?? 'Requisition'}</div>
-                  <div className="text-xs text-gray-500">{r.date} • {r.user ?? '—'}</div>
+          {isLoading ? (
+            <div className="divide-y divide-gray-200 dark:divide-gray-800">
+              {Array.from({ length: 6 }).map((_, idx) => (
+                <div key={idx} className="py-3 flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1 space-y-2">
+                    <Skeleton className="h-4 w-40" />
+                    <Skeleton className="h-3 w-56" />
+                  </div>
+                  <Skeleton className="h-4 w-20" />
                 </div>
-                <div className="text-sm font-medium">{formatCurrency(r.amount)}</div>
-              </li>
-            ))}
-          </ul>
+              ))}
+            </div>
+          ) : visible.length === 0 ? (
+            <EmptyState
+              title={tab === 'invoices' ? 'No invoices found' : 'No requisitions found'}
+              description={tab === 'invoices'
+                ? 'There are no invoices for this selection.'
+                : 'There are no requisitions for this selection.'}
+            />
+          ) : (
+            <ul className="divide-y divide-gray-200 dark:divide-gray-800">
+              {visible.map((r: any) => (
+                <li key={r.id} className="py-3 flex justify-between gap-4">
+                  <div className="min-w-0">
+                    <div className="text-sm font-medium text-gray-900 dark:text-gray-100 break-words">
+                      {tab === 'invoices' ? `#${r.invoice_number ?? r.id}` : r.category ?? 'Requisition'}
+                    </div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400 break-words">{r.date} • {r.user ?? '—'}</div>
+                  </div>
+                  <div className="text-sm font-semibold text-gray-900 dark:text-gray-100 whitespace-nowrap">{formatCurrency(r.amount)}</div>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
 
         <div className="mt-4 flex items-center justify-between">
-          <div className="text-sm text-gray-600">Page {page} / {totalPages}</div>
+          <div className="text-sm text-gray-600 dark:text-gray-300">Page {page} / {totalPages}</div>
           <div className="flex items-center gap-2">
-            <button disabled={page <= 1} onClick={() => setPage(p => Math.max(1, p - 1))} className="px-2 py-1 border rounded disabled:opacity-50">Prev</button>
-            <button disabled={page >= totalPages} onClick={() => setPage(p => Math.min(totalPages, p + 1))} className="px-2 py-1 border rounded disabled:opacity-50">Next</button>
+            <button
+              disabled={isLoading || page <= 1}
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+              className="px-2 py-1 rounded-lg border border-gray-200 bg-white text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:pointer-events-none dark:border-gray-800 dark:bg-gray-950 dark:text-gray-200 dark:hover:bg-gray-900"
+            >
+              Prev
+            </button>
+            <button
+              disabled={isLoading || page >= totalPages}
+              onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+              className="px-2 py-1 rounded-lg border border-gray-200 bg-white text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:pointer-events-none dark:border-gray-800 dark:bg-gray-950 dark:text-gray-200 dark:hover:bg-gray-900"
+            >
+              Next
+            </button>
           </div>
         </div>
       </div>

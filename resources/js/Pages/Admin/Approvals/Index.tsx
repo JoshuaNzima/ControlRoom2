@@ -1,27 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 import AdminLayout from '@/Layouts/AdminLayout';
-import Modal from '@/Components/Modal';
-import { formatCurrencyMWK } from '@/Components/format';
+import { formatCurrencyMWK, formatDateMW } from '@/Components/format';
 import RequisitionViewModal from '@/Components/Requisitions/RequisitionViewModal';
-
-interface ExpenseLite {
-  id: number;
-  description?: string | null;
-  amount?: number | null;
-  category?: string | null;
-  expense_date?: string | null;
-}
-
-interface Approval {
-  id: number;
-  status: 'pending' | 'approved' | 'rejected';
-  stage?: number | null;
-  comments?: string | null;
-  expense?: ExpenseLite | null;
-  approver?: { id: number; name: string } | null;
-  created_at?: string;
-}
+import PageHeader from '@/Components/ui/page-header';
+import EmptyState from '@/Components/ui/empty-state';
 
 interface BudgetLite {
   id: number;
@@ -31,7 +14,6 @@ interface BudgetLite {
 }
 
 interface Props {
-  approvals: Approval[];
   budgets: { data: BudgetLite[]; meta?: any } | BudgetLite[];
   selectedTab?: 'requisitions' | 'budgets';
   requisitionsPending?: RequisitionLite[];
@@ -50,11 +32,8 @@ interface RequisitionLite {
   needed_by?: string | null;
 }
 
-export default function AdminApprovalsIndex({ approvals = [], budgets, selectedTab = 'requisitions', requisitionsPending = [], requisitionsExpired = [], reqFilter = 'pending' }: Props) {
+export default function AdminApprovalsIndex({ budgets, selectedTab = 'requisitions', requisitionsPending = [], requisitionsExpired = [], reqFilter = 'pending' }: Props) {
   const [tab, setTab] = useState<'requisitions' | 'budgets'>(selectedTab);
-  const [viewOpen, setViewOpen] = useState(false);
-  const [viewing, setViewing] = useState<Approval | null>(null);
-  const [loadingId, setLoadingId] = useState<number | null>(null);
   const [reqOpen, setReqOpen] = useState(false);
   const [reqId, setReqId] = useState<number | null>(null);
 
@@ -62,25 +41,11 @@ export default function AdminApprovalsIndex({ approvals = [], budgets, selectedT
     if (tab !== selectedTab) {
       router.get(route('admin.approvals.index'), { tab }, { preserveState: true, replace: true });
     }
-  }, [tab]);
+  }, [tab, selectedTab]);
 
-  const openView = async (id: number) => {
-    setLoadingId(id);
-    try {
-      const res = await fetch(route('admin.approvals.show', id), {
-        headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
-      });
-      if (res.ok) {
-        const json = await res.json();
-        setViewing(json as Approval);
-        setViewOpen(true);
-      } else {
-        router.visit(route('admin.approvals.show', id));
-      }
-    } finally {
-      setLoadingId(null);
-    }
-  };
+  useEffect(() => {
+    setTab(selectedTab);
+  }, [selectedTab]);
 
   const approveReq = (r: RequisitionLite) => {
     if (!confirm('Approve this requisition?')) return;
@@ -93,6 +58,13 @@ export default function AdminApprovalsIndex({ approvals = [], budgets, selectedT
     router.post(route('requisitions.decline', r.id), { notes_admin: reason }, { preserveScroll: true });
   };
 
+  const requestedByLabel = (r: RequisitionLite) => {
+    return r.requestedBy?.name
+      ?? (typeof (r as any).requested_by === 'object'
+        ? ((r as any).requested_by?.name ?? '-')
+        : ((r as any).requested_by ? `User #${(r as any).requested_by}` : '-'));
+  };
+
   const reqStatusColors: Record<string, string> = {
     pending_admin: 'px-2 py-1 rounded text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-500/20 dark:text-yellow-200 border border-yellow-500/30',
     needs_revision: 'px-2 py-1 rounded text-xs font-medium bg-red-100 text-red-800 dark:bg-red-500/10 dark:text-red-300 border border-red-500/30',
@@ -103,17 +75,6 @@ export default function AdminApprovalsIndex({ approvals = [], budgets, selectedT
 
   const reqs = reqFilter === 'expired' ? (requisitionsExpired || []) : (requisitionsPending || []);
 
-  const doApprove = async (a: Approval) => {
-    if (!confirm('Approve this requisition?')) return;
-    router.post(route('admin.approvals.approve', a.id), {}, { preserveScroll: true });
-  };
-
-  const doReject = async (a: Approval) => {
-    const reason = prompt('Reason (optional)') || '';
-    if (!confirm('Reject this requisition?')) return;
-    router.post(route('admin.approvals.reject', a.id), { comments: reason }, { preserveScroll: true });
-  };
-
   const budgetsArr: BudgetLite[] = Array.isArray(budgets) ? budgets : (budgets?.data || []);
 
   return (
@@ -121,32 +82,39 @@ export default function AdminApprovalsIndex({ approvals = [], budgets, selectedT
       <Head title="Approvals" />
       <div className="py-6">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
-          <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-bold text-gray-900">Approvals</h1>
-            <div className="inline-flex rounded-lg border border-gray-200 overflow-hidden">
-              <button
-                onClick={() => setTab('requisitions')}
-                className={`px-4 py-2 text-sm ${tab === 'requisitions' ? 'bg-red-600 text-white' : 'bg-white text-gray-700'}`}
-              >
-                Requisitions
-              </button>
-              <button
-                onClick={() => setTab('budgets')}
-                className={`px-4 py-2 text-sm ${tab === 'budgets' ? 'bg-red-600 text-white' : 'bg-white text-gray-700'}`}
-              >
-                Budgets
-              </button>
-            </div>
-          </div>
+          <PageHeader
+            title="Approvals"
+            description="Review requisitions and budgets awaiting action."
+            actions={(
+              <div className="inline-flex w-full sm:w-auto rounded-lg border border-gray-200 dark:border-gray-800 overflow-hidden">
+                <button
+                  onClick={() => setTab('requisitions')}
+                  className={`flex-1 sm:flex-none px-4 py-2 text-xs sm:text-sm ${tab === 'requisitions'
+                    ? 'bg-coin-700 text-white hover:bg-coin-600'
+                    : 'bg-white text-gray-700 hover:bg-coin-50 dark:bg-gray-950 dark:text-gray-200 dark:hover:bg-gray-900'}`}
+                >
+                  Requisitions
+                </button>
+                <button
+                  onClick={() => setTab('budgets')}
+                  className={`flex-1 sm:flex-none px-4 py-2 text-xs sm:text-sm ${tab === 'budgets'
+                    ? 'bg-coin-700 text-white hover:bg-coin-600'
+                    : 'bg-white text-gray-700 hover:bg-coin-50 dark:bg-gray-950 dark:text-gray-200 dark:hover:bg-gray-900'}`}
+                >
+                  Budgets
+                </button>
+              </div>
+            )}
+          />
 
           {tab === 'requisitions' && (
-            <div className="bg-white rounded-xl shadow overflow-hidden dark:bg-gray-900 dark:border dark:border-gray-800">
+            <div className="rounded-xl border border-gray-200 bg-white shadow-sm shadow-black/5 overflow-hidden dark:border-gray-800 dark:bg-gray-900/60 dark:shadow-none">
               <div className="px-4 py-3 border-b dark:border-gray-800 flex flex-wrap items-center justify-between gap-2">
                 <div className="text-sm font-medium text-gray-900 dark:text-gray-100">Requisitions awaiting admin</div>
                 <div className="inline-flex rounded-full bg-gray-100 dark:bg-gray-800/60 p-1">
                   <button
                     onClick={() => router.get(route('admin.approvals.index'), { tab: 'requisitions', req_filter: 'pending' }, { preserveState: true, replace: true })}
-                    className={`px-3 py-1.5 rounded-full text-xs font-medium ${reqFilter === 'pending' ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-gray-200 dark:text-gray-300 dark:hover:bg-gray-700/60'}`}
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium ${reqFilter === 'pending' ? 'bg-coin-700 text-white' : 'text-gray-700 hover:bg-gray-200 dark:text-gray-300 dark:hover:bg-gray-700/60'}`}
                   >
                     Pending
                   </button>
@@ -158,132 +126,176 @@ export default function AdminApprovalsIndex({ approvals = [], budgets, selectedT
                   </button>
                 </div>
               </div>
-              <table className="min-w-full">
-                <thead className="bg-gray-50 dark:bg-gray-800/60">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase dark:text-gray-300">Requisition</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase dark:text-gray-300">Amount</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase dark:text-gray-300">Requested By</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase dark:text-gray-300">Status</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase dark:text-gray-300">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
-                  {reqs.length > 0 ? reqs.map((r) => (
-                    <tr key={r.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/60">
-                      <td className="px-6 py-3 text-sm text-gray-900 dark:text-gray-100">
-                        <div className="flex flex-col">
-                          <span className="font-medium">{r.title}</span>
-                          <span className="text-xs text-gray-500 dark:text-gray-400">#{r.id}</span>
+              {reqs.length === 0 ? (
+                <EmptyState
+                  title={reqFilter === 'expired' ? 'No expired requisitions' : 'No pending requisitions'}
+                  description={reqFilter === 'expired'
+                    ? 'You have no expired requisitions to review right now.'
+                    : 'When requisitions need admin approval, they will show up here.'}
+                />
+              ) : (
+                <>
+                  <div className="lg:hidden divide-y divide-gray-200 dark:divide-gray-800">
+                    {reqs.map((r) => (
+                      <div key={r.id} className="p-4 hover:bg-gray-50 dark:hover:bg-gray-800/60">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <div className="font-medium text-gray-900 dark:text-gray-100 break-words">{r.title}</div>
+                            <div className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">#{r.id}</div>
+                          </div>
+                          <span className={reqStatusColors[String(r.status)] || ''}>{String(r.status).replace('_', ' ')}</span>
                         </div>
-                      </td>
-                      <td className="px-6 py-3 text-sm text-gray-900 dark:text-gray-100">{r.amount != null ? formatCurrencyMWK(r.amount) : '-'}</td>
-                      <td className="px-6 py-3 text-sm text-gray-700 dark:text-gray-300">{r.requestedBy?.name ?? (r.requested_by ? `User #${r.requested_by}` : '-')}</td>
-                      <td className="px-6 py-3 text-sm">
-                        <span className={reqStatusColors[String(r.status)] || ''}>{String(r.status).replace('_', ' ')}</span>
-                      </td>
-                      <td className="px-6 py-3 text-sm">
-                        <div className="flex flex-wrap items-center gap-3">
+
+                        <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                          <div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400">Amount</div>
+                            <div className="font-semibold text-gray-900 dark:text-gray-100">{r.amount != null ? formatCurrencyMWK(r.amount) : '-'}</div>
+                          </div>
+                          <div className="min-w-0">
+                            <div className="text-xs text-gray-500 dark:text-gray-400">Requested By</div>
+                            <div className="text-gray-700 dark:text-gray-200 break-words">{requestedByLabel(r)}</div>
+                          </div>
+                          <div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400">Requested</div>
+                            <div className="text-gray-700 dark:text-gray-200">{r.created_at ? formatDateMW(undefined, r.created_at) : '-'}</div>
+                          </div>
+                          <div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400">Needed By</div>
+                            <div className="text-gray-700 dark:text-gray-200">{r.needed_by ? formatDateMW(undefined, r.needed_by) : '-'}</div>
+                          </div>
+                        </div>
+
+                        <div className="mt-4 flex flex-col gap-2">
                           <button
                             type="button"
                             onClick={() => { setReqId(r.id); setReqOpen(true); }}
-                            className="text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300"
+                            className="w-full rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-gray-900"
                           >
-                            View
+                            View Details
                           </button>
+
                           {reqFilter === 'pending' && (
-                            <>
-                              <button onClick={() => approveReq(r)} className="text-emerald-600 hover:text-emerald-800 dark:text-emerald-400 dark:hover:text-emerald-300">Approve</button>
-                              <button onClick={() => declineReq(r)} className="text-rose-600 hover:text-rose-800 dark:text-rose-400 dark:hover:text-rose-300">Decline</button>
-                            </>
+                            <div className="grid grid-cols-2 gap-2">
+                              <button
+                                type="button"
+                                onClick={() => approveReq(r)}
+                                className="w-full rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-700"
+                              >
+                                Approve
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => declineReq(r)}
+                                className="w-full rounded-lg bg-rose-600 px-3 py-2 text-xs font-semibold text-white hover:bg-rose-700"
+                              >
+                                Decline
+                              </button>
+                            </div>
                           )}
                         </div>
-                      </td>
-                    </tr>
-                  )) : (
-                    <tr>
-                      <td colSpan={5} className="px-6 py-8 text-center text-gray-500 dark:text-gray-400">{reqFilter === 'expired' ? 'No expired requisitions.' : 'No requisitions pending admin approval.'}</td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="hidden lg:block overflow-x-auto">
+                    <table className="min-w-[900px] w-full">
+                      <thead className="bg-gray-50 dark:bg-gray-800/60">
+                        <tr>
+                          <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase dark:text-gray-300">Requisition</th>
+                          <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase dark:text-gray-300">Amount</th>
+                          <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase dark:text-gray-300">Requested By</th>
+                          <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase dark:text-gray-300">Requested</th>
+                          <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase dark:text-gray-300">Needed By</th>
+                          <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase dark:text-gray-300">Status</th>
+                          <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase dark:text-gray-300">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
+                        {reqs.map((r) => (
+                          <tr key={r.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/60">
+                            <td className="px-6 py-3 text-sm text-gray-900 dark:text-gray-100">
+                              <div className="flex flex-col">
+                                <span className="font-medium">{r.title}</span>
+                                <span className="text-xs text-gray-500 dark:text-gray-400">#{r.id}</span>
+                              </div>
+                            </td>
+                            <td className="px-6 py-3 text-sm text-gray-900 dark:text-gray-100">{r.amount != null ? formatCurrencyMWK(r.amount) : '-'}</td>
+                            <td className="px-6 py-3 text-sm text-gray-700 dark:text-gray-300">{requestedByLabel(r)}</td>
+                            <td className="px-6 py-3 text-sm text-gray-700 dark:text-gray-300">{r.created_at ? formatDateMW(undefined, r.created_at) : '-'}</td>
+                            <td className="px-6 py-3 text-sm text-gray-700 dark:text-gray-300">{r.needed_by ? formatDateMW(undefined, r.needed_by) : '-'}</td>
+                            <td className="px-6 py-3 text-sm">
+                              <span className={reqStatusColors[String(r.status)] || ''}>{String(r.status).replace('_', ' ')}</span>
+                            </td>
+                            <td className="px-6 py-3 text-sm">
+                              <div className="flex flex-wrap items-center gap-3">
+                                <button
+                                  type="button"
+                                  onClick={() => { setReqId(r.id); setReqOpen(true); }}
+                                  className="text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300"
+                                >
+                                  View
+                                </button>
+                                {reqFilter === 'pending' && (
+                                  <>
+                                    <button onClick={() => approveReq(r)} className="text-emerald-600 hover:text-emerald-800 dark:text-emerald-400 dark:hover:text-emerald-300">Approve</button>
+                                    <button onClick={() => declineReq(r)} className="text-rose-600 hover:text-rose-800 dark:text-rose-400 dark:hover:text-rose-300">Decline</button>
+                                  </>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
+              )}
             </div>
           )}
 
           {tab === 'budgets' && (
-            <div className="bg-white rounded-xl shadow overflow-hidden">
-              <table className="min-w-full">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Period</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Owner</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {budgetsArr.length > 0 ? budgetsArr.map((b) => (
-                    <tr key={b.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-3 text-sm text-gray-900">{String(b.fiscal_month).padStart(2, '0')}/{b.fiscal_year}</td>
-                      <td className="px-6 py-3 text-sm text-gray-700">{b.user?.name ?? '-'}</td>
-                    </tr>
-                  )) : (
-                    <tr>
-                      <td colSpan={2} className="px-6 py-8 text-center text-gray-500">No budgets found.</td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+            <div className="rounded-xl border border-gray-200 bg-white shadow-sm shadow-black/5 overflow-hidden dark:border-gray-800 dark:bg-gray-900/60 dark:shadow-none">
+              {budgetsArr.length === 0 ? (
+                <EmptyState
+                  title="No budgets found"
+                  description="Budgets will appear here when they are available."
+                />
+              ) : (
+                <>
+                  <div className="sm:hidden divide-y divide-gray-200 dark:divide-gray-800">
+                    {budgetsArr.map((b) => (
+                      <div key={b.id} className="p-4 hover:bg-gray-50 dark:hover:bg-gray-800/60">
+                        <div className="text-xs text-gray-500 dark:text-gray-400">Period</div>
+                        <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">{String(b.fiscal_month).padStart(2, '0')}/{b.fiscal_year}</div>
+                        <div className="mt-3 text-xs text-gray-500 dark:text-gray-400">Owner</div>
+                        <div className="text-sm text-gray-700 dark:text-gray-200 break-words">{b.user?.name ?? '-'}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="hidden sm:block overflow-x-auto">
+                    <table className="min-w-full w-full">
+                      <thead className="bg-gray-50 dark:bg-gray-800/60">
+                        <tr>
+                          <th className="px-4 sm:px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase dark:text-gray-300">Period</th>
+                          <th className="px-4 sm:px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase dark:text-gray-300">Owner</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
+                        {budgetsArr.map((b) => (
+                          <tr key={b.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/60">
+                            <td className="px-4 sm:px-6 py-3 text-sm text-gray-900 dark:text-gray-100">{String(b.fiscal_month).padStart(2, '0')}/{b.fiscal_year}</td>
+                            <td className="px-4 sm:px-6 py-3 text-sm text-gray-700 dark:text-gray-200">{b.user?.name ?? '-'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
+              )}
             </div>
           )}
 
-          {viewing && (
-            <Modal show={viewOpen} onClose={() => setViewOpen(false)} maxWidth="2xl">
-              <div className="px-6 py-4 border-b flex items-center justify-between bg-white">
-                <h2 className="text-lg font-semibold text-gray-900">Approval #{viewing.id}</h2>
-                <button onClick={() => setViewOpen(false)} className="text-gray-400 hover:text-gray-600">✕</button>
-              </div>
-              <div className="px-6 py-4 bg-white space-y-3">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <div className="text-xs text-gray-500">Status</div>
-                    <div className="text-sm font-semibold text-gray-900">{viewing.status}</div>
-                  </div>
-                  <div>
-                    <div className="text-xs text-gray-500">Stage</div>
-                    <div className="text-sm font-semibold text-gray-900">{viewing.stage ?? '-'}</div>
-                  </div>
-                  <div>
-                    <div className="text-xs text-gray-500">Approver</div>
-                    <div className="text-sm font-semibold text-gray-900">{viewing.approver?.name ?? '-'}</div>
-                  </div>
-                  <div>
-                    <div className="text-xs text-gray-500">Amount</div>
-                    <div className="text-sm font-semibold text-gray-900">{viewing.expense?.amount ?? '-'}</div>
-                  </div>
-                </div>
-                {viewing.expense?.description && (
-                  <div>
-                    <div className="text-xs text-gray-500">Description</div>
-                    <div className="text-sm text-gray-900">{viewing.expense.description}</div>
-                  </div>
-                )}
-                {viewing.comments && (
-                  <div>
-                    <div className="text-xs text-gray-500">Comments</div>
-                    <div className="text-sm text-gray-900 whitespace-pre-wrap">{viewing.comments}</div>
-                  </div>
-                )}
-              </div>
-              <div className="px-6 py-4 bg-gray-50 border-t flex justify-end gap-2">
-                <button onClick={() => setViewOpen(false)} className="px-4 py-2 rounded bg-gray-200 text-gray-800 hover:bg-gray-300">Close</button>
-                {viewing.status === 'pending' && (
-                  <>
-                    <button onClick={() => doApprove(viewing)} className="px-4 py-2 rounded bg-emerald-600 text-white hover:bg-emerald-700">Approve</button>
-                    <button onClick={() => doReject(viewing)} className="px-4 py-2 rounded bg-rose-600 text-white hover:bg-rose-700">Reject</button>
-                  </>
-                )}
-              </div>
-            </Modal>
-          )}
           <RequisitionViewModal open={reqOpen} requisitionId={reqId} onClose={() => setReqOpen(false)} />
         </div>
       </div>

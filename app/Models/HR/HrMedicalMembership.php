@@ -33,7 +33,7 @@ class HrMedicalMembership extends Model
         return $this->belongsTo(HrMedicalScheme::class, 'hr_medical_scheme_id');
     }
 
-    public function guard(): BelongsTo
+    public function guardRelation(): BelongsTo
     {
         return $this->belongsTo(Guard::class, 'guard_id');
     }

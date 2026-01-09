@@ -128,14 +128,14 @@ export default function ShiftFormModal({
     <Modal show={open} onClose={onClose} maxWidth="2xl">
       <form onSubmit={handleSubmit} className="p-4 sm:p-6">
         <div className="mb-4">
-          <h3 className="text-lg font-semibold text-gray-900">{mode === 'create' ? 'Create Shift' : 'Edit Shift'}</h3>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{mode === 'create' ? 'Create Shift' : 'Edit Shift'}</h3>
         </div>
 
         <div className="grid grid-cols-1 gap-4">
           <div className="space-y-1">
-            <label className="text-sm font-medium text-gray-700">Guard</label>
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Guard</label>
             <select
-              className="w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-coin-500"
               value={data.guard_id ?? ''}
               onChange={(e) => setData('guard_id', Number(e.target.value))}
               required
@@ -151,7 +151,7 @@ export default function ShiftFormModal({
                 <span>Type:</span>
                 <span
                   className={`text-[10px] px-1.5 py-0.5 rounded-full ${selectedGuard.guard_type === 'reliever'
-                    ? 'bg-indigo-600 text-white'
+                    ? 'bg-coin-700 text-white'
                     : selectedGuard.guard_type === 'standby'
                     ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300'
                     : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-100'
@@ -166,9 +166,9 @@ export default function ShiftFormModal({
           </div>
 
           <div className="space-y-1">
-            <label className="text-sm font-medium text-gray-700">Site</label>
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Site</label>
             <select
-              className="w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-coin-500"
               value={data.client_site_id ?? ''}
               onChange={(e) => setData('client_site_id', Number(e.target.value))}
               required
@@ -183,10 +183,10 @@ export default function ShiftFormModal({
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="space-y-1">
-              <label className="text-sm font-medium text-gray-700">Date</label>
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Date</label>
               <input
                 type="date"
-                className="w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-coin-500"
                 value={data.date || ''}
                 onChange={(e) => setData('date', e.target.value)}
                 required
@@ -194,10 +194,10 @@ export default function ShiftFormModal({
               {errors.date && <div className="text-sm text-red-600">{errors.date}</div>}
             </div>
             <div className="space-y-1">
-              <label className="text-sm font-medium text-gray-700">Start Time</label>
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Start Time</label>
               <input
                 type="time"
-                className="w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-coin-500"
                 value={data.start_time || ''}
                 onChange={(e) => setData('start_time', e.target.value)}
                 required
@@ -205,10 +205,10 @@ export default function ShiftFormModal({
               {errors.start_time && <div className="text-sm text-red-600">{errors.start_time}</div>}
             </div>
             <div className="space-y-1">
-              <label className="text-sm font-medium text-gray-700">End Time</label>
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">End Time</label>
               <input
                 type="time"
-                className="w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-coin-500"
                 value={data.end_time || ''}
                 onChange={(e) => setData('end_time', e.target.value)}
                 required
@@ -219,9 +219,9 @@ export default function ShiftFormModal({
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="space-y-1">
-              <label className="text-sm font-medium text-gray-700">Type</label>
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Type</label>
               <select
-                className="w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-coin-500"
                 value={data.shift_type || 'day'}
                 onChange={(e) => setData('shift_type', e.target.value as any)}
                 required
@@ -232,9 +232,9 @@ export default function ShiftFormModal({
               {errors.shift_type && <div className="text-sm text-red-600">{errors.shift_type}</div>}
             </div>
             <div className="space-y-1">
-              <label className="text-sm font-medium text-gray-700">Status</label>
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Status</label>
               <select
-                className="w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-coin-500"
                 value={data.status || 'scheduled'}
                 onChange={(e) => setData('status', e.target.value as any)}
                 required
@@ -246,10 +246,10 @@ export default function ShiftFormModal({
               {errors.status && <div className="text-sm text-red-600">{errors.status}</div>}
             </div>
             <div className="space-y-1">
-              <label className="text-sm font-medium text-gray-700">Instructions</label>
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Instructions</label>
               <input
                 type="text"
-                className="w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-coin-500"
                 value={data.instructions || ''}
                 onChange={(e) => setData('instructions', e.target.value)}
                 placeholder="Optional"
@@ -265,7 +265,7 @@ export default function ShiftFormModal({
               type="button"
               onClick={handlePrecheck}
               disabled={checking || !data.guard_id || !data.client_site_id || !data.date || !data.start_time || !data.end_time}
-              className="inline-flex items-center px-3 py-2 rounded-md border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-60"
+              className="inline-flex items-center px-3 py-2 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-60"
             >
               {checking ? 'Checking…' : 'Check Conflicts'}
             </button>
@@ -290,14 +290,14 @@ export default function ShiftFormModal({
           <button
             type="button"
             onClick={onClose}
-            className="inline-flex items-center px-4 py-2 rounded-md border border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
+            className="inline-flex items-center px-4 py-2 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-800"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={processing}
-            className="inline-flex items-center px-4 py-2 rounded-md text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60"
+            className="inline-flex items-center px-4 py-2 rounded-md text-white bg-coin-700 hover:bg-coin-600 disabled:opacity-60"
           >
             {processing ? 'Saving...' : (mode === 'create' ? 'Create' : 'Save changes')}
           </button>

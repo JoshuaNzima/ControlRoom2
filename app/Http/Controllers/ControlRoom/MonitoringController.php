@@ -4,13 +4,12 @@ namespace App\Http\Controllers\ControlRoom;
 
 use App\Http\Controllers\Controller;
 use App\Models\ControlRoomSetting;
-use App\Models\Camera;
 use App\Models\CameraAlert;
 use App\Models\ClientSite;
 use App\Models\Flag;
+use App\Models\Guards\Attendance;
 use App\Models\Guards\Guard;
 use App\Models\Incident;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
 
@@ -66,6 +65,8 @@ class MonitoringController extends Controller
             'liveStatus' => $this->getLiveSiteStatus(),
             'recentActivity' => $this->getRecentActivityFormatted($rangeMinutes),
             'sla' => $this->getSlaStats($rangeMinutes),
+            'guards' => $this->getActiveGuards($rangeMinutes),
+            'events' => $this->getRecentEvents($rangeMinutes),
         ]);
     }
 
@@ -168,34 +169,44 @@ class MonitoringController extends Controller
     private function getLiveSiteStatus()
     {
         return Cache::remember('monitoring.live_status', 60, function () {
-            return ClientSite::with(['guards' => function($query) {
-                $query->where('status', 'active');
-            }, 'cameraAlerts' => function($query) {
-                $query->whereNull('resolved_at');
-            }])
-            ->get()
-            ->map(function ($site) {
-                $required = (int) ($site->required_guards ?? 0);
-                $onDuty = (int) $site->getCurrentGuardsCount();
-                $coverageStatus = $required > 0
-                    ? ($onDuty >= $required ? 'full' : ($onDuty > 0 ? 'partial' : 'none'))
-                    : ($onDuty > 0 ? 'partial' : 'unknown');
+            $onDutyBySite = Attendance::query()
+                ->whereDate('date', today())
+                ->whereNotNull('check_in_time')
+                ->whereNull('check_out_time')
+                ->selectRaw('client_site_id, COUNT(*) as c')
+                ->groupBy('client_site_id')
+                ->pluck('c', 'client_site_id');
 
-                return [
-                    'id' => $site->id,
-                    'name' => $site->name,
-                    'status' => $site->status,
-                    'required' => $required,
-                    'onDuty' => $onDuty,
-                    'coverageStatus' => $coverageStatus,
-                    'lastUpdate' => $site->updated_at->diffForHumans(),
-                    'alerts' => $site->cameraAlerts->count(),
-                    'location' => [
-                        'lat' => $site->latitude ?? -26.2041,
-                        'lng' => $site->longitude ?? 28.0473
-                    ]
-                ];
-            });
+            return ClientSite::query()
+                ->select(['id', 'name', 'status', 'required_guards', 'latitude', 'longitude', 'updated_at'])
+                ->withCount([
+                    'cameraAlerts as alerts' => function ($q) {
+                        $q->whereNull('resolved_at');
+                    }
+                ])
+                ->get()
+                ->map(function ($site) use ($onDutyBySite) {
+                    $required = (int) ($site->required_guards ?? 0);
+                    $onDuty = (int) ($onDutyBySite[$site->id] ?? 0);
+                    $coverageStatus = $required > 0
+                        ? ($onDuty >= $required ? 'full' : ($onDuty > 0 ? 'partial' : 'none'))
+                        : ($onDuty > 0 ? 'partial' : 'unknown');
+
+                    return [
+                        'id' => $site->id,
+                        'name' => $site->name,
+                        'status' => $site->status,
+                        'required' => $required,
+                        'onDuty' => $onDuty,
+                        'coverageStatus' => $coverageStatus,
+                        'lastUpdate' => $site->updated_at?->diffForHumans(),
+                        'alerts' => (int) ($site->alerts ?? 0),
+                        'location' => [
+                            'lat' => $site->latitude ?? -26.2041,
+                            'lng' => $site->longitude ?? 28.0473
+                        ]
+                    ];
+                });
         });
     }
 
@@ -248,9 +259,15 @@ class MonitoringController extends Controller
     private function getMetrics()
     {
         return Cache::remember('monitoring.metrics', 60, function () {
+            $onDutyToday = Attendance::query()
+                ->whereDate('date', today())
+                ->whereNotNull('check_in_time')
+                ->whereNull('check_out_time')
+                ->count();
+
             return [
                 'activeSites' => ClientSite::where('status', 'active')->count(),
-                'guardsOnDuty' => Guard::where('status', 'active')->count(),
+                'guardsOnDuty' => $onDutyToday,
                 'activeAlerts' => CameraAlert::whereNull('resolved_at')->count(),
                 'activeFlags' => Flag::whereIn('status', ['open', 'in_progress'])->count(),
                 'activeIncidents' => Incident::whereIn('status', ['open', 'in_progress'])->count(),
@@ -261,31 +278,40 @@ class MonitoringController extends Controller
 
     private function getActiveGuards(?int $rangeMinutes = null)
     {
-        $query = Guard::with(['currentShift', 'currentSite'])
-            ->where('status', 'active');
+        $cacheKey = 'monitoring.guards.' . ($rangeMinutes ?? 'default');
 
-        if ($rangeMinutes) {
-            $from = now()->subMinutes($rangeMinutes);
-            $query->where('updated_at', '>=', $from);
-        }
+        return Cache::remember($cacheKey, 15, function () use ($rangeMinutes) {
+            $query = Guard::query()
+                ->select(['id', 'name', 'status', 'last_known_location', 'current_site_id', 'updated_at'])
+                ->with([
+                    'currentShift:id,guard_id,status,date,start_time,end_time,actual_start_time,actual_end_time',
+                    'currentSite:id,name'
+                ])
+                ->where('status', 'active');
 
-        return $query
-            ->get()
-            ->map(function ($guard) {
-                return [
-                    'id' => $guard->id,
-                    'name' => $guard->name,
-                    'status' => $guard->status,
-                    'location' => $guard->last_known_location ?? ['lat' => -26.2041, 'lng' => 28.0473],
-                    'lastCheckIn' => $guard->last_check_in ?? $guard->updated_at,
-                    'currentSite' => $guard->currentSite?->name,
-                    'currentShift' => [
-                        'started_at' => $guard->currentShift?->actual_start_time ?? $guard->currentShift?->start_time,
-                        'ends_at' => $guard->currentShift?->actual_end_time ?? $guard->currentShift?->end_time,
-                    ],
-                    'lastActivity' => $guard->updated_at
-                ];
-            });
+            if ($rangeMinutes) {
+                $from = now()->subMinutes($rangeMinutes);
+                $query->where('updated_at', '>=', $from);
+            }
+
+            return $query
+                ->get()
+                ->map(function ($guard) {
+                    return [
+                        'id' => $guard->id,
+                        'name' => $guard->name,
+                        'status' => $guard->status,
+                        'location' => $guard->last_known_location ?? ['lat' => -26.2041, 'lng' => 28.0473],
+                        'lastCheckIn' => $guard->updated_at,
+                        'currentSite' => $guard->currentSite?->name,
+                        'currentShift' => [
+                            'started_at' => $guard->currentShift?->actual_start_time ?? $guard->currentShift?->start_time,
+                            'ends_at' => $guard->currentShift?->actual_end_time ?? $guard->currentShift?->end_time,
+                        ],
+                        'lastActivity' => $guard->updated_at,
+                    ];
+                });
+        });
     }
 
     private function getRecentEvents(?int $rangeMinutes = null)

@@ -6,21 +6,34 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Camera extends Model
 {
     use HasFactory;
+    use SoftDeletes;
 
     protected $fillable = [
         'name',
+        'client_site_id',
+        'stream_url',
+        'type',
         'location',
         'ip_address',
         'port',
+        'public_protocol',
+        'public_host',
+        'public_port',
+        'public_path',
         'username',
         'password',
         'model',
         'status',
+        'last_online',
         'recording_enabled',
+        'retention_days',
+        'credentials',
+        'settings',
         'motion_detection',
         'night_vision',
         'description',
@@ -34,6 +47,8 @@ class Camera extends Model
         'recording_enabled' => 'boolean',
         'motion_detection' => 'boolean',
         'night_vision' => 'boolean',
+        'settings' => 'array',
+        'last_online' => 'datetime',
         'last_connection_test' => 'datetime',
         'last_restart' => 'datetime',
     ];

@@ -8,6 +8,8 @@ import GuardForm from '@/Components/Guards/GuardForm';
 import { GuardFormData } from '@/types/guards';
 import AssignSiteModal from '@/Components/Guards/AssignSiteModal';
 import PromoteGuardModal from '@/Components/HR/PromoteGuardModal';
+import ConfirmModal from '@/Components/ConfirmModal';
+import ReasonModal from '@/Components/ReasonModal';
 
 interface Guard {
   id: number;
@@ -16,11 +18,13 @@ interface Guard {
   phone?: string;
   status?: string;
   supervisor?: { id: number; name: string } | null;
+  is_profile_complete?: boolean;
 }
 
 interface Filters {
   search?: string;
   status?: string;
+  profile_status?: string;
 }
 
 interface Supervisor { id: number; name: string }
@@ -41,6 +45,7 @@ interface GuardsIndexProps {
 
 export default function GuardsIndex({ guards, filters, canAssignSupervisor, canViewSupervisor, supervisors = [], grades = [], zones = [] }: GuardsIndexProps) {
   const [search, setSearch] = React.useState(filters.search || '');
+  const [profileStatus, setProfileStatus] = React.useState(filters.profile_status || '');
   const [loadingId, setLoadingId] = React.useState<number | null>(null);
   const { push } = useNotification();
 
@@ -56,7 +61,11 @@ export default function GuardsIndex({ guards, filters, canAssignSupervisor, canV
   const [photoEdit, setPhotoEdit] = React.useState<File | null>(null);
 
   const handleSearch = () => {
-    router.get(route('admin.guards.index'), { search }, { preserveState: true });
+    router.get(
+      route('admin.guards.index'),
+      { search, profile_status: profileStatus || undefined },
+      { preserveState: true }
+    );
   };
 
   function showToast(message: string) {
@@ -94,6 +103,29 @@ export default function GuardsIndex({ guards, filters, canAssignSupervisor, canV
       setSelectedGuard(data);
       setShowPromote(true);
     } catch {}
+  };
+
+  // Confirm & Reason Modals
+  const [confirmOpen, setConfirmOpen] = React.useState(false);
+  const [confirmTitle, setConfirmTitle] = React.useState('');
+  const [confirmMessage, setConfirmMessage] = React.useState('');
+  const [confirmAction, setConfirmAction] = React.useState<() => void>(() => {});
+  const [reasonOpen, setReasonOpen] = React.useState(false);
+  const [reasonTitle, setReasonTitle] = React.useState('');
+  const [reasonMessage, setReasonMessage] = React.useState('');
+  const [reasonSubmit, setReasonSubmit] = React.useState<((reason: string) => void) | null>(null);
+
+  const openConfirm = (title: string, message: string, action: () => void) => {
+    setConfirmTitle(title);
+    setConfirmMessage(message);
+    setConfirmAction(() => action);
+    setConfirmOpen(true);
+  };
+  const openReason = (title: string, message: string, submit: (reason: string) => void) => {
+    setReasonTitle(title);
+    setReasonMessage(message);
+    setReasonSubmit(() => submit);
+    setReasonOpen(true);
   };
 
   const submitCreate = async (form: GuardFormData) => {
@@ -194,7 +226,7 @@ export default function GuardsIndex({ guards, filters, canAssignSupervisor, canV
         </div>
 
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
-          <div className="flex gap-4">
+          <div className="flex flex-col md:flex-row gap-4">
               <div className="flex-1 relative">
               <span className="absolute left-3 top-3 text-gray-400"><IconMapper name="Search" size={20} /></span>
               <input
@@ -205,6 +237,18 @@ export default function GuardsIndex({ guards, filters, canAssignSupervisor, canV
                 placeholder="Search by name, employee id or phone..."
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-indigo-500"
               />
+            </div>
+            <div className="w-full md:w-56">
+              <label className="sr-only">Profile</label>
+              <select
+                value={profileStatus}
+                onChange={(e) => setProfileStatus(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 rounded-lg"
+              >
+                <option value="">All Profiles</option>
+                <option value="complete">Profile Complete</option>
+                <option value="incomplete">Profile Incomplete</option>
+              </select>
             </div>
             <button
               onClick={handleSearch}
@@ -239,7 +283,14 @@ export default function GuardsIndex({ guards, filters, canAssignSupervisor, canV
                       </div>
                       <button onClick={() => openDetails(guard.id)} className="text-left">
                         <div className="font-medium text-gray-900 dark:text-gray-100 hover:underline">{guard.name}</div>
-                        <div className="text-xs text-gray-500 dark:text-gray-400">Tap to view details</div>
+                        <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                          <span>Tap to view details</span>
+                          {guard.is_profile_complete === false && (
+                            <span className="px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200">
+                              Profile incomplete
+                            </span>
+                          )}
+                        </div>
                       </button>
                     </div>
                   </td>
@@ -262,9 +313,17 @@ export default function GuardsIndex({ guards, filters, canAssignSupervisor, canV
                   )}
                   <td className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">{guard.phone || 'N/A'}</td>
                   <td className="px-6 py-4">
-                    <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                      guard.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                    }`}>
+                    <span
+                      className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                        guard.status === 'active'
+                          ? 'bg-green-100 text-green-800'
+                          : guard.status === 'suspended'
+                          ? 'bg-yellow-100 text-yellow-800'
+                          : guard.status === 'absconded'
+                          ? 'bg-rose-100 text-rose-800'
+                          : 'bg-gray-100 text-gray-800'
+                      }`}
+                    >
                       {guard.status || 'Active'}
                     </span>
                   </td>
@@ -292,35 +351,75 @@ export default function GuardsIndex({ guards, filters, canAssignSupervisor, canV
                         Promote
                       </button>
                       <button
-                        onClick={() => {
-                          if (confirm('Are you sure you want to delete this guard?')) {
-                            router.delete(route('admin.guards.destroy', { guard: guard.id }));
-                          }
-                        }}
+                        onClick={() => openConfirm('Delete guard', `Are you sure you want to delete ${guard.name}?`, () => router.delete(route('admin.guards.destroy', { guard: guard.id })))}
                         className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition"
                       >
                         <IconMapper name="Trash" size={18} />
                       </button>
-                      {/* Suspend / Activate */}
+                      {/* Suspend / Reinstate */}
                       <button
-                        onClick={async () => {
-                          const newStatus = guard.status === 'active' ? 'suspended' : 'active';
-                          if (!confirm(`Are you sure you want to set status to ${newStatus}?`)) return;
+                        onClick={() => {
+                          const isSuspending = guard.status === 'active';
+                          openConfirm(
+                            `${isSuspending ? 'Suspend' : 'Reinstate'} guard`,
+                            `${isSuspending ? 'Suspend' : 'Reinstate'} ${guard.name}?`,
+                            async () => {
+                              setLoadingId(guard.id);
+                              try {
+                                const routeName = isSuspending ? 'admin.guards.suspend' : 'admin.guards.reinstate';
+                                await router.post(route(routeName, { guard: guard.id }), {});
+                                showToast(`Guard ${guard.name} ${isSuspending ? 'suspended' : 'reinstated'}`);
+                              } catch (e) {
+                                showToast('Failed to update status');
+                              } finally {
+                                setLoadingId(null);
+                              }
+                            }
+                          );
+                        }}
+                        className="p-2 text-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 rounded-lg transition"
+                        title={guard.status === 'active' ? 'Suspend guard' : 'Reinstate guard'}
+                        disabled={loadingId === guard.id}
+                      >
+                        {loadingId === guard.id ? '...' : guard.status === 'active' ? 'Suspend' : 'Reinstate'}
+                      </button>
+                      {/* Dismiss */}
+                      <button
+                        onClick={() => openReason('Dismiss Guard', `Provide a reason (optional) for dismissing ${guard.name}`, async (reason: string) => {
                           setLoadingId(guard.id);
                           try {
-                            await router.put(route('admin.guards.update', { guard: guard.id }), { status: newStatus });
-                            showToast(`Guard ${guard.name} set to ${newStatus}`);
+                            await router.post(route('admin.guards.dismiss', { guard: guard.id }), { reason });
+                            showToast(`Guard ${guard.name} dismissed`);
                           } catch (e) {
-                            showToast('Failed to update status');
+                            showToast('Failed to dismiss guard');
                           } finally {
                             setLoadingId(null);
                           }
-                        }}
-                        className="p-2 text-yellow-600 hover:bg-yellow-50 rounded-lg transition"
-                        title={guard.status === 'active' ? 'Suspend guard' : 'Activate guard'}
+                        })}
+                        className="p-2 text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-800 rounded-lg transition"
+                        title="Dismiss guard"
                         disabled={loadingId === guard.id}
                       >
-                        {loadingId === guard.id ? '...' : guard.status === 'active' ? 'Suspend' : 'Activate'}
+                        Dismiss
+                      </button>
+                      {/* Absconded */}
+                      <button
+                        onClick={() => openReason('Mark as Absconded', `Provide a reason (optional) for marking ${guard.name} as absconded`, async (reason: string) => {
+                          setLoadingId(guard.id);
+                          try {
+                            await router.post(route('admin.guards.abscond', { guard: guard.id }), { reason });
+                            showToast(`Guard ${guard.name} marked absconded`);
+                          } catch (e) {
+                            showToast('Failed to mark absconded');
+                          } finally {
+                            setLoadingId(null);
+                          }
+                        })}
+                        className="p-2 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-lg transition"
+                        title="Mark as absconded"
+                        disabled={loadingId === guard.id}
+                      >
+                        Abscond
                       </button>
                     </div>
                   </td>
@@ -507,6 +606,23 @@ export default function GuardsIndex({ guards, filters, canAssignSupervisor, canV
           zones={zones}
           onClose={() => setShowPromote(false)}
           onSuccess={() => push('Guard promoted')}
+        />
+
+        {/* Confirm & Reason Modals */}
+        <ConfirmModal
+          open={confirmOpen}
+          title={confirmTitle}
+          message={confirmMessage}
+          onConfirm={() => { setConfirmOpen(false); confirmAction(); }}
+          onCancel={() => setConfirmOpen(false)}
+        />
+        <ReasonModal
+          open={reasonOpen}
+          title={reasonTitle}
+          message={reasonMessage}
+          confirmLabel="Submit"
+          onConfirm={(reason) => { setReasonOpen(false); reasonSubmit && reasonSubmit(reason); }}
+          onCancel={() => setReasonOpen(false)}
         />
       </div>
     </AdminLayout>

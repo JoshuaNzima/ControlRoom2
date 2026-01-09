@@ -33,7 +33,7 @@ class HrPensionEnrollment extends Model
         return $this->belongsTo(HrPensionScheme::class, 'hr_pension_scheme_id');
     }
 
-    public function guard(): BelongsTo
+    public function guardRelation(): BelongsTo
     {
         return $this->belongsTo(Guard::class, 'guard_id');
     }

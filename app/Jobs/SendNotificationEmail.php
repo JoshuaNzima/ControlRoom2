@@ -8,6 +8,7 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Mail;
+use App\Mail\NotificationEmail;
 
 class SendNotificationEmail implements ShouldQueue
 {
@@ -46,9 +47,6 @@ class SendNotificationEmail implements ShouldQueue
      */
     public function handle(): void
     {
-        Mail::raw($this->body, function ($m) {
-            $m->to($this->to)
-              ->subject($this->subject);
-        });
+        Mail::to($this->to)->send(new NotificationEmail($this->subject, $this->body));
     }
 }

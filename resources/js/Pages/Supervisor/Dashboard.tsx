@@ -194,7 +194,7 @@ export default function Dashboard({
 
   return (
     <DashboardLayout>
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
         <Head title="Dashboard" />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
           {/* Header Section with Date & Time */}
@@ -202,7 +202,7 @@ export default function Dashboard({
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
               <div>
                 <h1 className="text-3xl font-bold mb-1">Supervisor Dashboard</h1>
-                <p className="text-indigo-100">{currentDate}</p>
+                <p className="text-white/80">{currentDate}</p>
               </div>
               <div className="flex items-center gap-4">
                 <div className="text-right">
@@ -222,7 +222,7 @@ export default function Dashboard({
             </div>
           </div>
 {/* Scanner Button */}
-  <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+  <div className="bg-white dark:bg-gray-900/60 border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm shadow-black/5 dark:shadow-none overflow-hidden">
   {activeScan ? (
     <div className="bg-gradient-to-r from-green-500 to-emerald-600 p-6">
       <div className="flex items-center justify-between text-white">
@@ -258,11 +258,11 @@ export default function Dashboard({
             <div className="p-6">
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h3 className="text-lg font-bold text-gray-900">Site Verification Required</h3>
-          <p className="text-sm text-gray-600">Scan checkpoint before taking attendance</p>
+          <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Site Verification Required</h3>
+          <p className="text-sm text-gray-600 dark:text-gray-300">Scan checkpoint before taking attendance</p>
         </div>
-        <div className="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center">
-          <svg className="w-8 h-8 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="w-16 h-16 bg-coin-100 dark:bg-coin-900/20 rounded-full flex items-center justify-center">
+          <svg className="w-8 h-8 text-coin-700 dark:text-coin-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
           </svg>
         </div>
@@ -308,7 +308,7 @@ export default function Dashboard({
                     onClick={() => {
                       // Add "select all" functionality here
                     }}
-                    className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium"
+                    className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-100"
                   >
                     Select All
                   </button>
@@ -316,7 +316,7 @@ export default function Dashboard({
                     onClick={() => {
                       // Add "export" functionality here
                     }}
-                    className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium"
+                    className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-100"
                   >
                     Export
                   </button>
@@ -327,23 +327,23 @@ export default function Dashboard({
 
           {/* Quick Attendance Section */}
           {showQuickAttendance && (
-            <div className="bg-white rounded-xl shadow-lg overflow-hidden animate-slideDown">
-              <div className="px-6 py-4 bg-gradient-to-r from-gray-50 to-gray-100 border-b">
+            <div className="bg-white dark:bg-gray-900/60 border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm shadow-black/5 dark:shadow-none overflow-hidden animate-slideDown">
+              <div className="px-6 py-4 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-950 dark:to-gray-900 border-b border-gray-200 dark:border-gray-800">
                 <div className="flex flex-col space-y-4">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                  <h3 className="text-lg font-bold text-gray-900">Quick Attendance ({sortedGuards.length} Guards)</h3>
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Quick Attendance ({sortedGuards.length} Guards)</h3>
                   <div className="flex flex-col md:flex-row gap-3">
                     <input
                       type="text"
                       placeholder="Search guards by name or ID..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
-                      className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent w-full md:w-80"
+                      className="px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-coin-500 focus:border-transparent w-full md:w-80"
                     />
                     <select
                       value={filterStatus}
                       onChange={(e) => setFilterStatus(e.target.value as 'all' | 'on_duty' | 'off_duty')}
-                      className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                      className="px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-coin-500"
                     >
                       <option value="all">All Guards</option>
                       <option value="on_duty">On Duty</option>
@@ -357,7 +357,7 @@ export default function Dashboard({
                       setSortField('name');
                       setSortDirection(current => current === 'asc' ? 'desc' : 'asc');
                     }}
-                    className={`px-3 py-1.5 rounded ${sortField === 'name' ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-100 hover:bg-gray-200'}`}
+                    className={`px-3 py-1.5 rounded ${sortField === 'name' ? 'bg-coin-100 text-coin-700 dark:bg-coin-900/30 dark:text-coin-200' : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-100 hover:bg-gray-200 dark:hover:bg-gray-700'}`}
                   >
                     Name {sortField === 'name' && (sortDirection === 'asc' ? '↑' : '↓')}
                   </button>
@@ -366,7 +366,7 @@ export default function Dashboard({
                       setSortField('employee_id');
                       setSortDirection(current => current === 'asc' ? 'desc' : 'asc');
                     }}
-                    className={`px-3 py-1.5 rounded ${sortField === 'employee_id' ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-100 hover:bg-gray-200'}`}
+                    className={`px-3 py-1.5 rounded ${sortField === 'employee_id' ? 'bg-coin-100 text-coin-700 dark:bg-coin-900/30 dark:text-coin-200' : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-100 hover:bg-gray-200 dark:hover:bg-gray-700'}`}
                   >
                     ID {sortField === 'employee_id' && (sortDirection === 'asc' ? '↑' : '↓')}
                   </button>
@@ -375,7 +375,7 @@ export default function Dashboard({
                       setSortField('status');
                       setSortDirection(current => current === 'asc' ? 'desc' : 'asc');
                     }}
-                    className={`px-3 py-1.5 rounded ${sortField === 'status' ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-100 hover:bg-gray-200'}`}
+                    className={`px-3 py-1.5 rounded ${sortField === 'status' ? 'bg-coin-100 text-coin-700 dark:bg-coin-900/30 dark:text-coin-200' : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-100 hover:bg-gray-200 dark:hover:bg-gray-700'}`}
                   >
                     Status {sortField === 'status' && (sortDirection === 'asc' ? '↑' : '↓')}
                   </button>
@@ -385,7 +385,7 @@ export default function Dashboard({
 
               <div className="divide-y max-h-[calc(100vh-20rem)] overflow-y-auto">
                 {sortedGuards.map((guard) => (
-                  <div key={guard.id} className="p-4 hover:bg-indigo-50 transition">
+                  <div key={guard.id} className="p-4 hover:bg-gray-50 dark:hover:bg-gray-800/60 transition">
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                       <div className="flex-1">
                         <div className="flex flex-col md:flex-row md:items-center gap-3">
@@ -394,27 +394,27 @@ export default function Dashboard({
                           </div>
                           <div>
                             <div className="flex items-center gap-2">
-                              <h4 className="font-bold text-gray-900">{guard.name}</h4>
+                              <h4 className="font-bold text-gray-900 dark:text-gray-100">{guard.name}</h4>
                               {guard.is_on_duty && (
                                 <span className="px-3 py-1 text-xs font-bold bg-gradient-to-r from-green-400 to-emerald-500 text-white rounded-full shadow-sm">
                                   On Duty
                                 </span>
                               )}
                             </div>
-                            <p className="text-sm text-gray-500">{guard.employee_id} • {guard.phone}</p>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">{guard.employee_id} • {guard.phone}</p>
                           </div>
                         </div>
 
                         {guard.attendance && (
                           <div className="mt-3 ml-3 space-y-1">
-                            <p className="text-sm text-gray-700">
+                            <p className="text-sm text-gray-700 dark:text-gray-200">
                               <span className="font-semibold">Check In:</span> {guard.attendance.check_in_time}
                               {guard.attendance.site && (
-                                <span className="text-indigo-600 ml-2">@ {guard.attendance.site}</span>
+                                <span className="text-coin-700 dark:text-coin-300 ml-2">@ {guard.attendance.site}</span>
                               )}
                             </p>
                             {guard.attendance.check_out_time && (
-                              <p className="text-sm text-gray-700">
+                              <p className="text-sm text-gray-700 dark:text-gray-200">
                                 <span className="font-semibold">Check Out:</span> {guard.attendance.check_out_time}
                                 <span className="text-purple-600 ml-2">({guard.attendance.hours_worked ?? 0}h worked)</span>
                               </p>
@@ -424,7 +424,7 @@ export default function Dashboard({
                       </div>
 
                       <div className="flex flex-col md:flex-row items-center gap-2">
-                        <button onClick={() => setShowScannerModal(true)} className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg font-semibold transition w-full md:w-auto text-center">View Details</button>
+                        <button onClick={() => setShowScannerModal(true)} className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg font-semibold transition w-full md:w-auto text-center dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-100">View Details</button>
                         {!guard.attendance ? (
                           <button
                             onClick={() => handleCheckIn(guard)}
@@ -440,7 +440,7 @@ export default function Dashboard({
                             Check Out
                           </button>
                         ) : (
-                          <span className="px-6 py-3 bg-gray-100 text-gray-500 rounded-lg font-bold inline-block">
+                          <span className="px-6 py-3 bg-gray-100 text-gray-500 rounded-lg font-bold inline-block dark:bg-gray-800 dark:text-gray-200">
                             Completed ✓
                           </span>
                         )}
@@ -460,11 +460,11 @@ export default function Dashboard({
           <Modal title={`Check In: ${selectedGuard.name}`} onClose={() => setAction(null)}>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Select Site *</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Select Site *</label>
                 <select
                   value={selectedSite ?? ''}
                   onChange={(e) => setSelectedSite(Number(e.target.value))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-coin-500"
                   required
                   disabled={!!activeScan}
                 >
@@ -477,45 +477,45 @@ export default function Dashboard({
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Time *</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Time *</label>
                 <input
                   type="time"
                   value={checkInTimeInput}
                   onChange={(e) => setCheckInTimeInput(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-coin-500"
                   required
                 />
               </div>
               <div className="space-y-2">
-                <label className="inline-flex items-center gap-2 text-sm text-gray-700">
+                <label className="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200">
                   <input
                     type="checkbox"
                     checked={backdate}
                     onChange={(e) => setBackdate(e.target.checked)}
-                    className="rounded border-gray-300"
+                    className="rounded border-gray-300 dark:border-gray-700"
                   />
                   <span>Mark for yesterday (backdate up to 1 day)</span>
                 </label>
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-gray-500 dark:text-gray-400">
                   Use this if you reached the site after midnight but are confirming the previous day's shift. Backdating is only allowed for yesterday and within the configured cutoff time.
                 </p>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Backdate Reason (optional)</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Backdate Reason (optional)</label>
                   <input
                     value={backdateReason}
                     onChange={(e) => setBackdateReason(e.target.value)}
                     disabled={!backdate}
                     placeholder="e.g. Arrived after 00:30, network outage, etc."
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg disabled:opacity-60 focus:ring-2 focus:ring-indigo-500"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 disabled:opacity-60 focus:ring-2 focus:ring-coin-500"
                   />
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Photo *</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Photo *</label>
                 <div className="space-y-2">
                   <div>
                     <button type="button" onClick={() => setShowCameraModal(true)} className="px-4 py-2 bg-coin-600 hover:bg-coin-700 text-white rounded mr-2">Open Camera</button>
-                    <span className="text-sm text-gray-500">or upload a photo</span>
+                    <span className="text-sm text-gray-500 dark:text-gray-400">or upload a photo</span>
                   </div>
                   <input
                     type="file"
@@ -527,12 +527,12 @@ export default function Dashboard({
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Notes (Optional)</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Notes (Optional)</label>
                 <textarea
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-coin-500"
                   placeholder="Any special instructions..."
                 />
               </div>
@@ -544,7 +544,7 @@ export default function Dashboard({
                 >
                   {submitting ? 'Processing…' : 'Confirm Check In'}
                 </button>
-                <button onClick={() => setAction(null)} className="px-4 py-3 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-bold transition">
+                <button onClick={() => setAction(null)} className="px-4 py-3 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-bold transition dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-100">
                   Cancel
                 </button>
               </div>
@@ -555,32 +555,32 @@ export default function Dashboard({
         {action === 'checkout' && selectedGuard && (
           <Modal title={`Check Out: ${selectedGuard.name}`} onClose={() => setAction(null)}>
             <div className="space-y-4">
-              <div className="bg-indigo-50 p-4 rounded-lg">
-                <p className="text-sm text-gray-700">
+              <div className="bg-coin-50 dark:bg-coin-900/20 border border-coin-100 dark:border-coin-900/30 p-4 rounded-lg">
+                <p className="text-sm text-gray-700 dark:text-gray-200">
                   <span className="font-semibold">Checked in at:</span> {selectedGuard.attendance?.check_in_time}
                 </p>
                 {selectedGuard.attendance?.site && (
-                  <p className="text-sm text-gray-700 mt-1">
+                  <p className="text-sm text-gray-700 dark:text-gray-200 mt-1">
                     <span className="font-semibold">Site:</span> {selectedGuard.attendance.site}
                   </p>
                 )}
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Time *</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Time *</label>
                 <input
                   type="time"
                   value={checkOutTimeInput}
                   onChange={(e) => setCheckOutTimeInput(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-coin-500"
                   required
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Photo *</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Photo *</label>
                 <div className="space-y-2">
                   <div>
                     <button type="button" onClick={() => setShowCameraModal(true)} className="px-4 py-2 bg-coin-600 hover:bg-coin-700 text-white rounded mr-2">Open Camera</button>
-                    <span className="text-sm text-gray-500">or upload a photo</span>
+                    <span className="text-sm text-gray-500 dark:text-gray-400">or upload a photo</span>
                   </div>
                   <input
                     type="file"
@@ -592,12 +592,12 @@ export default function Dashboard({
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Notes (Optional)</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Notes (Optional)</label>
                 <textarea
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-coin-500"
                   placeholder="End of shift notes..."
                 />
               </div>
@@ -605,7 +605,7 @@ export default function Dashboard({
                 <button onClick={submitCheckOut} disabled={submitting} className="flex-1 px-4 py-3 bg-red-600 hover:bg-red-700 disabled:bg-gray-300 text-white rounded-lg font-bold transition">
                   {submitting ? 'Processing…' : 'Confirm Check Out'}
                 </button>
-                <button onClick={() => setAction(null)} className="px-4 py-3 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-bold transition">
+                <button onClick={() => setAction(null)} className="px-4 py-3 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-bold transition dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-100">
                   Cancel
                 </button>
               </div>
@@ -647,12 +647,12 @@ interface QuickNavItem {
 
 function StatCard({ label = '', count = 0, description = '', color = 'gray', badge = '', icon = null }: Stat) {
   const colorClasses: Record<string, string> = {
-    green: 'border-green-500 bg-gradient-to-br from-green-50 to-green-100',
-    blue: 'border-blue-500 bg-gradient-to-br from-blue-50 to-blue-100',
-    yellow: 'border-yellow-500 bg-gradient-to-br from-yellow-50 to-yellow-100',
-    gray: 'border-gray-500 bg-gradient-to-br from-gray-50 to-gray-100',
-    orange: 'border-orange-500 bg-gradient-to-br from-orange-50 to-orange-100',
-    red: 'border-red-500 bg-gradient-to-br from-red-50 to-red-100',
+    green: 'border-green-500 bg-gradient-to-br from-green-50 to-green-100 dark:border-green-900/40 dark:from-green-900/20 dark:to-green-900/10',
+    blue: 'border-blue-500 bg-gradient-to-br from-blue-50 to-blue-100 dark:border-blue-900/40 dark:from-blue-900/20 dark:to-blue-900/10',
+    yellow: 'border-yellow-500 bg-gradient-to-br from-yellow-50 to-yellow-100 dark:border-yellow-900/40 dark:from-yellow-900/20 dark:to-yellow-900/10',
+    gray: 'border-gray-500 bg-gradient-to-br from-gray-50 to-gray-100 dark:border-gray-800 dark:from-gray-900 dark:to-gray-800',
+    orange: 'border-orange-500 bg-gradient-to-br from-orange-50 to-orange-100 dark:border-orange-900/40 dark:from-orange-900/20 dark:to-orange-900/10',
+    red: 'border-red-500 bg-gradient-to-br from-red-50 to-red-100 dark:border-red-900/40 dark:from-red-900/20 dark:to-red-900/10',
   };
 
   const badgeClasses: Record<string, string> = {
@@ -670,9 +670,9 @@ function StatCard({ label = '', count = 0, description = '', color = 'gray', bad
         <span className="text-3xl">{icon}</span>
         <span className={`px-2 py-1 text-xs font-bold text-white rounded-full ${badgeClasses[color]}`}>{badge}</span>
       </div>
-      <p className="text-sm font-semibold text-gray-700 mb-1">{label}</p>
-      <p className="text-3xl font-black text-gray-900 mb-1">{count}</p>
-      <p className="text-xs text-gray-600">{description}</p>
+      <p className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1">{label}</p>
+      <p className="text-3xl font-black text-gray-900 dark:text-gray-100 mb-1">{count}</p>
+      <p className="text-xs text-gray-600 dark:text-gray-300">{description}</p>
     </div>
   );
 }
@@ -700,11 +700,11 @@ function sortGuards(guards: Guard[], field: string, direction: 'asc' | 'desc') {
 function CameraModal({ open, onClose, onCaptured }: { open: boolean; onClose: () => void; onCaptured: (f: File) => void }) {
   if (!open) return null;
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl shadow-lg p-6 max-w-md w-full">
+    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-lg p-6 max-w-md w-full text-gray-900 dark:text-gray-100">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-bold">Camera</h3>
-          <button onClick={onClose} className="text-gray-500">Close</button>
+          <button onClick={onClose} className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">Close</button>
         </div>
         <CameraCapture
           onCapture={(file) => {
@@ -719,10 +719,10 @@ function CameraModal({ open, onClose, onCaptured }: { open: boolean; onClose: ()
 
 function AttendanceCard({ icon, label, value, color }: { icon?: React.ReactNode; label: string; value: number; color: string }) {
   const bgClasses: Record<string, string> = {
-    green: 'bg-gradient-to-br from-green-50 to-green-100 border-green-200',
-    blue: 'bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200',
-    purple: 'bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200',
-    red: 'bg-gradient-to-br from-red-50 to-red-100 border-red-200',
+    green: 'bg-gradient-to-br from-green-50 to-green-100 border-green-200 dark:from-green-900/20 dark:to-green-900/10 dark:border-green-900/30',
+    blue: 'bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 dark:from-blue-900/20 dark:to-blue-900/10 dark:border-blue-900/30',
+    purple: 'bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200 dark:from-purple-900/20 dark:to-purple-900/10 dark:border-purple-900/30',
+    red: 'bg-gradient-to-br from-red-50 to-red-100 border-red-200 dark:from-red-900/20 dark:to-red-900/10 dark:border-red-900/30',
   };
 
   return (
@@ -730,8 +730,8 @@ function AttendanceCard({ icon, label, value, color }: { icon?: React.ReactNode;
       <div className="flex items-center gap-3">
         <div className="text-3xl">{icon}</div>
         <div>
-          <p className="text-3xl font-black text-gray-900">{value}</p>
-          <p className="text-sm font-semibold text-gray-600">{label}</p>
+          <p className="text-3xl font-black text-gray-900 dark:text-gray-100">{value}</p>
+          <p className="text-sm font-semibold text-gray-600 dark:text-gray-300">{label}</p>
         </div>
       </div>
     </div>
@@ -742,24 +742,24 @@ function QuickNavCard({ name = '', description = '', route = '#', icon = null, c
   return (
     <Link
       href={route}
-      className="group bg-white rounded-xl p-6 shadow-md hover:shadow-xl transition-all duration-300 border border-gray-100 hover:border-indigo-300 transform hover:-translate-y-1"
+      className="group bg-white dark:bg-gray-900/60 border border-gray-200 dark:border-gray-800 rounded-xl p-6 shadow-sm shadow-black/5 dark:shadow-none hover:shadow-md transition-all duration-300 transform hover:-translate-y-1"
     >
       <div className="w-16 h-16 rounded-full flex items-center justify-center mb-4 mx-auto text-3xl shadow-md" style={{ backgroundColor: `${color}20` }}>
         {icon}
       </div>
-      <h3 className="text-base font-bold text-indigo-600 group-hover:text-indigo-700 text-center mb-2">{name}</h3>
-      <p className="text-sm text-gray-600 text-center">{description}</p>
+      <h3 className="text-base font-bold text-coin-700 dark:text-coin-300 group-hover:text-coin-600 text-center mb-2">{name}</h3>
+      <p className="text-sm text-gray-600 dark:text-gray-300 text-center">{description}</p>
     </Link>
   );
 }
 
 function Modal({ title, children, onClose }: { title: string; children: React.ReactNode; onClose: () => void }) {
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto animate-slideUp">
-        <div className="px-6 py-5 border-b flex items-center justify-between sticky top-0 bg-white rounded-t-2xl">
-          <h3 className="text-xl font-bold text-gray-900">{title}</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors p-2 hover:bg-gray-100 rounded-full">
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
+      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto animate-slideUp text-gray-900 dark:text-gray-100">
+        <div className="px-6 py-5 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between sticky top-0 bg-white dark:bg-gray-900 rounded-t-2xl">
+          <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">{title}</h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-200 transition-colors p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full">
             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>

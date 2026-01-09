@@ -172,24 +172,24 @@ export default function FinanceDashboard(props: Props) {
     <FinanceLayout title="Finance" user={auth?.user}>
       <Head title="Finance" />
       <div className="py-6">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="rounded-lg border bg-white p-4">
-              <div className="text-sm text-gray-500">Total Invoiced</div>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6 text-gray-900 dark:text-gray-100">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm shadow-black/5 dark:border-gray-800 dark:bg-gray-900/60 dark:shadow-none">
+              <div className="text-sm text-gray-500 dark:text-gray-400">Total Invoiced</div>
               <div className="text-xl font-semibold">{formatCurrencyMWK(invoicesSummary.total || 0)}</div>
             </div>
-            <div className="rounded-lg border bg-white p-4">
-              <div className="text-sm text-gray-500">Paid</div>
-              <div className="text-xl font-semibold text-green-600">{formatCurrencyMWK(invoicesSummary.paid || 0)}</div>
+            <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm shadow-black/5 dark:border-gray-800 dark:bg-gray-900/60 dark:shadow-none">
+              <div className="text-sm text-gray-500 dark:text-gray-400">Paid</div>
+              <div className="text-xl font-semibold text-emerald-600 dark:text-emerald-300">{formatCurrencyMWK(invoicesSummary.paid || 0)}</div>
             </div>
-            <div className="rounded-lg border bg-white p-4">
-              <div className="text-sm text-gray-500">Unpaid</div>
-              <div className="text-xl font-semibold text-yellow-600">{formatCurrencyMWK(invoicesSummary.unpaid || 0)}</div>
+            <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm shadow-black/5 dark:border-gray-800 dark:bg-gray-900/60 dark:shadow-none">
+              <div className="text-sm text-gray-500 dark:text-gray-400">Unpaid</div>
+              <div className="text-xl font-semibold text-yellow-600 dark:text-yellow-300">{formatCurrencyMWK(invoicesSummary.unpaid || 0)}</div>
             </div>
-            <div className="rounded-lg border bg-white p-4">
-              <div className="text-sm text-gray-500">Overdue</div>
-              <div className="text-xl font-semibold text-red-600">{overdueCount}</div>
-              <div className="text-xs text-gray-500 mt-1">
+            <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm shadow-black/5 dark:border-gray-800 dark:bg-gray-900/60 dark:shadow-none">
+              <div className="text-sm text-gray-500 dark:text-gray-400">Overdue</div>
+              <div className="text-xl font-semibold text-red-600 dark:text-red-300">{overdueCount}</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                 {formatCurrencyMWK(overdueAmount)} overdue
               </div>
             </div>
@@ -199,17 +199,17 @@ export default function FinanceDashboard(props: Props) {
           <RequisitionSummary />
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="rounded-lg border bg-white p-4">
-              <div className="text-sm text-gray-500">Approved Requisitions</div>
-              <div className="text-xl font-semibold text-red-600">
+            <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm shadow-black/5 dark:border-gray-800 dark:bg-gray-900/60 dark:shadow-none">
+              <div className="text-sm text-gray-500 dark:text-gray-400">Approved Requisitions</div>
+              <div className="text-xl font-semibold text-red-600 dark:text-red-300">
                 {formatCurrencyMWK(approvedExpensesTotal)}
               </div>
             </div>
-            <div className="rounded-lg border bg-white p-4">
-              <div className="text-sm text-gray-500">Net Cashflow (Paid - Approved)</div>
+            <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm shadow-black/5 dark:border-gray-800 dark:bg-gray-900/60 dark:shadow-none">
+              <div className="text-sm text-gray-500 dark:text-gray-400">Net Cashflow (Paid - Approved)</div>
               <div
                 className={`text-xl font-semibold ${
-                  netCashflow >= 0 ? 'text-emerald-600' : 'text-red-600'
+                  netCashflow >= 0 ? 'text-emerald-600 dark:text-emerald-300' : 'text-red-600 dark:text-red-300'
                 }`}
               >
                 {formatCurrencyMWK(netCashflow)}
@@ -221,30 +221,30 @@ export default function FinanceDashboard(props: Props) {
           {(props as any).myRequisitions || (props as any).lastPayroll ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {(props as any).myRequisitions && (
-                <div className="rounded-lg border bg-white p-4">
-                  <div className="text-sm text-gray-500 mb-1">My Requisitions (This Month)</div>
-                  <div className="text-2xl font-bold text-red-700">{formatCurrencyMWK((props as any).myRequisitions.this_month_total || 0)}</div>
-                  <div className="mt-2 text-sm text-gray-600 flex gap-4">
+                <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm shadow-black/5 dark:border-gray-800 dark:bg-gray-900/60 dark:shadow-none">
+                  <div className="text-sm text-gray-500 dark:text-gray-400 mb-1">My Requisitions (This Month)</div>
+                  <div className="text-2xl font-bold text-coin-700 dark:text-coin-300">{formatCurrencyMWK((props as any).myRequisitions.this_month_total || 0)}</div>
+                  <div className="mt-2 text-sm text-gray-600 dark:text-gray-300 flex gap-4">
                     <span>Pending: <strong>{Number((props as any).myRequisitions.pending_count || 0)}</strong></span>
                     <span>Approved: <strong className="text-emerald-600">{Number((props as any).myRequisitions.approved_count || 0)}</strong></span>
                   </div>
                 </div>
               )}
               {(props as any).lastPayroll && (
-                <div className="rounded-lg border bg-white p-4">
-                  <div className="text-sm text-gray-500 mb-1">Last Payroll</div>
-                  <div className="text-sm text-gray-700">{(props as any).lastPayroll.period_start} → {(props as any).lastPayroll.period_end}</div>
+                <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm shadow-black/5 dark:border-gray-800 dark:bg-gray-900/60 dark:shadow-none">
+                  <div className="text-sm text-gray-500 dark:text-gray-400 mb-1">Last Payroll</div>
+                  <div className="text-sm text-gray-700 dark:text-gray-300">{(props as any).lastPayroll.period_start} → {(props as any).lastPayroll.period_end}</div>
                   <div className="mt-2 grid grid-cols-3 gap-3">
                     <div>
-                      <div className="text-xs text-gray-500">Status</div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400">Status</div>
                       <div className="text-sm font-semibold">{(props as any).lastPayroll.status}</div>
                     </div>
                     <div>
-                      <div className="text-xs text-gray-500">Gross</div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400">Gross</div>
                       <div className="text-sm font-semibold">{formatCurrencyMWK(Number((props as any).lastPayroll.gross_total || 0))}</div>
                     </div>
                     <div>
-                      <div className="text-xs text-gray-500">Net</div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400">Net</div>
                       <div className="text-sm font-semibold">{formatCurrencyMWK(Number((props as any).lastPayroll.net_total || 0))}</div>
                     </div>
                   </div>
@@ -254,37 +254,37 @@ export default function FinanceDashboard(props: Props) {
           ) : null}
 
           {/* Additional KPIs */}
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-            <div className="rounded-lg border bg-white p-4">
-              <div className="text-sm text-gray-500">Invoices</div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+            <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm shadow-black/5 dark:border-gray-800 dark:bg-gray-900/60 dark:shadow-none">
+              <div className="text-sm text-gray-500 dark:text-gray-400">Invoices</div>
               <div className="text-xl font-semibold">{Number(kpis.invoices_count || 0)}</div>
             </div>
             {isAdmin && (
-              <div className="rounded-lg border bg-white p-4">
-                <div className="text-sm text-gray-500">Pending Approvals</div>
-                <div className="text-xl font-semibold text-red-700">{Number(kpis.pending_expenses_count || 0)}</div>
+              <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm shadow-black/5 dark:border-gray-800 dark:bg-gray-900/60 dark:shadow-none">
+                <div className="text-sm text-gray-500 dark:text-gray-400">Pending Approvals</div>
+                <div className="text-xl font-semibold text-coin-700 dark:text-coin-300">{Number(kpis.pending_expenses_count || 0)}</div>
               </div>
             )}
-            <div className="rounded-lg border bg-white p-4">
-              <div className="text-sm text-gray-500">Avg Invoice</div>
+            <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm shadow-black/5 dark:border-gray-800 dark:bg-gray-900/60 dark:shadow-none">
+              <div className="text-sm text-gray-500 dark:text-gray-400">Avg Invoice</div>
               <div className="text-xl font-semibold">{formatCurrencyMWK(kpis.avg_invoice || 0)}</div>
             </div>
-            <div className="rounded-lg border bg-white p-4">
-              <div className="text-sm text-gray-500">Collection Rate</div>
-              <div className="text-xl font-semibold text-emerald-600">{formatPercent(kpis.collection_rate || 0)}</div>
+            <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm shadow-black/5 dark:border-gray-800 dark:bg-gray-900/60 dark:shadow-none">
+              <div className="text-sm text-gray-500 dark:text-gray-400">Collection Rate</div>
+              <div className="text-xl font-semibold text-emerald-600 dark:text-emerald-300">{formatPercent(kpis.collection_rate || 0)}</div>
             </div>
-            <div className="rounded-lg border bg-white p-4">
-              <div className="text-sm text-gray-500">Due next 30d</div>
-              <div className="text-xl font-semibold text-yellow-700">{formatCurrencyMWK(kpis.upcoming_due_30d || 0)}</div>
+            <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm shadow-black/5 dark:border-gray-800 dark:bg-gray-900/60 dark:shadow-none">
+              <div className="text-sm text-gray-500 dark:text-gray-400">Due next 30d</div>
+              <div className="text-xl font-semibold text-yellow-700 dark:text-yellow-300">{formatCurrencyMWK(kpis.upcoming_due_30d || 0)}</div>
             </div>
-            <div className="rounded-lg border bg-white p-4">
-              <div className="text-sm text-gray-500">Requisition Run Rate (daily)</div>
-              <div className="text-xl font-semibold text-red-600">{formatCurrencyMWK(kpis.expenses_run_rate_daily || 0)}</div>
+            <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm shadow-black/5 dark:border-gray-800 dark:bg-gray-900/60 dark:shadow-none">
+              <div className="text-sm text-gray-500 dark:text-gray-400">Requisition Run Rate (daily)</div>
+              <div className="text-xl font-semibold text-red-600 dark:text-red-300">{formatCurrencyMWK(kpis.expenses_run_rate_daily || 0)}</div>
             </div>
           </div>
 
-          <div className="rounded-lg border bg-white p-6">
-            <h2 className="text-lg font-medium mb-4">Revenue vs Expenses (Last 12 months)</h2>
+          <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm shadow-black/5 dark:border-gray-800 dark:bg-gray-900/60 dark:shadow-none">
+            <h2 className="text-lg font-medium mb-4 text-gray-900 dark:text-gray-100">Revenue vs Expenses (Last 12 months)</h2>
             <div>
               {/* Use a ref and native event to get elements at click */}
               {/** @ts-ignore */}
@@ -310,54 +310,58 @@ export default function FinanceDashboard(props: Props) {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <div className="rounded-lg border bg-white p-6">
-              <h3 className="text-md font-semibold mb-4">Active Budgets</h3>
+            <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm shadow-black/5 dark:border-gray-800 dark:bg-gray-900/60 dark:shadow-none">
+              <h3 className="text-md font-semibold mb-4 text-gray-900 dark:text-gray-100">Active Budgets</h3>
               {budgets.length > 0 && (
-                <div className="mb-3 text-xs text-gray-600">
+                <div className="mb-3 text-xs text-gray-600 dark:text-gray-300">
                   {budgetStats.exceeded} exceeded / {budgetStats.critical} at risk (&gt;= 80%)
                 </div>
               )}
               <div className="space-y-3">
-                {budgets.length === 0 && <div className="text-sm text-gray-500">No active budgets</div>}
+                {budgets.length === 0 && <div className="text-sm text-gray-500 dark:text-gray-400">No active budgets</div>}
                 {budgets.map((b: any) => {
                   const pct = Number(b.percentageSpent || 0);
                   const isExceeded = !!b.isExceeded;
                   const isCritical = !isExceeded && pct >= 80;
-                  const borderClass = isExceeded ? 'border-red-200 bg-red-50' : isCritical ? 'border-yellow-200 bg-yellow-50' : 'border-green-100 bg-white';
+                  const borderClass = isExceeded
+                    ? 'border-red-200 bg-red-50 dark:border-red-500/30 dark:bg-red-500/10'
+                    : isCritical
+                      ? 'border-yellow-200 bg-yellow-50 dark:border-yellow-500/30 dark:bg-yellow-500/10'
+                      : 'border-green-100 bg-white dark:border-gray-800 dark:bg-gray-950/40';
                   return (
                     <div key={b.id} className={`rounded p-3 border ${borderClass}`}>
                       <div className="flex justify-between items-start">
                         <div>
                           <div className="text-sm font-medium">{b.name}</div>
-                          <div className="text-xs text-gray-500">{b.category}</div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">{b.category}</div>
                         </div>
                         <div className="text-right">
                           <div className="text-sm">{formatCurrencyMWK(b.budgeted_amount || 0)}</div>
-                          <div className="text-xs text-gray-500">Budgeted</div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">Budgeted</div>
                         </div>
                       </div>
                       <div className="mt-2 flex items-center justify-between">
                         <div className="w-2/3">
-                          <div className="w-full bg-gray-100 rounded h-2 overflow-hidden">
+                          <div className="w-full bg-gray-100 dark:bg-gray-800 rounded h-2 overflow-hidden">
                             <div
                               style={{ width: `${Math.min(100, pct)}%` }}
                               className={`h-2 ${isExceeded ? 'bg-red-500' : isCritical ? 'bg-yellow-500' : 'bg-green-500'}`}
                             />
                           </div>
-                          <div className="text-xs text-gray-500 mt-1">{pct.toFixed(0)}% used</div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">{pct.toFixed(0)}% used</div>
                         </div>
                         <div className="w-1/3 text-right">
                           <div className="text-sm">{formatCurrencyMWK(b.spent || 0)}</div>
-                          <div className="text-xs text-gray-500">Spent</div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">Spent</div>
                         </div>
                       </div>
                       <div className="mt-3 flex items-center justify-between">
                         <div>
-                          {isExceeded && <span className="text-xs text-red-700 font-semibold">Budget exceeded</span>}
-                          {!isExceeded && isCritical && <span className="text-xs text-yellow-700 font-semibold">At or above 80% of budget</span>}
+                          {isExceeded && <span className="text-xs text-red-700 dark:text-red-200 font-semibold">Budget exceeded</span>}
+                          {!isExceeded && isCritical && <span className="text-xs text-yellow-700 dark:text-yellow-200 font-semibold">At or above 80% of budget</span>}
                         </div>
                         <div>
-                          <button onClick={() => handleBudgetClick(b.id, b.name)} className="text-sm px-2 py-1 rounded bg-red-100 text-red-800">View details</button>
+                          <button onClick={() => handleBudgetClick(b.id, b.name)} className="text-sm px-2 py-1 rounded bg-coin-100 text-coin-900 hover:bg-coin-200 dark:bg-coin-900/30 dark:text-coin-200 dark:hover:bg-coin-900/40">View details</button>
                         </div>
                       </div>
                     </div>
@@ -366,21 +370,21 @@ export default function FinanceDashboard(props: Props) {
               </div>
             </div>
 
-            <div className="rounded-lg border bg-white p-6 lg:col-span-2">
-              <h3 className="text-md font-semibold mb-4">Recent Activity</h3>
-              <div className="divide-y">
-                {recent.length === 0 && <div className="text-sm text-gray-500">No recent finance activity</div>}
+            <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm shadow-black/5 lg:col-span-2 dark:border-gray-800 dark:bg-gray-900/60 dark:shadow-none">
+              <h3 className="text-md font-semibold mb-4 text-gray-900 dark:text-gray-100">Recent Activity</h3>
+              <div className="divide-y divide-gray-200 dark:divide-gray-800">
+                {recent.length === 0 && <div className="text-sm text-gray-500 dark:text-gray-400">No recent finance activity</div>}
                 {recent.map((r: any, idx: number) => (
                   <div key={`${r.type}-${r.id}-${idx}`} className="py-3 flex justify-between items-center">
                     <div>
                       <div className="text-sm font-medium">{r.type === 'expense' ? 'Requisition' : 'Invoice'} #{r.id}</div>
-                      <div className="text-xs text-gray-500">{r.user ? `${r.user} — ` : ''}{r.date}</div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400">{r.user ? `${r.user} — ` : ''}{r.date}</div>
                     </div>
                     <div className="text-right">
-                      <div className={`text-sm ${r.type === 'expense' ? 'text-red-600' : 'text-green-600'}`}>
+                      <div className={`text-sm ${r.type === 'expense' ? 'text-red-600 dark:text-red-300' : 'text-emerald-600 dark:text-emerald-300'}`}>
                         {formatCurrencyMWK(r.amount || 0)}
                       </div>
-                      {r.status && <div className="text-xs text-gray-500">{r.status}</div>}
+                      {r.status && <div className="text-xs text-gray-500 dark:text-gray-400">{r.status}</div>}
                     </div>
                   </div>
                 ))}
@@ -390,41 +394,41 @@ export default function FinanceDashboard(props: Props) {
 
           {/* Aging and Top Categories */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <div className="rounded-lg border bg-white p-6">
-              <h3 className="text-md font-semibold mb-3">A/R Aging</h3>
+            <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm shadow-black/5 dark:border-gray-800 dark:bg-gray-900/60 dark:shadow-none">
+              <h3 className="text-md font-semibold mb-3 text-gray-900 dark:text-gray-100">A/R Aging</h3>
               <dl className="grid grid-cols-2 gap-3 text-sm">
                 <div>
-                  <dt className="text-gray-500">Current</dt>
+                  <dt className="text-gray-500 dark:text-gray-400">Current</dt>
                   <dd className="font-medium">{formatCurrencyMWK(aging.current || 0)}</dd>
                 </div>
                 <div>
-                  <dt className="text-gray-500">1–30</dt>
+                  <dt className="text-gray-500 dark:text-gray-400">1–30</dt>
                   <dd className="font-medium">{formatCurrencyMWK(aging.one_to_30 || 0)}</dd>
                 </div>
                 <div>
-                  <dt className="text-gray-500">31–60</dt>
+                  <dt className="text-gray-500 dark:text-gray-400">31–60</dt>
                   <dd className="font-medium">{formatCurrencyMWK(aging.thirty_one_to_60 || 0)}</dd>
                 </div>
                 <div>
-                  <dt className="text-gray-500">61–90</dt>
+                  <dt className="text-gray-500 dark:text-gray-400">61–90</dt>
                   <dd className="font-medium">{formatCurrencyMWK(aging.sixty_one_to_90 || 0)}</dd>
                 </div>
                 <div>
-                  <dt className="text-gray-500">90+</dt>
+                  <dt className="text-gray-500 dark:text-gray-400">90+</dt>
                   <dd className="font-medium">{formatCurrencyMWK(aging.over_90 || 0)}</dd>
                 </div>
               </dl>
             </div>
 
-            <div className="rounded-lg border bg-white p-6 lg:col-span-2">
-              <h3 className="text-md font-semibold mb-3">Top Requisition Categories</h3>
+            <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm shadow-black/5 lg:col-span-2 dark:border-gray-800 dark:bg-gray-900/60 dark:shadow-none">
+              <h3 className="text-md font-semibold mb-3 text-gray-900 dark:text-gray-100">Top Requisition Categories</h3>
               {topCategories.length === 0 ? (
-                <div className="text-sm text-gray-500">No data</div>
+                <div className="text-sm text-gray-500 dark:text-gray-400">No data</div>
               ) : (
-                <ul className="divide-y">
+                <ul className="divide-y divide-gray-200 dark:divide-gray-800">
                   {topCategories.map((c: { category: string; total: number }) => (
                     <li key={c.category} className="py-2 flex justify-between text-sm">
-                      <span className="text-gray-700">{String(c.category).replace(/_/g, ' ')}</span>
+                      <span className="text-gray-700 dark:text-gray-200">{String(c.category).replace(/_/g, ' ')}</span>
                       <span className="font-medium">{formatCurrencyMWK(c.total)}</span>
                     </li>
                   ))}

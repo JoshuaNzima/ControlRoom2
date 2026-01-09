@@ -103,19 +103,24 @@ export default function GuardForm({
   const [submitted, setSubmitted] = React.useState(false);
   const err = (k: string) => (errors && (errors as any)[k]) || clientErrors[k];
 
+  const missingProfileFields = React.useMemo(() => {
+    const missing: string[] = [];
+    if (!String(data.id_number || '').trim()) missing.push('ID Number');
+    if (!String(data.emergency_contact_name || '').trim()) missing.push('Emergency Contact Name');
+    if (!String(data.emergency_contact_phone || '').trim()) missing.push('Emergency Contact Phone');
+    return missing;
+  }, [data.id_number, data.emergency_contact_name, data.emergency_contact_phone]);
+
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     setSubmitted(true);
     const local: Record<string, string> = {};
     if (!String(data.name || '').trim()) local.name = 'Full Name is required';
     if (!String(data.phone || '').trim()) local.phone = 'Phone is required';
-    if (!String(data.id_number || '').trim()) local.id_number = 'ID Number is required';
     if (!String(data.date_of_birth || '').trim()) local.date_of_birth = 'Date of Birth is required';
     if (!String(data.gender || '').trim()) local.gender = 'Gender is required';
     if (!String(data.guard_type || '').trim()) local.guard_type = 'Guard Type is required';
     if (!String(data.status || '').trim()) local.status = 'Status is required';
-    if (!String(data.emergency_contact_name || '').trim()) local.emergency_contact_name = 'Emergency contact name is required';
-    if (!String(data.emergency_contact_phone || '').trim()) local.emergency_contact_phone = 'Emergency contact phone is required';
 
     setClientErrors(local);
     if (Object.keys(local).length > 0) return;
@@ -154,6 +159,16 @@ export default function GuardForm({
 
   return (
     <form onSubmit={handleSubmit} noValidate className="space-y-6">
+      {missingProfileFields.length > 0 && (
+        <div className="rounded-lg border border-yellow-200 dark:border-yellow-800 bg-yellow-50 dark:bg-yellow-900/20 px-4 py-3">
+          <div className="text-sm font-semibold text-yellow-900 dark:text-yellow-100">Profile incomplete</div>
+          <div className="mt-1 text-sm text-yellow-800 dark:text-yellow-200">
+            Please add:
+            <span className="font-medium"> {missingProfileFields.join(', ')}</span>
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">Employee ID</label>
@@ -222,13 +237,12 @@ export default function GuardForm({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">ID Number *</label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">ID Number</label>
           <input
             type="text"
             value={data.id_number}
             onChange={handleChange('id_number')}
             className={`w-full px-4 py-2 border rounded-lg focus:ring-2 ${err('id_number') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-red-500'}`}
-            required
           />
           {err('id_number') && <p className="text-red-600 text-sm mt-1">{err('id_number')}</p>}
         </div>
@@ -445,25 +459,23 @@ export default function GuardForm({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Emergency Contact Name *</label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Emergency Contact Name</label>
           <input
             type="text"
             value={data.emergency_contact_name}
             onChange={handleChange('emergency_contact_name')}
             className={`w-full px-4 py-2 border rounded-lg focus:ring-2 ${err('emergency_contact_name') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-red-500'}`}
-            required
           />
           {err('emergency_contact_name') && <p className="text-red-600 text-sm mt-1">{err('emergency_contact_name')}</p>}
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Emergency Contact Phone *</label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Emergency Contact Phone</label>
           <input
             type="tel"
             value={data.emergency_contact_phone}
             onChange={handleChange('emergency_contact_phone')}
             className={`w-full px-4 py-2 border rounded-lg focus:ring-2 ${err('emergency_contact_phone') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-red-500'}`}
-            required
           />
           {err('emergency_contact_phone') && <p className="text-red-600 text-sm mt-1">{err('emergency_contact_phone')}</p>}
         </div>

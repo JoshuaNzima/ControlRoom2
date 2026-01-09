@@ -21,10 +21,10 @@ interface ReviewFlagModalProps {
 }
 
 const statusColors: Record<string, string> = {
-  pending_review: 'bg-yellow-100 text-yellow-800',
-  under_review: 'bg-blue-100 text-blue-800',
-  resolved: 'bg-green-100 text-green-800',
-  dismissed: 'bg-gray-100 text-gray-800',
+  pending_review: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-200',
+  under_review: 'bg-coin-100 text-coin-800 dark:bg-coin-900/20 dark:text-coin-200',
+  resolved: 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-200',
+  dismissed: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200',
 };
 
 const ReviewFlagModal: React.FC<ReviewFlagModalProps> = ({ flag, canReview = false, onUpdated }) => {
@@ -63,7 +63,7 @@ const ReviewFlagModal: React.FC<ReviewFlagModalProps> = ({ flag, canReview = fal
               <div>
                 <Label>Status</Label>
                 <div className="mt-1">
-                  <Badge className={statusColors[flag.status] || 'bg-gray-100 text-gray-800'}>
+                  <Badge className={statusColors[flag.status] || 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200'}>
                     {String(flag.status || '').replace('_', ' ')}
                   </Badge>
                 </div>

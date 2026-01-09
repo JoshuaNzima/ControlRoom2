@@ -8,6 +8,10 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Notification;
 use App\Models\User;
 use App\Notifications\GenericDbNotification;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\JobApplicationReceived;
+use App\Mail\JobApplicationInternalAlert;
+use App\Mail\JobApplicationStatusUpdated;
 
 class JobApplicationController extends Controller
 {
@@ -33,7 +37,22 @@ class JobApplicationController extends Controller
             'notes' => $validated['notes'] ?? null,
         ]);
 
-        // Notify careers managers of new application
+        if (!empty($application->email)) {
+            try {
+                $application->loadMissing('jobPosting:id,title');
+                Mail::to($application->email)->send(new JobApplicationReceived($application));
+            } catch (\Throwable $e) {
+            }
+        }
+
+        try {
+            $application->loadMissing('jobPosting:id,title,apply_email');
+            if (!empty($application->jobPosting?->apply_email)) {
+                Mail::to($application->jobPosting->apply_email)->send(new JobApplicationInternalAlert($application));
+            }
+        } catch (\Throwable $e) {
+        }
+
         try {
             $recipients = User::permission('hr.careers.manage')->get();
             if ($recipients->isEmpty()) {
@@ -45,11 +64,11 @@ class JobApplicationController extends Controller
                     'title' => 'New Job Application',
                     'message' => sprintf('%s applied%s', $application->candidate_name ?? 'Candidate', $application->jobPosting ? ' for '.$application->jobPosting->title : ''),
                     'url' => route('hr.jobs.applicants'),
+                    'mail' => true,
                 ];
                 Notification::send($recipients, new GenericDbNotification($payload));
             }
         } catch (\Throwable $e) {
-            // swallow
         }
 
         return back()->with('success', 'Application created');
@@ -66,7 +85,18 @@ class JobApplicationController extends Controller
             'notes' => ['nullable','string'],
         ]);
 
+        $oldStatus = (string) $jobApplication->status;
+
         $jobApplication->update($validated);
+
+        try {
+            $newStatus = (string) $jobApplication->status;
+            if (!empty($validated['status']) && $oldStatus !== $newStatus && !empty($jobApplication->email)) {
+                $jobApplication->loadMissing('jobPosting:id,title');
+                Mail::to($jobApplication->email)->send(new JobApplicationStatusUpdated($jobApplication, $oldStatus));
+            }
+        } catch (\Throwable $e) {
+        }
 
         return back()->with('success', 'Application updated');
     }

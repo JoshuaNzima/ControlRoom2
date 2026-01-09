@@ -128,10 +128,10 @@ const Settings = ({ auth, settings }: SettingsProps) => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Active Features</p>
-                  <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">3</p>
+                  <p className="text-2xl font-bold text-coin-700 dark:text-coin-200">3</p>
                 </div>
-                <div className="h-8 w-8 bg-blue-100 dark:bg-blue-900/20 rounded-full flex items-center justify-center">
-                  <span className="text-blue-600 dark:text-blue-400">⚙️</span>
+                <div className="h-8 w-8 bg-coin-100 dark:bg-coin-900/20 rounded-full flex items-center justify-center">
+                  <span className="text-coin-700 dark:text-coin-200">⚙️</span>
                 </div>
               </div>
             </CardContent>
@@ -142,10 +142,10 @@ const Settings = ({ auth, settings }: SettingsProps) => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Last Backup</p>
-                  <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">2h ago</p>
+                  <p className="text-2xl font-bold text-coin-700 dark:text-coin-200">2h ago</p>
                 </div>
-                <div className="h-8 w-8 bg-purple-100 dark:bg-purple-900/20 rounded-full flex items-center justify-center">
-                  <span className="text-purple-600 dark:text-purple-400">💾</span>
+                <div className="h-8 w-8 bg-coin-100 dark:bg-coin-900/20 rounded-full flex items-center justify-center">
+                  <span className="text-coin-700 dark:text-coin-200">💾</span>
                 </div>
               </div>
             </CardContent>

@@ -63,9 +63,9 @@ export default function Guards({ guards, filters }: Props) {
 
   const getStatusBadge = (status: string, color: string) => {
     const colors: Record<string, string> = {
-      green: 'bg-green-100 text-green-800',
-      gray: 'bg-gray-100 text-gray-800',
-      red: 'bg-red-100 text-red-800',
+      green: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200',
+      gray: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200',
+      red: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200',
     };
     return (
       <span className={`px-3 py-1 rounded-full text-xs font-semibold ${colors[color] || colors.gray}`}>
@@ -85,38 +85,38 @@ export default function Guards({ guards, filters }: Props) {
       <Head title="Guards" />
 
       {/* Header */}
-      <div className="max-w-7xl mx-auto space-y-6">
-        <div className="flex items-center justify-between">
+      <div className="max-w-7xl mx-auto space-y-6 px-4 sm:px-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Guards Management</h1>
-            <p className="text-gray-600">Manage security personnel</p>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Guards Management</h1>
+            <p className="text-gray-600 dark:text-gray-300">Manage security personnel</p>
           </div>
         </div>
 
         {/* Filters */}
-        <div className="bg-white rounded-xl shadow-lg p-6">
+        <div className="bg-white dark:bg-gray-900/60 border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm shadow-black/5 dark:shadow-none p-4 sm:p-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Search</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Search</label>
               <div className="relative">
-                <span className="absolute left-3 top-3 text-gray-400"><IconMapper name="Search" size={20} /></span>
+                <span className="absolute left-3 top-3 text-gray-400 dark:text-gray-500"><IconMapper name="Search" size={20} /></span>
                 <input
                   type="text"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
                   placeholder="Name or Employee ID..."
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:border-coin-500 focus:ring-2 focus:ring-coin-500"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Status</label>
               <select
                 value={status}
                 onChange={(e) => setStatus(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:border-coin-500 focus:ring-2 focus:ring-coin-500"
               >
                 <option value="">All Statuses</option>
                 <option value="active">Active</option>
@@ -128,7 +128,7 @@ export default function Guards({ guards, filters }: Props) {
             <div className="flex items-end">
               <button
                 onClick={handleSearch}
-                className="w-full px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition"
+                className="w-full px-6 py-2 bg-coin-700 hover:bg-coin-600 text-white rounded-lg font-medium transition focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950"
               >
                 Apply Filters
               </button>
@@ -139,19 +139,19 @@ export default function Guards({ guards, filters }: Props) {
         {/* Guards Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {guardsData.data.map((guard) => (
-            <div key={guard.id} className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition p-6">
+            <div key={guard.id} className="bg-white dark:bg-gray-900/60 border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm shadow-black/5 dark:shadow-none overflow-hidden transition p-6">
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-lg">
+                  <div className="w-12 h-12 bg-gradient-to-br from-coin-700 to-coin-600 rounded-full flex items-center justify-center text-white font-bold text-lg">
                     {guard.name.charAt(0)}
                   </div>
                   <div>
-                    <h3 className="font-bold text-gray-900">{guard.name}</h3>
-                    <p className="text-sm text-gray-500">{guard.employee_id}</p>
+                    <h3 className="font-bold text-gray-900 dark:text-gray-100">{guard.name}</h3>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">{guard.employee_id}</p>
                   </div>
                 </div>
                 {guard.is_on_duty && (
-                  <span className="px-2 py-1 bg-green-100 text-green-800 text-xs font-semibold rounded-full">
+                  <span className="px-2 py-1 bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200 text-xs font-semibold rounded-full">
                     On Duty
                   </span>
                 )}
@@ -161,7 +161,7 @@ export default function Guards({ guards, filters }: Props) {
                 {getStatusBadge(guard.status, guard.status_color)}
                 <button
                   onClick={() => setSelectedGuard(guard)}
-                  className="flex items-center gap-1 text-indigo-600 hover:text-indigo-800 font-medium text-sm"
+                  className="flex items-center gap-1 text-coin-700 hover:text-coin-600 font-medium text-sm focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950 rounded-md px-2 py-1 -mr-2"
                 >
                   <IconMapper name="Eye" size={16} /> View Details
                 </button>
@@ -172,20 +172,20 @@ export default function Guards({ guards, filters }: Props) {
 
         {/* Pagination */}
         {guardsData.meta.last_page > 1 && (
-          <div className="bg-white rounded-xl shadow-lg p-4 mt-6">
-            <div className="flex items-center justify-between">
-              <div className="text-sm text-gray-600">
+          <div className="bg-white dark:bg-gray-900/60 border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm shadow-black/5 dark:shadow-none p-4 mt-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div className="text-sm text-gray-600 dark:text-gray-300">
                 Showing {guardsData.meta.from} to {guardsData.meta.to} of {guardsData.meta.total} guards
               </div>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2 sm:justify-end">
                 {guardsData.links.map((link, index) => (
                   <a
                     key={index}
                     href={link.url || '#'}
-                    className={`px-4 py-2 rounded-lg font-medium transition ${
+                    className={`px-4 py-2 rounded-lg font-medium transition border ${
                       link.active
-                        ? 'bg-indigo-600 text-white'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        ? 'bg-coin-700 text-white border-coin-800'
+                        : 'bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-800 hover:bg-gray-100 dark:hover:bg-gray-800'
                     }`}
                     dangerouslySetInnerHTML={{ __html: link.label }}
                   />
@@ -198,29 +198,29 @@ export default function Guards({ guards, filters }: Props) {
 
       {/* Modal */}
       {selectedGuard && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
           <div
             ref={modalRef}
-            className="bg-white rounded-xl w-11/12 md:w-1/2 p-6 relative"
+            className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl w-full max-w-2xl p-6 relative text-gray-900 dark:text-gray-100"
           >
             <button
-              className="absolute top-4 right-4 text-gray-500 hover:text-gray-700"
+              className="absolute top-4 right-4 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
               onClick={() => setSelectedGuard(null)}
             >
               <IconMapper name="X" size={24} />
             </button>
 
             <h2 className="text-xl font-bold mb-4">{selectedGuard.name}</h2>
-            <p className="text-sm text-gray-600 mb-2">Employee ID: {selectedGuard.employee_id}</p>
-            <p className="text-sm text-gray-600 mb-2">Phone: {selectedGuard.phone}</p>
-            <p className="text-sm text-gray-600 mb-2">Email: {selectedGuard.email}</p>
-            <p className="text-sm text-gray-600 mb-2">Hired: {selectedGuard.hire_date}</p>
-            <p className="text-sm text-gray-600 mb-2">Status: {selectedGuard.status}</p>
+            <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">Employee ID: {selectedGuard.employee_id}</p>
+            <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">Phone: {selectedGuard.phone}</p>
+            <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">Email: {selectedGuard.email}</p>
+            <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">Hired: {selectedGuard.hire_date}</p>
+            <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">Status: {selectedGuard.status}</p>
 
             {selectedGuard.today_attendance && (
-              <div className="bg-blue-50 rounded-lg p-3 mt-4">
-                <p className="text-xs text-gray-600 mb-1">Today's Attendance</p>
-                <div className="flex justify-between text-sm">
+              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-900/30 rounded-lg p-3 mt-4">
+                <p className="text-xs text-gray-600 dark:text-gray-300 mb-1">Today's Attendance</p>
+                <div className="flex justify-between text-sm text-gray-900 dark:text-gray-100">
                   <span>In: {selectedGuard.today_attendance.check_in}</span>
                   {selectedGuard.today_attendance.check_out && (
                     <span>Out: {selectedGuard.today_attendance.check_out}</span>

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Head } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 import ZoneCommanderLayout from '@/Layouts/ZoneCommanderLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
@@ -7,6 +7,8 @@ import { Input } from '@/Components/ui/input';
 import { Badge } from '@/Components/ui/badge';
 import IconMapper from '@/Components/IconMapper';
 import { format } from 'date-fns';
+import ConfirmModal from '@/Components/ConfirmModal';
+import ReasonModal from '@/Components/ReasonModal';
 
 interface Guard {
   id: number;
@@ -14,7 +16,7 @@ interface Guard {
   employee_id: string;
   email: string;
   phone: string;
-  status: 'active' | 'inactive' | 'on_leave' | 'suspended';
+  status: 'active' | 'inactive' | 'suspended' | 'dismissed' | 'absconded';
   position: string;
   site_name: string;
   client_name: string;
@@ -35,8 +37,24 @@ interface GuardsProps {
 
 export default function Guards({ guards = [] }: GuardsProps) {
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive' | 'on_leave' | 'suspended'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive' | 'suspended' | 'dismissed' | 'absconded'>('all');
   const [riskFilter, setRiskFilter] = useState<'all' | 'low' | 'medium' | 'high'>('all');
+  const [loadingId, setLoadingId] = useState<number | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmTitle, setConfirmTitle] = useState('');
+  const [confirmMessage, setConfirmMessage] = useState('');
+  const [confirmAction, setConfirmAction] = useState<() => void>(() => {});
+  const [reasonOpen, setReasonOpen] = useState(false);
+  const [reasonTitle, setReasonTitle] = useState('');
+  const [reasonMessage, setReasonMessage] = useState('');
+  const [reasonSubmit, setReasonSubmit] = useState<((reason: string) => void) | null>(null);
+
+  const openConfirm = (title: string, message: string, action: () => void) => {
+    setConfirmTitle(title); setConfirmMessage(message); setConfirmAction(() => action); setConfirmOpen(true);
+  };
+  const openReason = (title: string, message: string, submit: (reason: string) => void) => {
+    setReasonTitle(title); setReasonMessage(message); setReasonSubmit(() => submit); setReasonOpen(true);
+  };
 
   const filteredGuards = guards.filter(guard => {
     const matchesSearch = guard.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -50,11 +68,16 @@ export default function Guards({ guards = [] }: GuardsProps) {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'active': return 'bg-green-100 text-green-800';
-      case 'inactive': return 'bg-gray-100 text-gray-800';
-      case 'on_leave': return 'bg-blue-100 text-blue-800';
-      case 'suspended': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'active':
+        return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100';
+      case 'suspended':
+        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100';
+      case 'absconded':
+        return 'bg-rose-100 text-rose-800 dark:bg-rose-900 dark:text-rose-100';
+      case 'dismissed':
+      case 'inactive':
+      default:
+        return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-100';
     }
   };
 
@@ -176,18 +199,32 @@ export default function Guards({ guards = [] }: GuardsProps) {
                   Active
                 </Button>
                 <Button
-                  variant={statusFilter === 'on_leave' ? 'default' : 'outline'}
-                  onClick={() => setStatusFilter('on_leave')}
-                  size="sm"
-                >
-                  On Leave
-                </Button>
-                <Button
                   variant={statusFilter === 'suspended' ? 'default' : 'outline'}
                   onClick={() => setStatusFilter('suspended')}
                   size="sm"
                 >
                   Suspended
+                </Button>
+                <Button
+                  variant={statusFilter === 'inactive' ? 'default' : 'outline'}
+                  onClick={() => setStatusFilter('inactive')}
+                  size="sm"
+                >
+                  Inactive
+                </Button>
+                <Button
+                  variant={statusFilter === 'dismissed' ? 'default' : 'outline'}
+                  onClick={() => setStatusFilter('dismissed')}
+                  size="sm"
+                >
+                  Dismissed
+                </Button>
+                <Button
+                  variant={statusFilter === 'absconded' ? 'default' : 'outline'}
+                  onClick={() => setStatusFilter('absconded')}
+                  size="sm"
+                >
+                  Absconded
                 </Button>
               </div>
               <div className="flex gap-2">
@@ -317,6 +354,69 @@ export default function Guards({ guards = [] }: GuardsProps) {
                           <IconMapper name="MessageSquare" className="w-4 h-4 mr-2" />
                           Contact
                         </Button>
+                        {(guard.status === 'active' || guard.status === 'suspended') && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="hover:bg-yellow-50 dark:hover:bg-yellow-900/20"
+                            disabled={loadingId === guard.id}
+                            onClick={() => {
+                              const isSuspending = guard.status === 'active';
+                              openConfirm(
+                                `${isSuspending ? 'Suspend' : 'Reinstate'} guard`,
+                                `${isSuspending ? 'Suspend' : 'Reinstate'} ${guard.name}?`,
+                                async () => {
+                                  setLoadingId(guard.id);
+                                  try {
+                                    const routeName = isSuspending ? 'control-room.guards.suspend' : 'control-room.guards.reinstate';
+                                    await router.post(route(routeName, { guard: guard.id }), {}, { preserveScroll: true });
+                                  } finally {
+                                    setLoadingId(null);
+                                  }
+                                }
+                              );
+                            }}
+                          >
+                            <IconMapper name={guard.status === 'active' ? 'PauseCircle' : 'PlayCircle'} className="w-4 h-4 mr-2" />
+                            {guard.status === 'active' ? 'Suspend' : 'Reinstate'}
+                          </Button>
+                        )}
+                        {guard.status !== 'dismissed' && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="hover:bg-gray-50 dark:hover:bg-gray-800"
+                            disabled={loadingId === guard.id}
+                            onClick={() => openReason('Dismiss Guard', `Provide a reason (optional) for dismissing ${guard.name}`, async (reason: string) => {
+                              setLoadingId(guard.id);
+                              try {
+                                await router.post(route('control-room.guards.dismiss', { guard: guard.id }), { reason }, { preserveScroll: true });
+                              } finally {
+                                setLoadingId(null);
+                              }
+                            })}
+                          >
+                            Dismiss
+                          </Button>
+                        )}
+                        {guard.status !== 'absconded' && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="hover:bg-rose-50 dark:hover:bg-rose-900/20"
+                            disabled={loadingId === guard.id}
+                            onClick={() => openReason('Mark as Absconded', `Provide a reason (optional) for marking ${guard.name} as absconded`, async (reason: string) => {
+                              setLoadingId(guard.id);
+                              try {
+                                await router.post(route('control-room.guards.abscond', { guard: guard.id }), { reason }, { preserveScroll: true });
+                              } finally {
+                                setLoadingId(null);
+                              }
+                            })}
+                          >
+                            Abscond
+                          </Button>
+                        )}
                       </div>
                     </div>
                   </CardContent>
@@ -334,6 +434,24 @@ export default function Guards({ guards = [] }: GuardsProps) {
           </CardContent>
         </Card>
       </div>
+
+        {/* Confirm & Reason Modals */}
+        <ConfirmModal
+          open={confirmOpen}
+          title={confirmTitle}
+          message={confirmMessage}
+          onConfirm={() => { setConfirmOpen(false); confirmAction(); }}
+          onCancel={() => setConfirmOpen(false)}
+        />
+        <ReasonModal
+          open={reasonOpen}
+          title={reasonTitle}
+          message={reasonMessage}
+          confirmLabel="Submit"
+          onConfirm={(reason) => { setReasonOpen(false); reasonSubmit && reasonSubmit(reason); }}
+          onCancel={() => setReasonOpen(false)}
+        />
+
 		</ZoneCommanderLayout>
 	);
 }

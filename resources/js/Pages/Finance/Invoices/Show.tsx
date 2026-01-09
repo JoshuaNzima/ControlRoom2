@@ -45,11 +45,11 @@ export default function ShowInvoice({ invoice }: Props) {
   const [channels, setChannels] = React.useState<{ email: boolean; whatsapp: boolean }>({ email: true, whatsapp: true });
   const getStatusColor = (status: string) => {
     const colors: Record<string, { bg: string; text: string }> = {
-      draft: { bg: 'bg-gray-100', text: 'text-gray-800' },
-      sent: { bg: 'bg-blue-100', text: 'text-blue-800' },
-      paid: { bg: 'bg-green-100', text: 'text-green-800' },
-      overdue: { bg: 'bg-red-100', text: 'text-red-800' },
-      cancelled: { bg: 'bg-yellow-100', text: 'text-yellow-800' },
+      draft: { bg: 'bg-gray-100 dark:bg-gray-800', text: 'text-gray-800 dark:text-gray-200' },
+      sent: { bg: 'bg-coin-100 dark:bg-coin-900/30', text: 'text-coin-800 dark:text-coin-200' },
+      paid: { bg: 'bg-green-100 dark:bg-green-900/30', text: 'text-green-800 dark:text-green-200' },
+      overdue: { bg: 'bg-red-100 dark:bg-red-900/30', text: 'text-red-800 dark:text-red-200' },
+      cancelled: { bg: 'bg-yellow-100 dark:bg-yellow-900/30', text: 'text-yellow-800 dark:text-yellow-200' },
     };
     return colors[status] || { bg: 'bg-gray-100', text: 'text-gray-800' };
   };
@@ -83,25 +83,25 @@ export default function ShowInvoice({ invoice }: Props) {
       <div className="py-6">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Header */}
-          <div className="mb-6 flex justify-between items-start">
+          <div className="mb-6 flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">
                 Invoice {invoice.invoice_number}
               </h1>
-              <p className="text-gray-600">
+              <p className="text-gray-600 dark:text-gray-300">
                 Created on {formatDate(invoice.created_at)}
               </p>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2 sm:gap-3 w-full sm:w-auto">
               <Link
                 href={route('finance.invoices.index')}
-                className="text-indigo-600 hover:text-indigo-900 font-medium"
+                className="text-coin-700 hover:text-coin-800 dark:text-coin-200 dark:hover:text-coin-100 font-medium"
               >
                 ← Back to Invoices
               </Link>
               <Link
                 href={route('finance.invoices.print', invoice.id)}
-                className="px-3 py-1.5 rounded-md bg-red-600 text-white hover:bg-red-700 font-medium"
+                className="w-full sm:w-auto px-3 py-1.5 rounded-md bg-coin-700 text-white hover:bg-coin-600 font-medium"
                 target="_blank"
                 rel="noopener"
               >
@@ -109,7 +109,7 @@ export default function ShowInvoice({ invoice }: Props) {
               </Link>
               <Link
                 href={route('finance.invoices.pdf', invoice.id)}
-                className="px-3 py-1.5 rounded-md bg-gray-900 text-white hover:bg-gray-800 font-medium"
+                className="w-full sm:w-auto px-3 py-1.5 rounded-md bg-gray-100 text-gray-800 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700 font-medium"
               >
                 Download PDF
               </Link>
@@ -117,9 +117,9 @@ export default function ShowInvoice({ invoice }: Props) {
           </div>
 
           {/* Main Card */}
-          <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-            <div className={`${statusColor.bg} ${statusColor.text} px-8 py-6 border-b`}>
-              <div className="flex justify-between items-center">
+          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-lg overflow-hidden">
+            <div className={`${statusColor.bg} ${statusColor.text} px-8 py-6 border-b border-gray-200 dark:border-gray-800`}>
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
                 <div>
                   <span className="text-xl font-bold">
                     Status: {invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1)}
@@ -130,7 +130,7 @@ export default function ShowInvoice({ invoice }: Props) {
                     </p>
                   )}
                 </div>
-                <div className="text-right">
+                <div className="text-right sm:text-right">
                   <span className="text-3xl font-bold">{formatCurrency(invoice.total_amount)}</span>
                   <p className="text-sm mt-1 opacity-75">Invoice Total</p>
                 </div>
@@ -138,53 +138,53 @@ export default function ShowInvoice({ invoice }: Props) {
             </div>
 
             <div className="p-8 space-y-8">
-              <div className="flex items-center gap-3 pb-4 border-b">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3 pb-4 border-b border-gray-200 dark:border-gray-800">
                 <img src="/images/Coin-logo.png" alt="Logo" className="h-9 w-auto" onError={(e) => ((e.currentTarget.style.display='none'))} />
-                <div className="text-emerald-700 font-semibold text-lg">Coin Security</div>
+                <div className="text-emerald-700 dark:text-emerald-400 font-semibold text-lg">Coin Security</div>
               </div>
               {/* Invoice and Client Details */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* Invoice Details */}
                 <div className="lg:col-span-2">
-                  <h3 className="text-base font-bold text-gray-900 mb-4 uppercase tracking-wider border-b pb-2">
+                  <h3 className="text-base font-bold text-gray-900 dark:text-gray-100 mb-4 uppercase tracking-wider border-b border-gray-200 dark:border-gray-800 pb-2">
                     Invoice Information
                   </h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Invoice Number</p>
-                      <p className="font-semibold text-gray-900">{invoice.invoice_number}</p>
+                    <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+                      <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Invoice Number</p>
+                      <p className="font-semibold text-gray-900 dark:text-gray-100">{invoice.invoice_number}</p>
                     </div>
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Invoice Date</p>
-                      <p className="font-semibold text-gray-900">{formatDate(invoice.invoice_date)}</p>
+                    <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+                      <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Invoice Date</p>
+                      <p className="font-semibold text-gray-900 dark:text-gray-100">{formatDate(invoice.invoice_date)}</p>
                     </div>
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Due Date</p>
-                      <p className="font-semibold text-gray-900">{formatDate(invoice.due_date)}</p>
+                    <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+                      <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Due Date</p>
+                      <p className="font-semibold text-gray-900 dark:text-gray-100">{formatDate(invoice.due_date)}</p>
                     </div>
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Billing Period</p>
-                      <p className="font-semibold text-gray-900">{invoice.billing_month}/{invoice.billing_year}</p>
+                    <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+                      <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Billing Period</p>
+                      <p className="font-semibold text-gray-900 dark:text-gray-100">{invoice.billing_month}/{invoice.billing_year}</p>
                     </div>
-                    <div className="bg-gray-50 p-4 rounded-lg sm:col-span-2">
-                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Created By</p>
-                      <p className="font-semibold text-gray-900">{invoice.user.name}</p>
+                    <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg sm:col-span-2">
+                      <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Created By</p>
+                      <p className="font-semibold text-gray-900 dark:text-gray-100">{invoice.user.name}</p>
                     </div>
                   </div>
                 </div>
 
                 {/* Client Details */}
                 <div>
-                  <h3 className="text-base font-bold text-gray-900 mb-4 uppercase tracking-wider border-b pb-2">
+                  <h3 className="text-base font-bold text-gray-900 dark:text-gray-100 mb-4 uppercase tracking-wider border-b border-gray-200 dark:border-gray-800 pb-2">
                     Client Information
                   </h3>
-                  <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                    <p className="text-xs font-semibold text-blue-600 uppercase tracking-wide mb-1">Client Name</p>
-                    <p className="font-semibold text-gray-900 text-lg mb-3">{invoice.client_name}</p>
+                  <div className="bg-coin-50 dark:bg-coin-900/20 p-4 rounded-lg border border-coin-200 dark:border-coin-800">
+                    <p className="text-xs font-semibold text-coin-700 dark:text-coin-200 uppercase tracking-wide mb-1">Client Name</p>
+                    <p className="font-semibold text-gray-900 dark:text-gray-100 text-lg mb-3">{invoice.client_name}</p>
                     {invoice.client_email && (
                       <>
-                        <p className="text-xs font-semibold text-blue-600 uppercase tracking-wide mb-1">Email</p>
-                        <p className="font-semibold text-gray-900">{invoice.client_email}</p>
+                        <p className="text-xs font-semibold text-coin-700 dark:text-coin-200 uppercase tracking-wide mb-1">Email</p>
+                        <p className="font-semibold text-gray-900 dark:text-gray-100">{invoice.client_email}</p>
                       </>
                     )}
                   </div>
@@ -193,36 +193,58 @@ export default function ShowInvoice({ invoice }: Props) {
 
               {/* Line Items */}
               <div className="border-t pt-8">
-                <h3 className="text-base font-bold text-gray-900 mb-6 uppercase tracking-wider border-b pb-2">
+                <h3 className="text-base font-bold text-gray-900 dark:text-gray-100 mb-6 uppercase tracking-wider border-b border-gray-200 dark:border-gray-800 pb-2">
                   Line Items
                 </h3>
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="bg-gray-100 border-y-2 border-gray-200">
+                <div className="md:hidden space-y-3">
+                  {invoice.lineItems.map((item) => (
+                    <div key={item.id} className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4">
+                      <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">{item.description}</div>
+                      <div className="mt-3 grid grid-cols-1 gap-2 text-sm">
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="text-gray-500 dark:text-gray-400">Qty</span>
+                          <span className="text-gray-900 dark:text-gray-100">{item.quantity}</span>
+                        </div>
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="text-gray-500 dark:text-gray-400">Unit price</span>
+                          <span className="text-gray-900 dark:text-gray-100">{formatCurrency(item.unit_price)}</span>
+                        </div>
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="text-gray-500 dark:text-gray-400">Total</span>
+                          <span className="font-semibold text-gray-900 dark:text-gray-100">{formatCurrency(item.line_total)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="hidden md:block overflow-x-auto">
+                  <table className="min-w-[700px] w-full">
+                    <thead className="bg-gray-100 dark:bg-gray-950 border-y-2 border-gray-200 dark:border-gray-800">
                       <tr>
-                        <th className="px-6 py-4 text-left font-bold text-gray-900 uppercase tracking-wider text-sm">
+                        <th className="px-6 py-4 text-left font-bold text-gray-900 dark:text-gray-100 uppercase tracking-wider text-sm">
                           Description
                         </th>
-                        <th className="px-6 py-4 text-center font-bold text-gray-900 uppercase tracking-wider text-sm w-20">
+                        <th className="px-6 py-4 text-center font-bold text-gray-900 dark:text-gray-100 uppercase tracking-wider text-sm w-20">
                           Qty
                         </th>
-                        <th className="px-6 py-4 text-right font-bold text-gray-900 uppercase tracking-wider text-sm w-32">
+                        <th className="px-6 py-4 text-right font-bold text-gray-900 dark:text-gray-100 uppercase tracking-wider text-sm w-32">
                           Unit Price
                         </th>
-                        <th className="px-6 py-4 text-right font-bold text-gray-900 uppercase tracking-wider text-sm w-32">
+                        <th className="px-6 py-4 text-right font-bold text-gray-900 dark:text-gray-100 uppercase tracking-wider text-sm w-32">
                           Total
                         </th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-100">
+                    <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                       {invoice.lineItems.map((item) => (
-                        <tr key={item.id} className="hover:bg-gray-50">
-                          <td className="px-6 py-4 font-medium text-gray-900">{item.description}</td>
-                          <td className="px-6 py-4 text-center text-gray-700">{item.quantity}</td>
-                          <td className="px-6 py-4 text-right text-gray-700">
+                        <tr key={item.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/60">
+                          <td className="px-6 py-4 font-medium text-gray-900 dark:text-gray-100">{item.description}</td>
+                          <td className="px-6 py-4 text-center text-gray-700 dark:text-gray-300">{item.quantity}</td>
+                          <td className="px-6 py-4 text-right text-gray-700 dark:text-gray-300">
                             {formatCurrency(item.unit_price)}
                           </td>
-                          <td className="px-6 py-4 text-right font-bold text-gray-900">
+                          <td className="px-6 py-4 text-right font-bold text-gray-900 dark:text-gray-100">
                             {formatCurrency(item.line_total)}
                           </td>
                         </tr>
@@ -233,34 +255,34 @@ export default function ShowInvoice({ invoice }: Props) {
               </div>
 
               {/* Totals */}
-              <div className="border-t-2 border-gray-200 pt-8">
+              <div className="border-t-2 border-gray-200 dark:border-gray-800 pt-8">
                 <div className="flex justify-end">
                   <div className="w-full lg:w-96">
-                    <div className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl p-6 border border-gray-200">
+                    <div className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-800">
                       <div className="space-y-3">
                         <div className="flex justify-between items-center">
-                          <span className="text-gray-600 font-medium">Subtotal:</span>
-                          <span className="font-bold text-gray-900">{formatCurrency(invoice.subtotal)}</span>
+                          <span className="text-gray-600 dark:text-gray-300 font-medium">Subtotal:</span>
+                          <span className="font-bold text-gray-900 dark:text-gray-100">{formatCurrency(invoice.subtotal)}</span>
                         </div>
                         {invoice.tax_percentage > 0 && (
                           <div className="flex justify-between items-center">
-                            <span className="text-gray-600 font-medium">
+                            <span className="text-gray-600 dark:text-gray-300 font-medium">
                               Tax ({invoice.tax_percentage}%):
                             </span>
-                            <span className="font-bold text-gray-900">{formatCurrency(invoice.tax_amount)}</span>
+                            <span className="font-bold text-gray-900 dark:text-gray-100">{formatCurrency(invoice.tax_amount)}</span>
                           </div>
                         )}
                         {invoice.discount_amount > 0 && (
                           <div className="flex justify-between items-center">
-                            <span className="text-gray-600 font-medium">Discount:</span>
+                            <span className="text-gray-600 dark:text-gray-300 font-medium">Discount:</span>
                             <span className="font-bold text-green-600">
                               -{formatCurrency(invoice.discount_amount)}
                             </span>
                           </div>
                         )}
-                        <div className="flex justify-between items-center text-xl font-bold border-t-2 border-gray-300 pt-4">
-                          <span className="text-gray-900">Total:</span>
-                          <span className="text-indigo-600">{formatCurrency(invoice.total_amount)}</span>
+                        <div className="flex justify-between items-center text-xl font-bold border-t-2 border-gray-300 dark:border-gray-700 pt-4">
+                          <span className="text-gray-900 dark:text-gray-100">Total:</span>
+                          <span className="text-coin-700 dark:text-coin-200">{formatCurrency(invoice.total_amount)}</span>
                         </div>
                       </div>
                     </div>
@@ -271,11 +293,11 @@ export default function ShowInvoice({ invoice }: Props) {
               {/* Notes */}
               {invoice.notes && (
                 <div className="border-t pt-8">
-                  <h3 className="text-base font-bold text-gray-900 mb-4 uppercase tracking-wider border-b pb-2">
+                  <h3 className="text-base font-bold text-gray-900 dark:text-gray-100 mb-4 uppercase tracking-wider border-b border-gray-200 dark:border-gray-800 pb-2">
                     Notes
                   </h3>
-                  <div className="bg-amber-50 border border-amber-200 p-6 rounded-xl">
-                    <div className="whitespace-pre-wrap text-gray-800 leading-relaxed">
+                  <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 p-6 rounded-xl">
+                    <div className="whitespace-pre-wrap text-gray-800 dark:text-gray-100 leading-relaxed">
                       {invoice.notes}
                     </div>
                   </div>
@@ -283,28 +305,28 @@ export default function ShowInvoice({ invoice }: Props) {
               )}
             </div>
 
-            <div className="bg-gradient-to-r from-gray-50 to-gray-100 px-8 py-6 border-t border-gray-200">
+            <div className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 px-8 py-6 border-t border-gray-200 dark:border-gray-800">
               <div className="flex flex-wrap gap-3 justify-center">
                 {invoice.status === 'draft' && (
                   <>
                     <Link
                       href={route('finance.invoices.index', { edit: invoice.id })}
-                      className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all font-medium shadow-md hover:shadow-lg"
+                      className="w-full sm:w-auto px-6 py-3 bg-coin-700 text-white rounded-lg hover:bg-coin-600 transition-all font-medium shadow-md hover:shadow-lg"
                     >
                       Edit Invoice
                     </Link>
-                    <div className="flex items-center gap-3">
-                      <label className="inline-flex items-center gap-2 text-sm">
-                        <input type="checkbox" checked={channels.email} onChange={(e) => setChannels((c) => ({ ...c, email: e.target.checked }))} />
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full sm:w-auto">
+                      <label className="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200">
+                        <input className="rounded border-gray-300 dark:border-gray-600 dark:bg-gray-900" type="checkbox" checked={channels.email} onChange={(e) => setChannels((c) => ({ ...c, email: e.target.checked }))} />
                         Email
                       </label>
-                      <label className="inline-flex items-center gap-2 text-sm">
-                        <input type="checkbox" checked={channels.whatsapp} onChange={(e) => setChannels((c) => ({ ...c, whatsapp: e.target.checked }))} />
+                      <label className="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200">
+                        <input className="rounded border-gray-300 dark:border-gray-600 dark:bg-gray-900" type="checkbox" checked={channels.whatsapp} onChange={(e) => setChannels((c) => ({ ...c, whatsapp: e.target.checked }))} />
                         WhatsApp
                       </label>
                       <button
                         onClick={handleSend}
-                        className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all font-medium shadow-md hover:shadow-lg"
+                        className="w-full sm:w-auto px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all font-medium shadow-md hover:shadow-lg"
                       >
                         Send Selected
                       </button>
@@ -348,7 +370,7 @@ export default function ShowInvoice({ invoice }: Props) {
 
                 {(invoice.status === 'paid' || invoice.status === 'cancelled') && (
                   <div className="text-center">
-                    <p className="text-gray-500 font-medium">
+                    <p className="text-gray-500 dark:text-gray-400 font-medium">
                       {invoice.status === 'paid' ? 'Invoice has been paid and is closed.' : 'Invoice has been cancelled.'}
                     </p>
                   </div>

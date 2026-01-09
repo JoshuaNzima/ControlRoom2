@@ -1,4 +1,6 @@
 import axios from 'axios';
+import Echo from 'laravel-echo';
+import Pusher from 'pusher-js';
 
 // Axios defaults
 axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
@@ -9,6 +11,46 @@ axios.defaults.xsrfHeaderName = 'X-XSRF-TOKEN';
 
 // Global axios
 window.axios = axios;
+
+declare global {
+  interface Window {
+    Pusher?: any;
+    Echo?: any;
+    appKey?: string;
+    pusherCluster?: string;
+  }
+}
+
+window.Pusher = (Pusher as any)?.default || Pusher;
+
+try {
+  if (!window.Echo && window.appKey) {
+    window.Echo = new Echo({
+      broadcaster: 'pusher',
+      key: window.appKey,
+      cluster: window.pusherCluster,
+      forceTLS: true,
+    });
+
+  }
+} catch {}
+
+// Provide a safe Echo stub so any consumer calling Echo.socketId() won't crash when Pusher isn't configured
+if (!window.Echo) {
+  (window as any).Echo = { socketId: () => '' };
+}
+
+// Helper to safely read the current socket id
+const __safeSocketId = (): string => {
+  try {
+    const e: any = (window as any).Echo;
+    if (e && typeof e.socketId === 'function') {
+      const id = e.socketId();
+      return typeof id === 'string' ? id : '';
+    }
+  } catch {}
+  return '';
+};
 
 axios.interceptors.response.use(
   (response) => response,
@@ -29,6 +71,18 @@ axios.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
+// Attach X-Socket-Id header when available to let Laravel avoid broadcasting to the same socket
+axios.interceptors.request.use((config) => {
+  try {
+    const sid = __safeSocketId();
+    if (sid) {
+      (config.headers as any) = config.headers || {};
+      (config.headers as any)['X-Socket-Id'] = sid;
+    }
+  } catch {}
+  return config;
+});
 
 const __getCookie = (name: string) => {
   const value = document.cookie.split('; ').find(row => row.startsWith(name + '='))?.split('=')[1];

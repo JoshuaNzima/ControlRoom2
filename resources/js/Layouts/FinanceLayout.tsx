@@ -69,7 +69,7 @@ export default function FinanceLayout({ title, children, user }: Props) {
 
       {/* Sidebar overlay for mobile */}
       <div
-        className={`fixed inset-0 bg-red-900 bg-opacity-50 z-40 md:hidden ${sidebarOpen ? 'block' : 'hidden'}`}
+        className={`fixed inset-0 bg-red-900 bg-opacity-50 dark:bg-gray-900 dark:bg-opacity-70 z-40 md:hidden ${sidebarOpen ? 'block' : 'hidden'}`}
         onClick={() => setSidebarOpen(false)}
       />
 
@@ -129,63 +129,65 @@ export default function FinanceLayout({ title, children, user }: Props) {
       {/* Main content */}
       <div className="md:pl-64 flex flex-col flex-1">
         {/* Top bar */}
-        <div className="sticky top-0 z-30 flex h-16 bg-white dark:bg-gray-800 border-b border-red-100 dark:border-gray-700">
-          <button
-            type="button"
-            className="px-4 border-r border-gray-200 dark:border-gray-700 text-gray-500 focus:outline-none md:hidden"
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-          >
-            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-            </svg>
-          </button>
-
-          <div className="flex-1 flex items-center justify-between px-4">
-            <h1 className="text-lg font-semibold text-gray-900 dark:text-white">{title}</h1>
-            <div className="flex items-center space-x-4">
-              <NotificationBell />
-              <QuickBudgetButton />
-              <QuickRequisitionButton />
-              <Link
-                href={route('profile.dashboard') as unknown as string}
-                className="inline-flex items-center px-3 py-1.5 rounded-md bg-gray-800 text-white hover:bg-gray-700 text-sm"
-              >
-                My Profile
-              </Link>
-              {Array.isArray(roles) && roles.includes('super_admin') && (
-                <Link
-                  href={route('superadmin.dashboard') as unknown as string}
-                  className="inline-flex items-center gap-2 rounded-md bg-red-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-600"
-                >
-                  <IconMapper name="shield" className="h-4 w-4" />
-                  Super Admin
-                </Link>
-              )}
-              <Link
-                href={route('finance.expenses.create')}
-                className="inline-flex items-center px-3 py-1.5 rounded-md bg-red-600 text-white hover:bg-red-700 text-sm"
-              >
-                Request Requisition
-              </Link>
-              <button
-                onClick={toggle}
-                className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
-              >
-                {theme === 'dark' ? (
-                  <IconMapper name="sun" className="h-5 w-5" />
-                ) : (
-                  <IconMapper name="moon" className="h-5 w-5" />
-                )}
-              </button>
-              <form method="POST" action={route('logout')} onSubmit={handleLogout} className="inline">
+        <div className="sticky top-0 z-30 border-b border-red-100 bg-white/95 backdrop-blur-sm dark:border-gray-800 dark:bg-gray-950/80">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-3">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3 min-w-0">
                 <button
-                  type="submit"
-                  className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
-                  title="Logout"
+                  type="button"
+                  className="h-10 w-10 inline-flex items-center justify-center rounded-md text-red-700 hover:bg-red-100 hover:text-red-900 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-coin-600 md:hidden"
+                  onClick={() => setSidebarOpen(true)}
                 >
-                  <IconMapper name="log-out" className="h-5 w-5" />
+                  <span className="sr-only">Open sidebar</span>
+                  <IconMapper name="menu" className="h-6 w-6" />
                 </button>
-              </form>
+                <h1 className="text-xl font-semibold text-red-900 dark:text-gray-100 truncate">{title}</h1>
+              </div>
+              <div className="flex items-center gap-4">
+                <NotificationBell />
+                <QuickBudgetButton />
+                <QuickRequisitionButton />
+                <Link
+                  href={route('profile.dashboard') as unknown as string}
+                  className="inline-flex items-center px-3 py-1.5 rounded-md bg-gray-800 text-white hover:bg-gray-700 text-sm"
+                >
+                  My Profile
+                </Link>
+                {Array.isArray(roles) && roles.includes('super_admin') && (
+                  <Link
+                    href={route('superadmin.dashboard') as unknown as string}
+                    className="inline-flex items-center gap-2 rounded-md bg-red-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-600"
+                  >
+                    <IconMapper name="shield" className="h-4 w-4" />
+                    Super Admin
+                  </Link>
+                )}
+                <Link
+                  href={route('finance.expenses.create')}
+                  className="inline-flex items-center px-3 py-1.5 rounded-md bg-red-600 text-white hover:bg-red-700 text-sm"
+                >
+                  Request Requisition
+                </Link>
+                <button
+                  onClick={toggle}
+                  className="rounded-md p-2 text-gray-600 hover:bg-gray-100 hover:text-gray-800 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-gray-100"
+                >
+                  {theme === 'dark' ? (
+                    <IconMapper name="sun" className="h-5 w-5" />
+                  ) : (
+                    <IconMapper name="moon" className="h-5 w-5" />
+                  )}
+                </button>
+                <form method="POST" action={route('logout')} onSubmit={handleLogout} className="inline">
+                  <button
+                    type="submit"
+                    className="rounded-md p-2 text-gray-600 hover:bg-gray-100 hover:text-gray-800 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-gray-100"
+                    title="Logout"
+                  >
+                    <IconMapper name="log-out" className="h-5 w-5" />
+                  </button>
+                </form>
+              </div>
             </div>
           </div>
         </div>

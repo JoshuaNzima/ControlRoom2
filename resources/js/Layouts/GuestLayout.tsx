@@ -11,7 +11,7 @@ export default function Guest({ children }: PropsWithChildren) {
                 </Link>
             </div>
 
-            <div className="mt-6 w-full overflow-hidden bg-white px-6 py-6 shadow-md sm:max-w-md sm:rounded-xl border border-red-100 dark:border-gray-800">
+            <div className="mt-6 w-full overflow-hidden rounded-xl border border-red-100 bg-white px-6 py-6 shadow-md shadow-black/5 sm:max-w-md dark:border-gray-800 dark:bg-gray-950 dark:shadow-none">
 				<div className="animate-slideUp transition-all-smooth">
 					{children}
 				</div>

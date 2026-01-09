@@ -14,7 +14,7 @@ interface Supervisor {
   employee_id: string;
   email: string;
   phone: string;
-  status: 'active' | 'inactive' | 'on_leave';
+  status: 'active' | 'inactive' | 'suspended' | 'dismissed' | 'absconded';
   position: string;
   zone_name: string;
   team_size: number;
@@ -32,7 +32,7 @@ interface SupervisorsProps {
 
 export default function Supervisors({ supervisors = [] }: SupervisorsProps) {
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive' | 'on_leave'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive' | 'suspended' | 'dismissed' | 'absconded'>('all');
 
   const filteredSupervisors = supervisors.filter(supervisor => {
     const matchesSearch = supervisor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -44,10 +44,16 @@ export default function Supervisors({ supervisors = [] }: SupervisorsProps) {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'active': return 'bg-green-100 text-green-800';
-      case 'inactive': return 'bg-gray-100 text-gray-800';
-      case 'on_leave': return 'bg-blue-100 text-blue-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'active':
+        return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100';
+      case 'suspended':
+        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100';
+      case 'absconded':
+        return 'bg-rose-100 text-rose-800 dark:bg-rose-900 dark:text-rose-100';
+      case 'dismissed':
+      case 'inactive':
+      default:
+        return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-100';
     }
   };
 
@@ -160,18 +166,32 @@ export default function Supervisors({ supervisors = [] }: SupervisorsProps) {
                   Active
                 </Button>
                 <Button
-                  variant={statusFilter === 'on_leave' ? 'default' : 'outline'}
-                  onClick={() => setStatusFilter('on_leave')}
-                  size="sm"
-                >
-                  On Leave
-                </Button>
-                <Button
                   variant={statusFilter === 'inactive' ? 'default' : 'outline'}
                   onClick={() => setStatusFilter('inactive')}
                   size="sm"
                 >
                   Inactive
+                </Button>
+                <Button
+                  variant={statusFilter === 'suspended' ? 'default' : 'outline'}
+                  onClick={() => setStatusFilter('suspended')}
+                  size="sm"
+                >
+                  Suspended
+                </Button>
+                <Button
+                  variant={statusFilter === 'dismissed' ? 'default' : 'outline'}
+                  onClick={() => setStatusFilter('dismissed')}
+                  size="sm"
+                >
+                  Dismissed
+                </Button>
+                <Button
+                  variant={statusFilter === 'absconded' ? 'default' : 'outline'}
+                  onClick={() => setStatusFilter('absconded')}
+                  size="sm"
+                >
+                  Absconded
                 </Button>
               </div>
             </div>

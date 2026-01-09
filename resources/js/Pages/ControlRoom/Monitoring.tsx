@@ -79,7 +79,7 @@ interface MonitoringProps {
   settings?: { showCountsOverlay: boolean; scaleByRequired: boolean };
 }
 
-const Monitoring = ({ auth, metrics, liveStatus: initialLiveStatus = [], recentActivity: initialRecent = [], sla: initialSla, activeRange = '1h', settings }: MonitoringProps) => {
+const Monitoring = ({ auth, metrics, liveStatus: initialLiveStatus = [], recentActivity: initialRecent = [], guards: initialGuards = [], events: initialEvents = [], sla: initialSla, activeRange = '1h', settings }: MonitoringProps) => {
   const [currentMetrics, setCurrentMetrics] = React.useState(metrics || { 
     activeSites: 0, 
     guardsOnDuty: 0, 
@@ -90,11 +90,11 @@ const Monitoring = ({ auth, metrics, liveStatus: initialLiveStatus = [], recentA
   });
   const [liveStatus, setLiveStatus] = React.useState(initialLiveStatus);
   const [recentActivity, setRecentActivity] = React.useState(initialRecent);
-  const [guards, setGuards] = React.useState<Guard[]>([]);
-  const [events, setEvents] = React.useState<Event[]>([]);
+  const [guards, setGuards] = React.useState<Guard[]>(initialGuards);
+  const [events, setEvents] = React.useState<Event[]>(initialEvents);
   const [sla, setSla] = React.useState(initialSla || null as MonitoringProps['sla'] | null);
   const [range, setRange] = React.useState<string>(activeRange || '1h');
-  const [refreshMs, setRefreshMs] = React.useState<number>(30000);
+  const [refreshMs, setRefreshMs] = React.useState<number>(60000);
   const [lastUpdated, setLastUpdated] = React.useState<Date | null>(null);
   const [siteModalOpen, setSiteModalOpen] = React.useState(false);
   const [siteDetails, setSiteDetails] = React.useState<any | null>(null);
@@ -102,50 +102,48 @@ const Monitoring = ({ auth, metrics, liveStatus: initialLiveStatus = [], recentA
   const [showCountsOverlay, setShowCountsOverlay] = React.useState<boolean>(settings?.showCountsOverlay ?? true);
   const [scaleByRequired, setScaleByRequired] = React.useState<boolean>(settings?.scaleByRequired ?? true);
 
+  const abortRef = React.useRef<AbortController | null>(null);
+
+  const fetchSnapshot = React.useCallback(async (withRange: string) => {
+    try {
+      abortRef.current?.abort();
+      const controller = new AbortController();
+      abortRef.current = controller;
+
+      const qs = withRange ? `?range=${encodeURIComponent(withRange)}` : '';
+      const res = await fetch(route('control-room.monitoring.data') + qs, {
+        headers: { 'Accept': 'application/json' },
+        signal: controller.signal,
+      });
+
+      if (!res.ok) return;
+
+      const data = await res.json();
+      setCurrentMetrics(data.metrics || {});
+      setLiveStatus(data.liveStatus || []);
+      setRecentActivity(data.recentActivity || []);
+      setSla(data.sla || null);
+      setGuards(data.guards || []);
+      setEvents(data.events || []);
+      setLastUpdated(new Date());
+    } catch (_) {
+      // no-op
+    }
+  }, []);
+
   React.useEffect(() => {
     let isMounted = true;
 
-    async function fetchData(withRange: string) {
-      try {
-        const qs = withRange ? `?range=${encodeURIComponent(withRange)}` : '';
-        const [dataRes, guardsRes, eventsRes] = await Promise.all([
-          fetch(route('control-room.monitoring.data') + qs, { headers: { 'Accept': 'application/json' } }),
-          fetch(route('control-room.monitoring.guards') + qs, { headers: { 'Accept': 'application/json' } }),
-          fetch(route('control-room.monitoring.events') + qs, { headers: { 'Accept': 'application/json' } })
-        ]);
-
-        if (!dataRes.ok || !guardsRes.ok || !eventsRes.ok) return;
-        
-        const [data, guardsData, eventsData] = await Promise.all([
-          dataRes.json(),
-          guardsRes.json(),
-          eventsRes.json()
-        ]);
-
-        if (!isMounted) return;
-        
-        setCurrentMetrics(data.metrics || {});
-        setLiveStatus(data.liveStatus || []);
-        setRecentActivity(data.recentActivity || []);
-        setSla(data.sla || null);
-        setGuards(guardsData || []);
-        setEvents(eventsData || []);
-        setLastUpdated(new Date());
-
-      } catch (_) {
-        // no-op
-      }
-    }
-
     // initial refresh in case page props were stale
-    fetchData(range);
-    const id = refreshMs > 0 ? setInterval(() => fetchData(range), refreshMs) : null;
+    fetchSnapshot(range);
+    const id = refreshMs > 0 ? setInterval(() => fetchSnapshot(range), refreshMs) : null;
     
     return () => {
       isMounted = false;
       if (id) clearInterval(id);
+      abortRef.current?.abort();
     };
-  }, [range, refreshMs]);
+  }, [range, refreshMs, fetchSnapshot]);
 
   async function handleSiteClick(site: any) {
     try {
@@ -253,7 +251,7 @@ const Monitoring = ({ auth, metrics, liveStatus: initialLiveStatus = [], recentA
                 size="sm"
                 variant="outline"
                 className="h-8 px-3 dark:border-gray-600 dark:text-gray-200"
-                onClick={() => setRange((r) => r)}
+                onClick={() => fetchSnapshot(range)}
               >
                 Refresh now
               </Button>
@@ -287,10 +285,10 @@ const Monitoring = ({ auth, metrics, liveStatus: initialLiveStatus = [], recentA
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Guards On Duty</p>
-                  <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{currentMetrics?.guardsOnDuty ?? 0}</p>
+                  <p className="text-2xl font-bold text-coin-700 dark:text-coin-200">{currentMetrics?.guardsOnDuty ?? 0}</p>
                 </div>
-                <div className="h-8 w-8 bg-blue-100 dark:bg-blue-900/20 rounded-full flex items-center justify-center">
-                  <span className="text-blue-600 dark:text-blue-400">👮</span>
+                <div className="h-8 w-8 bg-coin-100 dark:bg-coin-900/20 rounded-full flex items-center justify-center">
+                  <span className="text-coin-700 dark:text-coin-200">👮</span>
                 </div>
               </div>
             </CardContent>
@@ -359,12 +357,12 @@ const Monitoring = ({ auth, metrics, liveStatus: initialLiveStatus = [], recentA
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Avg Response (min)</p>
-                  <p className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">
+                  <p className="text-2xl font-bold text-coin-700 dark:text-coin-200">
                     {sla?.averageResponseMinutes != null ? sla.averageResponseMinutes : '--'}
                   </p>
                 </div>
-                <div className="h-8 w-8 bg-indigo-100 dark:bg-indigo-900/20 rounded-full flex items-center justify-center">
-                  <span className="text-indigo-600 dark:text-indigo-400">⏱</span>
+                <div className="h-8 w-8 bg-coin-100 dark:bg-coin-900/20 rounded-full flex items-center justify-center">
+                  <span className="text-coin-700 dark:text-coin-200">⏱</span>
                 </div>
               </div>
             </CardContent>
@@ -436,7 +434,7 @@ const Monitoring = ({ auth, metrics, liveStatus: initialLiveStatus = [], recentA
 
           <Card className="dark:bg-gray-800 dark:border-gray-700">
             <CardHeader>
-              <div className="flex justify-between items-center">
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
                 <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Live Events</h3>
                 <Badge variant="secondary" className="text-xs">
                   Real-time
@@ -457,7 +455,7 @@ const Monitoring = ({ auth, metrics, liveStatus: initialLiveStatus = [], recentA
                   return (
                     <div 
                       key={`${event.type}-${index}`} 
-                      className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg"
+                      className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg"
                     >
                       <div className="flex-1">
                         <div className="font-medium text-gray-900 dark:text-gray-100">
@@ -473,7 +471,7 @@ const Monitoring = ({ auth, metrics, liveStatus: initialLiveStatus = [], recentA
                       </div>
                       <Badge 
                         variant={severityColor as "success" | "warning" | "default" | "outline" | "destructive" | "secondary"}
-                        className="text-xs capitalize"
+                        className="text-xs capitalize self-start sm:self-auto"
                       >
                         {event.severity}
                       </Badge>
@@ -493,14 +491,17 @@ const Monitoring = ({ auth, metrics, liveStatus: initialLiveStatus = [], recentA
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {liveStatus.map((site) => (
-                <div key={site.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                <div 
+                  key={site.id} 
+                  className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg"
+                >
                   <div className="flex-1">
                     <div className="font-medium text-gray-900 dark:text-gray-100">{site.name}</div>
                     <div className="text-sm text-gray-600 dark:text-gray-400">
                       On duty: {site.onDuty ?? 0} / Required: {site.required ?? 0} • Last update: {site.lastUpdate}
                     </div>
                   </div>
-                  <div className="flex items-center space-x-2">
+                  <div className="flex flex-wrap items-center gap-2 sm:justify-end">
                     {site.alerts > 0 && (
                       <Badge variant="destructive" className="text-xs">
                         {site.alerts} Alert{site.alerts > 1 ? 's' : ''}

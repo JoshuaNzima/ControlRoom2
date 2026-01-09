@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { Head, router, usePage } from '@inertiajs/react';
 import HRLayout from '@/Layouts/HRLayout';
 import PromoteGuardModal from '@/Components/HR/PromoteGuardModal';
+import ConfirmModal from '@/Components/ConfirmModal';
+import ReasonModal from '@/Components/ReasonModal';
 
 export default function HREmployees() {
   const { guards, filters, zones, auth }: any = usePage().props;
@@ -10,6 +12,23 @@ export default function HREmployees() {
   const [employeeRole, setEmployeeRole] = useState(filters?.employee_role || '');
   const [promoteOpen, setPromoteOpen] = useState(false);
   const [currentGuard, setCurrentGuard] = useState<any | null>(null);
+
+  // Confirm & Reason Modals
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmTitle, setConfirmTitle] = useState('');
+  const [confirmMessage, setConfirmMessage] = useState('');
+  const [confirmAction, setConfirmAction] = useState<() => void>(() => {});
+  const [reasonOpen, setReasonOpen] = useState(false);
+  const [reasonTitle, setReasonTitle] = useState('');
+  const [reasonMessage, setReasonMessage] = useState('');
+  const [reasonSubmit, setReasonSubmit] = useState<((reason: string) => void) | null>(null);
+
+  const openConfirm = (title: string, message: string, action: () => void) => {
+    setConfirmTitle(title); setConfirmMessage(message); setConfirmAction(() => action); setConfirmOpen(true);
+  };
+  const openReason = (title: string, message: string, submit: (reason: string) => void) => {
+    setReasonTitle(title); setReasonMessage(message); setReasonSubmit(() => submit); setReasonOpen(true);
+  };
 
   const onFilter = () => {
     router.get(route('hr.employees.index'), { search, status, employee_role: employeeRole }, { preserveState: true, replace: true });
@@ -21,17 +40,24 @@ export default function HREmployees() {
   };
 
   const doSuspend = (guard: any) => {
-    if (!confirm(`Suspend ${guard.name}?`)) return;
-    router.post(route('hr.guards.suspend', { guard: guard.id }), {}, { preserveScroll: true });
+    openConfirm('Suspend guard', `Suspend ${guard.name}?`, () => {
+      router.post(route('hr.guards.suspend', { guard: guard.id }), {}, { preserveScroll: true });
+    });
   };
   const doReinstate = (guard: any) => {
-    if (!confirm(`Reinstate ${guard.name}?`)) return;
-    router.post(route('hr.guards.reinstate', { guard: guard.id }), {}, { preserveScroll: true });
+    openConfirm('Reinstate guard', `Reinstate ${guard.name}?`, () => {
+      router.post(route('hr.guards.reinstate', { guard: guard.id }), {}, { preserveScroll: true });
+    });
   };
   const doDismiss = (guard: any) => {
-    const reason = prompt('Dismissal reason (optional)');
-    if (!confirm(`Dismiss ${guard.name}?`)) return;
-    router.post(route('hr.guards.dismiss', { guard: guard.id }), { reason }, { preserveScroll: true });
+    openReason('Dismiss Guard', `Provide a reason (optional) for dismissing ${guard.name}`, (reason: string) => {
+      router.post(route('hr.guards.dismiss', { guard: guard.id }), { reason }, { preserveScroll: true });
+    });
+  };
+  const doAbscond = (guard: any) => {
+    openReason('Mark as Absconded', `Provide a reason (optional) for marking ${guard.name} as absconded`, (reason: string) => {
+      router.post(route('hr.guards.abscond', { guard: guard.id }), { reason }, { preserveScroll: true });
+    });
   };
 
   return (
@@ -64,6 +90,8 @@ export default function HREmployees() {
                 <option value="active">Active</option>
                 <option value="inactive">Inactive</option>
                 <option value="suspended">Suspended</option>
+                <option value="dismissed">Dismissed</option>
+                <option value="absconded">Absconded</option>
               </select>
               <select
                 value={employeeRole}
@@ -109,7 +137,15 @@ export default function HREmployees() {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      <span className={`px-2 py-1 rounded text-xs ${g.status === 'active' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100' : g.status === 'inactive' ? 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-100' : 'bg-rose-100 text-rose-800 dark:bg-rose-900 dark:text-rose-100'}`}>
+                      <span className={`px-2 py-1 rounded text-xs ${
+                        g.status === 'active'
+                          ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100'
+                          : g.status === 'suspended'
+                          ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100'
+                          : g.status === 'absconded'
+                          ? 'bg-rose-100 text-rose-800 dark:bg-rose-900 dark:text-rose-100'
+                          : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-100'
+                      }`}>
                         {g.status}
                       </span>
                     </td>
@@ -148,6 +184,12 @@ export default function HREmployees() {
                         >
                           Dismiss
                         </button>
+                        <button
+                          onClick={() => doAbscond(g)}
+                          className="px-3 py-1 rounded bg-red-700 hover:bg-red-800 text-white"
+                        >
+                          Abscond
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -163,6 +205,22 @@ export default function HREmployees() {
         zones={zones || []}
         onClose={() => { setPromoteOpen(false); setCurrentGuard(null); }}
         onSuccess={() => router.reload()}
+      />
+      {/* Confirm & Reason Modals */}
+      <ConfirmModal
+        open={confirmOpen}
+        title={confirmTitle}
+        message={confirmMessage}
+        onConfirm={() => { setConfirmOpen(false); confirmAction(); }}
+        onCancel={() => setConfirmOpen(false)}
+      />
+      <ReasonModal
+        open={reasonOpen}
+        title={reasonTitle}
+        message={reasonMessage}
+        confirmLabel="Submit"
+        onConfirm={(reason) => { setReasonOpen(false); reasonSubmit && reasonSubmit(reason); }}
+        onCancel={() => setReasonOpen(false)}
       />
     </HRLayout>
   );

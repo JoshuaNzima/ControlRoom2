@@ -59,19 +59,21 @@ class Client extends Model
      */
     public function getMonthlyDueAmount(): float
     {
-        // If the client has services assigned, sum service prices (allow custom pivot price)
-        if ($this->relationLoaded('services') || $this->services()->exists()) {
+        $services = $this->relationLoaded('services')
+            ? $this->services
+            : $this->services()->get();
+
+        if ($services->isNotEmpty()) {
             $total = 0.0;
-            foreach ($this->services as $service) {
+            foreach ($services as $service) {
                 $price = $service->pivot->custom_price ?? $service->monthly_price;
                 $quantity = $service->pivot->quantity ?? 1;
-                $total += (float) $price * $quantity;
+                $total += (float) $price * (int) $quantity;
             }
-            // Update the monthly_rate property
             $this->monthly_rate = $total;
-            return $total;
+            return (float) $total;
         }
-      
+
         return (float) ($this->monthly_rate ?? 0);
     }
 
@@ -93,15 +95,16 @@ class Client extends Model
         $currentMonth = now()->month;
         $limitMonth = $year < $currentYear ? 12 : ($year > $currentYear ? 0 : $currentMonth);
 
-        // Get all payments for the year
-        $yearPayments = $this->payments()
-            ->where('year', $year)
-            ->get(['month', 'paid', 'amount_due', 'amount_paid'])
-            ->keyBy('month');
+        $paymentsForYear = $this->relationLoaded('payments')
+            ? $this->payments->where('year', $year)
+            : $this->payments()->where('year', $year)->get(['month', 'paid', 'amount_due', 'amount_paid', 'prepaid_amount']);
+
+        $yearPayments = $paymentsForYear->keyBy('month');
 
         $unpaidCount = 0;
         $totalDue = 0;
         $totalPaid = 0;
+        $totalCovered = 0;
 
         $startMonth = 1;
         if ($this->effective_billing_start?->year === $year) {
@@ -117,21 +120,29 @@ class Client extends Model
             $payment = $yearPayments->get($month);
             $isInBillingWindow = $this->isInBillingWindow($year, $month);
             
-            $monthDue = $isInBillingWindow ? ($payment?->amount_due ?? $monthlyRate) : 0;
-            $monthPaid = $payment?->amount_paid ?? 0;
+            $computedDue = $isInBillingWindow ? (float) $monthlyRate : 0.0;
+            $monthDue = $isInBillingWindow
+                ? (float) (($payment && (float) $payment->amount_due > 0) ? $payment->amount_due : $computedDue)
+                : 0.0;
+
+            $monthPaid = (float) ($payment?->amount_paid ?? 0);
+            $monthPrepaid = (float) ($payment?->prepaid_amount ?? 0);
+            $covered = $monthPaid + $monthPrepaid;
 
             $totalDue += $monthDue;
             $totalPaid += $monthPaid;
+            $totalCovered += $covered;
 
-            if ($monthDue > 0 && $monthDue > $monthPaid) {
+            if ($monthDue > 0 && $monthDue > $covered) {
                 $unpaidCount++;
             }
         }
 
         return [
+            'expected_amount' => round($totalDue, 2),
             'total_due' => round($totalDue, 2),
             'total_paid' => round($totalPaid, 2),
-            'outstanding_amount' => round($totalDue - $totalPaid, 2),
+            'outstanding_amount' => round($totalDue - $totalCovered, 2),
             'outstanding_months' => $unpaidCount,
             'billing_start' => $this->effective_billing_start?->toDateString(),
             'is_overdue' => $unpaidCount >= 3

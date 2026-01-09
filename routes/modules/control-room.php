@@ -5,7 +5,7 @@ use Inertia\Inertia;
 
 Route::middleware(['auth'])->group(function () {
     // Allow specific roles or users with permission (include admin role)
-    Route::middleware(['role_or_permission:control_room_operator|operations_officer|supervisor|manager|admin|super_admin|control.dashboard.view'])->prefix('control-room')->name('control-room.')->group(function () {
+    Route::middleware(['role_or_permission:control_room_operator|operations_officer|supervisor|manager|admin|super_admin|zone_commander|control.dashboard.view'])->prefix('control-room')->name('control-room.')->group(function () {
 		Route::get('/dashboard', [\App\Http\Controllers\ControlRoomDashboardController::class, 'index'])->name('dashboard');
 		Route::get('/monitoring', [\App\Http\Controllers\ControlRoom\MonitoringController::class, 'index'])->name('monitoring');
 		Route::get('/monitoring/data', [\App\Http\Controllers\ControlRoom\MonitoringController::class, 'data'])->name('monitoring.data');
@@ -37,6 +37,8 @@ Route::middleware(['auth'])->group(function () {
 			->name('clients.sites.qr');
 
 		// Incidents Management
+		Route::get('incidents/{incident}/pdf', [\App\Http\Controllers\ControlRoom\IncidentController::class, 'pdf'])->name('incidents.pdf');
+		Route::get('incidents/{incident}/print', [\App\Http\Controllers\ControlRoom\IncidentController::class, 'print'])->name('incidents.print');
 		Route::resource('incidents', \App\Http\Controllers\ControlRoom\IncidentController::class);
 		Route::post('incidents/{incident}/escalate', [\App\Http\Controllers\ControlRoom\IncidentController::class, 'escalate'])->name('incidents.escalate');
 		Route::post('incidents/{incident}/resolve', [\App\Http\Controllers\ControlRoom\IncidentController::class, 'resolve'])->name('incidents.resolve');
@@ -60,6 +62,7 @@ Route::middleware(['auth'])->group(function () {
 			Route::get('/', [\App\Http\Controllers\ControlRoom\RosterController::class, 'index'])->name('index');
 			Route::get('/weekly', [\App\Http\Controllers\ControlRoom\RosterController::class, 'weekly'])->name('weekly');
 			Route::get('/weekly/data', [\App\Http\Controllers\ControlRoom\RosterController::class, 'weeklyData'])->name('weekly.data');
+			Route::post('/weekly/reuse', [\App\Http\Controllers\ControlRoom\RosterController::class, 'reuseWeeklyRelief'])->name('weekly.reuse');
 			Route::get('/events', [\App\Http\Controllers\HR\LeaveController::class, 'events'])->name('events');
 			Route::post('/off-days', [\App\Http\Controllers\HR\LeaveController::class, 'storeOffDay'])->name('off-days.store');
 			Route::put('/off-days/{offDay}', [\App\Http\Controllers\HR\LeaveController::class, 'updateOffDay'])->name('off-days.update');
@@ -109,14 +112,17 @@ Route::middleware(['auth'])->group(function () {
 
             // Status actions
             Route::post('/{guard}/suspend', [\App\Http\Controllers\ControlRoom\GuardManageController::class, 'suspend'])
-                ->middleware(['role_or_permission:operations_officer|manager|hr|hr_manager|super_admin'])
+                ->middleware(['role_or_permission:operations_officer|manager|hr|hr_manager|super_admin|zone_commander'])
                 ->name('suspend');
             Route::post('/{guard}/reinstate', [\App\Http\Controllers\ControlRoom\GuardManageController::class, 'reinstate'])
-                ->middleware(['role_or_permission:operations_officer|manager|hr|hr_manager|super_admin'])
+                ->middleware(['role_or_permission:operations_officer|manager|hr|hr_manager|super_admin|zone_commander'])
                 ->name('reinstate');
             Route::post('/{guard}/dismiss', [\App\Http\Controllers\ControlRoom\GuardManageController::class, 'dismiss'])
-                ->middleware(['role_or_permission:operations_officer|manager|hr|hr_manager|super_admin'])
+                ->middleware(['role_or_permission:operations_officer|manager|hr|hr_manager|super_admin|zone_commander'])
                 ->name('dismiss');
+            Route::post('/{guard}/abscond', [\App\Http\Controllers\ControlRoom\GuardManageController::class, 'abscond'])
+                ->middleware(['role_or_permission:operations_officer|manager|hr|hr_manager|super_admin|zone_commander'])
+                ->name('abscond');
         });
 		Route::get('/assignments', [\App\Http\Controllers\ControlRoom\AssignmentsController::class, 'index'])->name('assignments.index');
 		Route::get('/reports', [\App\Http\Controllers\ControlRoom\ReportsController::class, 'index'])->name('reports');
@@ -126,7 +132,7 @@ Route::middleware(['auth'])->group(function () {
 		Route::get('/assist/zone-commander', [\App\Http\Controllers\ControlRoom\AssistZoneCommanderController::class, 'index'])->name('assist.zone-commander');
 		
 		// Camera Management
-		Route::resource('cameras', \App\Http\Controllers\ControlRoom\CameraController::class);
+		Route::resource('cameras', \App\Http\Controllers\ControlRoom\CameraController::class)->only(['index','store','show','update','destroy']);
 		Route::get('cameras/{camera}/recordings', [\App\Http\Controllers\ControlRoom\CameraController::class, 'getRecordings'])->name('cameras.recordings.index');
 		Route::get('recordings/{recording}/download', [\App\Http\Controllers\ControlRoom\CameraController::class, 'downloadRecording'])->name('cameras.recordings.download');
 		Route::post('cameras/{camera}/alerts/{alert}/acknowledge', [\App\Http\Controllers\ControlRoom\CameraController::class, 'acknowledgeAlert'])->name('cameras.alerts.acknowledge');
@@ -175,6 +181,7 @@ Route::middleware(['auth'])->group(function () {
 		Route::prefix('attendance')->name('attendance.')->middleware(['role_or_permission:control_room_operator|operations_officer|manager|super_admin'])->group(function () {
 			Route::post('/check-in', [\App\Http\Controllers\ControlRoom\AttendanceController::class, 'checkIn'])->name('check-in');
 			Route::post('/check-out', [\App\Http\Controllers\ControlRoom\AttendanceController::class, 'checkOut'])->name('check-out');
+			Route::post('/mark-absent', [\App\Http\Controllers\ControlRoom\AttendanceController::class, 'markAbsent'])->name('mark-absent');
 		});
 
 		// Public Intake Triage

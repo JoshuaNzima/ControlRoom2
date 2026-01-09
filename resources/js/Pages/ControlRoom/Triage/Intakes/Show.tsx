@@ -39,10 +39,14 @@ export default function Show({ intake }: Props) {
       <Head title="Triage — Intake" />
 
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div className="flex items-center gap-3">
             <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-              intake.type === 'ticket' ? 'bg-blue-100 text-blue-700' : intake.type === 'down' ? 'bg-purple-100 text-purple-700' : 'bg-rose-100 text-rose-700'
+              intake.type === 'ticket'
+                ? 'bg-coin-100 text-coin-800 dark:bg-coin-900/20 dark:text-coin-200'
+                : intake.type === 'down'
+                  ? 'bg-coin-50 text-coin-800 dark:bg-coin-900/10 dark:text-coin-200'
+                  : 'bg-rose-100 text-rose-700 dark:bg-rose-900/20 dark:text-rose-200'
             }`}>
               <IconMapper name={intake.type === 'ticket' ? 'Inbox' : intake.type === 'down' ? 'ArrowDownCircle' : 'AlertTriangle'} className="w-3.5 h-3.5 mr-1" />
               {intake.type}
@@ -113,7 +117,7 @@ export default function Show({ intake }: Props) {
                         <span>{f.filename}</span>
                         <span className="text-xs text-red-700/70 dark:text-gray-400">{Math.round(f.size / 1024)} KB</span>
                       </div>
-                      <a href={`/storage/${f.path}`} className="text-xs px-2 py-1 rounded border">Download</a>
+                      <a href={`/storage/${f.path}`} className="text-xs px-2 py-1 rounded border border-red-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-red-900 dark:text-gray-100 hover:bg-red-50 dark:hover:bg-gray-800">Download</a>
                     </li>
                   ))}
                 </ul>
@@ -125,20 +129,20 @@ export default function Show({ intake }: Props) {
             <div className="bg-white dark:bg-gray-900 rounded-xl border border-red-100 dark:border-gray-800 p-4">
               <h2 className="text-sm font-semibold text-red-900 dark:text-gray-100 mb-3">Convert</h2>
               {intake.converted_id ? (
-                <div className="text-sm p-3 rounded bg-green-50 text-green-700 border border-green-200">
+                <div className="text-sm p-3 rounded bg-green-50 text-green-700 border border-green-200 dark:bg-green-900/20 dark:text-green-200 dark:border-green-900/30">
                   Already converted to {intake.converted_type} (ID #{intake.converted_id})
                 </div>
               ) : (
                 <form onSubmit={onConvert} className="space-y-3">
                   <div>
                     <label className="block text-xs font-medium text-red-900 dark:text-gray-200 mb-1">Target Type</label>
-                    <select value={convertForm.data.target_type} onChange={(e) => convertForm.setData('target_type', e.target.value as any)} className="w-full rounded border-red-200 dark:border-gray-700 text-sm">
+                    <select value={convertForm.data.target_type} onChange={(e) => convertForm.setData('target_type', e.target.value as any)} className="w-full rounded border border-red-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-red-900 dark:text-gray-100 text-sm">
                       <option value="ticket">Ticket</option>
                       <option value="down">Down</option>
                       <option value="incident">Incident</option>
                     </select>
                   </div>
-                  <button type="submit" disabled={convertForm.processing} className="w-full inline-flex items-center justify-center px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-sm disabled:opacity-60">
+                  <button type="submit" disabled={convertForm.processing} className="w-full inline-flex items-center justify-center px-4 py-2 rounded-lg bg-coin-700 hover:bg-coin-800 text-white text-sm disabled:opacity-60">
                     <IconMapper name="ArrowRightCircle" className="w-4 h-4 mr-2" />
                     Convert
                   </button>

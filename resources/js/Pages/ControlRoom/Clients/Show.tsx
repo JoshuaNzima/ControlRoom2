@@ -25,9 +25,14 @@ export default function ClientShow() {
       <div className="space-y-4">
         <Card className="dark:bg-gray-800 dark:border-gray-700">
           <CardHeader>
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
               <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Overview</h3>
-              <Link href={route('control-room.clients')} className="text-sm text-indigo-600">Back</Link>
+              <Link
+                href={route('control-room.clients')}
+                className="text-sm text-coin-700 hover:text-coin-800 dark:text-coin-300 dark:hover:text-coin-200"
+              >
+                Back
+              </Link>
             </div>
           </CardHeader>
           <CardContent>
@@ -48,8 +53,8 @@ export default function ClientShow() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {client.sites?.map((s: any) => (
                 <div key={s.id} className="p-3 rounded border dark:border-gray-600">
-                  <div className="font-medium">{s.name}</div>
-                  <div className="text-xs text-gray-500">{s.status}</div>
+                  <div className="font-medium text-gray-900 dark:text-gray-100">{s.name}</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">{s.status}</div>
                   <div className="mt-2 text-sm">
                     <div className="font-medium">Assigned Guards:</div>
                     <div className="text-xs text-gray-600 dark:text-gray-300">
@@ -79,10 +84,14 @@ export default function ClientShow() {
               <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Assign Guard</h3>
             </CardHeader>
             <CardContent>
-              <form className="flex gap-2 items-end" onSubmit={(e) => { e.preventDefault(); guardForm.post(route('control-room.clients.assign-guard', client.id)); }}>
+              <form className="flex flex-col sm:flex-row gap-2 sm:items-end" onSubmit={(e) => { e.preventDefault(); guardForm.post(route('control-room.clients.assign-guard', client.id)); }}>
                 <div className="flex-1">
                   <label className="block text-sm font-medium">Guard</label>
-                  <select className="w-full border rounded-md p-2" value={guardForm.data.guard_id} onChange={(e) => guardForm.setData('guard_id', e.target.value)}>
+                  <select
+                    className="w-full border border-gray-300 dark:border-gray-700 rounded-md p-2 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-coin-600"
+                    value={guardForm.data.guard_id}
+                    onChange={(e) => guardForm.setData('guard_id', e.target.value)}
+                  >
                     <option value="">Select guard</option>
                     {guards.map((g: any) => <option key={g.id} value={g.id}>{g.name}</option>)}
                   </select>
@@ -97,10 +106,14 @@ export default function ClientShow() {
               <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Assign Supervisor</h3>
             </CardHeader>
             <CardContent>
-              <form className="flex gap-2 items-end" onSubmit={(e) => { e.preventDefault(); supervisorForm.post(route('control-room.clients.assign-supervisor', client.id)); }}>
+              <form className="flex flex-col sm:flex-row gap-2 sm:items-end" onSubmit={(e) => { e.preventDefault(); supervisorForm.post(route('control-room.clients.assign-supervisor', client.id)); }}>
                 <div className="flex-1">
                   <label className="block text-sm font-medium">Supervisor</label>
-                  <select className="w-full border rounded-md p-2" value={supervisorForm.data.supervisor_id} onChange={(e) => supervisorForm.setData('supervisor_id', e.target.value)}>
+                  <select
+                    className="w-full border border-gray-300 dark:border-gray-700 rounded-md p-2 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-coin-600"
+                    value={supervisorForm.data.supervisor_id}
+                    onChange={(e) => supervisorForm.setData('supervisor_id', e.target.value)}
+                  >
                     <option value="">Select supervisor</option>
                     {supervisors.map((s: any) => <option key={s.id} value={s.id}>{s.name}</option>)}
                   </select>

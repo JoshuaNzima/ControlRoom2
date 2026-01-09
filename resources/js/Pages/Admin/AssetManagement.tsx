@@ -129,7 +129,7 @@ export default function AssetManagement({ auth = {}, summary, pendingDisbursemen
                   key={r.id}
                   type="button"
                   onClick={() => { setSelectedId(r.id); setOpen(true); }}
-                  className="w-full text-left py-3 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-800/50 px-2 rounded-md"
+                  className="w-full text-left py-3 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-800/50 px-2 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950"
                 >
                   <div className="min-w-0">
                     <div className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{r.title}</div>

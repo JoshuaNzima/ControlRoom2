@@ -43,6 +43,7 @@ const ShowIncident = ({ auth, incident }: ShowIncidentProps) => {
     switch (status) {
       case 'open': return 'bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100';
       case 'in_progress': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-100';
+      case 'escalated': return 'bg-coin-100 text-coin-900 dark:bg-coin-900/30 dark:text-coin-200';
       case 'resolved': return 'bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100';
       case 'closed': return 'bg-gray-100 text-gray-800 dark:bg-gray-600 dark:text-gray-100';
       default: return 'bg-gray-100 text-gray-800 dark:bg-gray-600 dark:text-gray-100';
@@ -81,7 +82,25 @@ const ShowIncident = ({ auth, incident }: ShowIncidentProps) => {
                 )}
               </div>
             </div>
-            <div className="flex space-x-2">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+              <Link
+                href={route('control-room.incidents.print', incident.id)}
+                target="_blank"
+                rel="noopener"
+              >
+                <Button className="w-full sm:w-auto bg-coin-700 hover:bg-coin-600 text-white">
+                  Print
+                </Button>
+              </Link>
+              <Link
+                href={route('control-room.incidents.pdf', incident.id)}
+                target="_blank"
+                rel="noopener"
+              >
+                <Button variant="outline" className="w-full sm:w-auto dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
+                  Download PDF
+                </Button>
+              </Link>
               <Link href={route('control-room.incidents.edit', incident.id)}>
                 <Button variant="outline" className="dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-600">
                   Edit

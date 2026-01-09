@@ -44,7 +44,7 @@ const RoleCard = React.memo(function RoleCard({ role, permissions, users, toggli
                 <div>
                   <h3 id={`role-${role.id}-title`} className="text-lg font-semibold text-gray-900 dark:text-white">{role.name}</h3>
                   <div className="mt-1 flex flex-wrap gap-2 text-sm text-gray-500 dark:text-gray-400">
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200">{role.permissions?.length ?? 0} Permissions</span>
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-coin-100 text-coin-800 dark:bg-coin-900/30 dark:text-coin-200">{role.permissions?.length ?? 0} Permissions</span>
                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">{role.users?.length ?? 0} Users</span>
                   </div>
                 </div>
@@ -67,8 +67,8 @@ const RoleCard = React.memo(function RoleCard({ role, permissions, users, toggli
               {displayedPermissions.map((permission: Permission) => {
                 const isActive = role.permissions?.some((p: Permission) => p.name === permission.name);
                 return (
-                  <button key={permission.id} type="button" onClick={() => onTogglePermission(role.id, permission.name)} role="switch" aria-checked={isActive} aria-label={`${isActive ? 'Revoke' : 'Grant'} ${permission.name} for ${role.name}`} disabled={!!toggling[role.id]} className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${isActive ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/50 dark:text-indigo-200' : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'} ${!!toggling[role.id] ? 'opacity-70 cursor-wait' : ''}`}>
-                    {permission.name}{isActive && <span className="ml-1.5 inline-flex items-center justify-center h-4 w-4 rounded-full bg-indigo-600 text-white text-[10px]">✓</span>}
+                  <button key={permission.id} type="button" onClick={() => onTogglePermission(role.id, permission.name)} role="switch" aria-checked={isActive} aria-label={`${isActive ? 'Revoke' : 'Grant'} ${permission.name} for ${role.name}`} disabled={!!toggling[role.id]} className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${isActive ? 'bg-coin-100 text-coin-800 dark:bg-coin-900/30 dark:text-coin-200' : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'} ${!!toggling[role.id] ? 'opacity-70 cursor-wait' : ''}`}>
+                    {permission.name}{isActive && <span className="ml-1.5 inline-flex items-center justify-center h-4 w-4 rounded-full bg-coin-700 text-white text-[10px]">✓</span>}
                   </button>
                 )
               })}
@@ -88,7 +88,7 @@ const RoleCard = React.memo(function RoleCard({ role, permissions, users, toggli
             <div className="flex items-center justify-between mb-2">
               <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">Assigned Users</h4>
               <div className="relative w-64">
-                <select onChange={(e) => { const userId = Number((e.target as HTMLSelectElement).value); if (userId) { onAssignUser(role.id, userId); (e.target as HTMLSelectElement).value = ''; } }} disabled={!!assigning[role.id]} aria-label={`Assign user to ${role.name}`} className="block w-full pl-3 pr-10 py-2 text-base border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white sm:text-sm disabled:opacity-60 disabled:cursor-not-allowed" defaultValue="">
+                <select onChange={(e) => { const userId = Number((e.target as HTMLSelectElement).value); if (userId) { onAssignUser(role.id, userId); (e.target as HTMLSelectElement).value = ''; } }} disabled={!!assigning[role.id]} aria-label={`Assign user to ${role.name}`} className="block w-full pl-3 pr-10 py-2 text-base border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-coin-500 focus:border-coin-500 dark:bg-gray-700 dark:text-white sm:text-sm disabled:opacity-60 disabled:cursor-not-allowed" defaultValue="">
                   <option value="">Select a user to add...</option>
                   {users?.filter((u: User) => !role.users?.some((ru: User) => ru.id === u.id)).map((u: User) => (<option key={u.id} value={u.id}>{u.name} — {u.email}</option>))}
                 </select>
@@ -200,16 +200,16 @@ export default function Roles({ roles, permissions, users, flash = {} }: Props) 
           </div>
 
           <div className="bg-white dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm overflow-hidden transition-all duration-200 hover:shadow-md">
-            <div className="px-6 py-4 bg-gradient-to-r from-indigo-50 to-indigo-100 dark:from-indigo-900/30 dark:to-indigo-900/10 border-b border-gray-200 dark:border-gray-700"><div className="flex items-center justify-between"><h2 className="text-lg font-semibold text-gray-900 dark:text-white">Create Permission</h2><Shield className="h-5 w-5 text-indigo-600 dark:text-indigo-400" /></div></div>
+            <div className="px-6 py-4 bg-gradient-to-r from-coin-50 to-coin-100 dark:from-coin-900/30 dark:to-coin-900/10 border-b border-gray-200 dark:border-gray-700"><div className="flex items-center justify-between"><h2 className="text-lg font-semibold text-gray-900 dark:text-white">Create Permission</h2><Shield className="h-5 w-5 text-coin-600 dark:text-coin-400" /></div></div>
             <div className="p-6">
               <form onSubmit={createPermission} className="space-y-4">
                 <div>
                   <label htmlFor="permissionName" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Permission Name <span className="text-red-500 ml-0.5">*</span></label>
-                  <input ref={permissionNameRef} id="permissionName" type="text" value={permissionForm.data.name} onChange={e => permissionForm.setData('name', e.target.value)} className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700/50 dark:border-gray-600 dark:text-white dark:placeholder-gray-400 sm:text-sm transition duration-150 ease-in-out" placeholder="e.g. finance.view" required />
+                  <input ref={permissionNameRef} id="permissionName" type="text" value={permissionForm.data.name} onChange={e => permissionForm.setData('name', e.target.value)} className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-coin-500 focus:ring-coin-500 dark:bg-gray-700/50 dark:border-gray-600 dark:text-white dark:placeholder-gray-400 sm:text-sm transition duration-150 ease-in-out" placeholder="e.g. finance.view" required />
                   {permissionForm.errors.name && (<p className="mt-1 text-sm text-red-600 dark:text-red-400">{permissionForm.errors.name}</p>)}
                 </div>
                 <div className="flex justify-end">
-                  <button type="submit" disabled={permissionForm.processing} className="inline-flex items-center justify-center rounded-lg border border-transparent bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200">{permissionForm.processing ? (<><svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>Creating...</>) : (<><Plus className="-ml-1 mr-2 h-4 w-4" />Create Permission</>)}</button>
+                  <button type="submit" disabled={permissionForm.processing} className="inline-flex items-center justify-center rounded-lg border border-transparent bg-coin-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-coin-700 focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200">{permissionForm.processing ? (<><svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>Creating...</>) : (<><Plus className="-ml-1 mr-2 h-4 w-4" />Create Permission</>)}</button>
                 </div>
               </form>
             </div>

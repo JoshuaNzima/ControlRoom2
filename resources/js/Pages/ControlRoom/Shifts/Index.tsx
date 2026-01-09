@@ -4,6 +4,8 @@ import ControlRoomLayout from '@/Layouts/ControlRoomLayout';
 import { Card, CardContent, CardHeader } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import Modal from '@/Components/Modal';
+import PageHeader from '@/Components/ui/page-header';
+import EmptyState from '@/Components/ui/empty-state';
 
 type Shift = {
   id: number;
@@ -128,16 +130,19 @@ export default function ShiftsIndex() {
     <ControlRoomLayout title="Shift Management">
       <Head title="Shift Management" />
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xl font-semibold">Shifts</h2>
-          <Button
-            type="button"
-            onClick={() => setCreateOpen(true)}
-            className="inline-flex items-center px-3 py-2 rounded-md bg-indigo-600 text-white text-sm"
-          >
-            Create Shift
-          </Button>
-        </div>
+        <PageHeader
+          title="Shifts"
+          description="Manage shift templates and view roster-based scheduled shifts."
+          actions={(
+            <Button
+              type="button"
+              onClick={() => setCreateOpen(true)}
+              className="inline-flex items-center px-3 py-2 rounded-md bg-coin-700 hover:bg-coin-800 text-white text-sm"
+            >
+              Create Shift
+            </Button>
+          )}
+        />
 
         <Card className="dark:bg-gray-800 dark:border-gray-700">
           <CardContent>
@@ -145,7 +150,7 @@ export default function ShiftsIndex() {
               <div>
                 <label className="block text-sm font-medium">Search</label>
                 <input
-                  className="w-full border rounded-md p-2 bg-white dark:bg-gray-900 dark:text-gray-100"
+                  className="w-full border rounded-md p-2 bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100"
                   placeholder="Guard/Site/Shift name"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
@@ -155,7 +160,7 @@ export default function ShiftsIndex() {
               <div>
                 <label className="block text-sm font-medium">Zone</label>
                 <select
-                  className="w-full border rounded-md p-2 bg-white dark:bg-gray-900 dark:text-gray-100"
+                  className="w-full border rounded-md p-2 bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100"
                   value={zoneId as any}
                   onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setZoneId(e.target.value ? Number(e.target.value) : '')}
                 >
@@ -168,7 +173,7 @@ export default function ShiftsIndex() {
               <div>
                 <label className="block text-sm font-medium">Supervisor</label>
                 <select
-                  className="w-full border rounded-md p-2 bg-white dark:bg-gray-900 dark:text-gray-100"
+                  className="w-full border rounded-md p-2 bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100"
                   value={supervisorId as any}
                   onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSupervisorId(e.target.value ? Number(e.target.value) : '')}
                 >
@@ -181,7 +186,7 @@ export default function ShiftsIndex() {
               <div>
                 <label className="block text-sm font-medium">Site</label>
                 <select
-                  className="w-full border rounded-md p-2 bg-white dark:bg-gray-900 dark:text-gray-100"
+                  className="w-full border rounded-md p-2 bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100"
                   value={siteId as any}
                   onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSiteId(e.target.value ? Number(e.target.value) : '')}
                 >
@@ -194,7 +199,7 @@ export default function ShiftsIndex() {
               <div>
                 <label className="block text-sm font-medium">Guard Type</label>
                 <select
-                  className="w-full border rounded-md p-2 bg-white dark:bg-gray-900 dark:text-gray-100"
+                  className="w-full border rounded-md p-2 bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100"
                   value={guardType}
                   onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setGuardType(e.target.value)}
                 >
@@ -208,7 +213,7 @@ export default function ShiftsIndex() {
                 <label className="block text-sm font-medium">Date From</label>
                 <input
                   type="date"
-                  className="w-full border rounded-md p-2 bg-white dark:bg-gray-900 dark:text-gray-100"
+                  className="w-full border rounded-md p-2 bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100"
                   value={dateFrom}
                   onChange={(e) => setDateFrom(e.target.value)}
                 />
@@ -217,7 +222,7 @@ export default function ShiftsIndex() {
                 <label className="block text-sm font-medium">Date To</label>
                 <input
                   type="date"
-                  className="w-full border rounded-md p-2 bg-white dark:bg-gray-900 dark:text-gray-100"
+                  className="w-full border rounded-md p-2 bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100"
                   value={dateTo}
                   onChange={(e) => setDateTo(e.target.value)}
                 />
@@ -407,16 +412,24 @@ export default function ShiftsIndex() {
                     <div className="font-medium flex items-center gap-2">
                       <span>{s.guard_relation?.name || 'Guard'} • {s.client_site?.name || 'Site'}</span>
                       {s.guard_relation?.guard_type && (
-                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${s.guard_relation.guard_type === 'reliever' ? 'bg-indigo-600 text-white' : s.guard_relation.guard_type === 'standby' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300' : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-100'}`}>
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${s.guard_relation.guard_type === 'reliever' ? 'bg-coin-700 text-white' : s.guard_relation.guard_type === 'standby' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300' : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-100'}`}>
                           {s.guard_relation.guard_type === 'permanent' ? 'Standard' : (s.guard_relation.guard_type.charAt(0).toUpperCase() + s.guard_relation.guard_type.slice(1))}
                         </span>
                       )}
                     </div>
-                    <div className="text-xs text-gray-500">{s.date} • {s.start_time} - {s.end_time} • {s.shift_type}</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">{s.date} • {s.start_time} - {s.end_time} • {s.shift_type}</div>
                   </div>
                   <div className="flex gap-2 text-xs text-gray-500">Scheduled</div>
                 </div>
               ))}
+              {(!guardShifts?.data || guardShifts.data.length === 0) && (
+                <EmptyState
+                  title="No guard shifts"
+                  description="Shifts generated from the roster will appear here."
+                  size="sm"
+                  contentClassName="py-6"
+                />
+              )}
             </div>
           </CardContent>
         </Card>
@@ -431,13 +444,13 @@ export default function ShiftsIndex() {
                 <div key={s.id} className="py-3 flex items-center justify-between">
                   <div>
                     <div className="font-medium">{s.name}</div>
-                    <div className="text-xs text-gray-500">{s.start_time} - {s.end_time} • Required guards: {s.required_guards} {s.is_global ? '• General (all zones)' : ''}</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">{s.start_time} - {s.end_time} • Required guards: {s.required_guards} {s.is_global ? '• General (all zones)' : ''}</div>
                   </div>
                   <div className="flex gap-2">
                     <button
                       type="button"
                       onClick={() => openViewModal(s.id)}
-                      className="text-sm text-indigo-600 disabled:opacity-50"
+                      className="text-sm text-coin-700 hover:text-coin-800 dark:text-coin-300 dark:hover:text-coin-200 disabled:opacity-50"
                       disabled={loadingId === s.id}
                     >
                       {loadingId === s.id ? 'Opening…' : 'View'}
@@ -445,13 +458,21 @@ export default function ShiftsIndex() {
                     <button
                       type="button"
                       onClick={() => openEditModal(s)}
-                      className="text-sm text-gray-600"
+                      className="text-sm text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-gray-100"
                     >
                       Edit
                     </button>
                   </div>
                 </div>
               ))}
+              {(!scheduleShifts?.data || scheduleShifts.data.length === 0) && (
+                <EmptyState
+                  title="No shift templates"
+                  description="Create a shift template to start scheduling."
+                  size="sm"
+                  contentClassName="py-6"
+                />
+              )}
             </div>
           </CardContent>
         </Card>
@@ -509,11 +530,11 @@ interface CreateShiftModalProps {
   sites: any[];
 }
 
-function CreateShiftModal({ open, onClose, supervisors, sites }: CreateShiftModalProps) {
+function CreateShiftModal({ open, onClose, supervisors, sites }: { open: boolean; onClose: () => void; supervisors: any[]; sites: any[]; }) {
   const { data, setData, post, processing, errors, reset } = useForm<ShiftForm>({
     name: '',
-    start_time: '',
-    end_time: '',
+    start_time: '06:00',
+    end_time: '18:00',
     description: '',
     supervisor_id: '',
     sites: [],
@@ -573,12 +594,12 @@ function CreateShiftModal({ open, onClose, supervisors, sites }: CreateShiftModa
 
   return (
     <Modal show={open} onClose={handleClose} maxWidth="2xl">
-      <div className="px-6 py-4 border-b flex items-center justify-between bg-white">
-        <h2 className="text-lg font-semibold text-gray-900">New Shift</h2>
+      <div className="px-6 py-4 border-b flex items-center justify-between bg-white dark:bg-gray-900 dark:border-gray-800">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">New Shift</h2>
         <button
           type="button"
           onClick={handleClose}
-          className="text-gray-400 hover:text-gray-600"
+          className="text-gray-400 hover:text-gray-600 dark:text-gray-300 dark:hover:text-gray-100"
         >
           <span className="sr-only">Close</span>
           <svg
@@ -595,12 +616,12 @@ function CreateShiftModal({ open, onClose, supervisors, sites }: CreateShiftModa
           </svg>
         </button>
       </div>
-      <div className="px-6 py-4 bg-white">
+      <div className="px-6 py-4 bg-white dark:bg-gray-900">
         <form className="grid grid-cols-1 sm:grid-cols-2 gap-4" onSubmit={onSubmit}>
           <div>
             <label className="block text-sm font-medium">Name</label>
             <input
-              className="w-full border rounded-md p-2"
+              className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100"
               value={data.name}
               onChange={(e) => setData('name', e.target.value)}
             />
@@ -609,7 +630,7 @@ function CreateShiftModal({ open, onClose, supervisors, sites }: CreateShiftModa
           <div>
             <label className="block text-sm font-medium">Supervisor</label>
             <select
-              className="w-full border rounded-md p-2"
+              className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100"
               value={data.supervisor_id as any}
               onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
                 setData('supervisor_id', e.target.value ? Number(e.target.value) : '')
@@ -628,7 +649,7 @@ function CreateShiftModal({ open, onClose, supervisors, sites }: CreateShiftModa
             <label className="block text-sm font-medium">Start Time</label>
             <input
               type="time"
-              className="w-full border rounded-md p-2"
+              className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100"
               value={data.start_time}
               onChange={(e) => setData('start_time', e.target.value)}
             />
@@ -638,7 +659,7 @@ function CreateShiftModal({ open, onClose, supervisors, sites }: CreateShiftModa
             <label className="block text-sm font-medium">End Time</label>
             <input
               type="time"
-              className="w-full border rounded-md p-2"
+              className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100"
               value={data.end_time}
               onChange={(e) => setData('end_time', e.target.value)}
             />
@@ -666,7 +687,7 @@ function CreateShiftModal({ open, onClose, supervisors, sites }: CreateShiftModa
           </div>
           <div className="sm:col-span-2">
             <label className="block text-sm font-medium">Sites</label>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-64 overflow-auto border rounded p-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-64 overflow-auto border rounded p-2 dark:border-gray-800">
               {sites.map((s: any) => (
                 <label key={s.id} className="flex items-center gap-2 text-sm">
                   <input
@@ -683,7 +704,7 @@ function CreateShiftModal({ open, onClose, supervisors, sites }: CreateShiftModa
           <div className="sm:col-span-2">
             <label className="block text-sm font-medium">Description</label>
             <textarea
-              className="w-full border rounded-md p-2"
+              className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100"
               rows={3}
               value={data.description}
               onChange={(e) => setData('description', e.target.value)}
@@ -693,7 +714,7 @@ function CreateShiftModal({ open, onClose, supervisors, sites }: CreateShiftModa
             <button
               type="button"
               onClick={handleClose}
-              className="px-4 py-2 text-sm rounded-md bg-gray-200 text-gray-700 hover:bg-gray-300"
+              className="px-4 py-2 text-sm rounded-md bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700"
               disabled={processing}
             >
               Cancel
@@ -701,7 +722,7 @@ function CreateShiftModal({ open, onClose, supervisors, sites }: CreateShiftModa
             <button
               type="submit"
               disabled={processing}
-              className="px-4 py-2 text-sm rounded-md bg-indigo-600 text-white hover:bg-indigo-700 disabled:bg-gray-400"
+              className="px-4 py-2 text-sm rounded-md bg-coin-700 text-white hover:bg-coin-800 disabled:bg-gray-400"
             >
               {processing ? 'Creating...' : 'Create'}
             </button>
@@ -785,12 +806,12 @@ function EditShiftModal({ open, onClose, shift, supervisors, sites }: EditShiftM
 
   return (
     <Modal show={open} onClose={handleClose} maxWidth="2xl">
-      <div className="px-6 py-4 border-b flex items-center justify-between bg-white">
-        <h2 className="text-lg font-semibold text-gray-900">Edit Shift</h2>
+      <div className="px-6 py-4 border-b flex items-center justify-between bg-white dark:bg-gray-900 dark:border-gray-800">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Edit Shift</h2>
         <button
           type="button"
           onClick={handleClose}
-          className="text-gray-400 hover:text-gray-600"
+          className="text-gray-400 hover:text-gray-600 dark:text-gray-300 dark:hover:text-gray-100"
         >
           <span className="sr-only">Close</span>
           <svg
@@ -807,12 +828,12 @@ function EditShiftModal({ open, onClose, shift, supervisors, sites }: EditShiftM
           </svg>
         </button>
       </div>
-      <div className="px-6 py-4 bg-white">
+      <div className="px-6 py-4 bg-white dark:bg-gray-900">
         <form className="grid grid-cols-1 sm:grid-cols-2 gap-4" onSubmit={onSubmit}>
           <div>
             <label className="block text-sm font-medium">Name</label>
             <input
-              className="w-full border rounded-md p-2"
+              className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100"
               value={data.name}
               onChange={(e) => setData('name', e.target.value)}
             />
@@ -821,7 +842,7 @@ function EditShiftModal({ open, onClose, shift, supervisors, sites }: EditShiftM
           <div>
             <label className="block text-sm font-medium">Supervisor</label>
             <select
-              className="w-full border rounded-md p-2"
+              className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100"
               value={data.supervisor_id as any}
               onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
                 setData('supervisor_id', e.target.value ? Number(e.target.value) : '')
@@ -840,7 +861,7 @@ function EditShiftModal({ open, onClose, shift, supervisors, sites }: EditShiftM
             <label className="block text-sm font-medium">Start Time</label>
             <input
               type="time"
-              className="w-full border rounded-md p-2"
+              className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100"
               value={data.start_time}
               onChange={(e) => setData('start_time', e.target.value)}
             />
@@ -850,7 +871,7 @@ function EditShiftModal({ open, onClose, shift, supervisors, sites }: EditShiftM
             <label className="block text-sm font-medium">End Time</label>
             <input
               type="time"
-              className="w-full border rounded-md p-2"
+              className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100"
               value={data.end_time}
               onChange={(e) => setData('end_time', e.target.value)}
             />
@@ -865,7 +886,7 @@ function EditShiftModal({ open, onClose, shift, supervisors, sites }: EditShiftM
           <div>
             <label className="block text-sm font-medium">Status</label>
             <select
-              className="w-full border rounded-md p-2"
+              className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100"
               value={data.status}
               onChange={(e) => setData('status', e.target.value)}
             >
@@ -890,7 +911,7 @@ function EditShiftModal({ open, onClose, shift, supervisors, sites }: EditShiftM
           </div>
           <div className="sm:col-span-2">
             <label className="block text-sm font-medium">Sites</label>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-64 overflow-auto border rounded p-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-64 overflow-auto border rounded p-2 dark:border-gray-800">
               {sites.map((s: any) => (
                 <label key={s.id} className="flex items-center gap-2 text-sm">
                   <input
@@ -907,7 +928,7 @@ function EditShiftModal({ open, onClose, shift, supervisors, sites }: EditShiftM
           <div className="sm:col-span-2">
             <label className="block text-sm font-medium">Description</label>
             <textarea
-              className="w-full border rounded-md p-2"
+              className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100"
               rows={3}
               value={data.description}
               onChange={(e) => setData('description', e.target.value)}
@@ -917,7 +938,7 @@ function EditShiftModal({ open, onClose, shift, supervisors, sites }: EditShiftM
             <button
               type="button"
               onClick={handleClose}
-              className="px-4 py-2 text-sm rounded-md bg-gray-200 text-gray-700 hover:bg-gray-300"
+              className="px-4 py-2 text-sm rounded-md bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700"
               disabled={processing}
             >
               Cancel
@@ -925,7 +946,7 @@ function EditShiftModal({ open, onClose, shift, supervisors, sites }: EditShiftM
             <button
               type="submit"
               disabled={processing}
-              className="px-4 py-2 text-sm rounded-md bg-indigo-600 text-white hover:bg-indigo-700 disabled:bg-gray-400"
+              className="px-4 py-2 text-sm rounded-md bg-coin-700 text-white hover:bg-coin-800 disabled:bg-gray-400"
             >
               {processing ? 'Saving...' : 'Save'}
             </button>
@@ -956,12 +977,12 @@ function ViewShiftModal({ open, onClose, data }: ViewShiftModalProps) {
 
   return (
     <Modal show={open} onClose={onClose} maxWidth="xl">
-      <div className="px-6 py-4 border-b flex items-center justify-between bg-white">
-        <h2 className="text-lg font-semibold text-gray-900">Shift • {shift.name}</h2>
+      <div className="px-6 py-4 border-b flex items-center justify-between bg-white dark:bg-gray-900 dark:border-gray-800">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Shift • {shift.name}</h2>
         <button
           type="button"
           onClick={onClose}
-          className="text-gray-400 hover:text-gray-600"
+          className="text-gray-400 hover:text-gray-600 dark:text-gray-300 dark:hover:text-gray-100"
         >
           <span className="sr-only">Close</span>
           <svg
@@ -978,56 +999,61 @@ function ViewShiftModal({ open, onClose, data }: ViewShiftModalProps) {
           </svg>
         </button>
       </div>
-      <div className="px-6 py-4 bg-white space-y-4">
+      <div className="px-6 py-4 bg-white dark:bg-gray-900 space-y-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
           <div>
-            <div className="font-medium text-gray-700">Time</div>
-            <div className="text-gray-900">{shift.start_time} - {shift.end_time}</div>
+            <div className="font-medium text-gray-700 dark:text-gray-300">Time</div>
+            <div className="text-gray-900 dark:text-gray-100">{shift.start_time} - {shift.end_time}</div>
           </div>
           <div>
-            <div className="font-medium text-gray-700">Required Guards</div>
-            <div className="text-gray-900">{shift.required_guards}</div>
+            <div className="font-medium text-gray-700 dark:text-gray-300">Required Guards</div>
+            <div className="text-gray-900 dark:text-gray-100">{shift.required_guards}</div>
           </div>
           <div>
-            <div className="font-medium text-gray-700">Supervisor</div>
-            <div className="text-gray-900">{shift.supervisor?.name}</div>
+            <div className="font-medium text-gray-700 dark:text-gray-300">Supervisor</div>
+            <div className="text-gray-900 dark:text-gray-100">{shift.supervisor?.name}</div>
           </div>
           <div>
-            <div className="font-medium text-gray-700">Status</div>
-            <div className="text-gray-900 capitalize">{shift.status}</div>
+            <div className="font-medium text-gray-700 dark:text-gray-300">Status</div>
+            <div className="text-gray-900 dark:text-gray-100 capitalize">{shift.status}</div>
           </div>
           <div className="sm:col-span-2">
-            <div className="font-medium text-gray-700">Sites</div>
-            <div className="text-gray-900">{sitesLabel || '—'}</div>
+            <div className="font-medium text-gray-700 dark:text-gray-300">Sites</div>
+            <div className="text-gray-900 dark:text-gray-100">{sitesLabel || '—'}</div>
           </div>
         </div>
 
         {shift.description && (
           <div className="text-sm">
-            <div className="font-medium text-gray-700">Description</div>
-            <div className="text-gray-900 mt-1">{shift.description}</div>
+            <div className="font-medium text-gray-700 dark:text-gray-300">Description</div>
+            <div className="text-gray-900 dark:text-gray-100 mt-1">{shift.description}</div>
           </div>
         )}
 
         <div className="text-sm">
-          <div className="font-medium text-gray-700 mb-1">Assigned Guards</div>
+          <div className="font-medium text-gray-700 dark:text-gray-300 mb-1">Assigned Guards</div>
           <div className="space-y-1">
             {(!shift.guards || shift.guards.length === 0) && (
-              <div className="text-gray-500">No guards assigned.</div>
+              <EmptyState
+                title="No guards assigned"
+                description="Assign guards to this shift to display them here."
+                size="sm"
+                contentClassName="py-4"
+              />
             )}
             {shift.guards && shift.guards.map((g: any) => (
-              <div key={g.id} className="flex items-center justify-between border rounded px-3 py-1">
-                <div className="text-gray-900">{g.name}</div>
+              <div key={g.id} className="flex items-center justify-between border rounded px-3 py-1 dark:border-gray-700">
+                <div className="text-gray-900 dark:text-gray-100">{g.name}</div>
               </div>
             ))}
           </div>
         </div>
       </div>
-      <div className="px-6 py-3 bg-gray-50 border-t flex justify-end text-sm">
+      <div className="px-6 py-3 bg-gray-50 border-t flex justify-end text-sm dark:bg-gray-950 dark:border-gray-800">
         <button
           type="button"
           onClick={onClose}
-          className="px-4 py-2 rounded-md bg-indigo-600 text-white hover:bg-indigo-700"
+          className="px-4 py-2 rounded-md bg-coin-700 text-white hover:bg-coin-800"
         >
           Close
         </button>

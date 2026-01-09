@@ -230,12 +230,12 @@ export default function CreateInvoice({ clients = [], defaultBilling }: Props) {
 
       <div className="py-6">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
-              <p className="text-sm text-gray-500">Finance &gt; Invoices</p>
-              <h1 className="text-3xl font-bold text-gray-900">Create {documentMode === 'invoice' ? 'Invoice' : 'Quotation'}</h1>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Finance &gt; Invoices</p>
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Create {documentMode === 'invoice' ? 'Invoice' : 'Quotation'}</h1>
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row flex-wrap gap-2 w-full sm:w-auto">
               {(['invoice', 'quotation'] as const).map((mode) => (
                 <button
                   key={mode}
@@ -243,8 +243,8 @@ export default function CreateInvoice({ clients = [], defaultBilling }: Props) {
                   onClick={() => setDocumentMode(mode)}
                   className={`px-4 py-2 text-sm rounded-full border ${
                     documentMode === mode
-                      ? 'bg-indigo-600 text-white border-indigo-600'
-                      : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                      ? 'bg-coin-700 text-white border-coin-800'
+                      : 'bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-200 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800'
                   }`}
                 >
                   {mode === 'invoice' ? 'Invoice Mode' : 'Quotation Mode'}
@@ -256,22 +256,22 @@ export default function CreateInvoice({ clients = [], defaultBilling }: Props) {
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid lg:grid-cols-[2fr,1fr] gap-6">
               <div className="space-y-6">
-                <div className="bg-white rounded-2xl shadow p-6 space-y-4">
+                <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl shadow p-6 space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="text-sm font-medium text-gray-700">Invoice Number *</label>
-                      <div className="mt-1 flex gap-2">
+                      <label className="text-sm font-medium text-gray-700 dark:text-gray-200">Invoice Number *</label>
+                      <div className="mt-1 flex flex-col sm:flex-row gap-2">
                         <input
                           type="text"
                           value={data.invoice_number}
                           onChange={(e) => setData('invoice_number', e.target.value)}
-                          className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                          className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-coin-500"
                           placeholder="INV-202511-0001"
                         />
                         <button
                           type="button"
                           onClick={regenerateNumber}
-                          className="px-3 py-2 rounded-lg border text-sm bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
+                          className="w-full sm:w-auto px-3 py-2 rounded-lg border text-sm bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-200 border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-900/30"
                           title="Auto-generate"
                         >
                           Auto
@@ -282,12 +282,12 @@ export default function CreateInvoice({ clients = [], defaultBilling }: Props) {
                       )}
                     </div>
                     <div className="space-y-2">
-                      <label className="text-sm font-medium text-gray-700">Client *</label>
-                      <div className="flex gap-2">
+                      <label className="text-sm font-medium text-gray-700 dark:text-gray-200">Client *</label>
+                      <div className="flex flex-col sm:flex-row gap-2">
                         <select
                           value={data.client_id ?? ''}
                           onChange={(e) => handleClientChange(e.target.value)}
-                          className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                          className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-coin-500"
                         >
                           <option value="">Select client</option>
                           {clients.map((client) => (
@@ -300,7 +300,7 @@ export default function CreateInvoice({ clients = [], defaultBilling }: Props) {
                           type="button"
                           onClick={loadServiceLineItems}
                           disabled={!data.client_id}
-                          className="px-3 py-2 rounded-lg border text-sm bg-emerald-50 text-emerald-700 border-emerald-200 disabled:opacity-50 hover:bg-emerald-100"
+                          className="w-full sm:w-auto px-3 py-2 rounded-lg border text-sm bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-200 border-emerald-200 dark:border-emerald-800 disabled:opacity-50 hover:bg-emerald-100 dark:hover:bg-emerald-900/30"
                           title="Load line items from client services"
                         >
                           Load Services
@@ -311,64 +311,64 @@ export default function CreateInvoice({ clients = [], defaultBilling }: Props) {
                       )}
                     </div>
                     <div>
-                      <label className="text-sm font-medium text-gray-700">Client Name *</label>
+                      <label className="text-sm font-medium text-gray-700 dark:text-gray-200">Client Name *</label>
                       <input
                         type="text"
                         required
                         value={data.client_name}
                         onChange={(e) => setData('client_name', e.target.value)}
-                        className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        className="mt-1 w-full px-3 py-2 border border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-coin-500"
                       />
                       {errors.client_name && (
                         <p className="mt-1 text-xs text-red-600">{errors.client_name}</p>
                       )}
                     </div>
                     <div>
-                      <label className="text-sm font-medium text-gray-700">Client Email</label>
+                      <label className="text-sm font-medium text-gray-700 dark:text-gray-200">Client Email</label>
                       <input
                         type="email"
                         value={data.client_email}
                         onChange={(e) => setData('client_email', e.target.value)}
-                        className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        className="mt-1 w-full px-3 py-2 border border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-coin-500"
                       />
                     </div>
                     <div>
-                      <label className="text-sm font-medium text-gray-700">Invoice Date *</label>
+                      <label className="text-sm font-medium text-gray-700 dark:text-gray-200">Invoice Date *</label>
                       <input
                         type="date"
                         required
                         value={data.invoice_date}
                         onChange={(e) => setData('invoice_date', e.target.value)}
-                        className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        className="mt-1 w-full px-3 py-2 border border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-coin-500"
                       />
                     </div>
                     <div>
-                      <label className="text-sm font-medium text-gray-700">Due Date *</label>
+                      <label className="text-sm font-medium text-gray-700 dark:text-gray-200">Due Date *</label>
                       <input
                         type="date"
                         required
                         value={data.due_date}
                         onChange={(e) => setData('due_date', e.target.value)}
-                        className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        className="mt-1 w-full px-3 py-2 border border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-coin-500"
                       />
                     </div>
                     <div>
-                      <label className="text-sm font-medium text-gray-700">Billing Year *</label>
+                      <label className="text-sm font-medium text-gray-700 dark:text-gray-200">Billing Year *</label>
                       <input
                         type="number"
                         min={2000}
                         max={2100}
                         value={data.billing_year}
                         onChange={(e) => setData('billing_year', Number(e.target.value))}
-                        className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        className="mt-1 w-full px-3 py-2 border border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-coin-500"
                       />
                     </div>
                     <div>
-                      <label className="text-sm font-medium text-gray-700">Billing Month *</label>
+                      <label className="text-sm font-medium text-gray-700 dark:text-gray-200">Billing Month *</label>
                       <select
                         value={data.billing_month}
                         onChange={(e) => setData('billing_month', Number(e.target.value))}
-                        className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        className="mt-1 w-full px-3 py-2 border border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-coin-500"
                       >
                         {months.map((label, index) => (
                           <option key={label} value={index + 1}>
@@ -381,34 +381,34 @@ export default function CreateInvoice({ clients = [], defaultBilling }: Props) {
                 </div>
 
                 {activeClient && (
-                  <div className="bg-white rounded-2xl border shadow-sm p-4 text-sm text-gray-600">
-                    <p className="font-semibold text-gray-900">Client Snapshot</p>
+                  <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm p-4 text-sm text-gray-600 dark:text-gray-300">
+                    <p className="font-semibold text-gray-900 dark:text-gray-100">Client Snapshot</p>
                     <p>{activeClient.contact_person}</p>
                     <p>{activeClient.phone ?? 'No phone on file'}</p>
                     <p>{activeClient.email ?? 'No email on file'}</p>
-                    <p className="mt-2 text-xs text-gray-500">
+                    <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
                       Monthly rate: {activeClient.monthly_rate ? `MWK ${activeClient.monthly_rate.toLocaleString()}` : '—'}
                     </p>
                   </div>
                 )}
 
-                <div className="bg-white rounded-2xl shadow p-6 space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h2 className="text-lg font-semibold text-gray-900">Line Items</h2>
+                <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl shadow p-6 space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Line Items</h2>
                     <button
                       type="button"
                       onClick={addLineItem}
-                      className="px-3 py-1.5 bg-emerald-600 text-white rounded-full text-sm hover:bg-emerald-700"
+                      className="w-full sm:w-auto px-3 py-1.5 bg-coin-600 text-white rounded-full text-sm hover:bg-coin-700"
                     >
                       + Add Item
                     </button>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-2">
                     <button
                       type="button"
                       onClick={loadServiceLineItems}
                       disabled={!data.client_id || loadingServices}
-                      className={`px-3 py-2 rounded-lg border text-sm ${loadingServices ? 'opacity-60 cursor-not-allowed' : 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'}`}
+                      className={`w-full sm:w-auto px-3 py-2 rounded-lg border text-sm ${loadingServices ? 'opacity-60 cursor-not-allowed' : 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-200 border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-900/30'}`}
                       title="Load line items from client services"
                     >
                       {loadingServices ? 'Loading…' : 'Load Services'}
@@ -416,35 +416,35 @@ export default function CreateInvoice({ clients = [], defaultBilling }: Props) {
                     <button
                       type="button"
                       onClick={resetItems}
-                      className="px-3 py-2 rounded-lg border text-sm bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100"
+                      className="w-full sm:w-auto px-3 py-2 rounded-lg border text-sm bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700"
                     >
                       Reset
                     </button>
                     {serviceError && (
-                      <span className="text-sm text-red-600">{serviceError}</span>
+                      <span className="text-sm text-red-600 dark:text-red-400">{serviceError}</span>
                     )}
                   </div>
 
                   <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead className="bg-gray-50">
+                    <table className="min-w-[820px] w-full text-sm">
+                      <thead className="bg-gray-50 dark:bg-gray-950 border-y border-gray-200 dark:border-gray-800">
                         <tr>
-                          <th className="px-4 py-2 text-left">Description</th>
-                          <th className="px-4 py-2 text-right w-24">Qty</th>
-                          <th className="px-4 py-2 text-right w-32">Unit Price</th>
-                          <th className="px-4 py-2 text-right w-32">Total</th>
-                          <th className="px-4 py-2 text-center w-16">Action</th>
+                          <th className="px-4 py-2 text-left font-semibold text-gray-700 dark:text-gray-200">Description</th>
+                          <th className="px-4 py-2 text-right w-24 font-semibold text-gray-700 dark:text-gray-200">Qty</th>
+                          <th className="px-4 py-2 text-right w-32 font-semibold text-gray-700 dark:text-gray-200">Unit Price</th>
+                          <th className="px-4 py-2 text-right w-32 font-semibold text-gray-700 dark:text-gray-200">Total</th>
+                          <th className="px-4 py-2 text-center w-16 font-semibold text-gray-700 dark:text-gray-200">Action</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y">
+                      <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
                         {lineItems.map((item, index) => (
-                          <tr key={index}>
+                          <tr key={index} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
                             <td className="px-4 py-2">
                               <input
                                 type="text"
                                 value={item.description}
                                 onChange={(e) => updateLineItem(index, 'description', e.target.value)}
-                                className="w-full px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                className="w-full px-2 py-1 border border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 rounded focus:outline-none focus:ring-2 focus:ring-coin-500"
                                 placeholder="Describe the service or product"
                               />
                             </td>
@@ -454,7 +454,7 @@ export default function CreateInvoice({ clients = [], defaultBilling }: Props) {
                                 min="1"
                                 value={item.quantity}
                                 onChange={(e) => updateLineItem(index, 'quantity', Number(e.target.value) || 1)}
-                                className="w-full px-2 py-1 border border-gray-300 rounded text-right"
+                                className="w-full px-2 py-1 border border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 rounded text-right"
                               />
                             </td>
                             <td className="px-4 py-2 text-right">
@@ -464,17 +464,17 @@ export default function CreateInvoice({ clients = [], defaultBilling }: Props) {
                                 step="0.01"
                                 value={item.unit_price}
                                 onChange={(e) => updateLineItem(index, 'unit_price', Number(e.target.value) || 0)}
-                                className="w-full px-2 py-1 border border-gray-300 rounded text-right"
+                                className="w-full px-2 py-1 border border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 rounded text-right"
                               />
                             </td>
-                            <td className="px-4 py-2 text-right font-semibold">
+                            <td className="px-4 py-2 text-right font-semibold text-gray-900 dark:text-gray-100">
                               {formatCurrency(item.quantity * item.unit_price)}
                             </td>
                             <td className="px-4 py-2 text-center">
                               <button
                                 type="button"
                                 onClick={() => removeLineItem(index)}
-                                className="text-red-500 hover:text-red-700 text-xs font-medium"
+                                className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 text-xs font-medium"
                               >
                                 Remove
                               </button>
@@ -486,14 +486,14 @@ export default function CreateInvoice({ clients = [], defaultBilling }: Props) {
                   </div>
                 </div>
 
-                <div className="bg-white rounded-2xl shadow p-6 space-y-4">
+                <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl shadow p-6 space-y-4">
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Subtotal</span>
-                    <span className="font-semibold">{formatCurrency(Number(data.subtotal))}</span>
+                    <span className="text-gray-600 dark:text-gray-300">Subtotal</span>
+                    <span className="font-semibold text-gray-900 dark:text-gray-100">{formatCurrency(Number(data.subtotal))}</span>
                   </div>
                   <div className="flex items-center justify-between text-sm">
                     <div className="flex items-center gap-2">
-                      <span className="text-gray-600">Tax (%)</span>
+                      <span className="text-gray-600 dark:text-gray-300">Tax (%)</span>
                       <input
                         type="number"
                         min="0"
@@ -501,71 +501,71 @@ export default function CreateInvoice({ clients = [], defaultBilling }: Props) {
                         step="0.01"
                         value={data.tax_percentage}
                         onChange={(e) => handleTaxChange(e.target.value)}
-                        className="w-24 px-2 py-1 border border-gray-300 rounded"
+                        className="w-24 px-2 py-1 border border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 rounded"
                       />
                     </div>
-                    <span className="font-semibold">{formatCurrency(Number(data.tax_amount))}</span>
+                    <span className="font-semibold text-gray-900 dark:text-gray-100">{formatCurrency(Number(data.tax_amount))}</span>
                   </div>
                   <div className="flex items-center justify-between text-sm">
                     <div className="flex items-center gap-2">
-                      <span className="text-gray-600">Discount</span>
+                      <span className="text-gray-600 dark:text-gray-300">Discount</span>
                       <input
                         type="number"
                         min="0"
                         step="0.01"
                         value={data.discount_amount}
                         onChange={(e) => handleDiscountChange(e.target.value)}
-                        className="w-32 px-2 py-1 border border-gray-300 rounded"
+                        className="w-32 px-2 py-1 border border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 rounded"
                       />
                     </div>
-                    <span className="font-semibold">- {formatCurrency(Number(data.discount_amount))}</span>
+                    <span className="font-semibold text-gray-900 dark:text-gray-100">- {formatCurrency(Number(data.discount_amount))}</span>
                   </div>
-                  <div className="flex justify-between items-center border-t pt-4 text-lg font-bold">
-                    <span>Total Due</span>
-                    <span className="text-indigo-600">{formatCurrency(Number(data.total_amount))}</span>
+                  <div className="flex justify-between items-center border-t border-gray-200 dark:border-gray-800 pt-4 text-lg font-bold">
+                    <span className="text-gray-900 dark:text-gray-100">Total Due</span>
+                    <span className="text-coin-700 dark:text-coin-200">{formatCurrency(Number(data.total_amount))}</span>
                   </div>
                 </div>
 
-                <div className="bg-white rounded-2xl shadow p-6 space-y-2">
-                  <label className="text-sm font-medium text-gray-700">Notes / Payment Terms</label>
+                <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl shadow p-6 space-y-2">
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-200">Notes / Payment Terms</label>
                   <textarea
                     rows={4}
                     value={data.notes}
                     onChange={(e) => setData('notes', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-coin-500"
                     placeholder="Add any additional notes, terms, or instructions for the client"
                   />
                 </div>
               </div>
 
               <aside className="space-y-6">
-                <div className="bg-white rounded-2xl shadow p-6">
+                <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl shadow p-6">
                   <div className="flex items-center justify-between mb-4">
-                    <span className="text-sm font-medium text-gray-700">Preview</span>
-                    <span className="text-xs text-gray-400 uppercase tracking-wide">{documentMode}</span>
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-200">Preview</span>
+                    <span className="text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wide">{documentMode}</span>
                   </div>
-                  <div className="border rounded-xl p-4 text-sm space-y-3">
+                  <div className="border border-gray-200 dark:border-gray-800 rounded-xl p-4 text-sm space-y-3">
                     {/* Brand header */}
-                    <div className="flex items-center gap-3 pb-3 border-b">
+                    <div className="flex items-center gap-3 pb-3 border-b border-gray-200 dark:border-gray-800">
                       <img src="/images/coin-logo.png" alt="Logo" className="h-8 w-auto" onError={(e) => ((e.currentTarget.style.display='none'))} />
-                      <div className="text-emerald-700 font-semibold">{import.meta.env.VITE_APP_NAME || 'Coin Security'}</div>
+                      <div className="text-emerald-700 dark:text-emerald-400 font-semibold">{import.meta.env.VITE_APP_NAME || 'Coin Security'}</div>
                     </div>
                     <div>
-                      <p className="text-gray-500">Recipient</p>
-                      <p className="font-semibold text-gray-900">{data.client_name || '—'}</p>
-                      <p className="text-gray-500">{data.client_email || 'No email provided'}</p>
+                      <p className="text-gray-500 dark:text-gray-400">Recipient</p>
+                      <p className="font-semibold text-gray-900 dark:text-gray-100">{data.client_name || '—'}</p>
+                      <p className="text-gray-500 dark:text-gray-400">{data.client_email || 'No email provided'}</p>
                     </div>
-                    <div className="flex justify-between text-gray-600 text-xs border-t pt-3">
+                    <div className="flex justify-between text-gray-600 dark:text-gray-300 text-xs border-t border-gray-200 dark:border-gray-800 pt-3">
                       <div>
-                        <p className="font-semibold text-gray-900">Invoice Date</p>
+                        <p className="font-semibold text-gray-900 dark:text-gray-100">Invoice Date</p>
                         <p>{data.invoice_date}</p>
                       </div>
                       <div>
-                        <p className="font-semibold text-gray-900">Due Date</p>
+                        <p className="font-semibold text-gray-900 dark:text-gray-100">Due Date</p>
                         <p>{data.due_date}</p>
                       </div>
                     </div>
-                    <div className="border rounded-lg bg-gray-50 p-3 text-xs space-y-1">
+                    <div className="border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800 p-3 text-xs space-y-1 text-gray-700 dark:text-gray-200">
                       <div className="flex justify-between">
                         <span>Subtotal</span>
                         <span>{formatCurrency(Number(data.subtotal))}</span>
@@ -578,7 +578,7 @@ export default function CreateInvoice({ clients = [], defaultBilling }: Props) {
                         <span>Discount</span>
                         <span>- {formatCurrency(Number(data.discount_amount))}</span>
                       </div>
-                      <div className="flex justify-between font-semibold border-t pt-2">
+                      <div className="flex justify-between font-semibold border-t border-gray-200 dark:border-gray-700 pt-2">
                         <span>Total</span>
                         <span>{formatCurrency(Number(data.total_amount))}</span>
                       </div>
@@ -586,17 +586,17 @@ export default function CreateInvoice({ clients = [], defaultBilling }: Props) {
                   </div>
                 </div>
 
-                <div className="bg-white rounded-2xl shadow p-6 space-y-3">
+                <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl shadow p-6 space-y-3">
                   <button
                     type="submit"
                     disabled={processing || !hasValidItem}
-                    className="w-full px-4 py-3 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 disabled:bg-gray-400"
+                    className="w-full px-4 py-3 bg-coin-700 text-white rounded-xl font-semibold hover:bg-coin-600 disabled:bg-gray-400 dark:disabled:bg-gray-700"
                   >
                     {processing ? 'Saving...' : (!hasValidItem ? 'Add a line item to save' : `Save ${documentMode === 'invoice' ? 'Invoice' : 'Quotation'}`)}
                   </button>
                   <a
                     href={route('finance.invoices.index')}
-                    className="w-full inline-flex justify-center px-4 py-3 bg-gray-100 text-gray-700 rounded-xl font-semibold hover:bg-gray-200"
+                    className="w-full inline-flex justify-center px-4 py-3 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 rounded-xl font-semibold hover:bg-gray-200 dark:hover:bg-gray-700"
                   >
                     Cancel
                   </a>

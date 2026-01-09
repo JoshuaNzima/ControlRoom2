@@ -147,13 +147,6 @@ class NavigationService
                 'color' => 'blue',
                 'badge' => 'Reliever',
             ],
-            'on_leave' => [
-                'label' => 'On Leave',
-                'count' => 0, // Will be implemented with HR module
-                'description' => 'Temporary absence',
-                'color' => 'yellow',
-                'badge' => 'On Leave',
-            ],
             'resigned' => [
                 'label' => 'Resigned',
                 'count' => 0,
@@ -163,14 +156,14 @@ class NavigationService
             ],
             'dismissed' => [
                 'label' => 'Dismissed',
-                'count' => 0,
+                'count' => \App\Models\Guards\Guard::where('status', 'dismissed')->count(),
                 'description' => 'Past 12 months',
                 'color' => 'orange',
                 'badge' => 'Dismissed',
             ],
             'absconded' => [
                 'label' => 'Absconded',
-                'count' => 0,
+                'count' => \App\Models\Guards\Guard::where('status', 'absconded')->count(),
                 'description' => 'Past 12 months',
                 'color' => 'red',
                 'badge' => 'Absconded',

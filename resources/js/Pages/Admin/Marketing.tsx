@@ -47,15 +47,15 @@ const channelLabel = (channel?: string | null) => {
 const statusColor = (status?: string) => {
   switch (status) {
     case 'active':
-      return 'bg-emerald-100 text-emerald-800';
+      return 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-200';
     case 'planned':
-      return 'bg-blue-100 text-blue-800';
+      return 'bg-coin-100 text-coin-800 dark:bg-coin-900/30 dark:text-coin-200';
     case 'paused':
-      return 'bg-yellow-100 text-yellow-800';
+      return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200';
     case 'completed':
-      return 'bg-gray-100 text-gray-800';
+      return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-100';
     default:
-      return 'bg-gray-100 text-gray-800';
+      return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-100';
   }
 };
 
@@ -114,8 +114,8 @@ export default function MarketingPage({
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
-              <h1 className="text-2xl md:text-3xl font-bold text-red-900">Marketing Overview</h1>
-              <p className="text-sm text-red-800/80 mt-1">
+              <h1 className="text-2xl md:text-3xl font-bold text-coin-700 dark:text-coin-300">Marketing Overview</h1>
+              <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
                 Monitor campaign pipeline, live activity, and media spend across channels.
               </p>
             </div>
@@ -123,14 +123,14 @@ export default function MarketingPage({
               <button
                 type="button"
                 onClick={() => setCreateOpen(true)}
-                className="inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium bg-indigo-600 text-white hover:bg-indigo-700"
+                className="inline-flex w-full sm:w-auto justify-center items-center px-4 py-2 rounded-lg text-sm font-medium bg-coin-700 text-white hover:bg-coin-600 focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950"
               >
                 <IconMapper name="megaphone" className="w-4 h-4 mr-2" />
                 New Campaign
               </button>
               <Link
                 href={route('admin.modules.index')}
-                className="inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium bg-white text-red-800 border border-red-200 hover:bg-red-50"
+                className="inline-flex w-full sm:w-auto justify-center items-center px-4 py-2 rounded-lg text-sm font-medium bg-white dark:bg-gray-900/60 text-gray-700 dark:text-gray-100 border border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/60"
               >
                 <IconMapper name="grid-3x3" className="w-4 h-4 mr-2" />
                 Modules
@@ -139,42 +139,42 @@ export default function MarketingPage({
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <Card className="p-4 bg-gradient-to-br from-indigo-50 to-indigo-100 border-indigo-200">
+            <Card className="p-4 bg-gradient-to-br from-coin-50 to-coin-100 border-coin-200 dark:from-coin-900/20 dark:to-coin-900/10 dark:border-coin-900/30">
               <div className="flex items-center justify-between mb-2">
-                <h3 className="text-sm font-medium text-indigo-900">Total Campaigns</h3>
-                <IconMapper name="megaphone" className="w-5 h-5 text-indigo-500" />
+                <h3 className="text-sm font-medium text-coin-900 dark:text-coin-100">Total Campaigns</h3>
+                <IconMapper name="megaphone" className="w-5 h-5 text-coin-600 dark:text-coin-300" />
               </div>
-              <p className="text-2xl font-bold text-indigo-900">
+              <p className="text-2xl font-bold text-coin-900 dark:text-coin-100">
                 {summary.total_campaigns ?? 0}
               </p>
             </Card>
 
-            <Card className="p-4 bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-200">
+            <Card className="p-4 bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-200 dark:from-emerald-900/20 dark:to-emerald-900/10 dark:border-emerald-900/30">
               <div className="flex items-center justify-between mb-2">
-                <h3 className="text-sm font-medium text-emerald-900">Active Campaigns</h3>
-                <IconMapper name="play" className="w-5 h-5 text-emerald-500" />
+                <h3 className="text-sm font-medium text-emerald-900 dark:text-emerald-100">Active Campaigns</h3>
+                <IconMapper name="play" className="w-5 h-5 text-emerald-500 dark:text-emerald-300" />
               </div>
-              <p className="text-2xl font-bold text-emerald-900">
+              <p className="text-2xl font-bold text-emerald-900 dark:text-emerald-100">
                 {summary.active_campaigns ?? 0}
               </p>
             </Card>
 
-            <Card className="p-4 bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+            <Card className="p-4 bg-gradient-to-br from-coin-50 to-coin-100 border-coin-200 dark:from-coin-900/20 dark:to-coin-900/10 dark:border-coin-900/30">
               <div className="flex items-center justify-between mb-2">
-                <h3 className="text-sm font-medium text-blue-900">Planned Campaigns</h3>
-                <IconMapper name="calendar" className="w-5 h-5 text-blue-500" />
+                <h3 className="text-sm font-medium text-coin-900 dark:text-coin-100">Planned Campaigns</h3>
+                <IconMapper name="calendar" className="w-5 h-5 text-coin-600 dark:text-coin-300" />
               </div>
-              <p className="text-2xl font-bold text-blue-900">
+              <p className="text-2xl font-bold text-coin-900 dark:text-coin-100">
                 {summary.planned_campaigns ?? 0}
               </p>
             </Card>
 
-            <Card className="p-4 bg-gradient-to-br from-gray-50 to-gray-100 border-gray-200">
+            <Card className="p-4 bg-gradient-to-br from-gray-50 to-gray-100 border-gray-200 dark:from-gray-900 dark:to-gray-800 dark:border-gray-800">
               <div className="flex items-center justify-between mb-2">
-                <h3 className="text-sm font-medium text-gray-900">Total Media Budget</h3>
-                <IconMapper name="wallet" className="w-5 h-5 text-gray-500" />
+                <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">Total Media Budget</h3>
+                <IconMapper name="wallet" className="w-5 h-5 text-gray-500 dark:text-gray-300" />
               </div>
-              <p className="text-2xl font-bold text-gray-900">
+              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                 MWK {Number(totalBudget || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
               </p>
             </Card>
@@ -184,50 +184,66 @@ export default function MarketingPage({
             <Card className="p-6 col-span-1 lg:col-span-2">
               <div className="flex items-center justify-between mb-4">
                 <div>
-                  <h2 className="text-lg font-semibold text-gray-900">Campaigns by Channel</h2>
-                  <p className="text-xs text-gray-500 mt-1">Campaign count and budget by channel</p>
+                  <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Campaigns by Channel</h2>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Campaign count and budget by channel</p>
                 </div>
               </div>
               {byChannel.length === 0 ? (
-                <p className="text-sm text-gray-500">No campaigns yet. Start by creating a new campaign.</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">No campaigns yet. Start by creating a new campaign.</p>
               ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-xs">
-                    <thead className="bg-gray-50 border-b">
-                      <tr>
-                        <th className="px-3 py-2 text-left font-semibold text-gray-600">Channel</th>
-                        <th className="px-3 py-2 text-right font-semibold text-gray-600">Campaigns</th>
-                        <th className="px-3 py-2 text-right font-semibold text-gray-600">Budget</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y">
-                      {byChannel.map((row, idx) => (
-                        <tr key={`${row.channel}-${idx}`}>
-                          <td className="px-3 py-2 text-gray-800">{channelLabel(row.channel)}</td>
-                          <td className="px-3 py-2 text-right text-gray-900">{row.count}</td>
-                          <td className="px-3 py-2 text-right text-gray-900">
-                            MWK {Number(row.budget || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                          </td>
+                <>
+                  <div className="md:hidden divide-y divide-gray-200 dark:divide-gray-800">
+                    {byChannel.map((row, idx) => (
+                      <div key={`${row.channel}-${idx}`} className="py-3 flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="text-sm font-medium text-gray-900 dark:text-gray-100 break-words">{channelLabel(row.channel)}</div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">{row.count} campaigns</div>
+                        </div>
+                        <div className="text-sm font-semibold text-gray-900 dark:text-gray-100 whitespace-nowrap">
+                          MWK {Number(row.budget || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="hidden md:block overflow-x-auto">
+                    <table className="min-w-[500px] w-full text-xs">
+                      <thead className="bg-gray-50 dark:bg-gray-950 border-b border-gray-200 dark:border-gray-800">
+                        <tr>
+                          <th className="px-3 py-2 text-left font-semibold text-gray-600 dark:text-gray-300">Channel</th>
+                          <th className="px-3 py-2 text-right font-semibold text-gray-600 dark:text-gray-300">Campaigns</th>
+                          <th className="px-3 py-2 text-right font-semibold text-gray-600 dark:text-gray-300">Budget</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                      </thead>
+                      <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-800">
+                        {byChannel.map((row, idx) => (
+                          <tr key={`${row.channel}-${idx}`}>
+                            <td className="px-3 py-2 text-gray-800 dark:text-gray-200">{channelLabel(row.channel)}</td>
+                            <td className="px-3 py-2 text-right text-gray-900 dark:text-gray-100">{row.count}</td>
+                            <td className="px-3 py-2 text-right text-gray-900 dark:text-gray-100">
+                              MWK {Number(row.budget || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
               )}
             </Card>
 
             <div className="space-y-4">
               <Card className="p-4">
-                <h3 className="text-sm font-semibold text-gray-900 mb-3">Recent Campaigns</h3>
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">Recent Campaigns</h3>
                 <div className="space-y-2 text-sm">
                   {(!recent || recent.length === 0) && (
-                    <p className="text-gray-500">No campaigns yet.</p>
+                    <p className="text-gray-500 dark:text-gray-400">No campaigns yet.</p>
                   )}
                   {recent && recent.map((c) => (
                     <div key={c.id} className="flex items-center justify-between">
                       <div>
-                        <div className="font-medium text-gray-900 text-sm">{c.name}</div>
-                        <div className="text-xs text-gray-500">{channelLabel(c.channel)}</div>
+                        <div className="font-medium text-gray-900 dark:text-gray-100 text-sm">{c.name}</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">{channelLabel(c.channel)}</div>
                       </div>
                       <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${statusColor(c.status)}`}>
                         {c.status}
@@ -241,38 +257,95 @@ export default function MarketingPage({
 
           <Card className="p-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900">All Campaigns</h2>
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">All Campaigns</h2>
               <button
                 type="button"
                 onClick={() => setCreateOpen(true)}
-                className="inline-flex items-center px-3 py-2 rounded-md bg-indigo-600 text-white text-sm hover:bg-indigo-700"
+                className="inline-flex w-full sm:w-auto justify-center items-center px-3 py-2 rounded-md bg-coin-700 text-white text-sm hover:bg-coin-600 focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950"
               >
                 <IconMapper name="plus" className="w-4 h-4 mr-1" />
                 New Campaign
               </button>
             </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-xs">
-                <thead className="bg-gray-50 border-b">
+
+            <div className="md:hidden divide-y divide-gray-200 dark:divide-gray-800">
+              {campaigns?.data?.length ? (
+                campaigns.data.map((c) => (
+                  <div key={c.id} className="py-4 flex flex-col gap-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="text-sm font-semibold text-gray-900 dark:text-gray-100 break-words">{c.name}</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">{channelLabel(c.channel)}</div>
+                      </div>
+                      <span className={`shrink-0 px-2 py-0.5 rounded-full text-[10px] font-medium ${statusColor(c.status)}`}>
+                        {c.status}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                      <div className="text-gray-700 dark:text-gray-300">
+                        <span className="font-medium text-gray-900 dark:text-gray-100">Budget:</span>{' '}
+                        MWK {Number(c.budget || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                      </div>
+                      <div className="text-gray-700 dark:text-gray-300">
+                        <span className="font-medium text-gray-900 dark:text-gray-100">Audience:</span>{' '}
+                        <span className="break-words">{c.target_audience || '—'}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-3 text-sm">
+                      <button
+                        type="button"
+                        onClick={() => openView(c)}
+                        className="text-coin-700 dark:text-coin-300 hover:text-coin-600 disabled:opacity-50"
+                        disabled={loadingId === c.id}
+                      >
+                        {loadingId === c.id ? 'Opening…' : 'View'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => openEdit(c)}
+                        className="text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-gray-100"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(c)}
+                        className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="py-6 text-center text-gray-500 dark:text-gray-400 text-sm">No campaigns yet.</div>
+              )}
+            </div>
+
+            <div className="hidden md:block overflow-x-auto">
+              <table className="min-w-[900px] w-full text-xs">
+                <thead className="bg-gray-50 dark:bg-gray-950 border-b border-gray-200 dark:border-gray-800">
                   <tr>
-                    <th className="px-3 py-2 text-left font-semibold text-gray-600">Name</th>
-                    <th className="px-3 py-2 text-left font-semibold text-gray-600">Channel</th>
-                    <th className="px-3 py-2 text-left font-semibold text-gray-600">Audience</th>
-                    <th className="px-3 py-2 text-right font-semibold text-gray-600">Budget</th>
-                    <th className="px-3 py-2 text-left font-semibold text-gray-600">Status</th>
-                    <th className="px-3 py-2 text-right font-semibold text-gray-600">Actions</th>
+                    <th className="px-3 py-2 text-left font-semibold text-gray-600 dark:text-gray-300">Name</th>
+                    <th className="px-3 py-2 text-left font-semibold text-gray-600 dark:text-gray-300">Channel</th>
+                    <th className="px-3 py-2 text-left font-semibold text-gray-600 dark:text-gray-300">Audience</th>
+                    <th className="px-3 py-2 text-right font-semibold text-gray-600 dark:text-gray-300">Budget</th>
+                    <th className="px-3 py-2 text-left font-semibold text-gray-600 dark:text-gray-300">Status</th>
+                    <th className="px-3 py-2 text-right font-semibold text-gray-600 dark:text-gray-300">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y">
+                <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-800">
                   {campaigns?.data?.length ? (
                     campaigns.data.map((c) => (
-                      <tr key={c.id} className="hover:bg-gray-50">
-                        <td className="px-3 py-2 text-gray-900 max-w-xs truncate">{c.name}</td>
-                        <td className="px-3 py-2 text-gray-700">{channelLabel(c.channel)}</td>
-                        <td className="px-3 py-2 text-gray-700 max-w-xs truncate">
+                      <tr key={c.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/60">
+                        <td className="px-3 py-2 text-gray-900 dark:text-gray-100 max-w-xs truncate">{c.name}</td>
+                        <td className="px-3 py-2 text-gray-700 dark:text-gray-200">{channelLabel(c.channel)}</td>
+                        <td className="px-3 py-2 text-gray-700 dark:text-gray-200 max-w-xs truncate">
                           {c.target_audience || '—'}
                         </td>
-                        <td className="px-3 py-2 text-right text-gray-900">
+                        <td className="px-3 py-2 text-right text-gray-900 dark:text-gray-100">
                           MWK {Number(c.budget || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
                         </td>
                         <td className="px-3 py-2">
@@ -285,7 +358,7 @@ export default function MarketingPage({
                             <button
                               type="button"
                               onClick={() => openView(c)}
-                              className="text-indigo-600 hover:text-indigo-800 disabled:opacity-50"
+                              className="text-coin-700 dark:text-coin-300 hover:text-coin-600 disabled:opacity-50"
                               disabled={loadingId === c.id}
                             >
                               {loadingId === c.id ? 'Opening…' : 'View'}
@@ -293,14 +366,14 @@ export default function MarketingPage({
                             <button
                               type="button"
                               onClick={() => openEdit(c)}
-                              className="text-gray-700 hover:text-gray-900"
+                              className="text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-gray-100"
                             >
                               Edit
                             </button>
                             <button
                               type="button"
                               onClick={() => handleDelete(c)}
-                              className="text-red-600 hover:text-red-800"
+                              className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300"
                             >
                               Delete
                             </button>
@@ -310,7 +383,7 @@ export default function MarketingPage({
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={6} className="px-3 py-6 text-center text-gray-500">
+                      <td colSpan={6} className="px-3 py-6 text-center text-gray-500 dark:text-gray-400">
                         No campaigns yet.
                       </td>
                     </tr>
@@ -320,15 +393,15 @@ export default function MarketingPage({
             </div>
 
             {(campaigns?.meta?.last_page ?? 1) > 1 && (
-              <div className="mt-4 flex justify-center gap-2">
+              <div className="mt-4 flex flex-wrap justify-center gap-2">
                 {(campaigns?.links ?? []).map((link: any, idx: number) => (
                   <Link
                     key={idx}
                     href={link.url || '#'}
                     className={`px-3 py-1 rounded text-xs ${
                       link.active
-                        ? 'bg-indigo-600 text-white'
-                        : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                        ? 'bg-coin-700 text-white'
+                        : 'bg-white dark:bg-gray-900/60 text-gray-700 dark:text-gray-100 border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/60'
                     }`}
                     dangerouslySetInnerHTML={{ __html: link.label }}
                   />
@@ -423,12 +496,12 @@ function CampaignCreateModal({ open, onClose, channels, statuses }: CampaignModa
 
   return (
     <Modal show={open} onClose={handleClose} maxWidth="2xl">
-      <div className="px-6 py-4 border-b flex items-center justify-between bg-white">
-        <h2 className="text-lg font-semibold text-gray-900">New Campaign</h2>
+      <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between bg-white dark:bg-gray-950">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">New Campaign</h2>
         <button
           type="button"
           onClick={handleClose}
-          className="text-gray-400 hover:text-gray-600"
+          className="text-gray-400 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-200"
         >
           <span className="sr-only">Close</span>
           <svg
@@ -445,12 +518,12 @@ function CampaignCreateModal({ open, onClose, channels, statuses }: CampaignModa
           </svg>
         </button>
       </div>
-      <div className="px-6 py-4 bg-white">
+      <div className="px-6 py-4 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100">
         <form className="grid grid-cols-1 sm:grid-cols-2 gap-4" onSubmit={handleSubmit}>
           <div className="sm:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Name</label>
             <input
-              className="w-full border rounded-md p-2"
+              className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 p-2 focus:border-coin-500 focus:ring-1 focus:ring-coin-500"
               value={data.name}
               onChange={(e) => setData('name', e.target.value)}
             />
@@ -458,9 +531,9 @@ function CampaignCreateModal({ open, onClose, channels, statuses }: CampaignModa
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Channel</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Channel</label>
             <select
-              className="w-full border rounded-md p-2"
+              className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 p-2 focus:border-coin-500 focus:ring-1 focus:ring-coin-500"
               value={data.channel}
               onChange={(e) => setData('channel', e.target.value)}
             >
@@ -475,9 +548,9 @@ function CampaignCreateModal({ open, onClose, channels, statuses }: CampaignModa
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Status</label>
             <select
-              className="w-full border rounded-md p-2"
+              className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 p-2 focus:border-coin-500 focus:ring-1 focus:ring-coin-500"
               value={data.status}
               onChange={(e) => setData('status', e.target.value)}
             >
@@ -491,12 +564,12 @@ function CampaignCreateModal({ open, onClose, channels, statuses }: CampaignModa
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Budget (MWK)</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Budget (MWK)</label>
             <input
               type="number"
               min={0}
               step="0.01"
-              className="w-full border rounded-md p-2"
+              className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 p-2 focus:border-coin-500 focus:ring-1 focus:ring-coin-500"
               value={data.budget}
               onChange={(e) => setData('budget', e.target.value)}
             />
@@ -504,10 +577,10 @@ function CampaignCreateModal({ open, onClose, channels, statuses }: CampaignModa
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Start Date</label>
             <input
               type="date"
-              className="w-full border rounded-md p-2"
+              className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 p-2 focus:border-coin-500 focus:ring-1 focus:ring-coin-500"
               value={data.start_date}
               onChange={(e) => setData('start_date', e.target.value)}
             />
@@ -515,10 +588,10 @@ function CampaignCreateModal({ open, onClose, channels, statuses }: CampaignModa
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">End Date</label>
             <input
               type="date"
-              className="w-full border rounded-md p-2"
+              className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 p-2 focus:border-coin-500 focus:ring-1 focus:ring-coin-500"
               value={data.end_date}
               onChange={(e) => setData('end_date', e.target.value)}
             />
@@ -526,9 +599,9 @@ function CampaignCreateModal({ open, onClose, channels, statuses }: CampaignModa
           </div>
 
           <div className="sm:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Target Audience</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Target Audience</label>
             <input
-              className="w-full border rounded-md p-2"
+              className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 p-2 focus:border-coin-500 focus:ring-1 focus:ring-coin-500"
               value={data.target_audience}
               onChange={(e) => setData('target_audience', e.target.value)}
               placeholder="e.g. Existing clients in Lilongwe, new SME prospects"
@@ -539,9 +612,9 @@ function CampaignCreateModal({ open, onClose, channels, statuses }: CampaignModa
           </div>
 
           <div className="sm:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Objective</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Objective</label>
             <textarea
-              className="w-full border rounded-md p-2"
+              className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 p-2 focus:border-coin-500 focus:ring-1 focus:ring-coin-500"
               rows={2}
               value={data.objective}
               onChange={(e) => setData('objective', e.target.value)}
@@ -551,9 +624,9 @@ function CampaignCreateModal({ open, onClose, channels, statuses }: CampaignModa
           </div>
 
           <div className="sm:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Notes</label>
             <textarea
-              className="w-full border rounded-md p-2"
+              className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 p-2 focus:border-coin-500 focus:ring-1 focus:ring-coin-500"
               rows={3}
               value={data.notes}
               onChange={(e) => setData('notes', e.target.value)}
@@ -561,11 +634,11 @@ function CampaignCreateModal({ open, onClose, channels, statuses }: CampaignModa
             {errors.notes && <p className="text-sm text-red-600">{errors.notes}</p>}
           </div>
 
-          <div className="sm:col-span-2 flex justify-end gap-2 pt-2">
+          <div className="sm:col-span-2 flex flex-col sm:flex-row justify-end gap-2 pt-2">
             <button
               type="button"
               onClick={handleClose}
-              className="px-4 py-2 text-sm rounded-md bg-gray-200 text-gray-700 hover:bg-gray-300"
+              className="w-full sm:w-auto px-4 py-2 text-sm rounded-md bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700"
               disabled={processing}
             >
               Cancel
@@ -573,7 +646,7 @@ function CampaignCreateModal({ open, onClose, channels, statuses }: CampaignModa
             <button
               type="submit"
               disabled={processing}
-              className="px-4 py-2 text-sm rounded-md bg-indigo-600 text-white hover:bg-indigo-700 disabled:bg-gray-400"
+              className="w-full sm:w-auto px-4 py-2 text-sm rounded-md bg-coin-700 text-white hover:bg-coin-600 disabled:bg-gray-400"
             >
               {processing ? 'Saving...' : 'Create Campaign'}
             </button>
@@ -619,12 +692,12 @@ function CampaignEditModal({ open, onClose, campaign, channels, statuses }: Camp
 
   return (
     <Modal show={open} onClose={handleClose} maxWidth="2xl">
-      <div className="px-6 py-4 border-b flex items-center justify-between bg-white">
-        <h2 className="text-lg font-semibold text-gray-900">Edit Campaign</h2>
+      <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between bg-white dark:bg-gray-950">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Edit Campaign</h2>
         <button
           type="button"
           onClick={handleClose}
-          className="text-gray-400 hover:text-gray-600"
+          className="text-gray-400 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-200"
         >
           <span className="sr-only">Close</span>
           <svg
@@ -641,12 +714,12 @@ function CampaignEditModal({ open, onClose, campaign, channels, statuses }: Camp
           </svg>
         </button>
       </div>
-      <div className="px-6 py-4 bg-white">
+      <div className="px-6 py-4 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100">
         <form className="grid grid-cols-1 sm:grid-cols-2 gap-4" onSubmit={handleSubmit}>
           <div className="sm:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Name</label>
             <input
-              className="w-full border rounded-md p-2"
+              className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 p-2 focus:border-coin-500 focus:ring-1 focus:ring-coin-500"
               value={data.name}
               onChange={(e) => setData('name', e.target.value)}
             />
@@ -654,9 +727,9 @@ function CampaignEditModal({ open, onClose, campaign, channels, statuses }: Camp
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Channel</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Channel</label>
             <select
-              className="w-full border rounded-md p-2"
+              className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 p-2 focus:border-coin-500 focus:ring-1 focus:ring-coin-500"
               value={data.channel}
               onChange={(e) => setData('channel', e.target.value)}
             >
@@ -671,9 +744,9 @@ function CampaignEditModal({ open, onClose, campaign, channels, statuses }: Camp
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Status</label>
             <select
-              className="w-full border rounded-md p-2"
+              className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 p-2 focus:border-coin-500 focus:ring-1 focus:ring-coin-500"
               value={data.status}
               onChange={(e) => setData('status', e.target.value)}
             >
@@ -687,12 +760,12 @@ function CampaignEditModal({ open, onClose, campaign, channels, statuses }: Camp
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Budget (MWK)</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Budget (MWK)</label>
             <input
               type="number"
               min={0}
               step="0.01"
-              className="w-full border rounded-md p-2"
+              className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 p-2 focus:border-coin-500 focus:ring-1 focus:ring-coin-500"
               value={data.budget}
               onChange={(e) => setData('budget', e.target.value)}
             />
@@ -700,10 +773,10 @@ function CampaignEditModal({ open, onClose, campaign, channels, statuses }: Camp
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Start Date</label>
             <input
               type="date"
-              className="w-full border rounded-md p-2"
+              className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 p-2 focus:border-coin-500 focus:ring-1 focus:ring-coin-500"
               value={data.start_date}
               onChange={(e) => setData('start_date', e.target.value)}
             />
@@ -711,10 +784,10 @@ function CampaignEditModal({ open, onClose, campaign, channels, statuses }: Camp
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">End Date</label>
             <input
               type="date"
-              className="w-full border rounded-md p-2"
+              className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 p-2 focus:border-coin-500 focus:ring-1 focus:ring-coin-500"
               value={data.end_date}
               onChange={(e) => setData('end_date', e.target.value)}
             />
@@ -722,9 +795,9 @@ function CampaignEditModal({ open, onClose, campaign, channels, statuses }: Camp
           </div>
 
           <div className="sm:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Target Audience</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Target Audience</label>
             <input
-              className="w-full border rounded-md p-2"
+              className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 p-2 focus:border-coin-500 focus:ring-1 focus:ring-coin-500"
               value={data.target_audience}
               onChange={(e) => setData('target_audience', e.target.value)}
               placeholder="e.g. Existing clients in Lilongwe, new SME prospects"
@@ -735,9 +808,9 @@ function CampaignEditModal({ open, onClose, campaign, channels, statuses }: Camp
           </div>
 
           <div className="sm:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Objective</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Objective</label>
             <textarea
-              className="w-full border rounded-md p-2"
+              className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 p-2 focus:border-coin-500 focus:ring-1 focus:ring-coin-500"
               rows={2}
               value={data.objective}
               onChange={(e) => setData('objective', e.target.value)}
@@ -747,9 +820,9 @@ function CampaignEditModal({ open, onClose, campaign, channels, statuses }: Camp
           </div>
 
           <div className="sm:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Notes</label>
             <textarea
-              className="w-full border rounded-md p-2"
+              className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 p-2 focus:border-coin-500 focus:ring-1 focus:ring-coin-500"
               rows={3}
               value={data.notes}
               onChange={(e) => setData('notes', e.target.value)}
@@ -757,11 +830,11 @@ function CampaignEditModal({ open, onClose, campaign, channels, statuses }: Camp
             {errors.notes && <p className="text-sm text-red-600">{errors.notes}</p>}
           </div>
 
-          <div className="sm:col-span-2 flex justify-end gap-2 pt-2">
+          <div className="sm:col-span-2 flex flex-col sm:flex-row justify-end gap-2 pt-2">
             <button
               type="button"
               onClick={handleClose}
-              className="px-4 py-2 text-sm rounded-md bg-gray-200 text-gray-700 hover:bg-gray-300"
+              className="w-full sm:w-auto px-4 py-2 text-sm rounded-md bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700"
               disabled={processing}
             >
               Cancel
@@ -769,7 +842,7 @@ function CampaignEditModal({ open, onClose, campaign, channels, statuses }: Camp
             <button
               type="submit"
               disabled={processing}
-              className="px-4 py-2 text-sm rounded-md bg-indigo-600 text-white hover:bg-indigo-700 disabled:bg-gray-400"
+              className="w-full sm:w-auto px-4 py-2 text-sm rounded-md bg-coin-700 text-white hover:bg-coin-600 disabled:bg-gray-400"
             >
               {processing ? 'Saving...' : 'Save Changes'}
             </button>
@@ -789,12 +862,12 @@ interface CampaignViewModalProps {
 function CampaignViewModal({ open, onClose, campaign }: CampaignViewModalProps) {
   return (
     <Modal show={open} onClose={onClose} maxWidth="xl">
-      <div className="px-6 py-4 border-b flex items-center justify-between bg-white">
-        <h2 className="text-lg font-semibold text-gray-900">Campaign • {campaign.name}</h2>
+      <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between bg-white dark:bg-gray-950">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Campaign • {campaign.name}</h2>
         <button
           type="button"
           onClick={onClose}
-          className="text-gray-400 hover:text-gray-600"
+          className="text-gray-400 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-200"
         >
           <span className="sr-only">Close</span>
           <svg
@@ -811,27 +884,27 @@ function CampaignViewModal({ open, onClose, campaign }: CampaignViewModalProps) 
           </svg>
         </button>
       </div>
-      <div className="px-6 py-4 bg-white space-y-4 text-sm">
+      <div className="px-6 py-4 bg-white dark:bg-gray-950 space-y-4 text-sm text-gray-900 dark:text-gray-100">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <div className="font-medium text-gray-700">Channel</div>
-            <div className="text-gray-900">{channelLabel(campaign.channel)}</div>
+            <div className="font-medium text-gray-700 dark:text-gray-300">Channel</div>
+            <div className="text-gray-900 dark:text-gray-100">{channelLabel(campaign.channel)}</div>
           </div>
           <div>
-            <div className="font-medium text-gray-700">Status</div>
+            <div className="font-medium text-gray-700 dark:text-gray-300">Status</div>
             <span className={`inline-flex mt-1 px-2 py-0.5 rounded-full text-[10px] font-medium ${statusColor(campaign.status)}`}>
               {campaign.status}
             </span>
           </div>
           <div>
-            <div className="font-medium text-gray-700">Budget</div>
-            <div className="text-gray-900">
+            <div className="font-medium text-gray-700 dark:text-gray-300">Budget</div>
+            <div className="text-gray-900 dark:text-gray-100">
               MWK {Number(campaign.budget || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
             </div>
           </div>
           <div>
-            <div className="font-medium text-gray-700">Dates</div>
-            <div className="text-gray-900">
+            <div className="font-medium text-gray-700 dark:text-gray-300">Dates</div>
+            <div className="text-gray-900 dark:text-gray-100">
               {campaign.start_date?.slice(0, 10) || '—'}
               {' '}–{' '}
               {campaign.end_date?.slice(0, 10) || '—'}
@@ -841,8 +914,8 @@ function CampaignViewModal({ open, onClose, campaign }: CampaignViewModalProps) 
 
         {campaign.target_audience && (
           <div>
-            <div className="font-medium text-gray-700 mb-1">Target Audience</div>
-            <div className="text-gray-900 bg-gray-50 rounded px-3 py-2 whitespace-pre-wrap">
+            <div className="font-medium text-gray-700 dark:text-gray-300 mb-1">Target Audience</div>
+            <div className="text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-900 rounded px-3 py-2 whitespace-pre-wrap">
               {campaign.target_audience}
             </div>
           </div>
@@ -850,8 +923,8 @@ function CampaignViewModal({ open, onClose, campaign }: CampaignViewModalProps) 
 
         {campaign.objective && (
           <div>
-            <div className="font-medium text-gray-700 mb-1">Objective</div>
-            <div className="text-gray-900 bg-gray-50 rounded px-3 py-2 whitespace-pre-wrap">
+            <div className="font-medium text-gray-700 dark:text-gray-300 mb-1">Objective</div>
+            <div className="text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-900 rounded px-3 py-2 whitespace-pre-wrap">
               {campaign.objective}
             </div>
           </div>
@@ -859,18 +932,18 @@ function CampaignViewModal({ open, onClose, campaign }: CampaignViewModalProps) 
 
         {campaign.notes && (
           <div>
-            <div className="font-medium text-gray-700 mb-1">Notes</div>
-            <div className="text-gray-900 bg-gray-50 rounded px-3 py-2 whitespace-pre-wrap">
+            <div className="font-medium text-gray-700 dark:text-gray-300 mb-1">Notes</div>
+            <div className="text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-900 rounded px-3 py-2 whitespace-pre-wrap">
               {campaign.notes}
             </div>
           </div>
         )}
       </div>
-      <div className="px-6 py-3 bg-gray-50 border-t flex justify-end text-sm">
+      <div className="px-6 py-3 bg-gray-50 dark:bg-gray-950 border-t border-gray-200 dark:border-gray-800 flex justify-end text-sm">
         <button
           type="button"
           onClick={onClose}
-          className="px-4 py-2 rounded-md bg-indigo-600 text-white hover:bg-indigo-700"
+          className="px-4 py-2 rounded-md bg-coin-700 text-white hover:bg-coin-600"
         >
           Close
         </button>

@@ -64,15 +64,15 @@ interface Props {
 const statusColor = (status?: string) => {
   switch (status) {
     case 'confirmed':
-      return 'bg-emerald-100 text-emerald-800';
+      return 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-200';
     case 'planned':
-      return 'bg-blue-100 text-blue-800';
+      return 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200';
     case 'completed':
-      return 'bg-gray-100 text-gray-800';
+      return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-100';
     case 'cancelled':
-      return 'bg-red-100 text-red-800';
+      return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200';
     default:
-      return 'bg-gray-100 text-gray-800';
+      return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-100';
   }
 };
 
@@ -139,8 +139,8 @@ export default function BusinessDevPage({
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
-              <h1 className="text-2xl md:text-3xl font-bold text-red-900">Business Development</h1>
-              <p className="text-sm text-red-800/80 mt-1">
+              <h1 className="text-2xl md:text-3xl font-bold text-red-700 dark:text-red-300">Business Development</h1>
+              <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
                 Liaise with clients, manage K9 and special events, and track per-event revenue.
               </p>
             </div>
@@ -148,21 +148,21 @@ export default function BusinessDevPage({
               <button
                 type="button"
                 onClick={() => setCreateOpen(true)}
-                className="inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium bg-indigo-600 text-white hover:bg-indigo-700"
+                className="inline-flex w-full sm:w-auto justify-center items-center px-4 py-2 rounded-lg text-sm font-medium bg-red-700 text-white hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950"
               >
                 <IconMapper name="calendar-plus" className="w-4 h-4 mr-2" />
                 New Event
               </button>
               <Link
                 href={route('admin.clients.index')}
-                className="inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium bg-white text-red-800 border border-red-200 hover:bg-red-50"
+                className="inline-flex w-full sm:w-auto justify-center items-center px-4 py-2 rounded-lg text-sm font-medium bg-white dark:bg-gray-900/60 text-gray-700 dark:text-gray-100 border border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/60"
               >
                 <IconMapper name="building-2" className="w-4 h-4 mr-2" />
                 Clients
               </Link>
               <Link
                 href={route('admin.business-dev.k9.dashboard')}
-                className="inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium bg-white text-red-800 border border-red-200 hover:bg-red-50"
+                className="inline-flex w-full sm:w-auto justify-center items-center px-4 py-2 rounded-lg text-sm font-medium bg-white dark:bg-gray-900/60 text-gray-700 dark:text-gray-100 border border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/60"
               >
                 <IconMapper name="shield" className="w-4 h-4 mr-2" />
                 K9 Module
@@ -171,78 +171,78 @@ export default function BusinessDevPage({
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <Card className="p-4 bg-gradient-to-br from-indigo-50 to-indigo-100 border-indigo-200">
+            <Card className="p-4 bg-gradient-to-br from-red-50 to-red-100 border-red-200 dark:from-red-900/20 dark:to-red-900/10 dark:border-red-900/30">
               <div className="flex items-center justify-between mb-2">
-                <h3 className="text-sm font-medium text-indigo-900">Upcoming Events</h3>
-                <IconMapper name="calendar" className="w-5 h-5 text-indigo-500" />
+                <h3 className="text-sm font-medium text-red-900 dark:text-red-100">Upcoming Events</h3>
+                <IconMapper name="calendar" className="w-5 h-5 text-red-600 dark:text-red-300" />
               </div>
-              <p className="text-2xl font-bold text-indigo-900">
+              <p className="text-2xl font-bold text-red-900 dark:text-red-100">
                 {summary.upcoming_events ?? 0}
               </p>
             </Card>
 
-            <Card className="p-4 bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-200">
+            <Card className="p-4 bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-200 dark:from-emerald-900/20 dark:to-emerald-900/10 dark:border-emerald-900/30">
               <div className="flex items-center justify-between mb-2">
-                <h3 className="text-sm font-medium text-emerald-900">Event Revenue (This Month)</h3>
-                <IconMapper name="wallet" className="w-5 h-5 text-emerald-500" />
+                <h3 className="text-sm font-medium text-emerald-900 dark:text-emerald-100">Event Revenue (This Month)</h3>
+                <IconMapper name="wallet" className="w-5 h-5 text-emerald-500 dark:text-emerald-300" />
               </div>
-              <p className="text-2xl font-bold text-emerald-900">
+              <p className="text-2xl font-bold text-emerald-900 dark:text-emerald-100">
                 MWK {Number(monthRevenue || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
               </p>
             </Card>
 
-            <Card className="p-4 bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+            <Card className="p-4 bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 dark:from-blue-900/20 dark:to-blue-900/10 dark:border-blue-900/30">
               <div className="flex items-center justify-between mb-2">
-                <h3 className="text-sm font-medium text-blue-900">K9 Events (This Month)</h3>
-                <IconMapper name="shield" className="w-5 h-5 text-blue-500" />
+                <h3 className="text-sm font-medium text-blue-900 dark:text-blue-100">K9 Events (This Month)</h3>
+                <IconMapper name="shield" className="w-5 h-5 text-blue-500 dark:text-blue-300" />
               </div>
-              <p className="text-2xl font-bold text-blue-900">
+              <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">
                 {summary.k9_events_month ?? 0}
               </p>
             </Card>
 
-            <Card className="p-4 bg-gradient-to-br from-gray-50 to-gray-100 border-gray-200">
+            <Card className="p-4 bg-gradient-to-br from-gray-50 to-gray-100 border-gray-200 dark:from-gray-900 dark:to-gray-800 dark:border-gray-800">
               <div className="flex items-center justify-between mb-2">
-                <h3 className="text-sm font-medium text-gray-900">Clients with Events</h3>
-                <IconMapper name="users-2" className="w-5 h-5 text-gray-500" />
+                <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">Clients with Events</h3>
+                <IconMapper name="users-2" className="w-5 h-5 text-gray-500 dark:text-gray-300" />
               </div>
-              <p className="text-2xl font-bold text-gray-900">
+              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                 {summary.active_clients_with_events ?? 0}
               </p>
             </Card>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <Card className="p-4 bg-gradient-to-br from-rose-50 to-rose-100 border-rose-200">
+            <Card className="p-4 bg-gradient-to-br from-rose-50 to-rose-100 border-rose-200 dark:from-rose-900/20 dark:to-rose-900/10 dark:border-rose-900/30">
               <div className="flex items-center justify-between mb-2">
-                <h3 className="text-sm font-medium text-rose-900">Active Sites</h3>
-                <IconMapper name="map-pin" className="w-5 h-5 text-rose-500" />
+                <h3 className="text-sm font-medium text-rose-900 dark:text-rose-100">Active Sites</h3>
+                <IconMapper name="map-pin" className="w-5 h-5 text-rose-500 dark:text-rose-300" />
               </div>
-              <p className="text-2xl font-bold text-rose-900">{summary.active_sites ?? 0}</p>
+              <p className="text-2xl font-bold text-rose-900 dark:text-rose-100">{summary.active_sites ?? 0}</p>
             </Card>
 
-            <Card className="p-4 bg-gradient-to-br from-amber-50 to-amber-100 border-amber-200">
+            <Card className="p-4 bg-gradient-to-br from-amber-50 to-amber-100 border-amber-200 dark:from-amber-900/20 dark:to-amber-900/10 dark:border-amber-900/30">
               <div className="flex items-center justify-between mb-2">
-                <h3 className="text-sm font-medium text-amber-900">Active Contracts</h3>
-                <IconMapper name="file-check" className="w-5 h-5 text-amber-500" />
+                <h3 className="text-sm font-medium text-amber-900 dark:text-amber-100">Active Contracts</h3>
+                <IconMapper name="file-check" className="w-5 h-5 text-amber-500 dark:text-amber-300" />
               </div>
-              <p className="text-2xl font-bold text-amber-900">{summary.contracts_active ?? 0}</p>
+              <p className="text-2xl font-bold text-amber-900 dark:text-amber-100">{summary.contracts_active ?? 0}</p>
             </Card>
 
-            <Card className="p-4 bg-gradient-to-br from-fuchsia-50 to-fuchsia-100 border-fuchsia-200">
+            <Card className="p-4 bg-gradient-to-br from-fuchsia-50 to-fuchsia-100 border-fuchsia-200 dark:from-fuchsia-900/20 dark:to-fuchsia-900/10 dark:border-fuchsia-900/30">
               <div className="flex items-center justify-between mb-2">
-                <h3 className="text-sm font-medium text-fuchsia-900">K9 Units (This Month)</h3>
-                <IconMapper name="shield" className="w-5 h-5 text-fuchsia-500" />
+                <h3 className="text-sm font-medium text-fuchsia-900 dark:text-fuchsia-100">K9 Units (This Month)</h3>
+                <IconMapper name="shield" className="w-5 h-5 text-fuchsia-500 dark:text-fuchsia-300" />
               </div>
-              <p className="text-2xl font-bold text-fuchsia-900">{summary.k9_units_month ?? 0}</p>
+              <p className="text-2xl font-bold text-fuchsia-900 dark:text-fuchsia-100">{summary.k9_units_month ?? 0}</p>
             </Card>
 
-            <Card className="p-4 bg-gradient-to-br from-slate-50 to-slate-100 border-slate-200">
+            <Card className="p-4 bg-gradient-to-br from-slate-50 to-slate-100 border-slate-200 dark:from-slate-900/20 dark:to-slate-900/10 dark:border-slate-900/30">
               <div className="flex items-center justify-between mb-2">
-                <h3 className="text-sm font-medium text-slate-900">Contracts (Draft/Expired)</h3>
-                <IconMapper name="file-warning" className="w-5 h-5 text-slate-500" />
+                <h3 className="text-sm font-medium text-slate-900 dark:text-slate-100">Contracts (Draft/Expired)</h3>
+                <IconMapper name="file-warning" className="w-5 h-5 text-slate-500 dark:text-slate-300" />
               </div>
-              <p className="text-sm font-semibold text-slate-900">
+              <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
                 Draft: {summary.contracts_draft ?? 0} • Expired: {summary.contracts_expired ?? 0}
               </p>
             </Card>
@@ -250,11 +250,11 @@ export default function BusinessDevPage({
 
           <Card className="p-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900">Upcoming & Recent Events</h2>
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Upcoming & Recent Events</h2>
               <button
                 type="button"
                 onClick={() => setCreateOpen(true)}
-                className="inline-flex items-center px-3 py-2 rounded-md bg-indigo-600 text-white text-sm hover:bg-indigo-700"
+                className="inline-flex w-full sm:w-auto justify-center items-center px-3 py-2 rounded-md bg-red-700 text-white text-sm hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950"
               >
                 <IconMapper name="plus" className="w-4 h-4 mr-1" />
                 New Event
@@ -262,29 +262,29 @@ export default function BusinessDevPage({
             </div>
 
             <div className="overflow-x-auto">
-              <table className="w-full text-xs">
-                <thead className="bg-gray-50 border-b">
+              <table className="min-w-[900px] w-full text-xs">
+                <thead className="bg-gray-50 dark:bg-gray-950 border-b border-gray-200 dark:border-gray-800">
                   <tr>
-                    <th className="px-3 py-2 text-left font-semibold text-gray-600">Date</th>
-                    <th className="px-3 py-2 text-left font-semibold text-gray-600">Client</th>
-                    <th className="px-3 py-2 text-left font-semibold text-gray-600">Title</th>
-                    <th className="px-3 py-2 text-left font-semibold text-gray-600">Category</th>
-                    <th className="px-3 py-2 text-right font-semibold text-gray-600">Expected</th>
-                    <th className="px-3 py-2 text-left font-semibold text-gray-600">Status</th>
-                    <th className="px-3 py-2 text-right font-semibold text-gray-600">Actions</th>
+                    <th className="px-3 py-2 text-left font-semibold text-gray-600 dark:text-gray-300">Date</th>
+                    <th className="px-3 py-2 text-left font-semibold text-gray-600 dark:text-gray-300">Client</th>
+                    <th className="px-3 py-2 text-left font-semibold text-gray-600 dark:text-gray-300">Title</th>
+                    <th className="px-3 py-2 text-left font-semibold text-gray-600 dark:text-gray-300">Category</th>
+                    <th className="px-3 py-2 text-right font-semibold text-gray-600 dark:text-gray-300">Expected</th>
+                    <th className="px-3 py-2 text-left font-semibold text-gray-600 dark:text-gray-300">Status</th>
+                    <th className="px-3 py-2 text-right font-semibold text-gray-600 dark:text-gray-300">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y">
+                <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-800">
                   {events?.data?.length ? (
                     events.data.map((ev) => (
-                      <tr key={ev.id} className="hover:bg-gray-50">
-                        <td className="px-3 py-2 text-gray-900">{ev.event_date}</td>
-                        <td className="px-3 py-2 text-gray-700 max-w-[160px] truncate">
+                      <tr key={ev.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/60">
+                        <td className="px-3 py-2 text-gray-900 dark:text-gray-100">{ev.event_date}</td>
+                        <td className="px-3 py-2 text-gray-700 dark:text-gray-200 max-w-[160px] truncate">
                           {ev.client?.name || clients.find((c) => c.id === ev.client_id)?.name || '—'}
                         </td>
-                        <td className="px-3 py-2 text-gray-900 max-w-xs truncate">{ev.title}</td>
-                        <td className="px-3 py-2 text-gray-700">{categoryLabel(ev.category)}</td>
-                        <td className="px-3 py-2 text-right text-gray-900">
+                        <td className="px-3 py-2 text-gray-900 dark:text-gray-100 max-w-xs truncate">{ev.title}</td>
+                        <td className="px-3 py-2 text-gray-700 dark:text-gray-200">{categoryLabel(ev.category)}</td>
+                        <td className="px-3 py-2 text-right text-gray-900 dark:text-gray-100">
                           MWK {Number(ev.expected_amount || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
                         </td>
                         <td className="px-3 py-2">
@@ -297,7 +297,7 @@ export default function BusinessDevPage({
                             <button
                               type="button"
                               onClick={() => openView(ev)}
-                              className="text-indigo-600 hover:text-indigo-800 disabled:opacity-50"
+                              className="text-red-700 dark:text-red-300 hover:text-red-600 disabled:opacity-50"
                               disabled={loadingId === ev.id}
                             >
                               {loadingId === ev.id ? 'Opening…' : 'View'}
@@ -305,21 +305,21 @@ export default function BusinessDevPage({
                             <button
                               type="button"
                               onClick={() => openEdit(ev)}
-                              className="text-gray-700 hover:text-gray-900"
+                              className="text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-gray-100"
                             >
                               Edit
                             </button>
                             <button
                               type="button"
                               onClick={() => openInvoice(ev)}
-                              className="text-emerald-700 hover:text-emerald-900"
+                              className="text-emerald-700 dark:text-emerald-300 hover:text-emerald-900 dark:hover:text-emerald-200"
                             >
                               Invoice
                             </button>
                             <button
                               type="button"
                               onClick={() => handleDelete(ev)}
-                              className="text-red-600 hover:text-red-800"
+                              className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300"
                             >
                               Delete
                             </button>
@@ -329,7 +329,7 @@ export default function BusinessDevPage({
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={7} className="px-3 py-6 text-center text-gray-500">
+                      <td colSpan={7} className="px-3 py-6 text-center text-gray-500 dark:text-gray-400">
                         No events yet.
                       </td>
                     </tr>
@@ -339,15 +339,15 @@ export default function BusinessDevPage({
             </div>
 
             {(events?.meta?.last_page ?? 1) > 1 && (
-              <div className="mt-4 flex justify-center gap-2">
+              <div className="mt-4 flex flex-wrap justify-center gap-2">
                 {(events?.links ?? []).map((link: any, idx: number) => (
                   <Link
                     key={idx}
                     href={link.url || '#'}
                     className={`px-3 py-1 rounded text-xs ${
                       link.active
-                        ? 'bg-indigo-600 text-white'
-                        : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                        ? 'bg-red-700 text-white'
+                        : 'bg-white dark:bg-gray-900/60 text-gray-700 dark:text-gray-100 border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/60'
                     }`}
                     dangerouslySetInnerHTML={{ __html: link.label }}
                   />
@@ -423,6 +423,9 @@ interface EventModalBaseProps {
   clients: ClientOption[];
 }
 
+const businessDevModalFieldClassName =
+  'w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 p-2 focus:border-red-500 focus:ring-1 focus:ring-red-500';
+
 function EventCreateModal({ open, onClose, clients }: EventModalBaseProps) {
   const { data, setData, post, processing, errors, reset } = useForm<EventForm>({
     client_id: '' as any,
@@ -458,12 +461,12 @@ function EventCreateModal({ open, onClose, clients }: EventModalBaseProps) {
 
   return (
     <Modal show={open} onClose={handleClose} maxWidth="2xl">
-      <div className="px-6 py-4 border-b flex items-center justify-between bg-white">
-        <h2 className="text-lg font-semibold text-gray-900">New Client Event</h2>
+      <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between bg-white dark:bg-gray-950">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">New Client Event</h2>
         <button
           type="button"
           onClick={handleClose}
-          className="text-gray-400 hover:text-gray-600"
+          className="text-gray-400 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-200"
         >
           <span className="sr-only">Close</span>
           <svg
@@ -480,12 +483,12 @@ function EventCreateModal({ open, onClose, clients }: EventModalBaseProps) {
           </svg>
         </button>
       </div>
-      <div className="px-6 py-4 bg-white">
+      <div className="px-6 py-4 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100">
         <form className="grid grid-cols-1 sm:grid-cols-2 gap-4" onSubmit={handleSubmit}>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Client</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Client</label>
             <select
-              className="w-full border rounded-md p-2"
+              className={businessDevModalFieldClassName}
               value={data.client_id}
               onChange={(e) => setData('client_id', e.target.value ? Number(e.target.value) : ('' as any))}
             >
@@ -500,10 +503,10 @@ function EventCreateModal({ open, onClose, clients }: EventModalBaseProps) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Event Date</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Event Date</label>
             <input
               type="date"
-              className="w-full border rounded-md p-2"
+              className={businessDevModalFieldClassName}
               value={data.event_date}
               onChange={(e) => setData('event_date', e.target.value)}
             />
@@ -511,9 +514,9 @@ function EventCreateModal({ open, onClose, clients }: EventModalBaseProps) {
           </div>
 
           <div className="sm:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Title</label>
             <input
-              className="w-full border rounded-md p-2"
+              className={businessDevModalFieldClassName}
               value={data.title}
               onChange={(e) => setData('title', e.target.value)}
               placeholder="e.g. K9 demo at client HQ, VIP event security"
@@ -522,10 +525,10 @@ function EventCreateModal({ open, onClose, clients }: EventModalBaseProps) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Start Time</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Start Time</label>
             <input
               type="time"
-              className="w-full border rounded-md p-2"
+              className={businessDevModalFieldClassName}
               value={data.start_time}
               onChange={(e) => setData('start_time', e.target.value)}
             />
@@ -533,10 +536,10 @@ function EventCreateModal({ open, onClose, clients }: EventModalBaseProps) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">End Time</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">End Time</label>
             <input
               type="time"
-              className="w-full border rounded-md p-2"
+              className={businessDevModalFieldClassName}
               value={data.end_time}
               onChange={(e) => setData('end_time', e.target.value)}
             />
@@ -544,9 +547,9 @@ function EventCreateModal({ open, onClose, clients }: EventModalBaseProps) {
           </div>
 
           <div className="sm:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Location</label>
             <input
-              className="w-full border rounded-md p-2"
+              className={businessDevModalFieldClassName}
               value={data.location}
               onChange={(e) => setData('location', e.target.value)}
             />
@@ -554,9 +557,9 @@ function EventCreateModal({ open, onClose, clients }: EventModalBaseProps) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Category</label>
             <select
-              className="w-full border rounded-md p-2"
+              className={businessDevModalFieldClassName}
               value={data.category}
               onChange={(e) => setData('category', e.target.value)}
             >
@@ -568,9 +571,9 @@ function EventCreateModal({ open, onClose, clients }: EventModalBaseProps) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Billing Type</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Billing Type</label>
             <select
-              className="w-full border rounded-md p-2"
+              className={businessDevModalFieldClassName}
               value={data.billing_type}
               onChange={(e) => setData('billing_type', e.target.value)}
             >
@@ -582,12 +585,12 @@ function EventCreateModal({ open, onClose, clients }: EventModalBaseProps) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Rate (MWK)</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Rate (MWK)</label>
             <input
               type="number"
               min={0}
               step="0.01"
-              className="w-full border rounded-md p-2"
+              className={businessDevModalFieldClassName}
               value={data.rate}
               onChange={(e) => setData('rate', e.target.value)}
             />
@@ -595,11 +598,11 @@ function EventCreateModal({ open, onClose, clients }: EventModalBaseProps) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Quantity</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Quantity</label>
             <input
               type="number"
               min={1}
-              className="w-full border rounded-md p-2"
+              className={businessDevModalFieldClassName}
               value={data.quantity}
               onChange={(e) => setData('quantity', Number(e.target.value) || 1)}
             />
@@ -607,9 +610,9 @@ function EventCreateModal({ open, onClose, clients }: EventModalBaseProps) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Status</label>
             <select
-              className="w-full border rounded-md p-2"
+              className={businessDevModalFieldClassName}
               value={data.status}
               onChange={(e) => setData('status', e.target.value)}
             >
@@ -622,11 +625,11 @@ function EventCreateModal({ open, onClose, clients }: EventModalBaseProps) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">K9 Units</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">K9 Units</label>
             <input
               type="number"
               min={0}
-              className="w-full border rounded-md p-2"
+              className={businessDevModalFieldClassName}
               value={data.k9_units}
               onChange={(e) => setData('k9_units', e.target.value)}
             />
@@ -634,9 +637,9 @@ function EventCreateModal({ open, onClose, clients }: EventModalBaseProps) {
           </div>
 
           <div className="sm:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Notes</label>
             <textarea
-              className="w-full border rounded-md p-2"
+              className={businessDevModalFieldClassName}
               rows={3}
               value={data.notes}
               onChange={(e) => setData('notes', e.target.value)}
@@ -644,11 +647,11 @@ function EventCreateModal({ open, onClose, clients }: EventModalBaseProps) {
             {errors.notes && <p className="text-sm text-red-600">{errors.notes}</p>}
           </div>
 
-          <div className="sm:col-span-2 flex justify-end gap-2 pt-2">
+          <div className="sm:col-span-2 flex flex-col sm:flex-row justify-end gap-2 pt-2">
             <button
               type="button"
               onClick={handleClose}
-              className="px-4 py-2 text-sm rounded-md bg-gray-200 text-gray-700 hover:bg-gray-300"
+              className="w-full sm:w-auto px-4 py-2 text-sm rounded-md bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700"
               disabled={processing}
             >
               Cancel
@@ -656,7 +659,7 @@ function EventCreateModal({ open, onClose, clients }: EventModalBaseProps) {
             <button
               type="submit"
               disabled={processing}
-              className="px-4 py-2 text-sm rounded-md bg-indigo-600 text-white hover:bg-indigo-700 disabled:bg-gray-400"
+              className="w-full sm:w-auto px-4 py-2 text-sm rounded-md bg-red-700 text-white hover:bg-red-600 disabled:bg-gray-400 dark:disabled:bg-gray-700"
             >
               {processing ? 'Saving...' : 'Create Event'}
             </button>
@@ -706,12 +709,12 @@ function EventEditModal({ open, onClose, event, clients }: EventEditModalProps) 
 
   return (
     <Modal show={open} onClose={handleClose} maxWidth="2xl">
-      <div className="px-6 py-4 border-b flex items-center justify-between bg-white">
-        <h2 className="text-lg font-semibold text-gray-900">Edit Client Event</h2>
+      <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between bg-white dark:bg-gray-950">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Edit Client Event</h2>
         <button
           type="button"
           onClick={handleClose}
-          className="text-gray-400 hover:text-gray-600"
+          className="text-gray-400 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-200"
         >
           <span className="sr-only">Close</span>
           <svg
@@ -728,12 +731,12 @@ function EventEditModal({ open, onClose, event, clients }: EventEditModalProps) 
           </svg>
         </button>
       </div>
-      <div className="px-6 py-4 bg-white">
+      <div className="px-6 py-4 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100">
         <form className="grid grid-cols-1 sm:grid-cols-2 gap-4" onSubmit={handleSubmit}>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Client</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Client</label>
             <select
-              className="w-full border rounded-md p-2"
+              className={businessDevModalFieldClassName}
               value={data.client_id}
               onChange={(e) => setData('client_id', e.target.value ? Number(e.target.value) : ('' as any))}
             >
@@ -748,10 +751,10 @@ function EventEditModal({ open, onClose, event, clients }: EventEditModalProps) 
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Event Date</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Event Date</label>
             <input
               type="date"
-              className="w-full border rounded-md p-2"
+              className={businessDevModalFieldClassName}
               value={data.event_date}
               onChange={(e) => setData('event_date', e.target.value)}
             />
@@ -759,9 +762,9 @@ function EventEditModal({ open, onClose, event, clients }: EventEditModalProps) 
           </div>
 
           <div className="sm:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Title</label>
             <input
-              className="w-full border rounded-md p-2"
+              className={businessDevModalFieldClassName}
               value={data.title}
               onChange={(e) => setData('title', e.target.value)}
               placeholder="e.g. K9 demo at client HQ, VIP event security"
@@ -770,10 +773,10 @@ function EventEditModal({ open, onClose, event, clients }: EventEditModalProps) 
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Start Time</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Start Time</label>
             <input
               type="time"
-              className="w-full border rounded-md p-2"
+              className={businessDevModalFieldClassName}
               value={data.start_time}
               onChange={(e) => setData('start_time', e.target.value)}
             />
@@ -781,10 +784,10 @@ function EventEditModal({ open, onClose, event, clients }: EventEditModalProps) 
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">End Time</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">End Time</label>
             <input
               type="time"
-              className="w-full border rounded-md p-2"
+              className={businessDevModalFieldClassName}
               value={data.end_time}
               onChange={(e) => setData('end_time', e.target.value)}
             />
@@ -792,9 +795,9 @@ function EventEditModal({ open, onClose, event, clients }: EventEditModalProps) 
           </div>
 
           <div className="sm:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Location</label>
             <input
-              className="w-full border rounded-md p-2"
+              className={businessDevModalFieldClassName}
               value={data.location}
               onChange={(e) => setData('location', e.target.value)}
             />
@@ -802,9 +805,9 @@ function EventEditModal({ open, onClose, event, clients }: EventEditModalProps) 
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Category</label>
             <select
-              className="w-full border rounded-md p-2"
+              className={businessDevModalFieldClassName}
               value={data.category}
               onChange={(e) => setData('category', e.target.value)}
             >
@@ -816,9 +819,9 @@ function EventEditModal({ open, onClose, event, clients }: EventEditModalProps) 
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Billing Type</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Billing Type</label>
             <select
-              className="w-full border rounded-md p-2"
+              className={businessDevModalFieldClassName}
               value={data.billing_type}
               onChange={(e) => setData('billing_type', e.target.value)}
             >
@@ -830,12 +833,12 @@ function EventEditModal({ open, onClose, event, clients }: EventEditModalProps) 
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Rate (MWK)</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Rate (MWK)</label>
             <input
               type="number"
               min={0}
               step="0.01"
-              className="w-full border rounded-md p-2"
+              className={businessDevModalFieldClassName}
               value={data.rate}
               onChange={(e) => setData('rate', e.target.value)}
             />
@@ -843,11 +846,11 @@ function EventEditModal({ open, onClose, event, clients }: EventEditModalProps) 
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Quantity</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Quantity</label>
             <input
               type="number"
               min={1}
-              className="w-full border rounded-md p-2"
+              className={businessDevModalFieldClassName}
               value={data.quantity}
               onChange={(e) => setData('quantity', Number(e.target.value) || 1)}
             />
@@ -855,9 +858,9 @@ function EventEditModal({ open, onClose, event, clients }: EventEditModalProps) 
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Status</label>
             <select
-              className="w-full border rounded-md p-2"
+              className={businessDevModalFieldClassName}
               value={data.status}
               onChange={(e) => setData('status', e.target.value)}
             >
@@ -870,11 +873,11 @@ function EventEditModal({ open, onClose, event, clients }: EventEditModalProps) 
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">K9 Units</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">K9 Units</label>
             <input
               type="number"
               min={0}
-              className="w-full border rounded-md p-2"
+              className={businessDevModalFieldClassName}
               value={data.k9_units}
               onChange={(e) => setData('k9_units', e.target.value)}
             />
@@ -882,9 +885,9 @@ function EventEditModal({ open, onClose, event, clients }: EventEditModalProps) 
           </div>
 
           <div className="sm:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Notes</label>
             <textarea
-              className="w-full border rounded-md p-2"
+              className={businessDevModalFieldClassName}
               rows={3}
               value={data.notes}
               onChange={(e) => setData('notes', e.target.value)}
@@ -892,11 +895,11 @@ function EventEditModal({ open, onClose, event, clients }: EventEditModalProps) 
             {errors.notes && <p className="text-sm text-red-600">{errors.notes}</p>}
           </div>
 
-          <div className="sm:col-span-2 flex justify-end gap-2 pt-2">
+          <div className="sm:col-span-2 flex flex-col sm:flex-row justify-end gap-2 pt-2">
             <button
               type="button"
               onClick={handleClose}
-              className="px-4 py-2 text-sm rounded-md bg-gray-200 text-gray-700 hover:bg-gray-300"
+              className="w-full sm:w-auto px-4 py-2 text-sm rounded-md bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700"
               disabled={processing}
             >
               Cancel
@@ -904,7 +907,7 @@ function EventEditModal({ open, onClose, event, clients }: EventEditModalProps) 
             <button
               type="submit"
               disabled={processing}
-              className="px-4 py-2 text-sm rounded-md bg-indigo-600 text-white hover:bg-indigo-700 disabled:bg-gray-400"
+              className="w-full sm:w-auto px-4 py-2 text-sm rounded-md bg-red-700 text-white hover:bg-red-600 disabled:bg-gray-400 dark:disabled:bg-gray-700"
             >
               {processing ? 'Saving...' : 'Save Changes'}
             </button>
@@ -924,12 +927,12 @@ interface EventViewModalProps {
 function EventViewModal({ open, onClose, event }: EventViewModalProps) {
   return (
     <Modal show={open} onClose={onClose} maxWidth="xl">
-      <div className="px-6 py-4 border-b flex items-center justify-between bg-white">
-        <h2 className="text-lg font-semibold text-gray-900">Event • {event.title}</h2>
+      <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between bg-white dark:bg-gray-950">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Event • {event.title}</h2>
         <button
           type="button"
           onClick={onClose}
-          className="text-gray-400 hover:text-gray-600"
+          className="text-gray-400 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-200"
         >
           <span className="sr-only">Close</span>
           <svg
@@ -946,44 +949,44 @@ function EventViewModal({ open, onClose, event }: EventViewModalProps) {
           </svg>
         </button>
       </div>
-      <div className="px-6 py-4 bg-white space-y-4 text-sm">
+      <div className="px-6 py-4 bg-white dark:bg-gray-950 space-y-4 text-sm text-gray-900 dark:text-gray-100">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <div className="font-medium text-gray-700">Date</div>
-            <div className="text-gray-900">{event.event_date}</div>
+            <div className="font-medium text-gray-700 dark:text-gray-300">Date</div>
+            <div className="text-gray-900 dark:text-gray-100">{event.event_date}</div>
           </div>
           <div>
-            <div className="font-medium text-gray-700">Status</div>
+            <div className="font-medium text-gray-700 dark:text-gray-300">Status</div>
             <span className={`inline-flex mt-1 px-2 py-0.5 rounded-full text-[10px] font-medium ${statusColor(event.status)}`}>
               {event.status}
             </span>
           </div>
           <div>
-            <div className="font-medium text-gray-700">Category</div>
-            <div className="text-gray-900">{categoryLabel(event.category)}</div>
+            <div className="font-medium text-gray-700 dark:text-gray-300">Category</div>
+            <div className="text-gray-900 dark:text-gray-100">{categoryLabel(event.category)}</div>
           </div>
           <div>
-            <div className="font-medium text-gray-700">Billing</div>
-            <div className="text-gray-900">
+            <div className="font-medium text-gray-700 dark:text-gray-300">Billing</div>
+            <div className="text-gray-900 dark:text-gray-100">
               {event.billing_type} • Rate MWK {Number(event.rate || 0).toLocaleString()} × {event.quantity}
             </div>
           </div>
           <div>
-            <div className="font-medium text-gray-700">Expected Amount</div>
-            <div className="text-gray-900">
+            <div className="font-medium text-gray-700 dark:text-gray-300">Expected Amount</div>
+            <div className="text-gray-900 dark:text-gray-100">
               MWK {Number(event.expected_amount || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
             </div>
           </div>
           <div>
-            <div className="font-medium text-gray-700">K9 Units</div>
-            <div className="text-gray-900">{event.k9_units ?? 0}</div>
+            <div className="font-medium text-gray-700 dark:text-gray-300">K9 Units</div>
+            <div className="text-gray-900 dark:text-gray-100">{event.k9_units ?? 0}</div>
           </div>
         </div>
 
         {event.location && (
           <div>
-            <div className="font-medium text-gray-700 mb-1">Location</div>
-            <div className="text-gray-900 bg-gray-50 rounded px-3 py-2 whitespace-pre-wrap">
+            <div className="font-medium text-gray-700 dark:text-gray-300 mb-1">Location</div>
+            <div className="text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-900 rounded px-3 py-2 whitespace-pre-wrap">
               {event.location}
             </div>
           </div>
@@ -991,18 +994,18 @@ function EventViewModal({ open, onClose, event }: EventViewModalProps) {
 
         {event.notes && (
           <div>
-            <div className="font-medium text-gray-700 mb-1">Notes</div>
-            <div className="text-gray-900 bg-gray-50 rounded px-3 py-2 whitespace-pre-wrap">
+            <div className="font-medium text-gray-700 dark:text-gray-300 mb-1">Notes</div>
+            <div className="text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-900 rounded px-3 py-2 whitespace-pre-wrap">
               {event.notes}
             </div>
           </div>
         )}
       </div>
-      <div className="px-6 py-3 bg-gray-50 border-t flex justify-end text-sm">
+      <div className="px-6 py-3 bg-gray-50 dark:bg-gray-950 border-t border-gray-200 dark:border-gray-800 flex justify-end text-sm">
         <button
           type="button"
           onClick={onClose}
-          className="px-4 py-2 rounded-md bg-indigo-600 text-white hover:bg-indigo-700"
+          className="px-4 py-2 rounded-md bg-red-700 text-white hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950"
         >
           Close
         </button>
@@ -1053,12 +1056,12 @@ function EventInvoiceModal({ open, onClose, event }: EventInvoiceModalProps) {
 
   return (
     <Modal show={open} onClose={handleClose} maxWidth="2xl">
-      <div className="px-6 py-4 border-b flex items-center justify-between bg-white">
-        <h2 className="text-lg font-semibold text-gray-900">Create Invoice for Event</h2>
+      <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between bg-white dark:bg-gray-950">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Create Invoice for Event</h2>
         <button
           type="button"
           onClick={handleClose}
-          className="text-gray-400 hover:text-gray-600"
+          className="text-gray-400 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-200"
         >
           <span className="sr-only">Close</span>
           <svg
@@ -1075,22 +1078,22 @@ function EventInvoiceModal({ open, onClose, event }: EventInvoiceModalProps) {
           </svg>
         </button>
       </div>
-      <div className="px-6 py-4 bg-white">
+      <div className="px-6 py-4 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100">
         <form className="grid grid-cols-1 sm:grid-cols-2 gap-4" onSubmit={handleSubmit}>
-          <div className="sm:col-span-2 text-sm text-gray-600 mb-2">
-            <div className="font-medium text-gray-800">{event.title}</div>
+          <div className="sm:col-span-2 text-sm text-gray-600 dark:text-gray-300 mb-2">
+            <div className="font-medium text-gray-800 dark:text-gray-100">{event.title}</div>
             <div>
               Subtotal:&nbsp;
-              <span className="font-semibold text-gray-900">
+              <span className="font-semibold text-gray-900 dark:text-gray-100">
                 MWK {numericSubtotal.toLocaleString(undefined, { maximumFractionDigits: 0 })}
               </span>
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Billing Mode</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Billing Mode</label>
             <select
-              className="w-full border rounded-md p-2"
+              className={businessDevModalFieldClassName}
               value={data.billing_mode}
               onChange={(e) => setData('billing_mode', e.target.value)}
             >
@@ -1101,10 +1104,10 @@ function EventInvoiceModal({ open, onClose, event }: EventInvoiceModalProps) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Invoice Date</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Invoice Date</label>
             <input
               type="date"
-              className="w-full border rounded-md p-2"
+              className={businessDevModalFieldClassName}
               value={data.invoice_date}
               onChange={(e) => setData('invoice_date', e.target.value)}
             />
@@ -1112,10 +1115,10 @@ function EventInvoiceModal({ open, onClose, event }: EventInvoiceModalProps) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Due Date</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Due Date</label>
             <input
               type="date"
-              className="w-full border rounded-md p-2"
+              className={businessDevModalFieldClassName}
               value={data.due_date}
               onChange={(e) => setData('due_date', e.target.value)}
             />
@@ -1123,13 +1126,13 @@ function EventInvoiceModal({ open, onClose, event }: EventInvoiceModalProps) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Tax % (optional)</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tax % (optional)</label>
             <input
               type="number"
               min={0}
               max={100}
               step="0.01"
-              className="w-full border rounded-md p-2"
+              className={businessDevModalFieldClassName}
               value={data.tax_percentage}
               onChange={(e) => setData('tax_percentage', e.target.value)}
             />
@@ -1137,12 +1140,12 @@ function EventInvoiceModal({ open, onClose, event }: EventInvoiceModalProps) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Tax Amount (MWK)</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tax Amount (MWK)</label>
             <input
               type="number"
               min={0}
               step="0.01"
-              className="w-full border rounded-md p-2"
+              className={businessDevModalFieldClassName}
               value={data.tax_amount}
               onChange={(e) => setData('tax_amount', e.target.value)}
             />
@@ -1150,12 +1153,12 @@ function EventInvoiceModal({ open, onClose, event }: EventInvoiceModalProps) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Discount (MWK)</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Discount (MWK)</label>
             <input
               type="number"
               min={0}
               step="0.01"
-              className="w-full border rounded-md p-2"
+              className={businessDevModalFieldClassName}
               value={data.discount_amount}
               onChange={(e) => setData('discount_amount', e.target.value)}
             />
@@ -1165,12 +1168,12 @@ function EventInvoiceModal({ open, onClose, event }: EventInvoiceModalProps) {
           {data.billing_mode === 'monthly' && (
             <>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Billing Year</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Billing Year</label>
                 <input
                   type="number"
                   min={2000}
                   max={2100}
-                  className="w-full border rounded-md p-2"
+                  className={businessDevModalFieldClassName}
                   value={data.billing_year}
                   onChange={(e) => setData('billing_year', e.target.value)}
                 />
@@ -1178,12 +1181,12 @@ function EventInvoiceModal({ open, onClose, event }: EventInvoiceModalProps) {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Billing Month (1-12)</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Billing Month (1-12)</label>
                 <input
                   type="number"
                   min={1}
                   max={12}
-                  className="w-full border rounded-md p-2"
+                  className={businessDevModalFieldClassName}
                   value={data.billing_month}
                   onChange={(e) => setData('billing_month', e.target.value)}
                 />
@@ -1192,11 +1195,11 @@ function EventInvoiceModal({ open, onClose, event }: EventInvoiceModalProps) {
             </>
           )}
 
-          <div className="sm:col-span-2 flex justify-end gap-2 pt-2">
+          <div className="sm:col-span-2 flex flex-col sm:flex-row justify-end gap-2 pt-2">
             <button
               type="button"
               onClick={handleClose}
-              className="px-4 py-2 text-sm rounded-md bg-gray-200 text-gray-700 hover:bg-gray-300"
+              className="w-full sm:w-auto px-4 py-2 text-sm rounded-md bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700"
               disabled={processing}
             >
               Cancel
@@ -1204,7 +1207,7 @@ function EventInvoiceModal({ open, onClose, event }: EventInvoiceModalProps) {
             <button
               type="submit"
               disabled={processing}
-              className="px-4 py-2 text-sm rounded-md bg-indigo-600 text-white hover:bg-indigo-700 disabled:bg-gray-400"
+              className="w-full sm:w-auto px-4 py-2 text-sm rounded-md bg-red-700 text-white hover:bg-red-600 disabled:bg-gray-400 dark:disabled:bg-gray-700"
             >
               {processing ? 'Creating…' : 'Create Invoice'}
             </button>

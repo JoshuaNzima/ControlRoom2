@@ -54,19 +54,19 @@ export const SelectTrigger = React.forwardRef<HTMLDivElement, SelectTriggerProps
     return (
       <div
         ref={ref}
-        className={`relative flex h-9 w-full items-center justify-between rounded-lg border border-gray-300 px-3 text-sm text-gray-900 focus-within:ring-2 focus-within:ring-indigo-500 ${className}`}
+        className={`relative flex h-9 w-full items-center justify-between rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 shadow-sm shadow-black/5 focus-within:ring-2 focus-within:ring-coin-500 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-100 dark:shadow-none ${className}`}
         {...props}
       >
         {/* Visual value/placeholder */}
         <div className="pointer-events-none flex-1 truncate">
           <SelectValue />
         </div>
-        <div className="pointer-events-none ml-2 text-gray-400">▾</div>
+        <div className="pointer-events-none ml-2 text-gray-400 dark:text-gray-500">▾</div>
         {/* Native select overlays to provide reliable dropdown behavior */}
         <select
           className="absolute inset-0 h-full w-full opacity-0"
           value={ctx?.value ?? ''}
-          onChange={e => ctx?.setValue(e.target.value || undefined)}
+          onChange={e => ctx?.setValue(e.target.value)}
         >
           {/* Placeholder option */}
           <option value="" disabled hidden>

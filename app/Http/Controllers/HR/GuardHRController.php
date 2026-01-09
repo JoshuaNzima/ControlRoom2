@@ -28,8 +28,18 @@ class GuardHRController extends Controller
         $request->validate([
             'reason' => ['nullable','string','max:500'],
         ]);
-        $guard->update(['status' => 'inactive', 'notes' => trim(($guard->notes ? ($guard->notes."\n") : '') . 'Dismissed: ' . ($request->input('reason') ?? ''))]);
+        $guard->update(['status' => 'dismissed', 'notes' => trim(($guard->notes ? ($guard->notes."\n") : '') . 'Dismissed: ' . ($request->input('reason') ?? ''))]);
         return back()->with('success', 'Guard dismissed.');
+    }
+
+    public function abscond(Request $request, Guard $guard)
+    {
+        $this->authorizeAction();
+        $request->validate([
+            'reason' => ['nullable','string','max:500'],
+        ]);
+        $guard->update(['status' => 'absconded', 'notes' => trim(($guard->notes ? ($guard->notes."\n") : '') . 'Absconded: ' . ($request->input('reason') ?? ''))]);
+        return back()->with('success', 'Guard marked as absconded.');
     }
 
     public function setRole(Request $request, Guard $guard)

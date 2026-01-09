@@ -9,27 +9,23 @@ interface Job { id: number; title: string; location: string; type: string }
 export default function Careers({ jobs = [] as Job[] }: { jobs: Job[] }) {
   const [selected, setSelected] = useState<Job | null>(null);
   const { data, setData, post, processing, reset, errors } = useForm({
-    name: '',
+    candidate_name: '',
     email: '',
-    subject: 'Job Application',
-    message: '',
+    phone: '',
+    notes: '',
+    resume: null as File | null,
     website: ''
   });
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
-    post(route('public.contact.store'), {
+    if (!selected) return;
+    post(route('public.careers.apply', selected.id), {
+      forceFormData: true,
       onSuccess: () => { reset(); setSelected(null); }
     });
   };
 
-  useEffect(() => {
-    if (selected) {
-      setData('subject', `Job Application — ${selected.title}`);
-    } else {
-      setData('subject', 'Job Application');
-    }
-  }, [selected]);
 
   return (
     <PublicLayout title="Careers — Coin Security">
@@ -72,8 +68,8 @@ export default function Careers({ jobs = [] as Job[] }: { jobs: Job[] }) {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="text-sm text-gray-700 dark:text-gray-300">Full Name *</label>
-                <input value={data.name} onChange={(e) => setData('name', e.target.value)} required className="w-full mt-1 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2" />
-                {errors.name && <div className="text-sm text-red-600">{errors.name}</div>}
+                <input value={data.candidate_name} onChange={(e) => setData('candidate_name', e.target.value)} required className="w-full mt-1 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2" />
+                {errors.candidate_name && <div className="text-sm text-red-600">{errors.candidate_name}</div>}
               </div>
               <div>
                 <label className="text-sm text-gray-700 dark:text-gray-300">Email *</label>
@@ -82,14 +78,19 @@ export default function Careers({ jobs = [] as Job[] }: { jobs: Job[] }) {
               </div>
             </div>
             <div>
-              <label className="text-sm text-gray-700 dark:text-gray-300">Subject *</label>
-              <input value={data.subject} onChange={(e) => setData('subject', e.target.value)} required className="w-full mt-1 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2" />
-              {errors.subject && <div className="text-sm text-red-600">{errors.subject}</div>}
+              <label className="text-sm text-gray-700 dark:text-gray-300">Phone</label>
+              <input value={data.phone} onChange={(e) => setData('phone', e.target.value)} className="w-full mt-1 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2" />
+              {errors.phone && <div className="text-sm text-red-600">{errors.phone}</div>}
             </div>
             <div>
-              <label className="text-sm text-gray-700 dark:text-gray-300">Message *</label>
-              <textarea value={data.message} onChange={(e) => setData('message', e.target.value)} required className="w-full mt-1 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 min-h-[120px]" />
-              {errors.message && <div className="text-sm text-red-600">{errors.message}</div>}
+              <label className="text-sm text-gray-700 dark:text-gray-300">Resume (PDF/DOC/DOCX, max 5MB)</label>
+              <input type="file" accept=".pdf,.doc,.docx" onChange={(e) => setData('resume', e.currentTarget.files?.[0] ?? null)} className="w-full mt-1 block text-sm text-gray-900 dark:text-gray-200" />
+              {errors.resume && <div className="text-sm text-red-600">{errors.resume}</div>}
+            </div>
+            <div>
+              <label className="text-sm text-gray-700 dark:text-gray-300">Notes</label>
+              <textarea value={data.notes} onChange={(e) => setData('notes', e.target.value)} className="w-full mt-1 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 min-h-[120px]" />
+              {errors.notes && <div className="text-sm text-red-600">{errors.notes}</div>}
             </div>
             <div className="flex justify-end">
               <button type="submit" disabled={processing} className="inline-flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-red-600 to-red-500 text-white rounded-lg font-medium disabled:opacity-60">

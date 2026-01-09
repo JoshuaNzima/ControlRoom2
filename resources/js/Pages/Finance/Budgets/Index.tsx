@@ -56,11 +56,11 @@ export default function BudgetIndex({ budgets, summary, filters, years }: Props)
 
   const getStatusColor = (status: string) => {
     const colors: Record<string, string> = {
-      active: 'bg-green-100 text-green-800',
-      inactive: 'bg-gray-100 text-gray-800',
-      archived: 'bg-blue-100 text-blue-800',
+      active: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-200',
+      inactive: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200',
+      archived: 'bg-coin-100 text-coin-800 dark:bg-coin-900/30 dark:text-coin-200',
     };
-    return colors[status] || 'bg-gray-100 text-gray-800';
+    return colors[status] || 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200';
   };
 
   return (
@@ -70,11 +70,11 @@ export default function BudgetIndex({ budgets, summary, filters, years }: Props)
       <div className="py-6">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
           {/* Header */}
-          <div className="flex justify-between items-center">
-            <h1 className="text-3xl font-bold text-gray-900">Budgets</h1>
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Budgets</h1>
             <Link
               href={route('finance.budgets.create')}
-              className="inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
+              className="w-full sm:w-auto inline-flex items-center justify-center px-4 py-2 bg-coin-600 text-white rounded-lg hover:bg-coin-700 transition"
             >
               + New Budget
             </Link>
@@ -82,38 +82,38 @@ export default function BudgetIndex({ budgets, summary, filters, years }: Props)
 
           {/* Summary Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="bg-white rounded-lg shadow p-6">
-              <p className="text-sm text-gray-600 mb-2">Total Budgeted</p>
-              <p className="text-3xl font-bold text-gray-900">
+            <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg shadow p-6">
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Total Budgeted</p>
+              <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">
                 {formatCurrency(summary.total_budgeted)}
               </p>
             </div>
-            <div className="bg-white rounded-lg shadow p-6">
-              <p className="text-sm text-gray-600 mb-2">Total Spent</p>
-              <p className="text-3xl font-bold text-blue-600">
+            <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg shadow p-6">
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Total Spent</p>
+              <p className="text-3xl font-bold text-coin-600 dark:text-coin-300">
                 {formatCurrency(summary.total_spent)}
               </p>
             </div>
-            <div className="bg-white rounded-lg shadow p-6">
-              <p className="text-sm text-gray-600 mb-2">Budgets Exceeded</p>
-              <p className="text-3xl font-bold text-red-600">
+            <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg shadow p-6">
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Budgets Exceeded</p>
+              <p className="text-3xl font-bold text-red-600 dark:text-red-400">
                 {summary.budgets_exceeded}
               </p>
             </div>
           </div>
 
           {/* Filters */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Filters</h2>
+          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg shadow p-6">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Filters</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Fiscal Year
                 </label>
                 <select
                   value={filterYear}
                   onChange={(e) => setFilterYear(parseInt(e.target.value))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-coin-500 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100"
                 >
                   {years.map((year) => (
                     <option key={year} value={year}>
@@ -123,13 +123,13 @@ export default function BudgetIndex({ budgets, summary, filters, years }: Props)
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Status
                 </label>
                 <select
                   value={filterStatus}
                   onChange={(e) => setFilterStatus(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-coin-500 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100"
                 >
                   <option value="">All Status</option>
                   {statuses.map((status) => (
@@ -139,16 +139,16 @@ export default function BudgetIndex({ budgets, summary, filters, years }: Props)
                   ))}
                 </select>
               </div>
-              <div className="flex items-end gap-2">
+              <div className="flex flex-col sm:flex-row sm:items-end gap-2">
                 <button
                   onClick={handleFilter}
-                  className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition text-sm font-medium"
+                  className="w-full sm:flex-1 px-4 py-2 bg-coin-600 text-white rounded-lg hover:bg-coin-700 transition text-sm font-medium"
                 >
                   Apply Filters
                 </button>
                 <button
                   onClick={handleClearFilters}
-                  className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition text-sm font-medium"
+                  className="w-full sm:flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition text-sm font-medium dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700"
                 >
                   Clear
                 </button>
@@ -163,12 +163,12 @@ export default function BudgetIndex({ budgets, summary, filters, years }: Props)
                 <Link
                   key={budget.id}
                   href={route('finance.budgets.show', budget.id)}
-                  className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition"
+                  className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg shadow p-6 hover:shadow-lg transition"
                 >
                   <div className="flex justify-between items-start mb-4">
                     <div>
-                      <h3 className="text-lg font-semibold text-gray-900">{budget.name}</h3>
-                      <p className="text-sm text-gray-600 mt-1">
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{budget.name}</h3>
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                         {budget.category.replace(/_/g, ' ')} · {budget.fiscal_year}
                         {budget.fiscal_month && ` · Month ${budget.fiscal_month}`}
                       </p>
@@ -185,18 +185,18 @@ export default function BudgetIndex({ budgets, summary, filters, years }: Props)
                   <div className="space-y-3">
                     <div>
                       <div className="flex justify-between items-center mb-1">
-                        <span className="text-sm text-gray-600">Budget Amount</span>
-                        <span className="font-semibold text-gray-900">
+                        <span className="text-sm text-gray-600 dark:text-gray-400">Budget Amount</span>
+                        <span className="font-semibold text-gray-900 dark:text-gray-100">
                           {formatCurrency(budget.budgeted_amount)}
                         </span>
                       </div>
                     </div>
 
                     {budget.description && (
-                      <p className="text-sm text-gray-500 line-clamp-2">{budget.description}</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400 line-clamp-2">{budget.description}</p>
                     )}
 
-                    <div className="text-xs text-gray-500 pt-2 border-t">
+                    <div className="text-xs text-gray-500 dark:text-gray-400 pt-2 border-t border-gray-200 dark:border-gray-800">
                       Created by {budget.user.name}
                     </div>
                   </div>
@@ -204,11 +204,11 @@ export default function BudgetIndex({ budgets, summary, filters, years }: Props)
               ))}
             </div>
           ) : (
-            <div className="bg-white rounded-lg shadow p-12 text-center">
-              <p className="text-gray-500 mb-4">No budgets found for the selected year.</p>
+            <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg shadow p-12 text-center">
+              <p className="text-gray-500 dark:text-gray-400 mb-4">No budgets found for the selected year.</p>
               <Link
                 href={route('finance.budgets.create')}
-                className="inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
+                className="inline-flex items-center px-4 py-2 bg-coin-600 text-white rounded-lg hover:bg-coin-700 transition"
               >
                 + Create First Budget
               </Link>
@@ -217,15 +217,15 @@ export default function BudgetIndex({ budgets, summary, filters, years }: Props)
 
           {/* Pagination */}
           {budgets.meta && budgets.meta.last_page > 1 && (
-            <div className="flex justify-center gap-2">
+            <div className="flex flex-wrap justify-center gap-2">
               {budgets.links && budgets.links.map((link: any, index: number) => (
                 <Link
                   key={index}
                   href={link.url}
                   className={`px-3 py-2 rounded ${
                     link.active
-                      ? 'bg-indigo-600 text-white'
-                      : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                      ? 'bg-coin-600 text-white'
+                      : 'bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800'
                   }`}
                   dangerouslySetInnerHTML={{ __html: link.label }}
                 />

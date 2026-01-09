@@ -18,13 +18,14 @@ type Conversation = {
 
 interface Props {
   conversations?: Conversation[];
+  currentUserId?: number | string;
 }
 
-const ConversationList: React.FC<Props> = ({ conversations = [] }) => {
+const ConversationList: React.FC<Props> = ({ conversations = [], currentUserId }) => {
   const getConversationName = (conversation: Conversation) => {
     if (conversation.type === 'direct') {
       const other = (conversation.participants || []).find(
-        p => p.id !== (window as any).auth?.user?.id
+        p => (currentUserId != null ? p.id !== currentUserId : true)
       );
       return other ? other.name : 'Deleted User';
     }
@@ -35,7 +36,7 @@ const ConversationList: React.FC<Props> = ({ conversations = [] }) => {
     const last = conversation.last_message || (conversation.messages && conversation.messages[0]);
     if (!last) return 'No messages yet';
 
-    const sender = last.sender_id === (window as any).auth?.user?.id
+    const sender = currentUserId != null && last.sender_id === currentUserId
       ? 'You'
       : last.sender?.name;
 

@@ -17,6 +17,7 @@ use App\Models\ReliefBundleSite;
 use App\Models\Guards\Shift as GuardShift;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 class RosterController extends Controller
 {
@@ -280,6 +281,124 @@ class RosterController extends Controller
         }
 
         return back()->with('success', 'Off days saved.');
+    }
+
+    public function reuseWeeklyRelief(Request $request)
+    {
+        $validated = $request->validate([
+            'start' => ['required', 'date'],
+            'supervisor_id' => ['nullable', 'integer', 'exists:users,id'],
+            'zone_id' => ['nullable', 'integer', 'exists:zones,id'],
+            'force' => ['nullable', 'boolean'],
+        ]);
+
+        $weekStart = Carbon::parse($validated['start'])->startOfWeek(Carbon::MONDAY);
+        $weekEnd = $weekStart->copy()->endOfWeek(Carbon::SUNDAY);
+
+        $relieversQuery = Guard::query()
+            ->where('status', 'active')
+            ->where('guard_type', 'reliever');
+
+        if (!empty($validated['supervisor_id'])) {
+            $relieversQuery->where('supervisor_id', $validated['supervisor_id']);
+        }
+        if (!empty($validated['zone_id'])) {
+            $relieversQuery->where('zone_id', $validated['zone_id']);
+        }
+
+        $relieverIds = $relieversQuery->pluck('id');
+        if ($relieverIds->isEmpty()) {
+            return response()->json([
+                'reused' => false,
+                'copied' => 0,
+                'reason' => 'no_relievers_in_scope',
+            ]);
+        }
+
+        $existingCount = RelieverRotation::whereIn('guard_id', $relieverIds)
+            ->whereBetween('date', [$weekStart->toDateString(), $weekEnd->toDateString()])
+            ->count();
+
+        $force = !empty($validated['force']);
+
+        if ($existingCount > 0 && !$force) {
+            return response()->json([
+                'reused' => false,
+                'copied' => 0,
+                'reason' => 'week_already_has_data',
+            ]);
+        }
+
+        if ($existingCount > 0 && $force) {
+            RelieverRotation::whereIn('guard_id', $relieverIds)
+                ->whereBetween('date', [$weekStart->toDateString(), $weekEnd->toDateString()])
+                ->delete();
+        }
+
+        $preferredSourceStart = $weekStart->copy()->subWeek()->startOfWeek(Carbon::MONDAY);
+        $preferredSourceEnd = $preferredSourceStart->copy()->endOfWeek(Carbon::SUNDAY);
+
+        $sourceHasAny = RelieverRotation::whereIn('guard_id', $relieverIds)
+            ->whereBetween('date', [$preferredSourceStart->toDateString(), $preferredSourceEnd->toDateString()])
+            ->exists();
+
+        $sourceWeekStart = null;
+        if ($sourceHasAny) {
+            $sourceWeekStart = $preferredSourceStart;
+        } else {
+            $lastRotationDate = RelieverRotation::whereIn('guard_id', $relieverIds)
+                ->whereDate('date', '<', $weekStart->toDateString())
+                ->orderBy('date', 'desc')
+                ->value('date');
+
+            if (!$lastRotationDate) {
+                return response()->json([
+                    'reused' => false,
+                    'copied' => 0,
+                    'reason' => 'no_source_week_found',
+                ]);
+            }
+
+            $sourceWeekStart = Carbon::parse($lastRotationDate)->startOfWeek(Carbon::MONDAY);
+        }
+
+        $sourceWeekEnd = $sourceWeekStart->copy()->endOfWeek(Carbon::SUNDAY);
+
+        $sourceRotations = RelieverRotation::whereIn('guard_id', $relieverIds)
+            ->whereBetween('date', [$sourceWeekStart->toDateString(), $sourceWeekEnd->toDateString()])
+            ->get(['guard_id', 'client_site_id', 'date']);
+
+        if ($sourceRotations->isEmpty()) {
+            return response()->json([
+                'reused' => false,
+                'copied' => 0,
+                'reason' => 'source_week_empty',
+            ]);
+        }
+
+        $copied = 0;
+        DB::transaction(function () use ($sourceRotations, $sourceWeekStart, $weekStart, $request, &$copied) {
+            foreach ($sourceRotations as $rot) {
+                $offset = $sourceWeekStart->copy()->startOfDay()->diffInDays(Carbon::parse($rot->date)->startOfDay(), false);
+                if ($offset < 0 || $offset > 6) {
+                    continue;
+                }
+
+                $targetDate = $weekStart->copy()->addDays($offset)->toDateString();
+
+                RelieverRotation::updateOrCreate(
+                    ['guard_id' => $rot->guard_id, 'date' => $targetDate],
+                    ['client_site_id' => $rot->client_site_id, 'assigned_by' => $request->user()?->id]
+                );
+                $copied++;
+            }
+        });
+
+        return response()->json([
+            'reused' => $copied > 0,
+            'copied' => $copied,
+            'source_week_start' => $sourceWeekStart->toDateString(),
+        ]);
     }
 
     public function generateShifts(Request $request)

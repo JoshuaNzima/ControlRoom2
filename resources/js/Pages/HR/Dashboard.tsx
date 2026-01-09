@@ -4,6 +4,7 @@ import HRLayout from '@/Layouts/HRLayout';
 import IconMapper from '@/Components/IconMapper';
 import QuickRequisitionModal from '@/Components/Requisitions/QuickRequisitionModal';
 import Modal from '@/Components/Modal';
+import EmptyState from '@/Components/ui/empty-state';
 
 export default function HRDashboard() {
   const { auth, metrics, upcoming_holidays = [], upcoming_off_days = [], guards = [], compliance = {}, upcoming_birthdays = [] } = (usePage().props as any);
@@ -80,12 +81,17 @@ export default function HRDashboard() {
                 <div className="text-sm font-medium mb-2 text-gray-900 dark:text-gray-100">Top Guards (window)</div>
                 <div className="divide-y divide-gray-200 dark:divide-gray-800">
                   {Array.isArray(infractions?.top_guards) && infractions.top_guards.length === 0 && (
-                    <div className="text-sm text-gray-500 dark:text-gray-400 py-4">No infractions in this window.</div>
+                    <EmptyState
+                      title="No infractions"
+                      description="No infractions in this window."
+                      size="sm"
+                      contentClassName="py-4"
+                    />
                   )}
                   {(infractions?.top_guards || []).map((g: any, i: number) => (
                     <div key={i} className="py-2 flex items-center justify-between">
                       <div className="text-sm text-gray-900 dark:text-gray-100">{g.guard?.name || 'Guard'} <span className="text-xs text-gray-500 dark:text-gray-400">{g.guard?.employee_id ? `(${g.guard.employee_id})` : ''}</span></div>
-                      <div className="text-xs text-gray-600 dark:text-gray-300">{g.count} · {g.last_incident_at || '-'}</div>
+                      <div className="text-xs text-gray-600 dark:text-gray-400">{g.count} · {g.last_incident_at || '-'}</div>
                     </div>
                   ))}
                 </div>
@@ -97,7 +103,12 @@ export default function HRDashboard() {
               </div>
               <div className="divide-y divide-gray-200 dark:divide-gray-800">
                 {Array.isArray(infractions?.followups) && infractions.followups.length === 0 && (
-                  <div className="text-sm text-gray-500 dark:text-gray-400 py-6">No follow-ups pending.</div>
+                  <EmptyState
+                    title="No follow-ups"
+                    description="No follow-ups pending."
+                    size="sm"
+                    contentClassName="py-4"
+                  />
                 )}
                 {(infractions?.followups || []).map((i: any) => (
                   <div key={i.id} className="py-3 flex items-start gap-3">
@@ -128,7 +139,12 @@ export default function HRDashboard() {
                 <div className="text-sm font-medium mb-2 text-gray-900 dark:text-gray-100">Upcoming Due Items</div>
                 <div className="divide-y divide-gray-200 dark:divide-gray-800">
                   {Array.isArray(checklists?.due_items) && checklists.due_items.length === 0 && (
-                    <div className="text-sm text-gray-500 dark:text-gray-400 py-6">No items due soon.</div>
+                    <EmptyState
+                      title="No items due"
+                      description="No items due soon."
+                      size="sm"
+                      contentClassName="py-4"
+                    />
                   )}
                   {(checklists?.due_items || []).map((it: any) => (
                     <div key={it.id} className="py-3 flex items-start gap-3">
@@ -198,39 +214,9 @@ export default function HRDashboard() {
             </div>
           </div>
 
-          <QuickRequisitionModal />
-
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="flex items-center gap-2">
-              <label className="text-sm text-gray-600 dark:text-gray-400">Window</label>
-              <select value={windowParam} onChange={(e) => setWindowParam(e.target.value)} className="px-2 py-1 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm">
-                <option value="7d">7 days</option>
-                <option value="30d">30 days</option>
-                <option value="90d">90 days</option>
-              </select>
-            </div>
-            <div className="flex items-center gap-2">
-              <label className="text-sm text-gray-600 dark:text-gray-400">Trend</label>
-              <select value={trendMode} onChange={(e) => setTrendMode(e.target.value)} className="px-2 py-1 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm">
-                <option value="week">Weekly</option>
-                <option value="month">Monthly</option>
-              </select>
-            </div>
-            <button onClick={applyFilters} className="px-3 py-1.5 rounded-md bg-red-600 text-white text-sm hover:bg-red-700">Apply</button>
-          </div>
-
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-            <StatCard label="Total Guards" value={counts.total_guards || 0} color="from-slate-600 to-slate-500" icon="users" />
-            <StatCard label="Active" value={counts.active_guards || 0} color="from-emerald-600 to-green-500" icon="badge-check" />
-            <StatCard label="Suspended" value={counts.suspended_guards || 0} color="from-amber-600 to-yellow-500" icon="pause-circle" />
-            <StatCard label="Drivers" value={counts.drivers || 0} color="from-blue-600 to-sky-500" icon="truck" />
-            <StatCard label="Off-days (mo)" value={counts.off_days_this_month || 0} color="from-indigo-600 to-violet-500" icon="calendar" />
-            <StatCard label="Jobs" value={(metrics?.jobs?.published_count || 0) + '/' + (metrics?.jobs?.draft_count || 0)} color="from-red-600 to-rose-500" icon="megaphone" />
-          </div>
-
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4">
-              <div className="flex items-center justify-between mb-2">
+            <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 lg:col-span-2">
+              <div className="flex items-center justify-between mb-3">
                 <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Headcount Trend</h2>
                 <div className="text-xs text-gray-500 dark:text-gray-400">{trendMode === 'month' ? 'Last 6 months' : 'Last 8 weeks'}</div>
               </div>
@@ -239,8 +225,6 @@ export default function HRDashboard() {
                 {trendLabels.map((l, i) => (
                   <span key={`${l}-${i}`}>{l}</span>
                 ))}
-              
-              
               </div>
             </div>
             <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 lg:col-span-2">
@@ -292,7 +276,12 @@ export default function HRDashboard() {
               <div className="text-sm font-medium mb-2 text-gray-900 dark:text-gray-100">Late check-ins</div>
               <div className="divide-y divide-gray-200 dark:divide-gray-800">
                 {Array.isArray(attendance.late_list) && attendance.late_list.length === 0 && (
-                  <div className="text-sm text-gray-500 dark:text-gray-400 py-6">No late check-ins recorded today.</div>
+                  <EmptyState
+                    title="No late check-ins"
+                    description="No late check-ins recorded today."
+                    size="sm"
+                    contentClassName="py-4"
+                  />
                 )}
                 {(attendance.late_list || []).map((a: any) => (
                   <div key={a.id} className="py-3 flex items-start gap-3">
@@ -315,7 +304,12 @@ export default function HRDashboard() {
               </div>
               <div className="divide-y divide-gray-200 dark:divide-gray-800">
                 {(upcoming_off_days || []).length === 0 && (
-                  <div className="text-sm text-gray-500 dark:text-gray-400 py-6">No off days in the next 7 days.</div>
+                  <EmptyState
+                    title="No upcoming off days"
+                    description="No off days in the next 7 days."
+                    size="sm"
+                    contentClassName="py-4"
+                  />
                 )}
                 {(upcoming_off_days || []).map((o: any) => (
                   <div key={o.id} className="py-3 flex items-start gap-3">
@@ -336,7 +330,12 @@ export default function HRDashboard() {
               </div>
               <div className="divide-y divide-gray-200 dark:divide-gray-800">
                 {(upcoming_holidays || []).length === 0 && (
-                  <div className="text-sm text-gray-500 dark:text-gray-400 py-6">No holidays in the next 30 days.</div>
+                  <EmptyState
+                    title="No upcoming holidays"
+                    description="No holidays in the next 30 days."
+                    size="sm"
+                    contentClassName="py-4"
+                  />
                 )}
                 {(upcoming_holidays || []).map((h: any, i: number) => (
                   <div key={`${h.id}-${h.date}-${i}`} className="py-3 flex items-start gap-3">
@@ -358,7 +357,12 @@ export default function HRDashboard() {
             </div>
             <div className="divide-y divide-gray-200 dark:divide-gray-800">
               {(recentJobs || []).length === 0 && (
-                <div className="text-sm text-gray-500 dark:text-gray-400 py-6">No job posts yet.</div>
+                <EmptyState
+                  title="No job posts"
+                  description="No job posts yet."
+                  size="sm"
+                  contentClassName="py-4"
+                />
               )}
               {(recentJobs || []).map((j: any) => (
                 <div key={j.id} className="py-3 flex items-center justify-between">
@@ -372,9 +376,9 @@ export default function HRDashboard() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4">
-              <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center justify-between mb-3">
                 <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Applicants ({(windowParam || '30d')})</h2>
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -392,7 +396,12 @@ export default function HRDashboard() {
               </div>
               <div className="divide-y divide-gray-200 dark:divide-gray-800">
                 {Array.isArray(recruitment?.upcoming_interviews) && recruitment.upcoming_interviews.length === 0 && (
-                  <div className="text-sm text-gray-500 dark:text-gray-400 py-6">No interviews scheduled in the next 7 days.</div>
+                  <EmptyState
+                    title="No interviews scheduled"
+                    description="No interviews scheduled in the next 7 days."
+                    size="sm"
+                    contentClassName="py-4"
+                  />
                 )}
                 {(recruitment?.upcoming_interviews || []).map((iv: any) => (
                   <div key={iv.id} className="py-3 flex items-start gap-3">
@@ -425,7 +434,12 @@ export default function HRDashboard() {
                 <div className="text-sm font-medium mb-2 text-gray-900 dark:text-gray-100">Top Incomplete Profiles</div>
                 <div className="divide-y divide-gray-200 dark:divide-gray-800">
                   {(compliance?.incomplete_profiles || []).length === 0 && (
-                    <div className="text-sm text-gray-500 dark:text-gray-400 py-6">All profiles look complete.</div>
+                    <EmptyState
+                      title="All profiles complete"
+                      description="No incomplete profiles detected."
+                      size="sm"
+                      contentClassName="py-4"
+                    />
                   )}
                   {(compliance?.incomplete_profiles || []).map((g: any) => (
                     <div key={g.id} className="py-3">
@@ -442,7 +456,12 @@ export default function HRDashboard() {
               </div>
               <div className="divide-y divide-gray-200 dark:divide-gray-800">
                 {(upcoming_birthdays || []).length === 0 && (
-                  <div className="text-sm text-gray-500 dark:text-gray-400 py-6">No birthdays in the next 30 days.</div>
+                  <EmptyState
+                    title="No upcoming birthdays"
+                    description="No birthdays in the next 30 days."
+                    size="sm"
+                    contentClassName="py-4"
+                  />
                 )}
                 {(upcoming_birthdays || []).map((b: any) => (
                   <div key={b.id} className="py-3 flex items-start gap-3">
@@ -475,7 +494,7 @@ function QuickInterviewModal({ open, onClose, applications }: { open: boolean; o
     mode: 'in_person',
     location_or_link: '',
     notes: '',
-  } as any) as any;
+  } as any);
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     form.post(route('hr.interviews.store'), { onSuccess: onClose });
@@ -530,6 +549,7 @@ function QuickInterviewModal({ open, onClose, applications }: { open: boolean; o
     </Modal>
   );
 }
+
 function StatCard({ label, value, color, icon }: { label: string; value: string | number; color: string; icon: string }) {
   return (
     <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4">
@@ -557,7 +577,15 @@ function MiniStat({ label, value }: { label: string; value: string | number }) {
 
 function Sparkline({ data }: { data: number[] }) {
   if (!Array.isArray(data) || data.length === 0) {
-    return <div className="h-16 flex items-center text-sm text-gray-500 dark:text-gray-400">No data</div>;
+    return (
+      <div className="h-16">
+        <EmptyState
+          title="No data"
+          size="sm"
+          contentClassName="px-0 py-0 flex h-16 flex-col items-center justify-center"
+        />
+      </div>
+    );
   }
   const width = 320;
   const height = 64;

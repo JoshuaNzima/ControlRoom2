@@ -35,10 +35,10 @@ const FlagShow: React.FC<{ flag: any; canReview?: boolean }> = ({ flag, canRevie
 	};
 
 	const statusColors: Record<string, string> = {
-		pending_review: 'bg-yellow-100 text-yellow-800',
-		under_review: 'bg-blue-100 text-blue-800',
-		resolved: 'bg-green-100 text-green-800',
-		dismissed: 'bg-gray-100 text-gray-800',
+		pending_review: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-200',
+		under_review: 'bg-coin-100 text-coin-800 dark:bg-coin-900/20 dark:text-coin-200',
+		resolved: 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-200',
+		dismissed: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200',
 	};
 
 	return (
@@ -48,7 +48,7 @@ const FlagShow: React.FC<{ flag: any; canReview?: boolean }> = ({ flag, canRevie
 			<div className="py-6">
 				<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 					<div className="mb-6">
-						<h2 className="text-2xl font-semibold text-gray-900">Flag #{flag.id}</h2>
+						<h2 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">Flag #{flag.id}</h2>
 					</div>
 
 					<div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -67,31 +67,31 @@ const FlagShow: React.FC<{ flag: any; canReview?: boolean }> = ({ flag, canRevie
 
 									<div>
 										<Label>Flagged Item</Label>
-										<div className="mt-1 text-gray-900">
+										<div className="mt-1 text-gray-900 dark:text-gray-100">
 											{flag.flaggable?.name || `Guard #${flag.flaggable?.id}`}
 										</div>
 									</div>
 
 									<div>
 										<Label>Type</Label>
-										<div className="mt-1 text-gray-900">
+										<div className="mt-1 text-gray-900 dark:text-gray-100">
 											{flag.flaggable_type.includes('Guard') ? 'Guard' : 'User'}
 										</div>
 									</div>
 
 									<div>
 										<Label>Reason</Label>
-										<div className="mt-1 text-gray-900">{flag.reason}</div>
+										<div className="mt-1 text-gray-900 dark:text-gray-100">{flag.reason}</div>
 									</div>
 
 									<div>
 										<Label>Details</Label>
-										<div className="mt-1 text-gray-900 whitespace-pre-wrap">{flag.details}</div>
+										<div className="mt-1 text-gray-900 dark:text-gray-100 whitespace-pre-wrap">{flag.details}</div>
 									</div>
 
 									<div>
 										<Label>Reported By</Label>
-										<div className="mt-1 text-gray-900">
+										<div className="mt-1 text-gray-900 dark:text-gray-100">
 											{flag.reporter?.name || '-'} on {new Date(flag.created_at).toLocaleDateString()}
 										</div>
 									</div>
@@ -99,7 +99,7 @@ const FlagShow: React.FC<{ flag: any; canReview?: boolean }> = ({ flag, canRevie
 									{flag.reviewer && (
 										<div>
 											<Label>Reviewed By</Label>
-											<div className="mt-1 text-gray-900">
+											<div className="mt-1 text-gray-900 dark:text-gray-100">
 												{flag.reviewer.name} on {new Date(flag.review_date).toLocaleDateString()}
 											</div>
 										</div>

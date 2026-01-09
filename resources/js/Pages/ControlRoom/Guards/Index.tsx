@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import ControlRoomLayout from '@/Layouts/ControlRoomLayout';
 import { Card } from '@/Components/ui/card';
+import PageHeader from '@/Components/ui/page-header';
+import EmptyState from '@/Components/ui/empty-state';
 import IconMapper from '@/Components/IconMapper';
 import Modal from '@/Components/Modal';
 import GuardForm from '@/Components/Guards/GuardForm';
@@ -14,14 +16,16 @@ type Guard = {
   name: string;
   employee_id: string;
   status: string;
+  is_profile_complete?: boolean;
+  profile_missing_fields?: string[];
   supervisor?: { id: number; name: string } | null;
-  today_attendance?: { check_in?: string | null; check_out?: string | null } | null;
+  today_attendance?: { check_in?: string | null; check_out?: string | null; status?: string | null; source?: string | null } | null;
   active_assignment?: { site_id?: number | null; site_name?: string | null; client_name?: string | null } | null;
 };
 
 type PageProps = {
   guards?: { data: Guard[]; links?: any; meta?: any };
-  filters?: { search?: string };
+  filters?: { search?: string; status?: string; profile_status?: string; zone_id?: string; grade_id?: string; on_duty?: any; sort?: string; dir?: string; per_page?: any };
   supervisors?: Array<{ id: number; name: string }>;
   grades?: Array<{ id: number; code: string; name: string }>;
   zones?: Array<{ id: number; name: string }>;
@@ -32,6 +36,7 @@ export default function GuardsIndex() {
   const { guards: guardsProp = { data: [], links: [], meta: {} }, filters = {}, supervisors = [], grades = [], zones = [], canAssignSupervisor = false } = usePage<PageProps>().props as any;
   const [search, setSearch] = useState(filters.search || '');
   const [status, setStatus] = useState<string>(filters.status || '');
+  const [profileStatus, setProfileStatus] = useState<string>(filters.profile_status || '');
   const [zoneId, setZoneId] = useState<string>(filters.zone_id || '');
   const [gradeId, setGradeId] = useState<string>(filters.grade_id || '');
   const [onDuty, setOnDuty] = useState<boolean>(filters.on_duty === '1' || filters.on_duty === 1 || filters.on_duty === true || filters.on_duty === 'true');
@@ -60,10 +65,28 @@ export default function GuardsIndex() {
     return '20';
   });
 
+  const canMarkAbsent = (g: Guard) => {
+    if (!g.today_attendance) return true;
+    if (g.today_attendance.check_in) return false;
+    if (g.today_attendance.status === 'absent') return false;
+    return true;
+  };
+
+  const markAbsent = (g: Guard) => {
+    if (!confirm(`Mark ${g.name} as absent for today?`)) return;
+    router.post(route('control-room.attendance.mark-absent'), {
+      guard_id: g.id,
+    }, {
+      preserveScroll: true,
+      onSuccess: () => router.reload(),
+    });
+  };
+
   const applyFilters = () => {
     const query: Record<string, any> = {
       search: search || undefined,
       status: status || undefined,
+      profile_status: profileStatus || undefined,
       zone_id: zoneId || undefined,
       grade_id: gradeId || undefined,
       on_duty: onDuty ? 1 : undefined,
@@ -75,7 +98,7 @@ export default function GuardsIndex() {
   };
 
   const resetFilters = () => {
-    setSearch(''); setStatus(''); setZoneId(''); setGradeId(''); setOnDuty(false); setSort('name'); setDir('asc'); setPerPage('20');
+    setSearch(''); setStatus(''); setProfileStatus(''); setZoneId(''); setGradeId(''); setOnDuty(false); setSort('name'); setDir('asc'); setPerPage('20');
     router.get(route('control-room.guards'), {}, { preserveState: true, preserveScroll: true });
   };
   const [showAdd, setShowAdd] = useState(false);
@@ -119,6 +142,7 @@ export default function GuardsIndex() {
     const query: Record<string, any> = {
       search: search || undefined,
       status: status || undefined,
+      profile_status: profileStatus || undefined,
       zone_id: zoneId || undefined,
       grade_id: gradeId || undefined,
       on_duty: onDuty ? 1 : undefined,
@@ -149,43 +173,43 @@ export default function GuardsIndex() {
       <Head title="Guards" />
 
       <div className="max-w-7xl mx-auto mt-6 px-4 sm:px-6 lg:px-8 space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Guards Management</h1>
-            <p className="text-gray-600">Control Room scoped guard list and quick actions</p>
-          </div>
-          <div className="flex gap-2">
-            <button
-              onClick={() => (window.location.href = route('control-room.assignments.index'))}
-              className="px-4 py-2 bg-coin-600 text-white rounded"
-            >
-              Manage Assignments
-            </button>
-            <Link href={route('control-room.clients')} className="px-4 py-2 bg-gray-100 rounded text-gray-700">
-              Clients
-            </Link>
-            <button
-              onClick={() => setShowAdd(true)}
-              className="px-4 py-2 bg-coin-700 hover:bg-coin-800 text-white rounded"
-            >
-              Add Guard
-            </button>
-            <button
-              type="button"
-              onClick={handleExport}
-              className="px-4 py-2 border dark:border-gray-700 rounded text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-900"
-            >
-              Export CSV
-            </button>
-          </div>
-        </div>
+        <PageHeader
+          title="Guards Management"
+          description="Control Room scoped guard list and quick actions"
+          actions={(
+            <>
+              <button
+                onClick={() => (window.location.href = route('control-room.assignments.index'))}
+                className="w-full sm:w-auto px-4 py-2 bg-coin-600 text-white rounded"
+              >
+                Manage Assignments
+              </button>
+              <Link href={route('control-room.clients')} className="w-full sm:w-auto px-4 py-2 bg-gray-100 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-800">
+                Clients
+              </Link>
+              <button
+                onClick={() => setShowAdd(true)}
+                className="w-full sm:w-auto px-4 py-2 bg-coin-700 hover:bg-coin-800 text-white rounded"
+              >
+                Add Guard
+              </button>
+              <button
+                type="button"
+                onClick={handleExport}
+                className="w-full sm:w-auto px-4 py-2 border border-gray-200 dark:border-gray-700 rounded text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-900"
+              >
+                Export CSV
+              </button>
+            </>
+          )}
+        />
 
-        <Card className="bg-white dark:bg-gray-800 dark:border-gray-700 rounded-xl shadow p-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-6 gap-4">
+        <Card className="p-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-7 gap-4">
             <div className="col-span-1">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Search</label>
               <div className="relative">
-                <span className="absolute left-3 top-3 text-gray-400"><IconMapper name="Search" size={20} /></span>
+                <span className="absolute left-3 top-3 text-gray-400 dark:text-gray-500"><IconMapper name="Search" size={20} /></span>
                 <input
                   type="text"
                   value={search}
@@ -203,6 +227,14 @@ export default function GuardsIndex() {
                 <option value="active">Active</option>
                 <option value="inactive">Inactive</option>
                 <option value="suspended">Suspended</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Profile</label>
+              <select value={profileStatus} onChange={(e) => setProfileStatus(e.target.value)} className="w-full rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-2 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+                <option value="">All</option>
+                <option value="complete">Complete</option>
+                <option value="incomplete">Incomplete</option>
               </select>
             </div>
             <div>
@@ -228,9 +260,9 @@ export default function GuardsIndex() {
                 </label>
               </div>
             </div>
-            <div className="flex items-end gap-2">
-              <button onClick={applyFilters} className="px-4 py-2 bg-coin-600 hover:bg-coin-700 text-white rounded w-full">Apply</button>
-              <button onClick={resetFilters} className="px-4 py-2 border dark:border-gray-700 rounded w-full bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200">Reset</button>
+            <div className="flex flex-col sm:flex-row sm:items-end gap-2">
+              <button onClick={applyFilters} className="w-full sm:w-auto px-4 py-2 bg-coin-600 hover:bg-coin-700 text-white rounded">Apply</button>
+              <button onClick={resetFilters} className="w-full sm:w-auto px-4 py-2 border dark:border-gray-700 rounded bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200">Reset</button>
             </div>
           </div>
           <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -257,127 +289,291 @@ export default function GuardsIndex() {
           </div>
         </Card>
 
-        <Card className="bg-white dark:bg-gray-800 dark:border-gray-700 rounded-xl shadow">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+        <Card>
+          {guardsProp.data.length === 0 ? (
+            <div className="p-6">
+              <EmptyState
+                title="No guards found"
+                description="Try adjusting your filters or search terms."
+                size="sm"
+                contentClassName="px-0"
+              />
+            </div>
+          ) : (
+            <>
+              <div className="lg:hidden divide-y divide-gray-200 dark:divide-gray-800">
+                <div className="p-4 flex items-center justify-between gap-3">
+                  <label className="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200">
                     <input
                       type="checkbox"
-                      className="rounded border-gray-300"
+                      className="rounded border-gray-300 dark:border-gray-600 dark:bg-gray-900"
                       checked={guardsProp.data.length > 0 && guardsProp.data.every((g: Guard) => selectedGuardIds.includes(g.id))}
                       onChange={toggleSelectAll}
                     />
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Employee ID</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Supervisor</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Assignment</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Today</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+                    <span>Select all on page</span>
+                  </label>
+                  {selectedGuardIds.length > 0 ? (
+                    <div className="text-xs text-gray-500 dark:text-gray-400">{selectedGuardIds.length} selected</div>
+                  ) : null}
+                </div>
+
                 {guardsProp.data.map((g: Guard) => (
-                  <tr key={g.id}>
-                    <td className="px-4 py-3 text-sm">
-                      <input
-                        type="checkbox"
-                        className="rounded border-gray-300"
-                        checked={selectedGuardIds.includes(g.id)}
-                        onChange={() => toggleGuardSelected(g.id)}
-                      />
-                    </td>
-                    <td className="px-6 py-3 text-sm text-gray-900">{g.name}</td>
-                    <td className="px-6 py-3 text-sm text-gray-700">{g.employee_id}</td>
-                    <td className="px-6 py-3 text-sm">
+                  <div key={g.id} className="p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <label className="inline-flex items-start gap-2">
+                        <input
+                          type="checkbox"
+                          className="mt-1 rounded border-gray-300 dark:border-gray-600 dark:bg-gray-900"
+                          checked={selectedGuardIds.includes(g.id)}
+                          onChange={() => toggleGuardSelected(g.id)}
+                        />
+                        <span className="min-w-0">
+                          <div className="text-sm font-semibold text-gray-900 dark:text-gray-100 break-words">{g.name}</div>
+                          <div className="mt-1 text-xs text-gray-500 dark:text-gray-400 break-words">{g.employee_id}</div>
+                          {g.is_profile_complete === false ? (
+                            <div className="mt-2">
+                              <span className="inline-flex px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200 text-xs">
+                                Profile incomplete
+                              </span>
+                            </div>
+                          ) : null}
+                        </span>
+                      </label>
+
                       <span className={`px-2 py-1 text-xs rounded-full ${
-                        g.status === 'active' ? 'bg-green-100 text-green-800' :
-                        g.status === 'inactive' ? 'bg-gray-100 text-gray-800' :
-                        'bg-yellow-100 text-yellow-800'
+                        g.status === 'active' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200' :
+                        g.status === 'inactive' ? 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200' :
+                        'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200'
                       }`}>
                         {g.status}
                       </span>
-                    </td>
-                    <td className="px-6 py-3 text-sm text-gray-700">{g.supervisor?.name || '-'}</td>
-                    <td className="px-6 py-3 text-sm text-gray-700">
-                      {g.active_assignment ? (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
-                          <span className="font-medium">{g.active_assignment.client_name || 'Client'}</span>
-                          <span className="text-xs text-indigo-600">• {g.active_assignment.site_name || 'Site'}</span>
-                        </span>
-                      ) : (
-                        <span className="text-gray-400">-</span>
-                      )}
-                    </td>
-                    <td className="px-6 py-3 text-sm text-gray-700">
-                      {g.today_attendance ? (
-                        <span>
-                          {g.today_attendance.check_in || '--:--'} → {g.today_attendance.check_out || '--:--'}
-                        </span>
-                      ) : <span className="text-gray-400">No entry</span>}
-                    </td>
-                    <td className="px-6 py-3 text-sm">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <button
-                          onClick={() => { setCurrentGuardId(g.id); setShowAssign(true); }}
-                          className="p-2 rounded bg-indigo-600 hover:bg-indigo-700 text-white"
-                          title="Assign Site"
-                          aria-label="Assign Site"
-                        >
-                          <IconMapper name="MapPin" size={18} />
-                        </button>
-                        <button
-                          onClick={() => { setManualGuardId(g.id); setShowManualCheckIn(true); }}
-                          className={`p-2 rounded text-white ${g.today_attendance?.check_in ? 'bg-gray-400 cursor-not-allowed' : 'bg-coin-700 hover:bg-coin-800'}`}
-                          title={g.today_attendance?.check_in ? 'Already checked in' : 'Manual Check-In'}
-                          aria-label="Manual Check-In"
-                          disabled={!!g.today_attendance?.check_in}
-                        >
-                          <IconMapper name="CheckCircle" size={18} />
-                        </button>
-                        <button
-                          onClick={() => { setManualOutGuardId(g.id); setShowManualCheckOut(true); }}
-                          className={`p-2 rounded text-white ${(!g.today_attendance?.check_in || !!g.today_attendance?.check_out) ? 'bg-gray-400 cursor-not-allowed' : 'bg-coin-700 hover:bg-coin-800'}`}
-                          title={!g.today_attendance?.check_in ? 'No active check-in' : (g.today_attendance?.check_out ? 'Already checked out' : 'Manual Check-Out')}
-                          aria-label="Manual Check-Out"
-                          disabled={!g.today_attendance?.check_in || !!g.today_attendance?.check_out}
-                        >
-                          <IconMapper name="LogOut" size={18} />
-                        </button>
-                        <button
-                          onClick={() => openView(g.id)}
-                          className="p-2 rounded bg-gray-100 hover:bg-gray-200 text-gray-800 border"
-                          title="View Details"
-                          aria-label="View Details"
-                          disabled={viewLoading === g.id}
-                        >
-                          {viewLoading === g.id ? '...' : <IconMapper name="Eye" size={18} />}
-                        </button>
-                        {canAssignSupervisor && (
-                          <button
-                            onClick={() => { setCurrentGuardId(g.id); setSelectedSupervisorId(''); setShowSupervisor(true); }}
-                            className="p-2 rounded bg-gray-800 hover:bg-gray-900 text-white"
-                            title="Assign Supervisor"
-                            aria-label="Assign Supervisor"
-                          >
-                            <IconMapper name="UserPlus" size={18} />
-                          </button>
-                        )}
+                    </div>
+
+                    <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                      <div className="min-w-0">
+                        <div className="text-xs text-gray-500 dark:text-gray-400">Supervisor</div>
+                        <div className="text-gray-700 dark:text-gray-200 break-words">{g.supervisor?.name || '-'}</div>
                       </div>
-                    </td>
-                  </tr>
+                      <div className="min-w-0">
+                        <div className="text-xs text-gray-500 dark:text-gray-400">Assignment</div>
+                        <div className="text-gray-700 dark:text-gray-200 break-words">
+                          {g.active_assignment ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-coin-50 text-coin-800 border border-coin-200 dark:bg-gray-900/40 dark:text-coin-200 dark:border-gray-800">
+                              <span className="font-medium">{g.active_assignment.client_name || 'Client'}</span>
+                              <span className="text-xs text-coin-700 dark:text-coin-300">• {g.active_assignment.site_name || 'Site'}</span>
+                            </span>
+                          ) : (
+                            <span className="text-gray-400 dark:text-gray-500">-</span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="sm:col-span-2">
+                        <div className="text-xs text-gray-500 dark:text-gray-400">Today</div>
+                        <div className="text-gray-700 dark:text-gray-200">
+                          {g.today_attendance ? (
+                            <span>{g.today_attendance.check_in || '--:--'} → {g.today_attendance.check_out || '--:--'}</span>
+                          ) : (
+                            <span className="text-gray-400 dark:text-gray-500">No entry</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                      <button
+                        onClick={() => { setCurrentGuardId(g.id); setShowAssign(true); }}
+                        className="p-2 rounded bg-coin-700 hover:bg-coin-800 text-white"
+                        title="Assign Site"
+                        aria-label="Assign Site"
+                      >
+                        <IconMapper name="MapPin" size={18} />
+                      </button>
+                      <button
+                        onClick={() => { setManualGuardId(g.id); setShowManualCheckIn(true); }}
+                        className={`p-2 rounded text-white ${g.today_attendance?.check_in ? 'bg-gray-400 cursor-not-allowed' : 'bg-coin-700 hover:bg-coin-800'}`}
+                        title={g.today_attendance?.check_in ? 'Already checked in' : 'Manual Check-In'}
+                        aria-label="Manual Check-In"
+                        disabled={!!g.today_attendance?.check_in}
+                      >
+                        <IconMapper name="CheckCircle" size={18} />
+                      </button>
+                      <button
+                        onClick={() => { setManualOutGuardId(g.id); setShowManualCheckOut(true); }}
+                        className={`p-2 rounded text-white ${(!g.today_attendance?.check_in || !!g.today_attendance?.check_out) ? 'bg-gray-400 cursor-not-allowed' : 'bg-coin-700 hover:bg-coin-800'}`}
+                        title={!g.today_attendance?.check_in ? 'No active check-in' : (g.today_attendance?.check_out ? 'Already checked out' : 'Manual Check-Out')}
+                        aria-label="Manual Check-Out"
+                        disabled={!g.today_attendance?.check_in || !!g.today_attendance?.check_out}
+                      >
+                        <IconMapper name="LogOut" size={18} />
+                      </button>
+					  <button
+						onClick={() => markAbsent(g)}
+						className={`p-2 rounded text-white disabled:opacity-60 ${canMarkAbsent(g) ? 'bg-red-700 hover:bg-red-800 dark:bg-red-700 dark:hover:bg-red-600' : 'bg-gray-400 dark:bg-gray-700 cursor-not-allowed'}`}
+						title={canMarkAbsent(g) ? 'Mark Absent' : (g.today_attendance?.check_in ? 'Already checked in' : 'Already absent')}
+						aria-label="Mark Absent"
+						disabled={!canMarkAbsent(g)}
+					  >
+						<IconMapper name="XCircle" size={18} />
+					  </button>
+                      <button
+                        onClick={() => openView(g.id)}
+                        className="p-2 rounded bg-gray-100 hover:bg-gray-200 text-gray-800 border dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-100 dark:border-gray-700"
+                        title="View Details"
+                        aria-label="View Details"
+                        disabled={viewLoading === g.id}
+                      >
+                        {viewLoading === g.id ? '...' : <IconMapper name="Eye" size={18} />}
+                      </button>
+                      {canAssignSupervisor && (
+                        <button
+                          onClick={() => { setCurrentGuardId(g.id); setSelectedSupervisorId(''); setShowSupervisor(true); }}
+                          className="p-2 rounded bg-gray-800 hover:bg-gray-900 text-white"
+                          title="Assign Supervisor"
+                          aria-label="Assign Supervisor"
+                        >
+                          <IconMapper name="UserPlus" size={18} />
+                        </button>
+                      )}
+                    </div>
+                  </div>
                 ))}
-                {guardsProp.data.length === 0 && (
-                  <tr>
-                    <td colSpan={7} className="px-6 py-8 text-center text-gray-500">No guards found.</td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+              </div>
+
+              <div className="hidden lg:block overflow-x-auto">
+                <table className="min-w-[1100px] w-full divide-y divide-gray-200 dark:divide-gray-700">
+                  <thead className="bg-gray-50 dark:bg-gray-950">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
+                        <input
+                          type="checkbox"
+                          className="rounded border-gray-300 dark:border-gray-600 dark:bg-gray-900"
+                          checked={guardsProp.data.length > 0 && guardsProp.data.every((g: Guard) => selectedGuardIds.includes(g.id))}
+                          onChange={toggleSelectAll}
+                        />
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Name</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Employee ID</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Status</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Supervisor</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Assignment</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Today</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+                    {guardsProp.data.map((g: Guard) => (
+                      <tr key={g.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/60">
+                        <td className="px-4 py-3 text-sm">
+                          <input
+                            type="checkbox"
+                            className="rounded border-gray-300 dark:border-gray-600 dark:bg-gray-900"
+                            checked={selectedGuardIds.includes(g.id)}
+                            onChange={() => toggleGuardSelected(g.id)}
+                          />
+                        </td>
+                        <td className="px-6 py-3 text-sm text-gray-900 dark:text-gray-100">
+                          <div className="flex items-center gap-2">
+                            <span>{g.name}</span>
+                            {g.is_profile_complete === false ? (
+                              <span className="px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200 text-xs">
+                                Profile incomplete
+                              </span>
+                            ) : null}
+                          </div>
+                        </td>
+                        <td className="px-6 py-3 text-sm text-gray-700 dark:text-gray-300">{g.employee_id}</td>
+                        <td className="px-6 py-3 text-sm">
+                          <span className={`px-2 py-1 text-xs rounded-full ${
+                            g.status === 'active' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200' :
+                            g.status === 'inactive' ? 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200' :
+                            'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200'
+                          }`}>
+                            {g.status}
+                          </span>
+                        </td>
+                        <td className="px-6 py-3 text-sm text-gray-700 dark:text-gray-300">{g.supervisor?.name || '-'}</td>
+                        <td className="px-6 py-3 text-sm text-gray-700 dark:text-gray-300">
+                          {g.active_assignment ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-coin-50 text-coin-800 border border-coin-200 dark:bg-gray-900/40 dark:text-coin-200 dark:border-gray-800">
+                              <span className="font-medium">{g.active_assignment.client_name || 'Client'}</span>
+                              <span className="text-xs text-coin-700 dark:text-coin-300">• {g.active_assignment.site_name || 'Site'}</span>
+                            </span>
+                          ) : (
+                            <span className="text-gray-400 dark:text-gray-500">-</span>
+                          )}
+                        </td>
+                        <td className="px-6 py-3 text-sm text-gray-700 dark:text-gray-300">
+                          {g.today_attendance ? (
+                            <span>
+                              {g.today_attendance.check_in || '--:--'} → {g.today_attendance.check_out || '--:--'}
+                            </span>
+                          ) : <span className="text-gray-400 dark:text-gray-500">No entry</span>}
+                        </td>
+                        <td className="px-6 py-3 text-sm">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <button
+                              onClick={() => { setCurrentGuardId(g.id); setShowAssign(true); }}
+                              className="p-2 rounded bg-coin-700 hover:bg-coin-800 text-white"
+                              title="Assign Site"
+                              aria-label="Assign Site"
+                            >
+                              <IconMapper name="MapPin" size={18} />
+                            </button>
+                            <button
+                              onClick={() => { setManualGuardId(g.id); setShowManualCheckIn(true); }}
+                              className={`p-2 rounded text-white ${g.today_attendance?.check_in ? 'bg-gray-400 cursor-not-allowed' : 'bg-coin-700 hover:bg-coin-800'}`}
+                              title={g.today_attendance?.check_in ? 'Already checked in' : 'Manual Check-In'}
+                              aria-label="Manual Check-In"
+                              disabled={!!g.today_attendance?.check_in}
+                            >
+                              <IconMapper name="CheckCircle" size={18} />
+                            </button>
+                            <button
+                              onClick={() => { setManualOutGuardId(g.id); setShowManualCheckOut(true); }}
+                              className={`p-2 rounded text-white ${(!g.today_attendance?.check_in || !!g.today_attendance?.check_out) ? 'bg-gray-400 cursor-not-allowed' : 'bg-coin-700 hover:bg-coin-800'}`}
+                              title={!g.today_attendance?.check_in ? 'No active check-in' : (g.today_attendance?.check_out ? 'Already checked out' : 'Manual Check-Out')}
+                              aria-label="Manual Check-Out"
+                              disabled={!g.today_attendance?.check_in || !!g.today_attendance?.check_out}
+                            >
+                              <IconMapper name="LogOut" size={18} />
+                            </button>
+						<button
+							onClick={() => markAbsent(g)}
+							className={`p-2 rounded text-white disabled:opacity-60 ${canMarkAbsent(g) ? 'bg-red-700 hover:bg-red-800 dark:bg-red-700 dark:hover:bg-red-600' : 'bg-gray-400 dark:bg-gray-700 cursor-not-allowed'}`}
+							title={canMarkAbsent(g) ? 'Mark Absent' : (g.today_attendance?.check_in ? 'Already checked in' : 'Already absent')}
+							aria-label="Mark Absent"
+							disabled={!canMarkAbsent(g)}
+						>
+							<IconMapper name="XCircle" size={18} />
+						</button>
+                            <button
+                              onClick={() => openView(g.id)}
+                              className="p-2 rounded bg-gray-100 hover:bg-gray-200 text-gray-800 border dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-100 dark:border-gray-700"
+                              title="View Details"
+                              aria-label="View Details"
+                              disabled={viewLoading === g.id}
+                            >
+                              {viewLoading === g.id ? '...' : <IconMapper name="Eye" size={18} />}
+                            </button>
+                            {canAssignSupervisor && (
+                              <button
+                                onClick={() => { setCurrentGuardId(g.id); setSelectedSupervisorId(''); setShowSupervisor(true); }}
+                                className="p-2 rounded bg-gray-800 hover:bg-gray-900 text-white"
+                                title="Assign Supervisor"
+                                aria-label="Assign Supervisor"
+                              >
+                                <IconMapper name="UserPlus" size={18} />
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
           {/* Pagination */}
           {guardsProp?.links && (
             <div className="p-4 border-t dark:border-gray-700 flex flex-col md:flex-row items-center justify-between gap-3">
@@ -405,7 +601,7 @@ export default function GuardsIndex() {
 
         {/* Add Guard Modal */}
         <Modal show={showAdd} onClose={() => setShowAdd(false)} maxWidth="2xl">
-          <div className="p-4 sm:p-6 bg-white dark:bg-gray-800">
+          <div className="p-4 sm:p-6 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
             <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">Add Guard</h2>
             <GuardForm
               initialData={{ status: 'active', guard_type: 'permanent' } as any}
@@ -433,12 +629,12 @@ export default function GuardsIndex() {
 
         {/* View Guard Details Modal */}
         <Modal show={viewOpen} onClose={() => { setViewOpen(false); setViewData(null); }} maxWidth="2xl">
-          <div className="p-4 sm:p-6 bg-white dark:bg-gray-800">
+          <div className="p-4 sm:p-6 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
             <div className="flex items-start gap-4">
               {viewData?.photo_url ? (
                 <img src={viewData.photo_url} alt={viewData?.name || 'Guard'} className="w-24 h-24 rounded object-cover border dark:border-gray-700" />
               ) : (
-                <div className="w-24 h-24 rounded bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-gray-500">No Photo</div>
+                <div className="w-24 h-24 rounded bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-gray-500 dark:text-gray-300">No Photo</div>
               )}
               <div className="flex-1">
                 <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{viewData?.name}</h2>
@@ -508,7 +704,7 @@ export default function GuardsIndex() {
                 onSuccess: () => { setShowSupervisor(false); setCurrentGuardId(null); setSelectedGuardIds([]); router.reload(); },
               });
             }}
-            className="p-4 sm:p-6 space-y-4 bg-white dark:bg-gray-800"
+            className="p-4 sm:p-6 space-y-4 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
           >
             <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Assign Supervisor</h3>
             <div>
@@ -525,7 +721,7 @@ export default function GuardsIndex() {
               </select>
             </div>
             <div className="flex items-center justify-end gap-2">
-              <button type="button" onClick={() => setShowSupervisor(false)} className="px-4 py-2 rounded-md border dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-700 dark:text-slate-200">Cancel</button>
+              <button type="button" onClick={() => setShowSupervisor(false)} className="px-4 py-2 rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800">Cancel</button>
               <button
                 type="button"
                 onClick={() => {

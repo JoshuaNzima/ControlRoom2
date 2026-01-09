@@ -14,7 +14,7 @@ export default function ZoneMap() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Sites in {zone.name}</h3>
-              <Link href={route('control-room.zones.index')} className="text-sm text-indigo-600">Back to Zones</Link>
+              <Link href={route('control-room.zones.index')} className="text-sm text-coin-700 hover:text-coin-800 dark:text-coin-300 dark:hover:text-coin-200">Back to Zones</Link>
             </div>
           </CardHeader>
           <CardContent>
@@ -22,7 +22,7 @@ export default function ZoneMap() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {sites?.map((s: any) => (
                 <div key={s.id} className="p-3 rounded border dark:border-gray-600">
-                  <div className="font-medium">{s.name}</div>
+                  <div className="font-medium text-gray-900 dark:text-gray-100">{s.name}</div>
                   <div className="text-xs text-gray-500 dark:text-gray-400">{s.status ?? 'unknown'} • lat {s.latitude ?? '-'}, lng {s.longitude ?? '-'}</div>
                 </div>
               ))}

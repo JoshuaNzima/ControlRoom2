@@ -35,12 +35,22 @@ export default function BusinessDevContracts({ auth = {}, contracts, filters, su
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
-              <h1 className="text-2xl md:text-3xl font-bold text-red-900">Contracts</h1>
-              <p className="text-sm text-red-800/80 mt-1">Manage client contracts and renewals.</p>
+              <h1 className="text-2xl md:text-3xl font-bold text-red-900 dark:text-gray-100">Contracts</h1>
+              <p className="text-sm text-red-800/80 dark:text-gray-300 mt-1">Manage client contracts and renewals.</p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <button onClick={() => setCreateOpen(true)} className="inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium bg-indigo-600 text-white hover:bg-indigo-700">New Contract</button>
-              <Link href={route('admin.business-dev')} className="inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium bg-white text-red-800 border border-red-200 hover:bg-red-50">Business Dev</Link>
+              <button
+                onClick={() => setCreateOpen(true)}
+                className="inline-flex w-full sm:w-auto justify-center items-center px-4 py-2 rounded-lg text-sm font-medium bg-red-700 text-white hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-red-50 dark:focus:ring-offset-gray-900"
+              >
+                New Contract
+              </button>
+              <Link
+                href={route('admin.business-dev')}
+                className="inline-flex w-full sm:w-auto justify-center items-center px-4 py-2 rounded-lg text-sm font-medium bg-white dark:bg-gray-900/60 text-red-800 dark:text-gray-100 border border-red-200 dark:border-gray-800 hover:bg-red-50 dark:hover:bg-gray-800/60"
+              >
+                Business Dev
+              </Link>
             </div>
           </div>
 
@@ -48,61 +58,91 @@ export default function BusinessDevContracts({ auth = {}, contracts, filters, su
             <StatCard label="Total" value={summary.total || 0} color="gray" />
             <StatCard label="Active" value={summary.active || 0} color="emerald" />
             <StatCard label="Expired" value={summary.expired || 0} color="red" />
-            <StatCard label="Draft" value={summary.draft || 0} color="indigo" />
+            <StatCard label="Draft" value={summary.draft || 0} color="blue" />
           </div>
 
-          <div className="bg-white rounded-xl shadow p-4">
+          <div className="bg-white dark:bg-gray-950 rounded-xl border border-gray-200 dark:border-gray-800 shadow p-4">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-              <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search title or client" className="px-3 py-2 border rounded" />
-              <select value={status} onChange={(e) => setStatus(e.target.value)} className="px-3 py-2 border rounded">
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search title or client"
+                className="px-3 py-2 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:border-red-500 focus:ring-1 focus:ring-red-500"
+              />
+              <select
+                value={status}
+                onChange={(e) => setStatus(e.target.value)}
+                className="px-3 py-2 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:border-red-500 focus:ring-1 focus:ring-red-500"
+              >
                 <option value="">All Status</option>
                 {statuses.map(s => <option key={s} value={s}>{s}</option>)}
               </select>
-              <div className="md:col-span-2 flex gap-2">
-                <button onClick={applyFilters} className="px-4 py-2 bg-indigo-600 text-white rounded">Apply</button>
-                <button onClick={() => { setStatus(''); setSearch(''); router.get(route('admin.business-dev.contracts.index')); }} className="px-4 py-2 bg-gray-200 rounded">Reset</button>
+              <div className="md:col-span-2 flex flex-col sm:flex-row gap-2">
+                <button
+                  onClick={applyFilters}
+                  className="w-full sm:w-auto px-4 py-2 bg-red-700 text-white rounded-md hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950"
+                >
+                  Apply
+                </button>
+                <button
+                  onClick={() => { setStatus(''); setSearch(''); router.get(route('admin.business-dev.contracts.index')); }}
+                  className="w-full sm:w-auto px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700"
+                >
+                  Reset
+                </button>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl shadow overflow-hidden">
+          <div className="bg-white dark:bg-gray-950 rounded-xl border border-gray-200 dark:border-gray-800 shadow overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="min-w-full text-sm">
-                <thead className="bg-gray-50">
+              <table className="min-w-[900px] w-full text-sm">
+                <thead className="bg-gray-50 dark:bg-gray-950 border-b border-gray-200 dark:border-gray-800">
                   <tr>
-                    <th className="px-4 py-2 text-left">Client</th>
-                    <th className="px-4 py-2 text-left">Title</th>
-                    <th className="px-4 py-2 text-right">Value</th>
-                    <th className="px-4 py-2 text-left">Status</th>
-                    <th className="px-4 py-2 text-left">Dates</th>
-                    <th className="px-4 py-2 text-right">Actions</th>
+                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 dark:text-gray-300">Client</th>
+                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 dark:text-gray-300">Title</th>
+                    <th className="px-4 py-2 text-right text-xs font-semibold text-gray-600 dark:text-gray-300">Value</th>
+                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 dark:text-gray-300">Status</th>
+                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 dark:text-gray-300">Dates</th>
+                    <th className="px-4 py-2 text-right text-xs font-semibold text-gray-600 dark:text-gray-300">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y">
+                <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-800">
                   {contracts?.data?.length ? contracts.data.map(c => (
-                    <tr key={c.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-2 text-gray-700">{c.client_name || '—'}</td>
-                      <td className="px-4 py-2 text-gray-900">{c.title}</td>
-                      <td className="px-4 py-2 text-right text-gray-900">MWK {Number(c.value || 0).toLocaleString()}</td>
-                      <td className="px-4 py-2"><span className="px-2 py-1 rounded text-xs bg-indigo-100 text-indigo-700">{c.status}</span></td>
-                      <td className="px-4 py-2 text-gray-700">{c.start_date || '—'}{c.end_date ? ` → ${c.end_date}` : ''}</td>
+                    <tr key={c.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/60">
+                      <td className="px-4 py-2 text-gray-700 dark:text-gray-200">{c.client_name || '—'}</td>
+                      <td className="px-4 py-2 text-gray-900 dark:text-gray-100">{c.title}</td>
+                      <td className="px-4 py-2 text-right text-gray-900 dark:text-gray-100">MWK {Number(c.value || 0).toLocaleString()}</td>
+                      <td className="px-4 py-2">
+                        <span className="px-2 py-1 rounded text-xs bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200">{c.status}</span>
+                      </td>
+                      <td className="px-4 py-2 text-gray-700 dark:text-gray-200">{c.start_date || '—'}{c.end_date ? ` → ${c.end_date}` : ''}</td>
                       <td className="px-4 py-2 text-right">
                         <div className="inline-flex gap-2">
-                          <button onClick={() => { setSelected(c); setEditOpen(true); }} className="text-gray-700 hover:text-gray-900">Edit</button>
-                          <button onClick={() => { if (confirm('Delete contract?')) router.delete(route('admin.business-dev.contracts.destroy', c.id)); }} className="text-red-600 hover:text-red-800">Delete</button>
+                          <button onClick={() => { setSelected(c); setEditOpen(true); }} className="text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-gray-100">Edit</button>
+                          <button onClick={() => { if (confirm('Delete contract?')) router.delete(route('admin.business-dev.contracts.destroy', c.id)); }} className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300">Delete</button>
                         </div>
                       </td>
                     </tr>
                   )) : (
-                    <tr><td colSpan={6} className="px-4 py-6 text-center text-gray-500">No contracts yet.</td></tr>
+                    <tr><td colSpan={6} className="px-4 py-6 text-center text-gray-500 dark:text-gray-400">No contracts yet.</td></tr>
                   )}
                 </tbody>
               </table>
             </div>
             {(contracts?.meta?.last_page ?? 1) > 1 && (
-              <div className="bg-gray-50 px-4 py-3 flex justify-center gap-2">
+              <div className="bg-gray-50 dark:bg-gray-950 px-4 py-3 flex flex-wrap justify-center gap-2 border-t border-gray-200 dark:border-gray-800">
                 {(contracts?.links ?? []).map((link: any, idx: number) => (
-                  <Link key={idx} href={link.url || '#'} className={`px-3 py-1 rounded text-xs ${link.active ? 'bg-indigo-600 text-white' : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'}`} dangerouslySetInnerHTML={{ __html: link.label }} />
+                  <Link
+                    key={idx}
+                    href={link.url || '#'}
+                    className={`px-3 py-1 rounded text-xs ${
+                      link.active
+                        ? 'bg-red-700 text-white'
+                        : 'bg-white dark:bg-gray-900/60 text-gray-700 dark:text-gray-100 border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/60'
+                    }`}
+                    dangerouslySetInnerHTML={{ __html: link.label }}
+                  />
                 ))}
               </div>
             )}
@@ -120,10 +160,10 @@ export default function BusinessDevContracts({ auth = {}, contracts, filters, su
 
 function StatCard({ label, value, color }: { label: string; value: number; color: string }) {
   const colors: Record<string,string> = {
-    gray: 'from-gray-50 to-gray-100 border-gray-200 text-gray-900',
-    emerald: 'from-emerald-50 to-emerald-100 border-emerald-200 text-emerald-900',
-    red: 'from-red-50 to-red-100 border-red-200 text-red-900',
-    indigo: 'from-indigo-50 to-indigo-100 border-indigo-200 text-indigo-900',
+    gray: 'from-gray-50 to-gray-100 border-gray-200 text-gray-900 dark:from-gray-900 dark:to-gray-800 dark:border-gray-800 dark:text-gray-100',
+    emerald: 'from-emerald-50 to-emerald-100 border-emerald-200 text-emerald-900 dark:from-emerald-900/20 dark:to-emerald-900/10 dark:border-emerald-900/30 dark:text-emerald-100',
+    red: 'from-red-50 to-red-100 border-red-200 text-red-900 dark:from-red-900/20 dark:to-red-900/10 dark:border-red-900/30 dark:text-red-100',
+    blue: 'from-blue-50 to-blue-100 border-blue-200 text-blue-900 dark:from-blue-900/20 dark:to-blue-900/10 dark:border-blue-900/30 dark:text-blue-100',
   };
   return (
     <div className={`p-4 rounded-xl border bg-gradient-to-br ${colors[color]}`}>
@@ -160,67 +200,67 @@ function ContractModal({ open, onClose, clients, statuses, contract }: { open: b
 
   return (
     <Modal show={open} onClose={handleClose} maxWidth="2xl">
-      <div className="px-6 py-4 border-b flex items-center justify-between bg-white">
-        <h2 className="text-lg font-semibold text-gray-900">{contract ? 'Edit Contract' : 'New Contract'}</h2>
-        <button onClick={handleClose} className="text-gray-400 hover:text-gray-600">✕</button>
+      <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between bg-white dark:bg-gray-950">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{contract ? 'Edit Contract' : 'New Contract'}</h2>
+        <button onClick={handleClose} className="text-gray-400 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-200">✕</button>
       </div>
-      <div className="px-6 py-4 bg-white">
+      <div className="px-6 py-4 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100">
         <form onSubmit={submit} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="sm:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Client</label>
-            <select className="w-full border rounded-md p-2" value={data.client_id as any} onChange={(e) => setData('client_id', e.target.value ? Number(e.target.value) : ('' as any))}>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Client</label>
+            <select className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 p-2 focus:border-red-500 focus:ring-1 focus:ring-red-500" value={data.client_id as any} onChange={(e) => setData('client_id', e.target.value ? Number(e.target.value) : ('' as any))}>
               <option value="">Select client</option>
               {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
             {errors.client_id && <p className="text-sm text-red-600">{errors.client_id}</p>}
           </div>
           <div className="sm:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
-            <input className="w-full border rounded-md p-2" value={data.title} onChange={(e) => setData('title', e.target.value)} />
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Title</label>
+            <input className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 p-2 focus:border-red-500 focus:ring-1 focus:ring-red-500" value={data.title} onChange={(e) => setData('title', e.target.value)} />
             {errors.title && <p className="text-sm text-red-600">{errors.title}</p>}
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
-            <input type="date" className="w-full border rounded-md p-2" value={data.start_date} onChange={(e) => setData('start_date', e.target.value)} />
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Start Date</label>
+            <input type="date" className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 p-2 focus:border-red-500 focus:ring-1 focus:ring-red-500" value={data.start_date} onChange={(e) => setData('start_date', e.target.value)} />
             {errors.start_date && <p className="text-sm text-red-600">{errors.start_date}</p>}
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
-            <input type="date" className="w-full border rounded-md p-2" value={data.end_date} onChange={(e) => setData('end_date', e.target.value)} />
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">End Date</label>
+            <input type="date" className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 p-2 focus:border-red-500 focus:ring-1 focus:ring-red-500" value={data.end_date} onChange={(e) => setData('end_date', e.target.value)} />
             {errors.end_date && <p className="text-sm text-red-600">{errors.end_date}</p>}
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Value (MWK)</label>
-            <input type="number" min={0} step="0.01" className="w-full border rounded-md p-2" value={data.value} onChange={(e) => setData('value', e.target.value)} />
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Value (MWK)</label>
+            <input type="number" min={0} step="0.01" className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 p-2 focus:border-red-500 focus:ring-1 focus:ring-red-500" value={data.value} onChange={(e) => setData('value', e.target.value)} />
             {errors.value && <p className="text-sm text-red-600">{errors.value}</p>}
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-            <select className="w-full border rounded-md p-2" value={data.status} onChange={(e) => setData('status', e.target.value)}>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Status</label>
+            <select className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 p-2 focus:border-red-500 focus:ring-1 focus:ring-red-500" value={data.status} onChange={(e) => setData('status', e.target.value)}>
               {statuses.map(s => <option key={s} value={s}>{s}</option>)}
             </select>
             {errors.status && <p className="text-sm text-red-600">{errors.status}</p>}
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Renewal Date</label>
-            <input type="date" className="w-full border rounded-md p-2" value={data.renewal_date} onChange={(e) => setData('renewal_date', e.target.value)} />
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Renewal Date</label>
+            <input type="date" className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 p-2 focus:border-red-500 focus:ring-1 focus:ring-red-500" value={data.renewal_date} onChange={(e) => setData('renewal_date', e.target.value)} />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Contact Person</label>
-            <input className="w-full border rounded-md p-2" value={data.contact_person} onChange={(e) => setData('contact_person', e.target.value)} />
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Contact Person</label>
+            <input className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 p-2 focus:border-red-500 focus:ring-1 focus:ring-red-500" value={data.contact_person} onChange={(e) => setData('contact_person', e.target.value)} />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Contact Email</label>
-            <input className="w-full border rounded-md p-2" value={data.contact_email} onChange={(e) => setData('contact_email', e.target.value)} />
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Contact Email</label>
+            <input className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 p-2 focus:border-red-500 focus:ring-1 focus:ring-red-500" value={data.contact_email} onChange={(e) => setData('contact_email', e.target.value)} />
             {errors.contact_email && <p className="text-sm text-red-600">{errors.contact_email}</p>}
           </div>
           <div className="sm:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Terms</label>
-            <textarea className="w-full border rounded-md p-2" rows={3} value={data.terms} onChange={(e) => setData('terms', e.target.value)} />
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Terms</label>
+            <textarea className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 p-2 focus:border-red-500 focus:ring-1 focus:ring-red-500" rows={3} value={data.terms} onChange={(e) => setData('terms', e.target.value)} />
           </div>
-          <div className="sm:col-span-2 flex justify-end gap-2 pt-2">
-            <button type="button" onClick={handleClose} className="px-4 py-2 text-sm rounded-md bg-gray-200 text-gray-700 hover:bg-gray-300" disabled={processing}>Cancel</button>
-            <button type="submit" disabled={processing} className="px-4 py-2 text-sm rounded-md bg-indigo-600 text-white hover:bg-indigo-700 disabled:bg-gray-400">Save</button>
+          <div className="sm:col-span-2 flex flex-col sm:flex-row justify-end gap-2 pt-2">
+            <button type="button" onClick={handleClose} className="w-full sm:w-auto px-4 py-2 text-sm rounded-md bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700" disabled={processing}>Cancel</button>
+            <button type="submit" disabled={processing} className="w-full sm:w-auto px-4 py-2 text-sm rounded-md bg-red-700 text-white hover:bg-red-600 disabled:bg-gray-400">Save</button>
           </div>
         </form>
       </div>

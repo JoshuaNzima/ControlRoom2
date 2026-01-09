@@ -133,6 +133,17 @@ class SettingController extends Controller
             $guardGrades = [];
         }
 
+		$attendanceMethods = [
+			'auto_absent' => true,
+			'auto_present' => false,
+		];
+		try {
+			$row = \App\Models\Setting::where('key', 'attendance.methods')->first();
+			if ($row && is_array($row->value)) {
+				$attendanceMethods = array_merge($attendanceMethods, $row->value);
+			}
+		} catch (\Throwable $e) {}
+
         $guardOptions = [];
         $userOptions = [];
         try {
@@ -173,6 +184,9 @@ class SettingController extends Controller
             'hr' => [
                 'guardGrades' => $guardGrades,
             ],
+			'attendance' => [
+				'methods' => $attendanceMethods,
+			],
         ]);
     }
 }

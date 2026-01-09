@@ -7,14 +7,14 @@ export interface GuardFormData {
     residence_address?: string;
     residence_city?: string;
     residence_district?: string;
-    id_number: string;
+    id_number?: string;
     date_of_birth: string;
     gender: string;
     marital_status?: 'single' | 'married' | 'divorced' | 'widowed' | '';
     spouse_name?: string;
     spouse_phone?: string;
-    emergency_contact_name: string;
-    emergency_contact_phone: string;
+    emergency_contact_name?: string;
+    emergency_contact_phone?: string;
     next_of_kin_name?: string;
     next_of_kin_relationship?: string;
     next_of_kin_phone?: string;
@@ -31,7 +31,7 @@ export interface GuardFormData {
     dependents_count?: string | number;
     children_names?: string;
     notes: string;
-    status: 'active' | 'inactive' | 'suspended';
+    status: 'active' | 'inactive' | 'suspended' | 'dismissed' | 'absconded';
     employee_role?: 'guard' | 'driver';
     client_id?: string;
 }

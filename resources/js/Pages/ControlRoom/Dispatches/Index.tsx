@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { Head, useForm } from '@inertiajs/react';
 import ControlRoomLayout from '@/Layouts/ControlRoomLayout';
 import { Card } from '@/Components/ui/card';
+import PageHeader from '@/Components/ui/page-header';
+import EmptyState from '@/Components/ui/empty-state';
 import Modal from '@/Components/Modal';
 
 interface VehicleOpt { id: number; tag: string; make?: string|null; model?: string|null }
@@ -28,22 +30,27 @@ export default function DispatchesIndex({ auth = {}, openDispatches = [], recent
       <Head title="Vehicle Dispatches" />
       <div className="py-6">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl md:text-3xl font-bold text-red-900 dark:text-gray-100">Vehicle Dispatches</h1>
-              <p className="text-sm text-red-800/80 dark:text-gray-400 mt-1">Create, track and close vehicle dispatches.</p>
-            </div>
-            <button onClick={() => setCreateOpen(true)} className="inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium bg-red-600 text-white hover:bg-red-700">New Dispatch</button>
-          </div>
+          <PageHeader
+            title="Vehicle Dispatches"
+            description="Create, track and close vehicle dispatches."
+            actions={(
+              <button
+                onClick={() => setCreateOpen(true)}
+                className="inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium bg-coin-700 text-white hover:bg-coin-800"
+              >
+                New Dispatch
+              </button>
+            )}
+          />
 
-          <Card className="p-4 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800">
+          <Card className="p-4">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">Open Dispatches</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
               {openDispatches.length ? openDispatches.map((d) => (
                 <div key={d.id} className="p-3 rounded-lg border bg-white dark:bg-gray-800 dark:border-gray-700">
                   <div className="flex items-center justify-between">
                     <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{d.vehicle?.tag}</div>
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-200">Dispatched</span>
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-coin-50 text-coin-800 border border-coin-200 dark:bg-gray-900/40 dark:text-coin-200 dark:border-gray-800">Dispatched</span>
                   </div>
                   <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">Driver: {d.driver?.name || '—'}</div>
                   <div className="text-xs text-gray-600 dark:text-gray-400">Out: {d.dispatched_at || '—'}</div>
@@ -52,12 +59,19 @@ export default function DispatchesIndex({ auth = {}, openDispatches = [], recent
                   </div>
                 </div>
               )) : (
-                <div className="text-sm text-gray-500 dark:text-gray-400">No open dispatches</div>
+                <div className="col-span-full">
+                  <EmptyState
+                    title="No open dispatches"
+                    description="When you dispatch a vehicle, it will appear here until it is returned."
+                    size="sm"
+                    contentClassName="py-6"
+                  />
+                </div>
               )}
             </div>
           </Card>
 
-          <Card className="p-4 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800">
+          <Card className="p-4">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">Recent</h2>
             <div className="space-y-2">
               {recentDispatches.length ? recentDispatches.map((d) => (
@@ -72,7 +86,12 @@ export default function DispatchesIndex({ auth = {}, openDispatches = [], recent
                   </div>
                 </div>
               )) : (
-                <div className="text-sm text-gray-500 dark:text-gray-400">No recent activity</div>
+                <EmptyState
+                  title="No recent activity"
+                  description="Recent dispatch history will show here."
+                  size="sm"
+                  contentClassName="py-6"
+                />
               )}
             </div>
           </Card>
@@ -158,7 +177,7 @@ function CreateDispatchModal({ open, onClose, vehicles, drivers, sites }: { open
           </div>
           <div className="sm:col-span-2 flex justify-end gap-2 pt-2">
             <button type="button" onClick={onClose} className="px-4 py-2 text-sm rounded-md bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-100 hover:bg-gray-300 dark:hover:bg-gray-600" disabled={processing}>Cancel</button>
-            <button type="submit" disabled={processing} className="px-4 py-2 text-sm rounded-md bg-red-600 text-white hover:bg-red-700 disabled:bg-gray-400">Create</button>
+            <button type="submit" disabled={processing} className="px-4 py-2 text-sm rounded-md bg-coin-700 text-white hover:bg-coin-800 disabled:bg-gray-400">Create</button>
           </div>
         </form>
       </div>

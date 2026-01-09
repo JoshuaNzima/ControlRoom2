@@ -11,6 +11,8 @@ use Spatie\Permission\Traits\HasPermissions;
 use Illuminate\Support\Collection;
 use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\Activitylog\LogOptions;
+use App\Notifications\ResetPasswordNotification as CustomResetPasswordNotification;
+use App\Models\Communication\AgentStatus;
 
 class User extends Authenticatable
 {
@@ -102,7 +104,11 @@ class User extends Authenticatable
 
     // AgentStatus / presence functionality temporarily disabled
 
-    
+    public function agentStatus()
+    {
+        return $this->hasOne(AgentStatus::class);
+    }
+
 
     /**
      * Get all conversations this user is part of.
@@ -151,5 +157,13 @@ class User extends Authenticatable
     public function isManager(): bool
     {
         return $this->hasRole('manager', 'admin');
+    }
+
+    /**
+     * Send the password reset notification.
+     */
+    public function sendPasswordResetNotification($token): void
+    {
+        $this->notify(new CustomResetPasswordNotification($token));
     }
 }

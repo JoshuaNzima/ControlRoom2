@@ -33,9 +33,35 @@ class ConversationController extends Controller
                 $q->where('user_id', Auth::id());
             })
             ->orderByDesc('last_message_at')
-            ->get();
+            ->get()
+            ->map(function ($conversation) {
+                $pivot = $conversation->participants
+                    ->firstWhere('id', Auth::id())
+                    ?->pivot;
 
-        $agents = User::orderBy('name')->get(['id','name']);
+                $lastReadAt = $pivot?->last_read_at;
+
+                $unreadQuery = $conversation->messages()
+                    ->where('sender_id', '!=', Auth::id());
+
+                if ($lastReadAt) {
+                    $unreadQuery->where('created_at', '>', $lastReadAt);
+                }
+
+                $conversation->unread_count = (int) $unreadQuery->count();
+                $conversation->last_message = $conversation->messages->first();
+
+                return $conversation;
+            });
+
+        $agents = User::query()
+            ->leftJoin('agent_statuses', 'agent_statuses.user_id', '=', 'users.id')
+            ->orderBy('users.name')
+            ->get([
+                'users.id',
+                'users.name',
+                'agent_statuses.status as status',
+            ]);
 
         return Inertia::render('Messages/Index', [
             'conversations' => $conversations,
@@ -53,7 +79,51 @@ class ConversationController extends Controller
             'is_emergency' => 'sometimes|boolean',
         ]);
 
-        $conversation = DB::transaction(function () use ($validated) {
+        $participants = collect($validated['participants'])
+            ->filter()
+            ->unique()
+            ->reject(fn ($id) => (string) $id === (string) Auth::id())
+            ->values();
+
+        if ($participants->isEmpty()) {
+            return back()->withErrors([
+                'participants' => 'Please select at least one other participant.',
+            ]);
+        }
+
+        if (($validated['type'] ?? null) === 'direct' && $participants->count() !== 1) {
+            return back()->withErrors([
+                'participants' => 'Direct messages must have exactly one participant.',
+            ]);
+        }
+
+        if (($validated['type'] ?? null) === 'direct') {
+            $otherId = $participants->first();
+            $existing = Conversation::query()
+                ->where('type', 'direct')
+                ->whereHas('participants', fn ($q) => $q->where('user_id', Auth::id()))
+                ->whereHas('participants', fn ($q) => $q->where('user_id', $otherId))
+                ->whereDoesntHave('participants', fn ($q) => $q->whereNotIn('user_id', [Auth::id(), $otherId]))
+                ->first();
+
+            if ($existing) {
+                if (!empty($validated['is_emergency'])) {
+                    $msg = $existing->messages()->create([
+                        'sender_id' => Auth::id(),
+                        'type' => 'emergency',
+                        'content' => 'Emergency alert',
+                    ]);
+                    $existing->update(['last_message_at' => now()]);
+                    $msg->load('sender:id,name');
+                    broadcast(new MessageSent($msg))->toOthers();
+                    broadcast(new EmergencyAlert($msg))->toOthers();
+                }
+
+                return redirect()->route('messages.conversations.show', $existing);
+            }
+        }
+
+        $conversation = DB::transaction(function () use ($validated, $participants) {
             $conv = Conversation::create([
                 'title' => $validated['title'] ?? null,
                 'type' => $validated['type'],
@@ -63,7 +133,7 @@ class ConversationController extends Controller
             // Add creator as admin
             $conv->addParticipants([Auth::id()], 'admin');
             // Add other participants
-            $conv->addParticipants(collect($validated['participants'])->filter()->unique()->toArray());
+            $conv->addParticipants($participants->toArray());
             return $conv;
         });
 
@@ -133,6 +203,7 @@ class ConversationController extends Controller
             'conversation_id' => $message->conversation_id,
             'sender_id' => $message->sender_id,
             'sender' => $message->sender,
+            'type' => $message->type,
             'content' => $message->content,
             'is_emergency' => $message->type === 'emergency',
             'created_at' => $message->created_at,

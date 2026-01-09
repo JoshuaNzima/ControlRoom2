@@ -109,6 +109,11 @@ Route::middleware(['auth', 'role:admin,super_admin'])
         // CSV Export for guards (shared with Control Room export implementation)
         Route::get('/guards/export', [\App\Http\Controllers\ControlRoom\GuardsController::class, 'export'])->name('guards.export');
         Route::resource('guards', \App\Http\Controllers\Admin\GuardController::class)->except(['create','edit','show']);
+        // Quick status actions for guards
+        Route::post('/guards/{guard}/suspend', [\App\Http\Controllers\Admin\GuardController::class, 'suspend'])->name('guards.suspend');
+        Route::post('/guards/{guard}/reinstate', [\App\Http\Controllers\Admin\GuardController::class, 'reinstate'])->name('guards.reinstate');
+        Route::post('/guards/{guard}/dismiss', [\App\Http\Controllers\Admin\GuardController::class, 'dismiss'])->name('guards.dismiss');
+        Route::post('/guards/{guard}/abscond', [\App\Http\Controllers\Admin\GuardController::class, 'abscond'])->name('guards.abscond');
         // Guard assignment to client site
         Route::post('/guards/assign-site', [\App\Http\Controllers\Admin\GuardAssignmentController::class, 'assignToSite'])->name('guards.assign-site');
         Route::post('/guards/unassign-site', [\App\Http\Controllers\Admin\GuardAssignmentController::class, 'unassignFromSite'])->name('guards.unassign-site');

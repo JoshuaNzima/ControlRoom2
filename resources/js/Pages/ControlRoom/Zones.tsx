@@ -239,10 +239,10 @@ const Zones = ({ auth, zones: zonesProp = [], commanders = [], sites = [], guard
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Zones</p>
-                  <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{zones.length}</p>
+                  <p className="text-2xl font-bold text-coin-700 dark:text-coin-200">{zones.length}</p>
                 </div>
-                <div className="h-8 w-8 bg-blue-100 dark:bg-blue-900/20 rounded-full flex items-center justify-center">
-                  <span className="text-blue-600 dark:text-blue-400">🗺️</span>
+                <div className="h-8 w-8 bg-coin-100 dark:bg-coin-900/20 rounded-full flex items-center justify-center">
+                  <span className="text-coin-700 dark:text-coin-200">🗺️</span>
                 </div>
               </div>
             </CardContent>
@@ -267,10 +267,10 @@ const Zones = ({ auth, zones: zonesProp = [], commanders = [], sites = [], guard
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Guards</p>
-                  <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">{zones.reduce((sum: number, z: ZoneItem) => sum + (z.active_guard_count ?? 0), 0)}</p>
+                  <p className="text-2xl font-bold text-coin-700 dark:text-coin-200">{zones.reduce((sum: number, z: ZoneItem) => sum + (z.active_guard_count ?? 0), 0)}</p>
                 </div>
-                <div className="h-8 w-8 bg-purple-100 dark:bg-purple-900/20 rounded-full flex items-center justify-center">
-                  <span className="text-purple-600 dark:text-purple-400">👮</span>
+                <div className="h-8 w-8 bg-coin-100 dark:bg-coin-900/20 rounded-full flex items-center justify-center">
+                  <span className="text-coin-700 dark:text-coin-200">👮</span>
                 </div>
               </div>
             </CardContent>
@@ -311,7 +311,7 @@ const Zones = ({ auth, zones: zonesProp = [], commanders = [], sites = [], guard
                           {zone.status}
                         </Badge>
                         {zone.commander_name && (
-                          <span className="ml-2 text-xs px-2 py-0.5 rounded bg-indigo-600/10 text-indigo-700 dark:text-indigo-300 dark:bg-indigo-900/30">Cmdr: {zone.commander_name}</span>
+                          <span className="ml-2 text-xs px-2 py-0.5 rounded bg-coin-600/10 text-coin-800 dark:text-coin-200 dark:bg-coin-900/30">Cmdr: {zone.commander_name}</span>
                         )}
                       </div>
                       <div className="text-sm text-gray-600 dark:text-gray-400">

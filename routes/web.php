@@ -27,6 +27,10 @@ Route::get('/services', [\App\Http\Controllers\Public\PageController::class, 'se
 Route::get('/services/{slug}', [\App\Http\Controllers\Public\PageController::class, 'service'])->name('public.services.show');
 Route::get('/about', [\App\Http\Controllers\Public\PageController::class, 'about'])->name('public.about');
 Route::get('/careers', [\App\Http\Controllers\Public\PageController::class, 'careers'])->name('public.careers');
+// Public apply endpoint for a specific job posting
+Route::post('/careers/{jobPosting}/apply', [\App\Http\Controllers\Public\JobApplicationController::class, 'store'])
+    ->middleware('throttle:6,1')
+    ->name('public.careers.apply');
 Route::get('/privacy', [\App\Http\Controllers\Public\PageController::class, 'privacy'])->name('public.privacy');
 // Public policies (guest)
 Route::get('/policies', [\App\Http\Controllers\Public\PolicyController::class, 'index'])->name('public.policies.index');
@@ -36,6 +40,12 @@ Route::get('/policies/{slug}', [\App\Http\Controllers\Public\PolicyController::c
 Route::middleware('guest')->group(function () {
     Route::get('login', [\App\Http\Controllers\Auth\AuthenticatedSessionController::class, 'create'])->name('login');
     Route::post('login', [\App\Http\Controllers\Auth\AuthenticatedSessionController::class, 'store']);
+
+    // Password reset
+    Route::get('forgot-password', [\App\Http\Controllers\Auth\PasswordResetLinkController::class, 'create'])->name('password.request');
+    Route::post('forgot-password', [\App\Http\Controllers\Auth\PasswordResetLinkController::class, 'store'])->name('password.email');
+    Route::get('reset-password/{token}', [\App\Http\Controllers\Auth\NewPasswordController::class, 'create'])->name('password.reset');
+    Route::post('reset-password', [\App\Http\Controllers\Auth\NewPasswordController::class, 'store'])->name('password.store');
 });
 
 // Public intake endpoint (rate-limited)
@@ -62,6 +72,7 @@ Route::middleware(['auth', 'role:super_admin'])->prefix('superadmin')->name('sup
     Route::post('/cache/clear', [\App\Http\Controllers\SuperAdmin\DashboardController::class, 'clearCache'])->name('cache.clear');
     Route::post('/maintenance/enable', [\App\Http\Controllers\SuperAdmin\DashboardController::class, 'enableMaintenance'])->name('maintenance.enable');
     Route::post('/maintenance/disable', [\App\Http\Controllers\SuperAdmin\DashboardController::class, 'disableMaintenance'])->name('maintenance.disable');
+	Route::post('/settings/attendance/methods', [\App\Http\Controllers\SuperAdmin\AttendanceSettingsController::class, 'update'])->name('attendance.methods.update');
     
     // Module Management
     Route::get('/modules', fn() => Inertia::render('SuperAdmin/Modules'))->name('modules');
@@ -131,6 +142,7 @@ Route::middleware(['auth', 'role:super_admin'])->prefix('superadmin')->name('sup
             ->when(request('status'), function($q, $status) {
                 $q->where('status', $status);
             })
+            ->profileStatus(request('profile_status'))
             ->when(request('zone_id'), function($q, $zoneId) {
                 $q->where('zone_id', $zoneId);
             })
@@ -140,6 +152,11 @@ Route::middleware(['auth', 'role:super_admin'])->prefix('superadmin')->name('sup
             ->orderBy($sort, $dir)
             ->paginate($perPage)
             ->withQueryString();
+
+        $guards->getCollection()->transform(function ($g) {
+            $g->is_profile_complete = (bool) $g->is_profile_complete;
+            return $g;
+        });
         $supervisors = \App\Models\User::where('status', 'active')
             ->whereHas('roles', function ($q) {
                 $q->whereIn('name', ['supervisor', 'manager', 'sergeant', 'zone_commander'])
@@ -151,7 +168,7 @@ Route::middleware(['auth', 'role:super_admin'])->prefix('superadmin')->name('sup
         $zones = \App\Models\Zone::orderBy('name')->get(['id','name']);
         return Inertia::render('SuperAdmin/Guards', [
             'guards' => $guards,
-            'filters' => request()->only(['search','status','zone_id','grade_id','sort','dir','per_page']),
+            'filters' => request()->only(['search','status','profile_status','zone_id','grade_id','sort','dir','per_page']),
             'supervisors' => $supervisors,
             'grades' => $grades,
             'zones' => $zones,

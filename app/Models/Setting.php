@@ -15,4 +15,21 @@ class Setting extends Model
     protected $casts = [
         'value' => 'array',
     ];
+
+	public static function getValue(string $key, mixed $default = null): mixed
+	{
+		$row = static::query()->where('key', $key)->first();
+		if (!$row) {
+			return $default;
+		}
+		return $row->value ?? $default;
+	}
+
+	public static function setValue(string $key, mixed $value, ?string $module = null): void
+	{
+		static::query()->updateOrCreate(
+			['key' => $key],
+			['value' => $value, 'module' => $module]
+		);
+	}
 }

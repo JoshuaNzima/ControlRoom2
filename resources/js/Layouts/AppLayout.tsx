@@ -11,9 +11,9 @@ type Props = {
 
 export default function AppLayout({ children, title }: Props) {
   return (
-    <div className="min-h-screen bg-red-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-red-50 dark:bg-gray-950">
       {title && (
-        <header className="bg-white dark:bg-gray-800 border-b border-red-100 dark:border-gray-800 sticky top-0 z-30">
+        <header className="sticky top-0 z-30 border-b border-red-100 bg-white/95 backdrop-blur-sm dark:border-gray-800 dark:bg-gray-950/80">
           <div className="max-w-7xl mx-auto px-6 py-4">
             <div className="flex items-center justify-between">
               <h1 className="text-xl font-bold text-red-900 dark:text-gray-100">{title}</h1>
@@ -21,7 +21,7 @@ export default function AppLayout({ children, title }: Props) {
                 <NotificationBell />
                 <QuickBudgetButton />
                 <QuickRequisitionButton />
-                <Link href={route('profile.dashboard')} className="inline-flex items-center px-3 py-1.5 rounded-md bg-gray-800 text-white hover:bg-gray-700 text-sm">
+                <Link href={route('profile.dashboard')} className="inline-flex items-center rounded-lg bg-gray-900 px-3 py-1.5 text-sm font-medium text-white shadow-sm shadow-black/10 hover:bg-gray-800 dark:bg-gray-900 dark:hover:bg-gray-800 dark:shadow-black/40">
                   My Profile
                 </Link>
               </div>

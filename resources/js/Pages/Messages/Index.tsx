@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { Head, router } from '@inertiajs/react';
+import { Head, router, usePage } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Card, CardContent, CardHeader } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/Components/ui/dialog';
 import NewConversationForm, { Agent } from './NewConversationForm';
 import ConversationList from './ConversationList';
-import Echo from 'laravel-echo';
+import { PageProps } from '@/types';
 
 interface Props {
   auth?: { user?: { name?: string } };
@@ -16,16 +16,13 @@ interface Props {
 
 const Index: React.FC<Props> = ({ auth, conversations = [], agents = [] }) => {
   const [showNewDialog, setShowNewDialog] = useState(false);
+  const currentUserId = usePage<PageProps>().props.auth.user.id;
 
   useEffect(() => {
     try {
-      const echo = new Echo({
-        broadcaster: 'pusher',
-        key: (window as any).appKey,
-        cluster: (window as any).pusherCluster,
-        forceTLS: true,
-      });
       // Optionally listen to a global channel for notifications
+      const echo = (window as any).Echo;
+      if (!echo) return;
       (echo as any).private('emergencies').listen('EmergencyAlert', (e: any) => {
         try {
           const notification = new Notification('Emergency Alert!', {
@@ -48,11 +45,11 @@ const Index: React.FC<Props> = ({ auth, conversations = [], agents = [] }) => {
       <Head title="Messages" />
 
       <div className="space-y-6">
-        <div className="flex justify-between items-center">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Messages</h1>
           <Dialog open={showNewDialog} onOpenChange={setShowNewDialog}>
             <DialogTrigger asChild>
-              <Button className="dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600">New Conversation</Button>
+              <Button className="w-full sm:w-auto dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600">New Conversation</Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
@@ -68,7 +65,7 @@ const Index: React.FC<Props> = ({ auth, conversations = [], agents = [] }) => {
             <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Recent Conversations</h3>
           </CardHeader>
           <CardContent>
-            <ConversationList conversations={conversations} />
+            <ConversationList conversations={conversations} currentUserId={currentUserId} />
           </CardContent>
         </Card>
       </div>

@@ -9,6 +9,7 @@ import IconMapper from '@/Components/IconMapper';
 import QRCodeGenerator from '@/Components/QRCodeGenerator';
 import RequisitionSummary from '@/Components/Requisitions/RequisitionSummary';
 import useCounters from '@/Hooks/useCounters';
+import EmptyState from '@/Components/ui/empty-state';
 
 // Type Definitions
 interface Auth {
@@ -383,7 +384,7 @@ const Dashboard: React.FC<SuperAdminDashboardProps> = ({
               <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">System Health</h2>
               <button
                 onClick={() => router.reload({ only: ['systemHealth'] })}
-                className="p-2 hover:bg-gray-100 rounded-lg transition"
+                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition"
               >
                 <IconMapper name="RefreshCw" size={20} />
               </button>
@@ -410,22 +411,33 @@ const Dashboard: React.FC<SuperAdminDashboardProps> = ({
           <div>
             <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">Quick Actions</h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {adminActions.map((action) => (
-                <Link
-                  key={action.route}
-                  href={route(action.route)}
-                  className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md hover:shadow-xl transition-all transform hover:-translate-y-1 text-center group border border-red-100 dark:border-gray-700"
-                >
-                  <div
-                    className={`w-16 h-16 rounded-full mx-auto mb-3 flex items-center justify-center text-3xl group-hover:scale-110 transition-transform`}
-                    style={{ backgroundColor: `${action.color}20` }}
+              {(adminActions || []).length === 0 ? (
+                <div className="col-span-full">
+                  <EmptyState
+                    title="No quick actions"
+                    description="No admin actions are configured for this dashboard."
+                    size="sm"
+                    variant="card"
+                  />
+                </div>
+              ) : (
+                adminActions.map((action) => (
+                  <Link
+                    key={action.route}
+                    href={route(action.route)}
+                    className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md hover:shadow-xl transition-all transform hover:-translate-y-1 text-center group border border-red-100 dark:border-gray-700"
                   >
-                    {action.icon}
-                  </div>
-                  <h3 className="font-bold text-gray-900 dark:text-gray-100 text-sm mb-1">{action.title}</h3>
-                  <p className="text-xs text-gray-600 dark:text-gray-400">{action.description}</p>
-                </Link>
-              ))}
+                    <div
+                      className={`w-16 h-16 rounded-full mx-auto mb-3 flex items-center justify-center text-3xl group-hover:scale-110 transition-transform`}
+                      style={{ backgroundColor: `${action.color}20` }}
+                    >
+                      {action.icon}
+                    </div>
+                    <h3 className="font-bold text-gray-900 dark:text-gray-100 text-sm mb-1">{action.title}</h3>
+                    <p className="text-xs text-gray-600 dark:text-gray-400">{action.description}</p>
+                  </Link>
+                ))
+              )}
             </div>
           </div>
         )}
@@ -433,66 +445,74 @@ const Dashboard: React.FC<SuperAdminDashboardProps> = ({
         {/* Modules by Category */}
         <div>
           <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">Available Modules</h2>
-          {Object.entries(modulesByCategory).map(([category, categoryModules]) => (
-            <div key={category} className="mb-8">
-              <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4 capitalize">
-                {category.replace('_', ' ')} Modules
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {categoryModules.map((module) => (
-                  <div
-                    key={module.id}
-                    className={`p-6 rounded-xl shadow-md border transition-all ${
-                      module.is_active
-                        ? 'border-red-300 bg-white dark:bg-gray-800 hover:shadow-xl hover:-translate-y-1'
-                        : 'border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-900/30'
-                    }`}
-                    role="group"
-                    aria-label={`${module.display_name} module card`}
-                  >
-                    <div className="text-center">
-                      <div className="mb-2 flex items-center justify-center">
-                        <IconMapper name={module.icon || 'Puzzle'} size={36} />
+          {(modules || []).length === 0 ? (
+            <EmptyState
+              title="No modules"
+              description="No modules are available for this environment."
+              variant="card"
+            />
+          ) : (
+            Object.entries(modulesByCategory).map(([category, categoryModules]) => (
+              <div key={category} className="mb-8">
+                <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4 capitalize">
+                  {category.replace('_', ' ')} Modules
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {categoryModules.map((module) => (
+                    <div
+                      key={module.id}
+                      className={`p-6 rounded-xl shadow-md border transition-all ${
+                        module.is_active
+                          ? 'border-red-300 bg-white dark:bg-gray-800 hover:shadow-xl hover:-translate-y-1'
+                          : 'border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-900/30'
+                      }`}
+                      role="group"
+                      aria-label={`${module.display_name} module card`}
+                    >
+                      <div className="text-center">
+                        <div className="mb-2 flex items-center justify-center">
+                          <IconMapper name={module.icon || 'Puzzle'} size={36} />
+                        </div>
+                        <h3 className="font-bold text-gray-900 dark:text-gray-100 text-lg mb-1">{module.display_name}</h3>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">v{module.version}</p>
+                        <p className="text-xs text-gray-600 dark:text-gray-400">{module.description}</p>
+                        {module.is_core && (
+                          <p className="text-xs text-red-600 dark:text-red-300 mt-2">Core module</p>
+                        )}
                       </div>
-                      <h3 className="font-bold text-gray-900 dark:text-gray-100 text-lg mb-1">{module.display_name}</h3>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">v{module.version}</p>
-                      <p className="text-xs text-gray-600 dark:text-gray-400">{module.description}</p>
-                      {module.is_core && (
-                        <p className="text-xs text-red-600 mt-2">Core module</p>
-                      )}
+                      <div className="mt-4 flex items-center justify-center">
+                        <button
+                          onClick={() => handleToggleModule(module.id)}
+                          className={`inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium shadow ${
+                            module.is_active
+                              ? 'bg-rose-600 hover:bg-rose-700 text-white'
+                              : 'bg-indigo-600 hover:bg-indigo-700 text-white'
+                          }`}
+                          aria-pressed={module.is_active}
+                        >
+                          {module.is_active ? 'Disable' : 'Enable'}
+                        </button>
+                        {(() => {
+                          if (!module.is_active || !module.route) return null;
+                          let href = '#';
+                          try { href = route(module.route) as unknown as string; } catch (e) { href = '#'; }
+                          if (href === '#') return null;
+                          return (
+                            <Link
+                              href={href}
+                              className="ml-3 inline-flex items-center px-3 py-2 rounded-lg text-sm font-medium border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700"
+                            >
+                              Open
+                            </Link>
+                          );
+                        })()}
+                      </div>
                     </div>
-                    <div className="mt-4 flex items-center justify-center">
-                      <button
-                        onClick={() => handleToggleModule(module.id)}
-                        className={`inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium shadow ${
-                          module.is_active
-                            ? 'bg-rose-600 hover:bg-rose-700 text-white'
-                            : 'bg-indigo-600 hover:bg-indigo-700 text-white'
-                        }`}
-                        aria-pressed={module.is_active}
-                      >
-                        {module.is_active ? 'Disable' : 'Enable'}
-                      </button>
-                      {(() => {
-                        if (!module.is_active || !module.route) return null;
-                        let href = '#';
-                        try { href = route(module.route) as unknown as string; } catch (e) { href = '#'; }
-                        if (href === '#') return null;
-                        return (
-                          <Link
-                            href={href}
-                            className="ml-3 inline-flex items-center px-3 py-2 rounded-lg text-sm font-medium border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700"
-                          >
-                            Open
-                          </Link>
-                        );
-                      })()}
-                    </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
-          ))}
+            ))
+          )}
         </div>
 
         {/* QR Code Generator */}
@@ -502,43 +522,55 @@ const Dashboard: React.FC<SuperAdminDashboardProps> = ({
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
             <h3 className="font-bold text-gray-900 dark:text-gray-100 mb-4">Recent User Activity</h3>
-            <div className="space-y-3">
-              {userActivity.map((activity, index) => (
-                <div key={index} className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-900/30 rounded-lg">
-                  <div>
-                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{activity.name}</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">{activity.role}</p>
+            {(userActivity || []).length === 0 ? (
+              <EmptyState title="No recent activity" description="No user activity recorded yet." size="sm" contentClassName="px-0" />
+            ) : (
+              <div className="space-y-3">
+                {userActivity.map((activity, index) => (
+                  <div key={index} className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-900/30 rounded-lg">
+                    <div>
+                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{activity.name}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{activity.role}</p>
+                    </div>
+                    <p className="text-xs text-gray-400 dark:text-gray-400">{activity.last_active}</p>
                   </div>
-                  <p className="text-xs text-gray-400 dark:text-gray-400">{activity.last_active}</p>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
             <h3 className="font-bold text-gray-900 dark:text-gray-100 mb-4">Recent System Logs</h3>
-            <div className="space-y-2 max-h-64 overflow-y-auto">
-              {recentLogs.map((log, index) => (
-                <div key={index} className="p-2 bg-gray-50 dark:bg-gray-900/30 rounded text-xs">
-                  <p className="text-gray-700 dark:text-gray-300 truncate">{log.message}</p>
-                  <p className="text-gray-400 dark:text-gray-500 text-[10px]">{log.time}</p>
-                </div>
-              ))}
-            </div>
+            {(recentLogs || []).length === 0 ? (
+              <EmptyState title="No logs" description="No recent system logs available." size="sm" contentClassName="px-0" />
+            ) : (
+              <div className="space-y-2 max-h-64 overflow-y-auto">
+                {recentLogs.map((log, index) => (
+                  <div key={index} className="p-2 bg-gray-50 dark:bg-gray-900/30 rounded text-xs">
+                    <p className="text-gray-700 dark:text-gray-300 truncate">{log.message}</p>
+                    <p className="text-gray-400 dark:text-gray-500 text-[10px]">{log.time}</p>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
             <h3 className="font-bold text-gray-900 dark:text-gray-100 mb-4">Audit Trail</h3>
-            <div className="space-y-3">
-              {auditTrail.map((audit, index) => (
-                <div key={index} className="p-3 bg-gray-50 dark:bg-gray-900/30 rounded-lg">
-                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{audit.user}</p>
-                  <p className="text-xs text-gray-600 dark:text-gray-400">{audit.action}</p>
-                  <div className="flex justify-between mt-1">
-                    <p className="text-xs text-gray-400 dark:text-gray-500">{audit.time}</p>
-                    <p className="text-xs text-gray-400 dark:text-gray-500">{audit.ip}</p>
+            {(auditTrail || []).length === 0 ? (
+              <EmptyState title="No audit events" description="No audit trail events recorded yet." size="sm" contentClassName="px-0" />
+            ) : (
+              <div className="space-y-3">
+                {auditTrail.map((audit, index) => (
+                  <div key={index} className="p-3 bg-gray-50 dark:bg-gray-900/30 rounded-lg">
+                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{audit.user}</p>
+                    <p className="text-xs text-gray-600 dark:text-gray-400">{audit.action}</p>
+                    <div className="flex justify-between mt-1">
+                      <p className="text-xs text-gray-400 dark:text-gray-500">{audit.time}</p>
+                      <p className="text-xs text-gray-400 dark:text-gray-500">{audit.ip}</p>
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 

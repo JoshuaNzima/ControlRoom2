@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Head, useForm, usePage } from '@inertiajs/react';
 import ControlRoomLayout from '@/Layouts/ControlRoomLayout';
 import Modal from '@/Components/Modal';
@@ -65,10 +65,12 @@ export default function Roster() {
   const [events, setEvents] = useState<EventItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [addOffDayOpen, setAddOffDayOpen] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState<EventItem | null>(null);
+  const [editOffDayOpen, setEditOffDayOpen] = useState(false);
 
   const { gridStart, gridEnd } = useMemo(() => getCalendarRange(currentMonth), [currentMonth]);
 
-  const refreshEvents = async () => {
+  const refreshEvents = useCallback(async () => {
     setLoading(true);
     try {
       const url = route('control-room.roster.events', { start: formatYmd(gridStart), end: formatYmd(gridEnd) });
@@ -80,12 +82,11 @@ export default function Roster() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [gridStart, gridEnd]);
 
   useEffect(() => {
     refreshEvents();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gridStart.getTime(), gridEnd.getTime()]);
+  }, [refreshEvents]);
 
   const days: Date[] = useMemo(() => {
     const arr: Date[] = [];
@@ -104,16 +105,22 @@ export default function Roster() {
     return events.filter((e) => e.date === key);
   };
 
+  const openEvent = (e: EventItem) => {
+    if (e.type !== 'off_day') return;
+    setSelectedEvent(e);
+    setEditOffDayOpen(true);
+  };
+
   return (
     <ControlRoomLayout title="Roster" user={auth?.user as any}>
       <Head title="Roster" />
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
           <div>
             <h2 className="text-xl font-semibold">Roster & Calendar</h2>
             <p className="text-sm text-gray-500 dark:text-gray-400">Manage guard off days. Holidays are shown for context.</p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
             <button
               type="button"
               className="px-3 py-1.5 rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700"
@@ -121,7 +128,7 @@ export default function Roster() {
             >
               Prev
             </button>
-            <div className="min-w-[10rem] text-center font-medium">{monthLabel}</div>
+            <div className="flex-1 min-w-0 text-center font-medium truncate">{monthLabel}</div>
             <button
               type="button"
               className="px-3 py-1.5 rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700"
@@ -131,7 +138,7 @@ export default function Roster() {
             </button>
             <button
               type="button"
-              className="px-3 py-1.5 rounded-md bg-indigo-600 text-white hover:bg-indigo-700"
+              className="px-3 py-1.5 rounded-md bg-coin-700 text-white hover:bg-coin-600"
               onClick={() => setAddOffDayOpen(true)}
             >
               Add Off Day
@@ -141,7 +148,7 @@ export default function Roster() {
 
         <div className="flex items-center gap-4 text-sm">
           <div className="flex items-center gap-2"><span className="inline-block w-3 h-3 rounded-sm bg-red-600" /> Holiday</div>
-          <div className="flex items-center gap-2"><span className="inline-block w-3 h-3 rounded-sm bg-indigo-600" /> Off Day</div>
+          <div className="flex items-center gap-2"><span className="inline-block w-3 h-3 rounded-sm bg-coin-700" /> Off Day</div>
           {loading && <div className="text-gray-500 dark:text-gray-400">Loading…</div>}
         </div>
 
@@ -157,12 +164,17 @@ export default function Roster() {
                 key={d.toISOString()}
                 className={`min-h-[80px] sm:min-h-[110px] border rounded-md p-1 sm:p-2 ${inMonth ? 'bg-white dark:bg-gray-900 dark:border-gray-800' : 'bg-gray-50 text-gray-400 dark:bg-gray-950 dark:border-gray-900'} `}
               >
-                <div className="text-xs sm:text-sm font-medium mb-1">{d.getDate()}</div>
+                <div className={`text-xs sm:text-sm font-medium mb-1 ${inMonth ? 'text-gray-900 dark:text-gray-100' : 'text-gray-400 dark:text-gray-500'}`}>{d.getDate()}</div>
                 <div className="space-y-1">
                   {evs.slice(0,3).map((e) => (
-                    <div key={`${e.entity}-${e.entity_id}-${e.date}`} className={`text-[10px] sm:text-xs px-1.5 py-0.5 rounded-md text-white ${e.color === 'red' ? 'bg-red-600' : 'bg-indigo-600'}`}>
+                    <button
+                      key={`${e.entity}-${e.entity_id}-${e.date}`}
+                      type="button"
+                      onClick={() => openEvent(e)}
+                      className={`text-left w-full truncate text-[10px] sm:text-xs px-1.5 py-0.5 rounded-md text-white hover:opacity-90 ${e.color === 'red' ? 'bg-red-600' : 'bg-coin-700'}`}
+                    >
                       {e.title}
-                    </div>
+                    </button>
                   ))}
                   {evs.length > 3 && (
                     <div className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400">+{evs.length - 3} more</div>
@@ -179,6 +191,21 @@ export default function Roster() {
           guards={guards as Guard[]}
           onSaved={() => {
             setAddOffDayOpen(false);
+            refreshEvents();
+          }}
+        />
+
+        <EditOffDayModal
+          open={editOffDayOpen}
+          onClose={() => {
+            setEditOffDayOpen(false);
+            setSelectedEvent(null);
+          }}
+          event={selectedEvent}
+          guards={guards as Guard[]}
+          onSaved={() => {
+            setEditOffDayOpen(false);
+            setSelectedEvent(null);
             refreshEvents();
           }}
         />
@@ -199,8 +226,7 @@ function AddOffDayModal({ open, onClose, guards, onSaved }: { open: boolean; onC
     if (open && guards && guards.length && !data.guard_id) {
       setData('guard_id', guards[0].id);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
+  }, [open, guards, data.guard_id, setData]);
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -247,7 +273,158 @@ function AddOffDayModal({ open, onClose, guards, onSaved }: { open: boolean; onC
           </div>
           <div className="flex justify-end gap-2 pt-2">
             <button type="button" onClick={handleClose} className="px-4 py-2 text-sm rounded-md bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700" disabled={processing}>Cancel</button>
-            <button type="submit" disabled={processing} className="px-4 py-2 text-sm rounded-md bg-indigo-600 text-white hover:bg-indigo-700">{processing ? 'Saving…' : 'Save'}</button>
+            <button type="submit" disabled={processing} className="px-4 py-2 text-sm rounded-md bg-coin-700 text-white hover:bg-coin-600">{processing ? 'Saving…' : 'Save'}</button>
+          </div>
+        </form>
+      </div>
+    </Modal>
+  );
+}
+
+function EditOffDayModal({
+  open,
+  onClose,
+  onSaved,
+  event,
+  guards,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onSaved: () => void;
+  event: EventItem | null;
+  guards: Guard[];
+}) {
+  const { data, setData, put, processing, errors, reset, delete: destroy } = useForm<OffDay>({
+    guard_id: (guards?.[0]?.id as number) || ('' as any),
+    start_date: '',
+    end_date: '',
+    reason: '',
+  });
+
+  useEffect(() => {
+    if (!open || !event || event.type !== 'off_day') return;
+    const guardId = Number(event.meta?.guard_id ?? event.meta?.guard?.id ?? '') || (guards?.[0]?.id as number);
+    setData({
+      guard_id: guardId as any,
+      start_date: event.meta?.start_date || event.date || '',
+      end_date: event.meta?.end_date || '',
+      reason: event.meta?.reason || '',
+    });
+  }, [open, event, guards, setData]);
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!event || event.type !== 'off_day') return;
+    put(route('control-room.roster.off-days.update', event.entity_id), {
+      preserveScroll: true,
+      onSuccess: () => {
+        reset();
+        onSaved();
+      },
+    });
+  };
+
+  const handleDelete = () => {
+    if (!event || event.type !== 'off_day') return;
+    if (!confirm('Delete this off day?')) return;
+    destroy(route('control-room.roster.off-days.destroy', event.entity_id), {
+      preserveScroll: true,
+      onSuccess: () => {
+        reset();
+        onSaved();
+      },
+    });
+  };
+
+  const handleClose = () => {
+    if (!processing) onClose();
+  };
+
+  return (
+    <Modal show={open} onClose={handleClose} maxWidth="md">
+      <div className="px-6 py-4 border-b flex items-center justify-between bg-white dark:bg-gray-900 dark:border-gray-800">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Edit Off Day</h2>
+        <button
+          type="button"
+          onClick={handleClose}
+          className="text-gray-400 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-200"
+        >
+          ✕
+        </button>
+      </div>
+      <div className="px-6 py-4 bg-white dark:bg-gray-900">
+        <form className="grid grid-cols-1 gap-3" onSubmit={submit}>
+          <div>
+            <label className="block text-sm font-medium">Guard</label>
+            <select
+              className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100"
+              value={data.guard_id as any}
+              onChange={(e) => setData('guard_id', Number(e.target.value))}
+            >
+              {guards.map((g) => (
+                <option key={g.id} value={g.id}>
+                  {g.name} {g.employee_id ? `(${g.employee_id})` : ''}
+                </option>
+              ))}
+            </select>
+            {errors.guard_id && <p className="text-xs text-red-600 mt-1">{errors.guard_id}</p>}
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium">Start Date</label>
+              <input
+                type="date"
+                className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100"
+                value={data.start_date}
+                onChange={(e) => setData('start_date', e.target.value)}
+              />
+              {errors.start_date && <p className="text-xs text-red-600 mt-1">{errors.start_date}</p>}
+            </div>
+            <div>
+              <label className="block text-sm font-medium">End Date</label>
+              <input
+                type="date"
+                className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100"
+                value={data.end_date || ''}
+                onChange={(e) => setData('end_date', e.target.value)}
+              />
+              {errors.end_date && <p className="text-xs text-red-600 mt-1">{errors.end_date}</p>}
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium">Reason (optional)</label>
+            <input
+              className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100"
+              value={data.reason || ''}
+              onChange={(e) => setData('reason', e.target.value)}
+            />
+            {errors.reason && <p className="text-xs text-red-600 mt-1">{errors.reason}</p>}
+          </div>
+
+          <div className="flex justify-end gap-2 pt-2">
+            <button
+              type="button"
+              onClick={handleClose}
+              className="px-4 py-2 text-sm rounded-md bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700"
+              disabled={processing}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleDelete}
+              className="px-4 py-2 text-sm rounded-md bg-red-700 text-white hover:bg-red-800"
+              disabled={processing}
+            >
+              Delete
+            </button>
+            <button
+              type="submit"
+              disabled={processing}
+              className="px-4 py-2 text-sm rounded-md bg-coin-700 text-white hover:bg-coin-600"
+            >
+              {processing ? 'Saving…' : 'Save'}
+            </button>
           </div>
         </form>
       </div>

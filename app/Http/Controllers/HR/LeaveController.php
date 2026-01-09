@@ -97,7 +97,7 @@ class LeaveController extends Controller
         }
 
         // Guard off-days overlapping the range
-        $offDays = GuardOffDay::with('guard:id,name,employee_id')
+        $offDays = GuardOffDay::with('guardRelation:id,name,employee_id')
             ->whereDate('start_date', '<=', $end->toDateString())
             ->where(function($q) use ($start) {
                 $q->whereNull('end_date')->orWhereDate('end_date', '>=', $start->toDateString());
@@ -117,18 +117,19 @@ class LeaveController extends Controller
                     'entity' => 'off_day',
                     'entity_id' => $off->id,
                     'date' => $day->toDateString(),
-                    'title' => 'Off: '.($off->guard?->name ?? 'Guard'),
+                    'title' => 'Off: '.($off->guardRelation?->name ?? 'Guard'),
                     'type' => 'off_day',
                     'color' => 'indigo',
                     'meta' => [
-                        'guard' => $off->guard ? [
-                            'id' => $off->guard->id,
-                            'name' => $off->guard->name,
-                            'employee_id' => $off->guard->employee_id,
+                        'guard_id' => $off->guard_id,
+                        'guard' => $off->guardRelation ? [
+                            'id' => $off->guardRelation->id,
+                            'name' => $off->guardRelation->name,
+                            'employee_id' => $off->guardRelation->employee_id,
                         ] : null,
                         'reason' => $off->reason,
-                        'start_date' => $off->start_date,
-                        'end_date' => $off->end_date,
+                        'start_date' => $off->start_date ? Carbon::parse($off->start_date)->toDateString() : null,
+                        'end_date' => $off->end_date ? Carbon::parse($off->end_date)->toDateString() : null,
                     ],
                 ];
             }

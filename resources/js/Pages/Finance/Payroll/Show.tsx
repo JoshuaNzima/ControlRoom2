@@ -1,5 +1,5 @@
 import React from 'react';
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 import { formatCurrency } from '@/utils/formatters';
 import PayrollLayout from '@/Layouts/PayrollLayout';
 
@@ -44,31 +44,31 @@ export default function PayrollShow({ run }: Props) {
   return (
     <PayrollLayout title={`Payroll ${run.period_start} → ${run.period_end}`}>
       <Head title="Payroll Run" />
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Payroll Run</h1>
         {run.status !== 'processed' && (
-          <button onClick={process} className="inline-flex items-center px-3 py-2 rounded-md bg-red-600 text-white hover:bg-red-700 text-sm">Process</button>
+          <button onClick={process} className="w-full sm:w-auto inline-flex items-center justify-center px-3 py-2 rounded-md bg-red-600 text-white hover:bg-red-700 text-sm">Process</button>
         )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-          <div className="text-sm text-gray-500">Status</div>
-          <div className="text-lg font-semibold">{run.status}</div>
+          <div className="text-sm text-gray-500 dark:text-gray-400">Status</div>
+          <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">{run.status}</div>
         </div>
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-          <div className="text-sm text-gray-500">Gross Total</div>
-          <div className="text-lg font-semibold">{formatCurrency(Number(run.gross_total || 0))}</div>
+          <div className="text-sm text-gray-500 dark:text-gray-400">Gross Total</div>
+          <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">{formatCurrency(Number(run.gross_total || 0))}</div>
         </div>
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-          <div className="text-sm text-gray-500">Net Total</div>
-          <div className="text-lg font-semibold">{formatCurrency(Number(run.net_total || 0))}</div>
+          <div className="text-sm text-gray-500 dark:text-gray-400">Net Total</div>
+          <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">{formatCurrency(Number(run.net_total || 0))}</div>
         </div>
       </div>
 
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
-        <table className="w-full">
-          <thead className="bg-red-50 dark:bg-gray-700 border-b dark:border-gray-700">
+      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg shadow overflow-x-auto">
+        <table className="min-w-[900px] w-full">
+          <thead className="bg-red-50 dark:bg-gray-950 border-b border-gray-200 dark:border-gray-800">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wide">Payee</th>
               <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wide">Base</th>
@@ -78,20 +78,20 @@ export default function PayrollShow({ run }: Props) {
               <th className="px-6 py-3 text-right text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wide">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+          <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
             {run.entries.map(e => {
               const currentOT = Number((e.allowances as any)?.overtime ?? 0);
               return (
-                <tr key={e.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                <tr key={e.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/60">
                   <td className="px-6 py-3 text-sm text-gray-900 dark:text-gray-100">{e.payee_type} #{e.payee_id}</td>
                   <td className="px-6 py-3 text-sm text-gray-900 dark:text-gray-100">{formatCurrency(Number(e.base_amount || 0))}</td>
                   <td className="px-6 py-3 text-sm text-gray-900 dark:text-gray-100">
-                    <form onSubmit={(ev)=>{ev.preventDefault(); updateEntry(e, ev.currentTarget);}} className="flex items-center gap-2">
+                    <form onSubmit={(ev)=>{ev.preventDefault(); updateEntry(e, ev.currentTarget);}} className="flex flex-col sm:flex-row sm:items-center gap-2">
                       <input name="overtime_amount" type="number" step="0.01" defaultValue={currentOT}
-                        className="w-28 rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 px-2 py-1 text-sm" />
+                        className="w-full sm:w-28 rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 px-2 py-1 text-sm" />
                       <input name="notes" type="text" placeholder="Notes" defaultValue={e.notes || ''}
-                        className="flex-1 rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 px-2 py-1 text-sm" />
-                      <button type="submit" className="px-3 py-1.5 rounded-md bg-emerald-600 text-white hover:bg-emerald-700 text-xs">Save</button>
+                        className="w-full sm:flex-1 rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 px-2 py-1 text-sm" />
+                      <button type="submit" className="w-full sm:w-auto px-3 py-1.5 rounded-md bg-emerald-600 text-white hover:bg-emerald-700 text-xs">Save</button>
                     </form>
                   </td>
                   <td className="px-6 py-3 text-sm text-gray-900 dark:text-gray-100">{formatCurrency(Number(e.gross || 0))}</td>

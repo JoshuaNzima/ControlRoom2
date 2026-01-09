@@ -3,6 +3,8 @@ import { Head, useForm, usePage, Link } from '@inertiajs/react';
 import ControlRoomLayout from '@/Layouts/ControlRoomLayout';
 import Modal from '@/Components/Modal';
 import useToast from '@/Components/ui/use-toast';
+import PageHeader from '@/Components/ui/page-header';
+import EmptyState from '@/Components/ui/empty-state';
 
 type DayKey = string; // YYYY-MM-DD
 
@@ -32,6 +34,12 @@ type WeeklyData = {
   active_sites?: Site[];
 };
 
+function getCsrfToken(): string {
+  if (typeof document === 'undefined') return '';
+  const el = document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement | null;
+  return el?.content || '';
+}
+
 function formatYmd(d: Date): string {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, '0');
@@ -53,17 +61,56 @@ function StandbyTable({ data, onRefresh }: { data: WeeklyData; onRefresh: () => 
 
   return (
     <div className="space-y-2">
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold">Standby Guards</h3>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Standby Guards</h3>
         <div className="text-xs text-gray-500 dark:text-gray-400">Click a day to add off-day</div>
       </div>
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <div className="text-xs text-gray-500 dark:text-gray-400">Select guards then bulk mark OFF</div>
-        <button disabled={!selectedIds.length} onClick={() => setBulkOffOpen(true)} className={`px-3 py-1.5 rounded-md text-white ${selectedIds.length ? 'bg-gray-800 hover:bg-gray-700' : 'bg-gray-400 cursor-not-allowed'}`}>Bulk Off-day</button>
+        <button disabled={!selectedIds.length} onClick={() => setBulkOffOpen(true)} className={`w-full sm:w-auto px-3 py-1.5 rounded-md text-white ${selectedIds.length ? 'bg-coin-700 hover:bg-coin-600' : 'bg-gray-400 cursor-not-allowed'}`}>Bulk Off-day</button>
       </div>
 
-      <div className="overflow-x-auto border dark:border-gray-800 rounded-md">
-        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-800">
+      <div className="md:hidden space-y-2">
+        {standbyGuards.map((g) => (
+          <div key={g.id} className="rounded-md border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-3">
+            <div className="flex items-start justify-between gap-3">
+              <label className="inline-flex items-start gap-2">
+                <input className="mt-1 rounded border-gray-300 dark:border-gray-600 dark:bg-gray-900" type="checkbox" checked={!!selected[g.id]} onChange={() => toggleSel(g.id)} />
+                <span className="min-w-0">
+                  <div className="text-sm font-semibold text-gray-900 dark:text-gray-100 break-words">
+                    {g.name} {g.employee_id ? <span className="text-xs text-gray-500">({g.employee_id})</span> : null}
+                  </div>
+                  <div className="mt-1">
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300">Standby</span>
+                  </div>
+                </span>
+              </label>
+            </div>
+
+            <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {data.days.map((d, idx) => {
+                const off = !!g.off?.[d];
+                const site = g.sites?.[d];
+                return (
+                  <button
+                    key={d}
+                    type="button"
+                    className={`flex items-center justify-between gap-2 w-full px-3 py-2 rounded-md border text-sm ${off ? 'bg-gray-800 text-gray-100 border-gray-700' : site ? 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100 border-gray-200 dark:border-gray-700' : 'bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-800'}`}
+                    onClick={() => setOffModal({ open: true, guardId: g.id, date: d })}
+                    title="Add off-day"
+                  >
+                    <span className="text-xs font-medium text-gray-500 dark:text-gray-400">{dayLabels[idx]}</span>
+                    <span className="font-semibold truncate">{off ? 'OFF' : (site ? site.name : '—')}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="hidden md:block overflow-x-auto border dark:border-gray-800 rounded-md">
+        <table className="min-w-[900px] w-full divide-y divide-gray-200 dark:divide-gray-800">
           <thead className="bg-gray-50 dark:bg-gray-950">
             <tr>
               <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400">Guard</th>
@@ -77,7 +124,7 @@ function StandbyTable({ data, onRefresh }: { data: WeeklyData; onRefresh: () => 
               <tr key={g.id}>
                 <td className="px-3 py-2 text-sm font-medium whitespace-nowrap">
                   <label className="inline-flex items-center gap-2">
-                    <input type="checkbox" checked={!!selected[g.id]} onChange={() => toggleSel(g.id)} />
+                    <input className="rounded border-gray-300 dark:border-gray-600 dark:bg-gray-900" type="checkbox" checked={!!selected[g.id]} onChange={() => toggleSel(g.id)} />
                     <span className="inline-flex items-center gap-2">
                       <span>{g.name} {g.employee_id ? <span className="text-xs text-gray-500">({g.employee_id})</span> : null}</span>
                       <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300">Standby</span>
@@ -153,12 +200,12 @@ function GenerateShiftsPanel({ weekStart, zoneId, supervisorId }: { weekStart: D
 
   return (
     <div className="border rounded-md dark:border-gray-800">
-      <div className="px-4 py-3 border-b dark:border-gray-800 bg-white dark:bg-gray-900">
+      <div className="px-4 py-3 border-b dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-medium">Generate Shifts from Roster (Week of {weekStart.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })})</h3>
         </div>
       </div>
-      <div className="px-4 py-3 bg-white dark:bg-gray-900">
+      <div className="px-4 py-3 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
         <form onSubmit={submit} className="grid grid-cols-1 sm:grid-cols-6 gap-3 items-end">
           <div>
             <label className="block text-sm">Start Time</label>
@@ -190,7 +237,7 @@ function GenerateShiftsPanel({ weekStart, zoneId, supervisorId }: { weekStart: D
             </label>
           </div>
           <div className="flex justify-end">
-            <button type="submit" disabled={processing || !data.start_time || !data.end_time} className="px-3 py-2 rounded-md bg-indigo-600 text-white hover:bg-indigo-700 text-sm">Generate</button>
+            <button type="submit" disabled={processing || !data.start_time || !data.end_time} className="w-full sm:w-auto px-3 py-2 rounded-md bg-coin-700 text-white hover:bg-coin-600 text-sm">Generate</button>
           </div>
         </form>
       </div>
@@ -205,6 +252,8 @@ function BundlesSection({ weekStart, zoneId, supervisorId, relievers, sites }: {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const applyForm = useForm<{ start: string }>({ start: formatYmd(weekStart) });
+
+  const hasRelievers = Array.isArray(relievers) && relievers.length > 0;
 
   const loadBundles = async () => {
     setLoading(true);
@@ -242,23 +291,49 @@ function BundlesSection({ weekStart, zoneId, supervisorId, relievers, sites }: {
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold">Bundles (6 sites + 1 reliever)</h3>
-        <button type="button" className="px-3 py-1.5 rounded-md bg-gray-800 text-white hover:bg-gray-700 text-sm" onClick={() => { setEditing(null); setCreateOpen(true); }}>New Bundle</button>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Bundles (6 sites + 1 reliever)</h3>
+        <button
+          type="button"
+          disabled={!hasRelievers}
+          className="w-full sm:w-auto px-3 py-1.5 rounded-md bg-coin-700 text-white hover:bg-coin-600 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+          onClick={() => {
+            if (!hasRelievers) return;
+            setEditing(null);
+            setCreateOpen(true);
+          }}
+        >
+          New Bundle
+        </button>
       </div>
-      {loading && <div className="text-sm text-gray-500 dark:text-gray-400">Loading…</div>}
+      {!hasRelievers ? (
+        <EmptyState
+          title="No relievers available"
+          description="Bundles can’t be created for the current zone/supervisor scope."
+          size="sm"
+          contentClassName="py-2"
+        />
+      ) : null}
+      {loading && (
+        <EmptyState
+          title="Loading bundles"
+          description="Fetching bundle configuration…"
+          size="sm"
+          contentClassName="py-2"
+        />
+      )}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {bundles.map((b) => (
-          <div key={b.id} className="border rounded-md p-3 dark:border-gray-800">
-            <div className="flex items-center justify-between">
+          <div key={b.id} className="border rounded-md p-3 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
               <div>
                 <div className="font-medium">{b.name}</div>
-                <div className="text-xs text-gray-500">Reliever: {b.reliever?.name || '—'}</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">Reliever: {b.reliever?.name || '—'}</div>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <button type="button" className="text-xs px-2 py-1 rounded-md bg-gray-100 dark:bg-gray-800" onClick={() => { setEditing(b); setCreateOpen(true); }}>Edit</button>
                 <DeleteBundleButton id={b.id} onDone={loadBundles} />
-                <button type="button" className="text-xs px-2 py-1 rounded-md bg-indigo-600 text-white" onClick={() => applyWeek(b.id)}>Apply Week</button>
+                <button type="button" className="text-xs px-2 py-1 rounded-md bg-coin-700 text-white hover:bg-coin-600" onClick={() => applyWeek(b.id)}>Apply Week</button>
               </div>
             </div>
             <div className="mt-2 text-xs text-gray-600 dark:text-gray-300">
@@ -267,6 +342,15 @@ function BundlesSection({ weekStart, zoneId, supervisorId, relievers, sites }: {
           </div>
         ))}
       </div>
+      {!loading && bundles.length === 0 && (
+        <EmptyState
+          title="No bundles yet"
+          description="Create a bundle to define reliever rotations across 6 sites."
+          size="sm"
+          variant="card"
+          contentClassName="py-4"
+        />
+      )}
 
       <BundleFormModal
         open={createOpen}
@@ -357,7 +441,7 @@ function BundleFormModal({ open, onClose, initial, relievers, sites, filters, on
         <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{isEdit ? 'Edit Bundle' : 'New Bundle'}</h2>
         <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-200">✕</button>
       </div>
-      <div className="px-6 py-4 bg-white dark:bg-gray-900">
+      <div className="px-6 py-4 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
         <form className="grid grid-cols-1 gap-3" onSubmit={submit}>
           <div>
             <label className="block text-sm font-medium">Name</label>
@@ -406,7 +490,7 @@ function BundleFormModal({ open, onClose, initial, relievers, sites, filters, on
           </div>
           <div className="flex justify-end gap-2 pt-2">
             <button type="button" onClick={onClose} className="px-4 py-2 text-sm rounded-md bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700" disabled={processing}>Cancel</button>
-            <button type="submit" disabled={processing || !data.name || !data.reliever_guard_id || !(data.site_ids || []).length} className="px-4 py-2 text-sm rounded-md bg-indigo-600 text-white hover:bg-indigo-700">{processing ? 'Saving…' : 'Save'}</button>
+            <button type="submit" disabled={processing || !data.name || !data.reliever_guard_id || !(data.site_ids || []).length} className="px-4 py-2 text-sm rounded-md bg-coin-700 text-white hover:bg-coin-600">{processing ? 'Saving…' : 'Save'}</button>
           </div>
         </form>
       </div>
@@ -425,19 +509,80 @@ function startOfWeekMonday(d: Date) {
 
 export default function RosterWeekly() {
   const { auth, initial_week_start, zones = [], supervisors = [] } = (usePage().props as any);
+  const { toast } = useToast();
   const [weekStart, setWeekStart] = useState<Date>(() => initial_week_start ? new Date(initial_week_start) : startOfWeekMonday(new Date()));
   const [data, setData] = useState<WeeklyData | null>(null);
   const [loading, setLoading] = useState(false);
   const [zoneId, setZoneId] = useState<number | ''>('');
   const [supervisorId, setSupervisorId] = useState<number | ''>('');
   const [guardTypeFilter, setGuardTypeFilter] = useState<string>('');
+  const [reuseInfo, setReuseInfo] = useState<any | null>(null);
+  const [lastReuseToastKey, setLastReuseToastKey] = useState<string>('');
 
-  const load = async () => {
+  const hasRelieversInScope = useMemo(() => {
+    return !!data?.relievers?.length;
+  }, [data]);
+
+  const hasRelieverAssignments = useMemo(() => {
+    if (!data?.relievers?.length) return false;
+    return data.relievers.some((r) => r.sites && Object.keys(r.sites).length > 0);
+  }, [data]);
+
+  const hasStandbyInScope = useMemo(() => {
+    return !!data?.guards?.some((g) => (g.guard_type || 'permanent') === 'standby');
+  }, [data]);
+
+  const ensureReuse = async (params: { start: string; zone_id?: number; supervisor_id?: number; force?: boolean }) => {
+    try {
+      const token = getCsrfToken();
+      const res = await fetch(route('control-room.roster.weekly.reuse'), {
+        method: 'POST',
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+          ...(token ? { 'X-CSRF-TOKEN': token } : {}),
+        },
+        body: JSON.stringify(params),
+      });
+      if (!res.ok) return;
+      const json = await res.json();
+      setReuseInfo(json);
+      if (json?.reused) {
+        const key = `${params.start}-${params.zone_id || ''}-${params.supervisor_id || ''}-${json.source_week_start || ''}`;
+        if (key !== lastReuseToastKey) {
+          toast({
+            title: 'Reused last roster',
+            description: json.source_week_start ? `Copied ${json.copied || 0} reliever assignments from week of ${json.source_week_start}.` : 'Copied reliever assignments from the last saved week.',
+          });
+          setLastReuseToastKey(key);
+        }
+      }
+    } catch {
+      return;
+    }
+  };
+
+  const load = async (overrides?: { weekStart?: Date; zoneId?: number | ''; supervisorId?: number | ''; forceReuse?: boolean }) => {
     setLoading(true);
     try {
-      const params: any = { start: formatYmd(weekStart) };
-      if (zoneId) params.zone_id = zoneId;
-      if (supervisorId) params.supervisor_id = supervisorId;
+      const ws = overrides?.weekStart ?? weekStart;
+      const zid = overrides?.zoneId ?? zoneId;
+      const sid = overrides?.supervisorId ?? supervisorId;
+
+      setReuseInfo(null);
+
+      const params: any = { start: formatYmd(ws) };
+      if (zid) params.zone_id = zid;
+      if (sid) params.supervisor_id = sid;
+
+      const currentWeekStart = startOfWeekMonday(new Date());
+      const shouldAutoReuse = ws.getTime() >= currentWeekStart.getTime();
+      if (overrides?.forceReuse) {
+        await ensureReuse({ ...params, force: true });
+      } else if (shouldAutoReuse) {
+        await ensureReuse(params);
+      }
+
       const url = route('control-room.roster.weekly.data', params);
       const res = await fetch(url, { headers: { Accept: 'application/json' } });
       if (res.ok) {
@@ -447,6 +592,16 @@ export default function RosterWeekly() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const reuseOverwrite = async () => {
+    if (!hasRelieversInScope) {
+      toast({ title: 'No relievers in this scope', description: 'Change filters (zone/supervisor) to a scope that has relievers.' });
+      return;
+    }
+    const ok = confirm('Reuse last saved reliever roster for this week and overwrite current reliever assignments?');
+    if (!ok) return;
+    await load({ forceReuse: true });
   };
 
   useEffect(() => {
@@ -462,54 +617,97 @@ export default function RosterWeekly() {
     <ControlRoomLayout title="Weekly Roster" user={auth?.user as any}>
       <Head title="Weekly Roster" />
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-xl font-semibold">Weekly Roster</h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400">Show guard off-days and reliever sites for each day.</p>
+        <div className="space-y-3">
+          <PageHeader
+            title="Weekly Roster"
+            description="Show guard off-days and reliever sites for each day."
+            actions={(
+              <>
+                <Link href={route('control-room.shifts.index')} className="w-full sm:w-auto px-3 py-1.5 rounded-md bg-coin-700 text-white hover:bg-coin-600 text-sm">View Guard Shifts</Link>
+                <button onClick={prevWeek} className="w-full sm:w-auto px-3 py-1.5 rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700">Prev</button>
+                <button onClick={thisWeek} className="w-full sm:w-auto px-3 py-1.5 rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700">This Week</button>
+                <button onClick={nextWeek} className="w-full sm:w-auto px-3 py-1.5 rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700">Next</button>
+              </>
+            )}
+          />
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+              <label className="text-sm text-gray-600 dark:text-gray-300 sm:min-w-[70px]">Zone</label>
+              <select className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100" value={zoneId as any} onChange={(e) => setZoneId(e.target.value ? Number(e.target.value) : '')}>
+                <option value="">All zones</option>
+                {zones.map((z: any) => (<option key={z.id} value={z.id}>{z.name}</option>))}
+              </select>
+            </div>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+              <label className="text-sm text-gray-600 dark:text-gray-300 sm:min-w-[90px]">Supervisor</label>
+              <select className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100" value={supervisorId as any} onChange={(e) => setSupervisorId(e.target.value ? Number(e.target.value) : '')}>
+                <option value="">All supervisors</option>
+                {supervisors.map((s: any) => (<option key={s.id} value={s.id}>{s.name}</option>))}
+              </select>
+            </div>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 md:justify-end">
+              <button onClick={() => load()} className="w-full sm:w-auto px-3 py-1.5 rounded-md bg-coin-700 text-white hover:bg-coin-600">Apply</button>
+              <button
+                onClick={() => {
+                  setZoneId('');
+                  setSupervisorId('');
+                  setGuardTypeFilter('');
+                  load({ zoneId: '', supervisorId: '' });
+                }}
+                className="w-full sm:w-auto px-3 py-1.5 rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700"
+              >
+                Reset
+              </button>
+            </div>
           </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-          <div className="flex items-center gap-2">
-            <label className="text-sm text-gray-600 dark:text-gray-300 min-w-[70px]">Zone</label>
-            <select className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100" value={zoneId as any} onChange={(e) => setZoneId(e.target.value ? Number(e.target.value) : '')}>
-              <option value="">All zones</option>
-              {zones.map((z: any) => (<option key={z.id} value={z.id}>{z.name}</option>))}
+          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+            <label className="text-sm text-gray-600 dark:text-gray-300 sm:min-w-[90px]">Guard Type</label>
+            <select
+              className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100 sm:max-w-xs"
+              value={guardTypeFilter}
+              onChange={(e) => setGuardTypeFilter(e.target.value)}
+            >
+              <option value="">All types</option>
+              <option value="permanent">Standard</option>
+              <option value="standby">Standby</option>
+              <option value="reliever">Reliever</option>
             </select>
-          </div>
-          <div className="flex items-center gap-2">
-            <label className="text-sm text-gray-600 dark:text-gray-300 min-w-[90px]">Supervisor</label>
-            <select className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100" value={supervisorId as any} onChange={(e) => setSupervisorId(e.target.value ? Number(e.target.value) : '')}>
-              <option value="">All supervisors</option>
-              {supervisors.map((s: any) => (<option key={s.id} value={s.id}>{s.name}</option>))}
-            </select>
-          </div>
-          <div className="flex items-center gap-2 md:justify-end">
-            <button onClick={load} className="px-3 py-1.5 rounded-md bg-indigo-600 text-white hover:bg-indigo-700">Apply</button>
-            <button onClick={() => { setZoneId(''); setSupervisorId(''); setGuardTypeFilter(''); load(); }} className="px-3 py-1.5 rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700">Reset</button>
-          </div>
-        </div>
-        <div className="mt-2 flex items-center gap-2">
-          <label className="text-sm text-gray-600 dark:text-gray-300 min-w-[90px]">Guard Type</label>
-          <select
-            className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100 max-w-xs"
-            value={guardTypeFilter}
-            onChange={(e) => setGuardTypeFilter(e.target.value)}
-          >
-            <option value="">All types</option>
-            <option value="permanent">Standard</option>
-            <option value="standby">Standby</option>
-            <option value="reliever">Reliever</option>
-          </select>
-        </div>
-          <div className="flex items-center gap-2">
-            <Link href={route('control-room.shifts.index')} className="px-3 py-1.5 rounded-md bg-gray-800 text-white hover:bg-gray-700 text-sm">View Guard Shifts</Link>
-            <button onClick={prevWeek} className="px-3 py-1.5 rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700">Prev</button>
-            <button onClick={thisWeek} className="px-3 py-1.5 rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700">This Week</button>
-            <button onClick={nextWeek} className="px-3 py-1.5 rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700">Next</button>
           </div>
         </div>
 
-        {loading && <div className="text-gray-500 dark:text-gray-400">Loading…</div>}
+        <div className="rounded-md border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-3">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <div className="text-sm text-gray-700 dark:text-gray-200">
+              {!hasRelieversInScope
+                ? 'Relievers not found for the selected zone/supervisor.'
+                : (hasRelieverAssignments ? 'Reliever roster is saved for this week.' : 'Reliever roster not saved for this week yet.')}
+            </div>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+              <button
+                type="button"
+                onClick={reuseOverwrite}
+                disabled={loading || !hasRelieversInScope}
+                className="w-full sm:w-auto px-3 py-1.5 rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Reuse Last (Overwrite)
+              </button>
+            </div>
+          </div>
+          {hasRelieversInScope && reuseInfo?.reused && reuseInfo?.source_week_start ? (
+            <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">Reused from week starting {reuseInfo.source_week_start}.</div>
+          ) : null}
+        </div>
+
+        {loading && (
+          <EmptyState
+            title="Loading roster"
+            description="Fetching weekly roster data…"
+            size="sm"
+            contentClassName="py-2"
+          />
+        )}
 
         {data && (
           <div className="space-y-8">
@@ -522,10 +720,28 @@ export default function RosterWeekly() {
               <GuardsTable data={data} onRefresh={load} />
             )}
             {(!guardTypeFilter || guardTypeFilter === 'standby') && (
-              <StandbyTable data={data} onRefresh={load} />
+              hasStandbyInScope
+                ? <StandbyTable data={data} onRefresh={load} />
+                : (guardTypeFilter === 'standby' ? (
+                  <EmptyState
+                    title="No standby guards"
+                    description="Change zone/supervisor filters to a scope that has standby guards."
+                    size="sm"
+                    variant="card"
+                  />
+                ) : null)
             )}
             {(!guardTypeFilter || guardTypeFilter === 'reliever') && (
-              <RelieversTable data={data} onRefresh={load} />
+              data.relievers?.length
+                ? <RelieversTable data={data} onRefresh={load} />
+                : (guardTypeFilter === 'reliever' ? (
+                  <EmptyState
+                    title="No relievers found"
+                    description="Change zone/supervisor filters to a scope that has relievers."
+                    size="sm"
+                    variant="card"
+                  />
+                ) : null)
             )}
             <BundlesSection
               weekStart={weekStart}
@@ -552,17 +768,56 @@ function GuardsTable({ data, onRefresh }: { data: WeeklyData; onRefresh: () => v
 
   return (
     <div className="space-y-2">
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold">Assigned Guards</h3>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Assigned Guards</h3>
         <div className="text-xs text-gray-500 dark:text-gray-400">Click a day to add off-day</div>
       </div>
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <div className="text-xs text-gray-500 dark:text-gray-400">Select guards then bulk mark OFF</div>
-        <button disabled={!selectedIds.length} onClick={() => setBulkOffOpen(true)} className={`px-3 py-1.5 rounded-md text-white ${selectedIds.length ? 'bg-gray-800 hover:bg-gray-700' : 'bg-gray-400 cursor-not-allowed'}`}>Bulk Off-day</button>
+        <button disabled={!selectedIds.length} onClick={() => setBulkOffOpen(true)} className={`w-full sm:w-auto px-3 py-1.5 rounded-md text-white ${selectedIds.length ? 'bg-coin-700 hover:bg-coin-600' : 'bg-gray-400 cursor-not-allowed'}`}>Bulk Off-day</button>
       </div>
 
-      <div className="overflow-x-auto border dark:border-gray-800 rounded-md">
-        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-800">
+      <div className="md:hidden space-y-2">
+        {data.guards.filter(g => ((g.guard_type || 'permanent') === 'permanent')).map((g) => (
+          <div key={g.id} className="rounded-md border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-3">
+            <div className="flex items-start justify-between gap-3">
+              <label className="inline-flex items-start gap-2">
+                <input className="mt-1 rounded border-gray-300 dark:border-gray-600 dark:bg-gray-900" type="checkbox" checked={!!selected[g.id]} onChange={() => toggleSel(g.id)} />
+                <span className="min-w-0">
+                  <div className="text-sm font-semibold text-gray-900 dark:text-gray-100 break-words">
+                    {g.name} {g.employee_id ? <span className="text-xs text-gray-500">({g.employee_id})</span> : null}
+                  </div>
+                  <div className="mt-1">
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200">Permanent</span>
+                  </div>
+                </span>
+              </label>
+            </div>
+
+            <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {data.days.map((d, idx) => {
+                const off = !!g.off?.[d];
+                const site = g.sites?.[d];
+                return (
+                  <button
+                    key={d}
+                    type="button"
+                    className={`flex items-center justify-between gap-2 w-full px-3 py-2 rounded-md border text-sm ${off ? 'bg-gray-800 text-gray-100 border-gray-700' : site ? 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100 border-gray-200 dark:border-gray-700' : 'bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-800'}`}
+                    onClick={() => setOffModal({ open: true, guardId: g.id, date: d })}
+                    title="Add off-day"
+                  >
+                    <span className="text-xs font-medium text-gray-500 dark:text-gray-400">{dayLabels[idx]}</span>
+                    <span className="font-semibold truncate">{off ? 'OFF' : (site ? site.name : '—')}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="hidden md:block overflow-x-auto border dark:border-gray-800 rounded-md">
+        <table className="min-w-[900px] w-full divide-y divide-gray-200 dark:divide-gray-800">
           <thead className="bg-gray-50 dark:bg-gray-950">
             <tr>
               <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400">Guard</th>
@@ -576,7 +831,7 @@ function GuardsTable({ data, onRefresh }: { data: WeeklyData; onRefresh: () => v
               <tr key={g.id}>
                 <td className="px-3 py-2 text-sm font-medium whitespace-nowrap">
                   <label className="inline-flex items-center gap-2">
-                    <input type="checkbox" checked={!!selected[g.id]} onChange={() => toggleSel(g.id)} />
+                    <input className="rounded border-gray-300 dark:border-gray-600 dark:bg-gray-900" type="checkbox" checked={!!selected[g.id]} onChange={() => toggleSel(g.id)} />
                     <span className="inline-flex items-center gap-2">
                       <span>{g.name} {g.employee_id ? <span className="text-xs text-gray-500">({g.employee_id})</span> : null}</span>
                       <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200">Permanent</span>
@@ -630,12 +885,45 @@ function RelieversTable({ data, onRefresh }: { data: WeeklyData; onRefresh: () =
 
   return (
     <div className="space-y-2">
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold">Relievers</h3>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Relievers</h3>
         <div className="text-xs text-gray-500 dark:text-gray-400">Click a day to assign a site</div>
       </div>
-      <div className="overflow-x-auto border dark:border-gray-800 rounded-md">
-        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-800">
+      <div className="md:hidden space-y-2">
+        {data.relievers.map((r) => (
+          <div key={r.id} className="rounded-md border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-3">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="text-sm font-semibold text-gray-900 dark:text-gray-100 break-words">
+                  {r.name} {r.employee_id ? <span className="text-xs text-gray-500">({r.employee_id})</span> : null}
+                </div>
+                <button type="button" className="mt-2 px-2 py-1 text-xs rounded-md bg-coin-700 text-white hover:bg-coin-600" onClick={() => setBulkRel({ open: true, guardId: r.id })}>Bulk Assign Week</button>
+              </div>
+            </div>
+
+            <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {data.days.map((d, idx) => {
+                const site = r.sites?.[d];
+                return (
+                  <button
+                    key={d}
+                    type="button"
+                    className={`flex items-center justify-between gap-2 w-full px-3 py-2 rounded-md border text-sm ${site ? 'bg-coin-700 text-white border-coin-800' : 'bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-800'}`}
+                    onClick={() => setRelModal({ open: true, guardId: r.id, date: d, siteId: site?.id })}
+                    title="Assign site"
+                  >
+                    <span className={`text-xs font-medium ${site ? 'text-white/80' : 'text-gray-500 dark:text-gray-400'}`}>{dayLabels[idx]}</span>
+                    <span className="font-semibold truncate">{site ? site.name : 'Assign'}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="hidden md:block overflow-x-auto border dark:border-gray-800 rounded-md">
+        <table className="min-w-[900px] w-full divide-y divide-gray-200 dark:divide-gray-800">
           <thead className="bg-gray-50 dark:bg-gray-950">
             <tr>
               <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400">Reliever</th>
@@ -648,9 +936,9 @@ function RelieversTable({ data, onRefresh }: { data: WeeklyData; onRefresh: () =
             {data.relievers.map((r) => (
               <tr key={r.id}>
                 <td className="px-3 py-2 text-sm font-medium whitespace-nowrap">
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-col lg:flex-row lg:items-center gap-2">
                     <span>{r.name} {r.employee_id ? <span className="text-xs text-gray-500">({r.employee_id})</span> : null}</span>
-                    <button type="button" className="px-2 py-1 text-xs rounded-md bg-indigo-600 text-white hover:bg-indigo-700" onClick={() => setBulkRel({ open: true, guardId: r.id })}>Bulk Assign Week</button>
+                    <button type="button" className="px-2 py-1 text-xs rounded-md bg-coin-700 text-white hover:bg-coin-600" onClick={() => setBulkRel({ open: true, guardId: r.id })}>Bulk Assign Week</button>
                   </div>
                 </td>
                 {data.days.map((d) => {
@@ -659,7 +947,7 @@ function RelieversTable({ data, onRefresh }: { data: WeeklyData; onRefresh: () =
                     <td key={d} className="px-3 py-2 text-sm">
                       <button
                         type="button"
-                        className={`inline-flex items-center gap-2 px-2 py-1 rounded-md border text-xs ${site ? 'bg-indigo-600 text-white border-indigo-700' : 'bg-white dark:bg-gray-900 text-gray-500 border-gray-200 dark:border-gray-800'}`}
+                        className={`inline-flex items-center gap-2 px-2 py-1 rounded-md border text-xs ${site ? 'bg-coin-700 text-white border-coin-800' : 'bg-white dark:bg-gray-900 text-gray-500 border-gray-200 dark:border-gray-800'}`}
                         onClick={() => setRelModal({ open: true, guardId: r.id, date: d, siteId: site?.id })}
                         title="Assign site"
                       >
@@ -728,7 +1016,7 @@ function AddOffDayModal({ open, onClose, guardId, date, onSaved }: { open: boole
         <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Add Off Day</h2>
         <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-200">✕</button>
       </div>
-      <div className="px-6 py-4 bg-white dark:bg-gray-900">
+      <div className="px-6 py-4 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
         <form className="grid grid-cols-1 gap-3" onSubmit={submit}>
           <div>
             <label className="block text-sm font-medium">Date</label>
@@ -742,7 +1030,7 @@ function AddOffDayModal({ open, onClose, guardId, date, onSaved }: { open: boole
           </div>
           <div className="flex justify-end gap-2 pt-2">
             <button type="button" onClick={onClose} className="px-4 py-2 text-sm rounded-md bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700" disabled={processing}>Cancel</button>
-            <button type="submit" disabled={processing || !data.start_date} className="px-4 py-2 text-sm rounded-md bg-indigo-600 text-white hover:bg-indigo-700">{processing ? 'Saving…' : 'Save'}</button>
+            <button type="submit" disabled={processing || !data.start_date} className="px-4 py-2 text-sm rounded-md bg-coin-700 text-white hover:bg-coin-600">{processing ? 'Saving…' : 'Save'}</button>
           </div>
         </form>
       </div>
@@ -787,7 +1075,7 @@ function AssignReliefModal({ open, onClose, guardId, date, initialSiteId, sites,
         <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Assign Reliever</h2>
         <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-200">✕</button>
       </div>
-      <div className="px-6 py-4 bg-white dark:bg-gray-900">
+      <div className="px-6 py-4 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
         <form className="grid grid-cols-1 gap-3" onSubmit={submit}>
           <div>
             <label className="block text-sm font-medium">Date</label>
@@ -814,7 +1102,7 @@ function AssignReliefModal({ open, onClose, guardId, date, initialSiteId, sites,
             {initialSiteId ? (
               <button type="button" onClick={clearAssignment} className="px-4 py-2 text-sm rounded-md bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700" disabled={processing}>Clear</button>
             ) : null}
-            <button type="submit" disabled={processing || !data.client_site_id || !data.date} className="px-4 py-2 text-sm rounded-md bg-indigo-600 text-white hover:bg-indigo-700">{processing ? 'Saving…' : 'Save'}</button>
+            <button type="submit" disabled={processing || !data.client_site_id || !data.date} className="px-4 py-2 text-sm rounded-md bg-coin-700 text-white hover:bg-coin-600">{processing ? 'Saving…' : 'Save'}</button>
           </div>
         </form>
       </div>
@@ -844,7 +1132,7 @@ function BulkOffModal({ open, onClose, guardIds, onSaved }: { open: boolean; onC
         <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Bulk Off-day</h2>
         <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-200">✕</button>
       </div>
-      <div className="px-6 py-4 bg-white dark:bg-gray-900">
+      <div className="px-6 py-4 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
         <form className="grid grid-cols-1 gap-3" onSubmit={submit}>
           <div>
             <label className="block text-sm font-medium">Date</label>
@@ -858,7 +1146,7 @@ function BulkOffModal({ open, onClose, guardIds, onSaved }: { open: boolean; onC
           </div>
           <div className="flex justify-end gap-2 pt-2">
             <button type="button" onClick={onClose} className="px-4 py-2 text-sm rounded-md bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700" disabled={processing}>Cancel</button>
-            <button type="submit" disabled={processing || !data.date || !guardIds.length} className="px-4 py-2 text-sm rounded-md bg-gray-800 text-white hover:bg-gray-700">{processing ? 'Saving…' : 'Save'}</button>
+            <button type="submit" disabled={processing || !data.date || !guardIds.length} className="px-4 py-2 text-sm rounded-md bg-coin-700 text-white hover:bg-coin-600">{processing ? 'Saving…' : 'Save'}</button>
           </div>
         </form>
       </div>
@@ -894,7 +1182,7 @@ function BulkReliefModal({ open, onClose, guardId, days, initialMap, sites, acti
         <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Bulk Assign Reliever</h2>
         <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-200">✕</button>
       </div>
-      <div className="px-6 py-4 bg-white dark:bg-gray-900">
+      <div className="px-6 py-4 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
         <form className="grid grid-cols-1 gap-3" onSubmit={submit}>
           <label className="inline-flex items-center gap-2"><input type="checkbox" checked={onlyActive} onChange={(e) => setOnlyActive(e.target.checked)} /> <span className="text-sm">Only show active sites this week</span></label>
           {days.map((d) => (
@@ -910,7 +1198,7 @@ function BulkReliefModal({ open, onClose, guardId, days, initialMap, sites, acti
           ))}
           <div className="flex justify-end gap-2 pt-2">
             <button type="button" onClick={onClose} className="px-4 py-2 text-sm rounded-md bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700" disabled={processing}>Cancel</button>
-            <button type="submit" disabled={processing || !guardId} className="px-4 py-2 text-sm rounded-md bg-indigo-600 text-white hover:bg-indigo-700">{processing ? 'Saving…' : 'Save'}</button>
+            <button type="submit" disabled={processing || !guardId} className="px-4 py-2 text-sm rounded-md bg-coin-700 text-white hover:bg-coin-600">{processing ? 'Saving…' : 'Save'}</button>
           </div>
         </form>
       </div>

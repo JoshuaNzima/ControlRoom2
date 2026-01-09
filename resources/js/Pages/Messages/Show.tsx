@@ -1,18 +1,19 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Head } from '@inertiajs/react';
+import { Head, usePage } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Card, CardContent, CardHeader } from '@/Components/ui/card';
 import { Input } from '@/Components/ui/input';
 import { Button } from '@/Components/ui/button';
 import { Badge } from '@/Components/ui/badge';
 import { ScrollArea } from '@/Components/ui/scroll-area';
-import Echo from 'laravel-echo';
 import axios from 'axios';
+import { PageProps } from '@/types';
 
 type Message = {
   id: number;
   sender_id: number;
   sender: { id: number; name: string };
+  type?: string;
   content: string;
   is_emergency?: boolean;
   created_at: string;
@@ -28,6 +29,7 @@ type Conversation = {
 };
 
 const MessageBubble = ({ message, isOwnMessage }: { message: Message; isOwnMessage: boolean }) => {
+  const isEmergency = !!message.is_emergency || message.type === 'emergency';
   return (
     <div className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'} mb-4`}>
       <div
@@ -43,7 +45,7 @@ const MessageBubble = ({ message, isOwnMessage }: { message: Message; isOwnMessa
           </div>
         )}
         <div>
-          {message.is_emergency && '🚨 '}
+          {isEmergency && '🚨 '}
           {message.content}
         </div>
         <div
@@ -68,7 +70,13 @@ const Show: React.FC<ShowProps> = ({ auth, conversation }) => {
   const [newMessage, setNewMessage] = useState('');
   const [isEmergency, setIsEmergency] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
-  const userId = (window as any).auth?.user?.id as number;
+  const userId = usePage<PageProps>().props.auth.user.id;
+
+  const markRead = async () => {
+    try {
+      await axios.post(route('messages.conversations.read', conversation.id));
+    } catch {}
+  };
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -78,17 +86,15 @@ const Show: React.FC<ShowProps> = ({ auth, conversation }) => {
     scrollToBottom();
 
     try {
-      const echo = new Echo({
-        broadcaster: 'pusher',
-        key: (window as any).appKey,
-        cluster: (window as any).pusherCluster,
-        forceTLS: true,
-      });
-
+      const echo = (window as any).Echo;
+      if (!echo) return;
       const channel = (echo as any).join(`conversation.${conversation.id}`);
 
       channel.listen('MessageSent', (e: any) => {
         setMessages((current: Message[]) => [...current, e.message]);
+        if (e?.message?.sender_id && Number(e.message.sender_id) !== Number(userId)) {
+          markRead();
+        }
         scrollToBottom();
       });
 

@@ -16,10 +16,10 @@ export default function PublicLayout({ title = 'Coin Security', children }: Prop
     }
   };
   return (
-    <div className="min-h-screen bg-red-50 dark:bg-gray-900 text-gray-900">
+    <div className="min-h-screen bg-red-50 text-gray-900 dark:bg-gray-950 dark:text-gray-100">
       <Head title={title} />
 
-      <header className="bg-white/95 backdrop-blur-sm shadow-lg sticky top-0 z-50">
+      <header className="sticky top-0 z-50 border-b border-red-100 bg-white/95 backdrop-blur-sm shadow-lg dark:border-gray-800 dark:bg-gray-950/80 dark:shadow-black/30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4">
             <div className="flex items-center gap-3">
@@ -31,19 +31,19 @@ export default function PublicLayout({ title = 'Coin Security', children }: Prop
             <nav className="flex items-center gap-6">
               <Link 
                 href={safeRoute('public.home', undefined, '/')} 
-                className="text-sm font-medium text-gray-700 hover:text-red-600 transition-colors duration-200"
+                className="text-sm font-medium text-gray-700 hover:text-coin-700 transition-colors duration-200 dark:text-gray-200 dark:hover:text-coin-300"
               >
                 Home
               </Link>
               <Link 
                 href={safeRoute('public.services', undefined, '/services')} 
-                className="text-sm font-medium text-gray-700 hover:text-red-600 transition-colors duration-200"
+                className="text-sm font-medium text-gray-700 hover:text-coin-700 transition-colors duration-200 dark:text-gray-200 dark:hover:text-coin-300"
               >
                 Services
               </Link>
               <Link 
                 href={safeRoute('login', undefined, '/login')} 
-                className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-red-600 to-red-500 text-white text-sm font-medium rounded-lg hover:shadow-lg transform hover:scale-105 transition-all duration-200"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-coin-700 to-coin-600 text-white text-sm font-medium rounded-lg shadow-sm shadow-black/10 hover:shadow-lg transform hover:scale-[1.02] transition-all duration-200 dark:shadow-black/40"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
@@ -52,7 +52,7 @@ export default function PublicLayout({ title = 'Coin Security', children }: Prop
               </Link>
               <Link 
                 href={safeRoute('public.contact', undefined, '/contact')} 
-                className="text-sm font-medium text-gray-700 hover:text-red-600 transition-colors duration-200"
+                className="text-sm font-medium text-gray-700 hover:text-coin-700 transition-colors duration-200 dark:text-gray-200 dark:hover:text-coin-300"
               >
                 Contact
               </Link>

@@ -59,14 +59,14 @@ export default function Pagination({
   const visiblePages = getVisiblePages();
 
   return (
-    <div className="flex items-center justify-between px-4 py-3 bg-white border-t border-gray-200 sm:px-6">
+    <div className="flex items-center justify-between px-4 py-3 bg-white dark:bg-gray-950 border-t border-gray-200 dark:border-gray-800 sm:px-6">
       <div className="flex justify-between flex-1 sm:hidden">
         <Button
           variant="outline"
           size="sm"
           onClick={() => onPageChange(currentPage - 1)}
           disabled={currentPage === 1}
-          className="relative inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+          className="relative inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-md hover:bg-gray-50 dark:hover:bg-gray-800"
         >
           Previous
         </Button>
@@ -75,7 +75,7 @@ export default function Pagination({
           size="sm"
           onClick={() => onPageChange(currentPage + 1)}
           disabled={currentPage === totalPages}
-          className="relative ml-3 inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+          className="relative ml-3 inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-md hover:bg-gray-50 dark:hover:bg-gray-800"
         >
           Next
         </Button>
@@ -83,7 +83,7 @@ export default function Pagination({
       
       <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
         <div>
-          <p className="text-sm text-gray-700">
+          <p className="text-sm text-gray-700 dark:text-gray-200">
             Showing page <span className="font-medium">{currentPage}</span> of{' '}
             <span className="font-medium">{totalPages}</span>
           </p>
@@ -96,7 +96,7 @@ export default function Pagination({
               size="sm"
               onClick={() => onPageChange(currentPage - 1)}
               disabled={currentPage === 1}
-              className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
+              className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm font-medium text-gray-500 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800"
             >
               <IconMapper name="chevron-left" className="h-5 w-5" />
             </Button>
@@ -104,7 +104,7 @@ export default function Pagination({
             {showPageNumbers && visiblePages.map((page, index) => (
               <React.Fragment key={index}>
                 {page === '...' ? (
-                  <span className="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700">
+                  <span className="relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm font-medium text-gray-700 dark:text-gray-200">
                     ...
                   </span>
                 ) : (
@@ -114,8 +114,8 @@ export default function Pagination({
                     onClick={() => onPageChange(page as number)}
                     className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
                       currentPage === page
-                        ? 'z-10 bg-indigo-50 border-indigo-500 text-indigo-600'
-                        : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                        ? 'z-10 bg-coin-50 border-coin-500 text-coin-700 dark:bg-coin-900/30 dark:border-coin-800 dark:text-coin-200'
+                        : 'bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700 text-gray-500 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800'
                     }`}
                   >
                     {page}
@@ -129,7 +129,7 @@ export default function Pagination({
               size="sm"
               onClick={() => onPageChange(currentPage + 1)}
               disabled={currentPage === totalPages}
-              className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
+              className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm font-medium text-gray-500 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800"
             >
               <IconMapper name="chevron-right" className="h-5 w-5" />
             </Button>

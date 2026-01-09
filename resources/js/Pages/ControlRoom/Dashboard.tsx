@@ -3,6 +3,9 @@ import { Head } from '@inertiajs/react';
 import ControlRoomLayout from '@/Layouts/ControlRoomLayout';
 import { Card, CardContent, CardHeader } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
+import EmptyState from '@/Components/ui/empty-state';
+import Skeleton from '@/Components/ui/skeleton';
+import PageHeader from '@/Components/ui/page-header';
 const CoverageTrendChart = React.lazy(() => import('@/Components/ControlRoom/CoverageTrendChart'));
 const AttendanceChart = React.lazy(() => import('@/Components/ControlRoom/AttendanceChart'));
 import {
@@ -212,6 +215,19 @@ const Dashboard = ({ stats, recentIncidents, activeAlerts, coverageData, attenda
             <Head title="Control Room Dashboard" />
 
             <div className="space-y-6">
+                <PageHeader
+                    title="Control Room Dashboard"
+                    description="Live operations overview: coverage, incidents, alerts, and attendance trends."
+                    actions={(
+                        <Button
+                            variant="outline"
+                            className="h-10 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+                            onClick={() => window.location.reload()}
+                        >
+                            Refresh
+                        </Button>
+                    )}
+                />
                 <QuickRequisitionModal />
                 <RequisitionSummary />
 
@@ -227,7 +243,7 @@ const Dashboard = ({ stats, recentIncidents, activeAlerts, coverageData, attenda
                                     ? 'border-yellow-500 bg-yellow-50 dark:bg-yellow-900/20'
                                     : metric.status === 'danger'
                                     ? 'border-red-500 bg-red-50 dark:bg-red-900/20'
-                                    : 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                                    : 'border-coin-600 bg-coin-50 dark:bg-coin-900/20'
                             } hover:shadow-md transition-shadow dark:bg-gray-800 dark:border-gray-700`}
                         >
                             <CardContent className="py-4">
@@ -241,7 +257,7 @@ const Dashboard = ({ stats, recentIncidents, activeAlerts, coverageData, attenda
                                                 ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-100'
                                                 : metric.status === 'danger'
                                                 ? 'bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100'
-                                                : 'bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-100'
+                                                : 'bg-coin-100 text-coin-800 dark:bg-coin-900/40 dark:text-coin-200'
                                         }`}
                                     >
                                         {metric.status}
@@ -275,7 +291,7 @@ const Dashboard = ({ stats, recentIncidents, activeAlerts, coverageData, attenda
                             <button
                                 className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm transition ${
                                     showZoneCoverage
-                                        ? 'bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-800 dark:text-red-100 dark:hover:bg-red-700'
+                                        ? 'bg-coin-700 text-white hover:bg-coin-800 dark:bg-coin-700 dark:hover:bg-coin-600'
                                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
                                 }`}
                                 onClick={() => setShowZoneCoverage(!showZoneCoverage)}
@@ -339,9 +355,12 @@ const Dashboard = ({ stats, recentIncidents, activeAlerts, coverageData, attenda
                                             </div>
                                         ))
                                     ) : (
-                                        <div className="text-center py-6 text-gray-500 dark:text-gray-400">
-                                            No zones data available
-                                        </div>
+                                        <EmptyState
+                                          title="No zones"
+                                          description="Zone coverage will appear here once zones are configured."
+                                          size="sm"
+                                          contentClassName="py-4"
+                                        />
                                     )}
                                 </div>
                             </CardContent>
@@ -357,7 +376,7 @@ const Dashboard = ({ stats, recentIncidents, activeAlerts, coverageData, attenda
                             <button
                                 className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm transition ${
                                     showIncidents
-                                        ? 'bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-800 dark:text-red-100 dark:hover:bg-red-700'
+                                        ? 'bg-coin-700 text-white hover:bg-coin-800 dark:bg-coin-700 dark:hover:bg-coin-600'
                                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
                                 }`}
                                 onClick={() => setShowIncidents(!showIncidents)}
@@ -421,9 +440,12 @@ const Dashboard = ({ stats, recentIncidents, activeAlerts, coverageData, attenda
                                             </div>
                                         ))
                                     ) : (
-                                        <div className="text-center py-6 text-gray-500 dark:text-gray-400">
-                                            No recent incidents
-                                        </div>
+                                        <EmptyState
+                                          title="No recent incidents"
+                                          description="You're all clear right now. New incidents will show up here."
+                                          size="sm"
+                                          contentClassName="py-4"
+                                        />
                                     )}
                                 </div>
                             </CardContent>
@@ -442,7 +464,7 @@ const Dashboard = ({ stats, recentIncidents, activeAlerts, coverageData, attenda
                             <button
                                 className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm transition ${
                                     showAlerts
-                                        ? 'bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-800 dark:text-red-100 dark:hover:bg-red-700'
+                                        ? 'bg-coin-700 text-white hover:bg-coin-800 dark:bg-coin-700 dark:hover:bg-coin-600'
                                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
                                 }`}
                                 onClick={() => setShowAlerts(!showAlerts)}
@@ -478,27 +500,27 @@ const Dashboard = ({ stats, recentIncidents, activeAlerts, coverageData, attenda
                                             Moderate incidents
                                         </div>
                                     </div>
-                                    <div className="text-center p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                                    <div className="text-center p-4 bg-coin-50 dark:bg-coin-900/20 rounded-lg border border-coin-200 dark:border-coin-800">
                                         <div className="text-3xl mb-2">👥</div>
-                                        <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                                        <div className="text-2xl font-bold text-coin-700 dark:text-coin-200">
                                             {safeActiveAlerts.attendance_alerts}
                                         </div>
-                                        <div className="text-sm text-blue-800 dark:text-blue-200 font-medium">
+                                        <div className="text-sm text-coin-800 dark:text-coin-200 font-medium">
                                             Attendance Alerts
                                         </div>
-                                        <div className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                                        <div className="text-xs text-coin-700 dark:text-coin-200 mt-1">
                                             Missing checkouts
                                         </div>
                                     </div>
-                                    <div className="text-center p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-800">
+                                    <div className="text-center p-4 bg-coin-50 dark:bg-coin-900/20 rounded-lg border border-coin-200 dark:border-coin-800">
                                         <div className="text-3xl mb-2">📹</div>
-                                        <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
+                                        <div className="text-2xl font-bold text-coin-700 dark:text-coin-200">
                                             {safeActiveAlerts.camera_alerts}
                                         </div>
-                                        <div className="text-sm text-purple-800 dark:text-purple-200 font-medium">
+                                        <div className="text-sm text-coin-800 dark:text-coin-200 font-medium">
                                             Camera Alerts
                                         </div>
-                                        <div className="text-xs text-purple-600 dark:text-purple-400 mt-1">
+                                        <div className="text-xs text-coin-700 dark:text-coin-200 mt-1">
                                             System alerts
                                         </div>
                                     </div>
@@ -526,16 +548,7 @@ const Dashboard = ({ stats, recentIncidents, activeAlerts, coverageData, attenda
                             <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
                                 Quick Actions
                             </h3>
-                            <div className="flex gap-2">
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => window.location.reload()}
-                                    className="dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
-                                >
-                                    Refresh
-                                </Button>
-                            </div>
+                            <div className="flex gap-2" />
                         </CardHeader>
                         <CardContent>
                             <div className="grid grid-cols-2 gap-3">
@@ -586,7 +599,7 @@ const Dashboard = ({ stats, recentIncidents, activeAlerts, coverageData, attenda
                             <button
                                 className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm transition ${
                                     showTrends
-                                        ? 'bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-800 dark:text-red-100 dark:hover:bg-red-700'
+                                        ? 'bg-coin-700 text-white hover:bg-coin-800 dark:bg-coin-700 dark:hover:bg-coin-600'
                                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
                                 }`}
                                 onClick={() => setShowTrends(!showTrends)}
@@ -597,7 +610,13 @@ const Dashboard = ({ stats, recentIncidents, activeAlerts, coverageData, attenda
                         </CardHeader>
                         {showTrends && (
                             <CardContent>
-                                <Suspense fallback={<div className="h-48 flex items-center justify-center">Loading chart…</div>}>
+                                <Suspense fallback={(
+                                  <div className="h-48 flex flex-col justify-center gap-3">
+                                    <Skeleton className="h-4 w-40" />
+                                    <Skeleton className="h-3 w-56" />
+                                    <Skeleton className="h-24 w-full" />
+                                  </div>
+                                )}>
                                     <CoverageTrendChart zones={safeZones} />
                                 </Suspense>
                             </CardContent>
@@ -612,7 +631,7 @@ const Dashboard = ({ stats, recentIncidents, activeAlerts, coverageData, attenda
                             <button
                                 className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm transition ${
                                     showTrends
-                                        ? 'bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-800 dark:text-red-100 dark:hover:bg-red-700'
+                                        ? 'bg-coin-700 text-white hover:bg-coin-800 dark:bg-coin-700 dark:hover:bg-coin-600'
                                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
                                 }`}
                                 onClick={() => setShowTrends(!showTrends)}
@@ -623,7 +642,13 @@ const Dashboard = ({ stats, recentIncidents, activeAlerts, coverageData, attenda
                         </CardHeader>
                         {showTrends && (
                             <CardContent>
-                                <Suspense fallback={<div className="h-48 flex items-center justify-center">Loading chart…</div>}>
+                                <Suspense fallback={(
+                                  <div className="h-48 flex flex-col justify-center gap-3">
+                                    <Skeleton className="h-4 w-40" />
+                                    <Skeleton className="h-3 w-56" />
+                                    <Skeleton className="h-24 w-full" />
+                                  </div>
+                                )}>
                                     <AttendanceChart zones={safeZones} />
                                 </Suspense>
                             </CardContent>
@@ -637,7 +662,7 @@ const Dashboard = ({ stats, recentIncidents, activeAlerts, coverageData, attenda
                         <CardHeader className="flex flex-row items-center justify-between">
                             <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Coverage Data (Last 7 Days)</h3>
                             <button
-                                className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm transition ${showAnalytics ? 'bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-800 dark:text-red-100 dark:hover:bg-red-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'}`}
+                                className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm transition ${showAnalytics ? 'bg-coin-700 text-white hover:bg-coin-800 dark:bg-coin-700 dark:hover:bg-coin-600' : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'}`}
                                 onClick={() => setShowAnalytics(!showAnalytics)}
                                 aria-expanded={showAnalytics}
                             >
@@ -653,7 +678,7 @@ const Dashboard = ({ stats, recentIncidents, activeAlerts, coverageData, attenda
                                             <div className="flex items-center space-x-2">
                                                 <div className="w-20 bg-gray-200 dark:bg-gray-600 rounded-full h-2">
                                                     <div 
-                                                        className="bg-blue-500 h-2 rounded-full"
+                                                        className="bg-coin-600 h-2 rounded-full"
                                                         style={{ width: `${Math.min(point.coverage, 100)}%` }}
                                                     ></div>
                                                 </div>
@@ -661,7 +686,12 @@ const Dashboard = ({ stats, recentIncidents, activeAlerts, coverageData, attenda
                                             </div>
                                         </div>
                                     )) : (
-                                        <div className="text-center py-4 text-gray-500 dark:text-gray-400">No coverage data available</div>
+                                        <EmptyState
+                                          title="No coverage data"
+                                          description="No coverage data available for the last 7 days."
+                                          size="sm"
+                                          contentClassName="py-2"
+                                        />
                                     )}
                                 </div>
                             </CardContent>
@@ -672,7 +702,7 @@ const Dashboard = ({ stats, recentIncidents, activeAlerts, coverageData, attenda
                         <CardHeader className="flex flex-row items-center justify-between">
                             <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Attendance Data (Last 7 Days)</h3>
                             <button
-                                className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm transition ${showAnalytics ? 'bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-800 dark:text-red-100 dark:hover:bg-red-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'}`}
+                                className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm transition ${showAnalytics ? 'bg-coin-700 text-white hover:bg-coin-800 dark:bg-coin-700 dark:hover:bg-coin-600' : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'}`}
                                 onClick={() => setShowAnalytics(!showAnalytics)}
                                 aria-expanded={showAnalytics}
                             >
@@ -696,7 +726,12 @@ const Dashboard = ({ stats, recentIncidents, activeAlerts, coverageData, attenda
                                             </div>
                                         </div>
                                     )) : (
-                                        <div className="text-center py-4 text-gray-500 dark:text-gray-400">No attendance data available</div>
+                                        <EmptyState
+                                          title="No attendance data"
+                                          description="No attendance data available for the last 7 days."
+                                          size="sm"
+                                          contentClassName="py-2"
+                                        />
                                     )}
                                 </div>
                             </CardContent>

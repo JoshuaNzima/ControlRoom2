@@ -5,6 +5,8 @@ namespace App\Console\Commands;
 use Illuminate\Console\Command;
 use App\Models\Guards\Shift;
 use App\Models\Guards\Attendance;
+use App\Models\Setting;
+use App\Models\User;
 use Carbon\Carbon;
 
 class AutoMarkAbsentAttendance extends Command
@@ -21,7 +23,23 @@ class AutoMarkAbsentAttendance extends Command
 
     public function handle(): int
     {
+        $methods = Setting::getValue('attendance.methods', [
+            'auto_absent' => true,
+            'auto_present' => false,
+        ]);
+
+        if (empty($methods['auto_absent'])) {
+            $this->info('Auto-absent is disabled.');
+            return self::SUCCESS;
+        }
+
         $dateInput = $this->argument('date');
+
+        $systemUserId = User::query()->min('id');
+        if (!$systemUserId) {
+            $this->warn('No users found; cannot set supervisor_id for auto-absent attendance.');
+            return self::SUCCESS;
+        }
 
         if ($dateInput) {
             try {
@@ -45,7 +63,7 @@ class AutoMarkAbsentAttendance extends Command
             ->whereDate('date', $dateString)
             ->whereNotIn('status', ['cancelled'])
             ->orderBy('id')
-            ->chunkById(200, function ($shifts) use ($dateString, &$createdCount, &$updatedShifts) {
+            ->chunkById(200, function ($shifts) use ($dateString, $systemUserId, &$createdCount, &$updatedShifts) {
                 $byGuard = $shifts->groupBy('guard_id');
 
                 foreach ($byGuard as $guardId => $guardShifts) {
@@ -67,7 +85,7 @@ class AutoMarkAbsentAttendance extends Command
 
                     $attendance = new Attendance([
                         'guard_id' => $guardId,
-                        'supervisor_id' => null,
+                        'supervisor_id' => $systemUserId,
                         'client_site_id' => $firstShift?->client_site_id,
                         'date' => $dateString,
                         'check_in_time' => null,

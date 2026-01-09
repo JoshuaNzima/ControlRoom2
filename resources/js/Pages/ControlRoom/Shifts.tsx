@@ -114,10 +114,10 @@ const Shifts = ({ auth }: ShiftsProps) => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Guards</p>
-                  <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">23</p>
+                  <p className="text-2xl font-bold text-coin-700 dark:text-coin-200">23</p>
                 </div>
-                <div className="h-8 w-8 bg-blue-100 dark:bg-blue-900/20 rounded-full flex items-center justify-center">
-                  <span className="text-blue-600 dark:text-blue-400">👮</span>
+                <div className="h-8 w-8 bg-coin-100 dark:bg-coin-900/20 rounded-full flex items-center justify-center">
+                  <span className="text-coin-700 dark:text-coin-200">👮</span>
                 </div>
               </div>
             </CardContent>
@@ -128,10 +128,10 @@ const Shifts = ({ auth }: ShiftsProps) => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Assigned Guards</p>
-                  <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">21</p>
+                  <p className="text-2xl font-bold text-coin-700 dark:text-coin-200">21</p>
                 </div>
-                <div className="h-8 w-8 bg-purple-100 dark:bg-purple-900/20 rounded-full flex items-center justify-center">
-                  <span className="text-purple-600 dark:text-purple-400">✅</span>
+                <div className="h-8 w-8 bg-coin-100 dark:bg-coin-900/20 rounded-full flex items-center justify-center">
+                  <span className="text-coin-700 dark:text-coin-200">✅</span>
                 </div>
               </div>
             </CardContent>

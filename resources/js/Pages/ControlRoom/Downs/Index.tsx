@@ -2,6 +2,9 @@ import React from 'react';
 import ControlRoomLayout from '@/Layouts/ControlRoomLayout';
 import { Head, Link, router, usePage, useForm } from '@inertiajs/react';
 import Modal from '@/Components/Modal';
+import { Card } from '@/Components/ui/card';
+import PageHeader from '@/Components/ui/page-header';
+import EmptyState from '@/Components/ui/empty-state';
 
 type Down = {
   id: number;
@@ -119,9 +122,15 @@ export default function DownsIndex() {
   return (
     <ControlRoomLayout title="Downs Management" user={auth?.user as any}>
       <Head title="Downs Management" />
+      <div className="space-y-6">
+        <PageHeader
+          title="Downs Management"
+          description="Report, track, and resolve coverage downs."
+        />
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <section className="lg:col-span-1 bg-white dark:bg-gray-800 rounded-xl shadow p-6">
-          <h2 className="text-lg font-semibold mb-4">Report a Down</h2>
+        <Card className="lg:col-span-1 p-6">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Report a Down</h2>
           <form onSubmit={submit} className="space-y-3">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Title</label>
@@ -151,14 +160,24 @@ export default function DownsIndex() {
                     placeholder="Search site or client name"
                   />
                 </div>
-                <button type="button" onClick={loadSites} className="h-9 px-3 rounded-md bg-gray-100 dark:bg-gray-800 text-sm">{loadingSites ? 'Loading…' : 'Search'}</button>
+                <button type="button" onClick={loadSites} className="h-9 px-3 rounded-md bg-gray-100 dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100">
+                  {loadingSites ? 'Loading…' : 'Search'}
+                </button>
               </div>
               {selectedSiteName && (
-                <div className="text-xs text-gray-500">Selected site: <span className="font-medium text-gray-800 dark:text-gray-200">{selectedSiteName}</span></div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">Selected site: <span className="font-medium text-gray-800 dark:text-gray-200">{selectedSiteName}</span></div>
               )}
               <div className="max-h-40 overflow-y-auto rounded border border-gray-200 dark:border-gray-700">
                 {siteResults.length === 0 ? (
-                  <div className="p-2 text-sm text-gray-500">{loadingSites ? 'Loading…' : 'No sites found'}</div>
+                  loadingSites ? (
+                    <div className="p-2">
+                      <EmptyState title="Searching" description="Fetching site results…" size="sm" contentClassName="py-2" />
+                    </div>
+                  ) : (
+                    <div className="p-2">
+                      <EmptyState title="No sites found" description="Try a different search term." size="sm" contentClassName="py-2" />
+                    </div>
+                  )
                 ) : (
                   <ul>
                     {siteResults.map(s => (
@@ -169,7 +188,7 @@ export default function DownsIndex() {
                           className="w-full text-left px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-800/50"
                         >
                           <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{s.client_name}</div>
-                          <div className="text-xs text-gray-500">{s.name}</div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">{s.name}</div>
                         </button>
                       </li>
                     ))}
@@ -189,14 +208,24 @@ export default function DownsIndex() {
                     placeholder="Search guard name or employee ID"
                   />
                 </div>
-                <button type="button" onClick={loadGuards} className="h-9 px-3 rounded-md bg-gray-100 dark:bg-gray-800 text-sm">{loadingGuards ? 'Loading…' : 'Search'}</button>
+                <button type="button" onClick={loadGuards} className="h-9 px-3 rounded-md bg-gray-100 dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100">
+                  {loadingGuards ? 'Loading…' : 'Search'}
+                </button>
               </div>
               {selectedGuardName && (
-                <div className="text-xs text-gray-500">Selected guard: <span className="font-medium text-gray-800 dark:text-gray-200">{selectedGuardName}</span></div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">Selected guard: <span className="font-medium text-gray-800 dark:text-gray-200">{selectedGuardName}</span></div>
               )}
               <div className="max-h-40 overflow-y-auto rounded border border-gray-200 dark:border-gray-700">
                 {guardResults.length === 0 ? (
-                  <div className="p-2 text-sm text-gray-500">{loadingGuards ? 'Loading…' : 'No guards found'}</div>
+                  loadingGuards ? (
+                    <div className="p-2">
+                      <EmptyState title="Searching" description="Fetching guard results…" size="sm" contentClassName="py-2" />
+                    </div>
+                  ) : (
+                    <div className="p-2">
+                      <EmptyState title="No guards found" description="Try a different search term." size="sm" contentClassName="py-2" />
+                    </div>
+                  )
                 ) : (
                   <ul>
                     {guardResults.map(g => (
@@ -207,7 +236,7 @@ export default function DownsIndex() {
                           className="w-full text-left px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-800/50"
                         >
                           <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{g.name}</div>
-                          {g.employee_id && (<div className="text-xs text-gray-500">{g.employee_id}</div>)}
+                          {g.employee_id && (<div className="text-xs text-gray-500 dark:text-gray-400">{g.employee_id}</div>)}
                         </button>
                       </li>
                     ))}
@@ -245,13 +274,13 @@ export default function DownsIndex() {
               )}
             </div>
             <div className="pt-2">
-              <button type="submit" disabled={processing} className="px-4 py-2 rounded-md bg-red-600 text-white hover:bg-red-700 disabled:opacity-50">Report</button>
+              <button type="submit" disabled={processing} className="px-4 py-2 rounded-md bg-coin-700 text-white hover:bg-coin-800 disabled:opacity-50">Report</button>
             </div>
           </form>
-        </section>
+        </Card>
 
-        <section className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-xl shadow p-6">
-          <h2 className="text-lg font-semibold mb-4">Open Downs</h2>
+        <Card className="lg:col-span-2 p-6">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Open Downs</h2>
           <div className="divide-y dark:divide-gray-700">
             {downs.data.map((d: any) => (
               <div key={d.id} className="py-3 flex items-start justify-between gap-4">
@@ -289,8 +318,16 @@ export default function DownsIndex() {
                 </div>
               </div>
             ))}
+            {downs.data.length === 0 && (
+              <EmptyState
+                title="No open downs"
+                description="You’re clear right now. New downs will appear here."
+                size="sm"
+                contentClassName="py-6"
+              />
+            )}
           </div>
-        </section>
+        </Card>
       </div>
     {/* Guard Details Modal */}
     <Modal show={guardModalOpen} onClose={() => setGuardModalOpen(false)} maxWidth="xl">
@@ -332,8 +369,7 @@ export default function DownsIndex() {
       </div>
     </Modal>
 
-    </ControlRoomLayout>
-  );
+    </div>
+  </ControlRoomLayout>
+);
 }
-
-
