@@ -136,7 +136,7 @@ export default function SuperAdminLayout({ title, children, user }: Props) {
     ];
 
     return (
-        <div className="min-h-screen bg-red-50 dark:bg-gray-900">
+        <div className="min-h-screen overflow-x-hidden bg-red-50 dark:bg-gray-900">
 
             {/* Mobile sidebar */}
             <div
@@ -252,7 +252,7 @@ export default function SuperAdminLayout({ title, children, user }: Props) {
             <div className="md:pl-72">
                 <div className="sticky top-0 z-30 border-b border-red-100 bg-white/95 backdrop-blur-sm dark:border-gray-800 dark:bg-gray-950/80">
                     <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-3">
-                        <div className="flex items-center justify-between gap-3">
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                             <div className="flex items-center gap-3 min-w-0">
                                 <button
                                     type="button"
@@ -264,7 +264,7 @@ export default function SuperAdminLayout({ title, children, user }: Props) {
                                 </button>
                                 <h1 className="text-xl font-semibold text-red-900 dark:text-gray-100 truncate">{title}</h1>
                             </div>
-                            <div className="flex items-center gap-4">
+                            <div className="flex flex-wrap items-center gap-2 sm:gap-4">
                                 <NotificationBell />
                                 <div className="hidden sm:flex items-center gap-4">
                                     <QuickBudgetButton />

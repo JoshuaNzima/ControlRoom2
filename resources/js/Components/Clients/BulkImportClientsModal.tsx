@@ -75,7 +75,7 @@ export default function BulkImportClientsModal({ open, onClose }: BulkImportClie
 
   return (
     <Dialog open={open} onOpenChange={() => !uploading && onClose()}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="w-full sm:max-w-md rounded-2xl bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 p-6">
         <DialogHeader>
           <DialogTitle>Bulk Import Clients</DialogTitle>
         </DialogHeader>
@@ -89,13 +89,13 @@ export default function BulkImportClientsModal({ open, onClose }: BulkImportClie
           </div>
 
           <div className="flex items-center justify-center w-full">
-            <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100">
+            <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg cursor-pointer bg-gray-50 dark:bg-gray-900 hover:bg-gray-100 dark:hover:bg-gray-800 focus-within:outline-none focus-within:ring-2 focus-within:ring-coin-500 focus-within:ring-offset-2 focus-within:ring-offset-white dark:focus-within:ring-offset-gray-950">
               <div className="flex flex-col items-center justify-center pt-5 pb-6">
                 <IconMapper name="Upload" size={24} className="mb-3 text-gray-400" />
-                <p className="mb-2 text-sm text-gray-500">
+                <p className="mb-2 text-sm text-gray-600 dark:text-gray-300">
                   <span className="font-semibold">Click to upload</span> or drag and drop
                 </p>
-                <p className="text-xs text-gray-500">Excel or CSV file</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Excel or CSV file</p>
               </div>
               <input
                 type="file"
@@ -108,10 +108,10 @@ export default function BulkImportClientsModal({ open, onClose }: BulkImportClie
           </div>
 
           {file && (
-            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+            <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800">
               <div className="flex items-center gap-2">
                 <IconMapper name="File" size={18} />
-                <span className="text-sm font-medium">{file.name}</span>
+                <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{file.name}</span>
               </div>
               <Button
                 variant="ghost"
@@ -127,14 +127,14 @@ export default function BulkImportClientsModal({ open, onClose }: BulkImportClie
           {uploading && (
             <div className="space-y-2">
               <ProgressBar value={progress} className="w-full" />
-              <p className="text-sm text-center text-gray-500">
+              <p className="text-sm text-center text-gray-500 dark:text-gray-400">
                 Uploading... {progress}%
               </p>
             </div>
           )}
 
           <div className="flex justify-end gap-3">
-            <Button variant="outline" onClick={onClose} disabled={uploading}>
+            <Button variant="outline" onClick={() => !uploading && onClose()} disabled={uploading}>
               Cancel
             </Button>
             <Button

@@ -216,7 +216,7 @@ export default function PaymentsIndex({
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400">MWK</span>
             <input
               type="text"
-              className="w-full pl-12 pr-3 py-2 border rounded mb-3 text-right bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+              className="w-full pl-12 pr-3 py-2 border border-gray-300 dark:border-gray-700 rounded mb-3 text-right bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950"
               value={prepayAmountInput}
               onChange={(e) => {
                 const value = e.target.value.replace(/[^0-9.]/g, '');
@@ -243,38 +243,38 @@ export default function PaymentsIndex({
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
           {/* Summary Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Card className="p-4 bg-white">
+            <Card className="p-4">
               <div className="flex flex-col">
-                <div className="text-sm text-gray-500">Outstanding Balance</div>
-                <div className="text-2xl font-bold text-gray-900">{formatCurrencyMWK(overallSummary.total_outstanding)}</div>
-                <div className="mt-1 text-xs text-gray-400">
+                <div className="text-sm text-gray-500 dark:text-gray-400">Outstanding Balance</div>
+                <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{formatCurrencyMWK(overallSummary.total_outstanding)}</div>
+                <div className="mt-1 text-xs text-gray-400 dark:text-gray-400">
                   Collection Rate: {overallSummary.collection_rate}%
                 </div>
               </div>
             </Card>
-            <Card className="p-4 bg-white">
+            <Card className="p-4">
               <div className="flex flex-col">
-                <div className="text-sm text-gray-500">Clients with Outstanding</div>
-                <div className="text-2xl font-bold text-gray-900">{overallSummary.clients_with_outstanding} / {overallSummary.total_clients}</div>
-                <div className="mt-1 text-xs text-gray-400">
+                <div className="text-sm text-gray-500 dark:text-gray-400">Clients with Outstanding</div>
+                <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{overallSummary.clients_with_outstanding} / {overallSummary.total_clients}</div>
+                <div className="mt-1 text-xs text-gray-400 dark:text-gray-400">
                   {overallSummary.clients_overdue_percentage}% of clients have outstanding balance
                 </div>
               </div>
             </Card>
-            <Card className="p-4 bg-white">
+            <Card className="p-4">
               <div className="flex flex-col">
-                <div className="text-sm text-gray-500">Max Outstanding Duration</div>
-                <div className="text-2xl font-bold text-gray-900">{overallSummary.max_outstanding_months} months</div>
-                <div className="mt-1 text-xs text-gray-400">
+                <div className="text-sm text-gray-500 dark:text-gray-400">Max Outstanding Duration</div>
+                <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{overallSummary.max_outstanding_months} months</div>
+                <div className="mt-1 text-xs text-gray-400 dark:text-gray-400">
                   Longest period without payment
                 </div>
               </div>
             </Card>
-            <Card className="p-4 bg-white">
+            <Card className="p-4">
               <div className="flex flex-col">
-                <div className="text-sm text-gray-500">Total Amount Due</div>
-                <div className="text-2xl font-bold text-gray-900">{formatCurrencyMWK(overallSummary.total_due)}</div>
-                <div className="mt-1 text-xs text-gray-400">
+                <div className="text-sm text-gray-500 dark:text-gray-400">Total Amount Due</div>
+                <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{formatCurrencyMWK(overallSummary.total_due)}</div>
+                <div className="mt-1 text-xs text-gray-400 dark:text-gray-400">
                   Paid: {formatCurrencyMWK(overallSummary.total_paid)}
                 </div>
               </div>
@@ -284,15 +284,15 @@ export default function PaymentsIndex({
           {/* Top Overdue Clients */}
           {overallSummary.overdue_clients.length > 0 && (
             <Card className="p-4">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Top Overdue Accounts</h2>
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Top Overdue Accounts</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {overallSummary.overdue_clients.map(client => (
-                  <div key={client.id} className="p-3 rounded-lg border bg-red-50 border-red-100">
-                    <div className="font-medium text-gray-900">{client.name}</div>
-                    <div className="text-sm text-red-600 font-semibold mt-1">
+                  <div key={client.id} className="p-3 rounded-lg border bg-red-50 border-red-100 dark:bg-red-900/20 dark:border-red-900/30">
+                    <div className="font-medium text-gray-900 dark:text-gray-100">{client.name}</div>
+                    <div className="text-sm text-red-600 dark:text-red-300 font-semibold mt-1">
                       {formatCurrencyMWK(client.outstanding_amount)}
                     </div>
-                    <div className="text-xs text-gray-500 mt-1">
+                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                       Outstanding for {client.outstanding_months} months
                     </div>
                   </div>
@@ -322,14 +322,14 @@ export default function PaymentsIndex({
                       <input
                         type="text"
                         placeholder="Search clients..."
-                        className="w-full pr-10 px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-coin-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                        className="w-full pr-10 px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                         value={searchText}
                         onChange={(e) => setSearchText(e.target.value)}
                       />
                       {searchText && (
                         <button
                           onClick={() => clearFilter('search')}
-                          className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                          className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950 rounded"
                           aria-label="Clear search"
                         >
                           ×
@@ -342,7 +342,7 @@ export default function PaymentsIndex({
                       <div className="flex items-center gap-2">
                         <label className="text-sm text-gray-600 dark:text-gray-300">Zone</label>
                         <select
-                          className="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-coin-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                          className="px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                           value={String(filters.zone_id ?? '')}
                           onChange={(e) => handleFilterChange({ zone_id: e.target.value, page: 1 })}
                         >
@@ -356,7 +356,7 @@ export default function PaymentsIndex({
                       <div className="flex items-center gap-2">
                         <label className="text-sm text-gray-600 dark:text-gray-300">Per page</label>
                         <select
-                          className="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-coin-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                          className="px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                           value={String(filters.per_page ?? 20)}
                           onChange={(e) => handleFilterChange({ per_page: e.target.value, page: 1 })}
                         >
@@ -370,7 +370,7 @@ export default function PaymentsIndex({
                       <div className="flex items-center gap-2">
                         <label className="text-sm text-gray-600 dark:text-gray-300">Status</label>
                         <select
-                          className="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-coin-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                          className="px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                           value={filters.status}
                           onChange={(e) => handleFilterChange({ status: e.target.value as 'all' | 'late' | 'paid', page: 1 })}
                         >
@@ -387,7 +387,7 @@ export default function PaymentsIndex({
                     {filters.zone_id && (
                       <button
                         onClick={() => clearFilter('zone_id')}
-                        className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-coin-50 dark:bg-coin-900/30 text-sm text-coin-800 dark:text-coin-200 hover:bg-coin-100 dark:hover:bg-coin-900/50"
+                        className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-coin-50 dark:bg-coin-900/30 text-sm text-coin-800 dark:text-coin-200 hover:bg-coin-100 dark:hover:bg-coin-900/50 focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950"
                       >
                         Zone: {zones.find(z => String(z.id) === String(filters.zone_id))?.name ?? filters.zone_id}
                         <span className="ml-1">×</span>
@@ -396,7 +396,7 @@ export default function PaymentsIndex({
                     {filters.status !== 'all' && (
                       <button
                         onClick={() => clearFilter('status')}
-                        className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-coin-50 dark:bg-coin-900/30 text-sm text-coin-800 dark:text-coin-200 hover:bg-coin-100 dark:hover:bg-coin-900/50"
+                        className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-coin-50 dark:bg-coin-900/30 text-sm text-coin-800 dark:text-coin-200 hover:bg-coin-100 dark:hover:bg-coin-900/50 focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950"
                       >
                         Status: {filters.status}
                         <span className="ml-1">×</span>
@@ -405,7 +405,7 @@ export default function PaymentsIndex({
                     {String(filters.per_page) !== '20' && (
                       <button
                         onClick={() => clearFilter('per_page')}
-                        className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-coin-50 dark:bg-coin-900/30 text-sm text-coin-800 dark:text-coin-200 hover:bg-coin-100 dark:hover:bg-coin-900/50"
+                        className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-coin-50 dark:bg-coin-900/30 text-sm text-coin-800 dark:text-coin-200 hover:bg-coin-100 dark:hover:bg-coin-900/50 focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950"
                       >
                         {filters.per_page} per page
                         <span className="ml-1">×</span>
@@ -414,7 +414,7 @@ export default function PaymentsIndex({
                     {filters.search && (
                       <button
                         onClick={() => clearFilter('search')}
-                        className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-coin-50 dark:bg-coin-900/30 text-sm text-coin-800 dark:text-coin-200 hover:bg-coin-100 dark:hover:bg-coin-900/50"
+                        className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-coin-50 dark:bg-coin-900/30 text-sm text-coin-800 dark:text-coin-200 hover:bg-coin-100 dark:hover:bg-coin-900/50 focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950"
                       >
                         "{filters.search}"
                         <span className="ml-1">×</span>
@@ -492,7 +492,7 @@ export default function PaymentsIndex({
                               <button
                                 onClick={() => toggle(c.id, month)}
                                 disabled={isBeforeBillingStart}
-                                className={`inline-flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold transition ${isBeforeBillingStart ? 'bg-gray-50 dark:bg-gray-700 text-gray-300 dark:text-gray-500 cursor-not-allowed' : paid ? 'bg-green-500 text-white' : (prepaid ? 'bg-blue-500 text-white hover:bg-blue-600' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600')} ${isBillingStart ? 'ring-2 ring-coin-500' : ''}`}
+                                className={`inline-flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold transition focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950 ${isBeforeBillingStart ? 'bg-gray-50 dark:bg-gray-700 text-gray-300 dark:text-gray-500 cursor-not-allowed' : paid ? 'bg-green-500 text-white' : (prepaid ? 'bg-coin-600 text-white hover:bg-coin-700' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600')} ${isBillingStart ? 'ring-2 ring-coin-500' : ''}`}
                                 aria-pressed={paid}
                                 title={prepaid ? `Prepaid: ${formatCurrencyMWK(clientPayments[month]?.prepaid_amount || 0)}` : (isBillingStart ? 'Billing Start' : undefined)}
                               >
@@ -509,7 +509,7 @@ export default function PaymentsIndex({
               </div>
 
               <div className="hidden md:block relative overflow-x-auto sm:overflow-x-visible">
-                <table className="border min-w-[820px] sm:min-w-full">
+                <table className="border border-gray-200 dark:border-gray-800 min-w-[820px] sm:min-w-full">
                   <thead>
                     <tr className="bg-gray-50 dark:bg-gray-800">
                       <th 
@@ -517,7 +517,7 @@ export default function PaymentsIndex({
                           sort_field: 'name',
                           sort_direction: filters.sort_field === 'name' && filters.sort_direction === 'asc' ? 'desc' : 'asc'
                         })}
-                        className="sticky left-0 z-20 px-3 py-2 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 border cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 bg-white dark:bg-gray-900 w-[200px] min-w-[200px] max-w-[260px]"
+                        className="sticky left-0 z-20 px-3 py-2 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-800 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 bg-white dark:bg-gray-900 w-[200px] min-w-[200px] max-w-[260px]"
                       >
                         <div className="flex items-center gap-2">
                           Client
@@ -525,27 +525,27 @@ export default function PaymentsIndex({
                         </div>
                       </th>
                       {months.map((m, idx) => (
-                        <th key={m} className="px-2 py-2 text-xs font-semibold text-gray-600 dark:text-gray-300 border text-center min-w-[56px] w-[56px]">{m}</th>
+                        <th key={m} className="px-2 py-2 text-xs font-semibold text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-800 text-center min-w-[56px] w-[56px]">{m}</th>
                       ))}
                       <th
                         onClick={() => handleFilterChange({
                           sort_field: 'expected_amount',
                           sort_direction: filters.sort_field === 'expected_amount' && filters.sort_direction === 'asc' ? 'desc' : 'asc'
                         })}
-                        className="hidden sm:table-cell px-2 py-2 text-xs font-semibold text-gray-600 dark:text-gray-300 border text-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700"
+                        className="hidden sm:table-cell px-2 py-2 text-xs font-semibold text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-800 text-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700"
                       >
                         <div className="flex items-center justify-center gap-2">
                           Expected Amount
                           <SortIcon direction={filters.sort_field === 'expected_amount' ? filters.sort_direction : null} />
                         </div>
                       </th>
-                      <th className="hidden sm:table-cell px-2 py-2 text-xs font-semibold text-gray-600 dark:text-gray-300 border text-center">Amount Paid</th>
+                      <th className="hidden sm:table-cell px-2 py-2 text-xs font-semibold text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-800 text-center">Amount Paid</th>
                       <th
                         onClick={() => handleFilterChange({
                           sort_field: 'outstanding_amount',
                           sort_direction: filters.sort_field === 'outstanding_amount' && filters.sort_direction === 'asc' ? 'desc' : 'asc'
                         })}
-                        className="hidden sm:table-cell px-2 py-2 text-xs font-semibold text-gray-600 dark:text-gray-300 border text-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700"
+                        className="hidden sm:table-cell px-2 py-2 text-xs font-semibold text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-800 text-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700"
                       >
                         <div className="flex items-center justify-center gap-2">
                           Outstanding
@@ -567,7 +567,7 @@ export default function PaymentsIndex({
                       
                       return (
                         <tr key={c.id} className={`${isOverdue ? 'bg-red-50/80 hover:bg-red-100/90 dark:bg-red-900/30 dark:hover:bg-red-900/40' : 'odd:bg-white even:bg-gray-50 hover:bg-gray-100 odd:dark:bg-gray-900 even:dark:bg-gray-800 hover:dark:bg-gray-700'} transition-colors group`} title={isOverdue ? `${outstandingMonths} months overdue` : ''}>
-                          <td className={`sticky left-0 z-10 px-3 py-2 text-sm border whitespace-nowrap bg-white dark:bg-gray-900 w-[200px] min-w-[200px] max-w-[260px] ${isOverdue ? 'text-red-900 font-semibold' : 'text-gray-900 dark:text-gray-100'} group-hover:bg-gray-100 dark:group-hover:bg-gray-800`}>
+                          <td className={`sticky left-0 z-10 px-3 py-2 text-sm border border-gray-200 dark:border-gray-800 whitespace-nowrap bg-white dark:bg-gray-900 w-[200px] min-w-[200px] max-w-[260px] ${isOverdue ? 'text-red-900 dark:text-red-300 font-semibold' : 'text-gray-900 dark:text-gray-100'} group-hover:bg-gray-100 dark:group-hover:bg-gray-800`}>
                             <div className="flex items-center gap-2">
                               <span className="group-hover:underline">{c.name}</span>
                               {isOverdue && (
@@ -586,15 +586,16 @@ export default function PaymentsIndex({
                             ) : false;
                             
                             return (
-                              <td key={month} className="px-2 py-2 border text-center min-w-[56px] w-[56px]">
+                              <td key={month} className="px-2 py-2 border border-gray-200 dark:border-gray-800 text-center min-w-[56px] w-[56px]">
                                 <button
                                   onClick={() => toggle(c.id, month)}
                                   disabled={isBeforeBillingStart}
                                   className={`
                                     inline-flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold transition
                                     ${isBeforeBillingStart ? 'bg-gray-50 dark:bg-gray-700 text-gray-300 dark:text-gray-500 cursor-not-allowed' : 
-                                      paid ? 'bg-green-500 text-white' : (prepaid ? 'bg-blue-500 text-white hover:bg-blue-600' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600')}
+                                      paid ? 'bg-green-500 text-white' : (prepaid ? 'bg-coin-600 text-white hover:bg-coin-700' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600')}
                                     ${isBillingStart ? 'ring-2 ring-coin-500' : ''}
+                                    focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950
                                   `}
                                   aria-pressed={paid}
                                   aria-label={`Mark ${months[idx]} paid for ${c.name}`}
@@ -611,13 +612,13 @@ export default function PaymentsIndex({
                               </td>
                             );
                           })}
-                          <td className="hidden sm:table-cell px-2 py-2 border text-center text-sm">
+                          <td className="hidden sm:table-cell px-2 py-2 border border-gray-200 dark:border-gray-800 text-center text-sm text-gray-900 dark:text-gray-100">
                             {formatCurrencyMWK(summary?.expected_amount ?? (monthlyRate || 0))}
                           </td>
-                          <td className="hidden sm:table-cell px-2 py-2 border text-center text-sm font-semibold">
+                          <td className="hidden sm:table-cell px-2 py-2 border border-gray-200 dark:border-gray-800 text-center text-sm font-semibold text-gray-900 dark:text-gray-100">
                             {formatCurrencyMWK(summary?.total_paid ?? Object.values(clientPayments).reduce((sum, s) => sum + (s?.amount_paid || 0), 0))}
                           </td>
-                          <td className={`hidden sm:table-cell px-2 py-2 border text-center text-sm ${isOverdue ? 'font-bold text-red-700' : 'font-semibold text-red-600'} ${isOverdue ? 'group-hover:scale-105' : ''} transition-transform`}>
+                          <td className={`hidden sm:table-cell px-2 py-2 border border-gray-200 dark:border-gray-800 text-center text-sm ${isOverdue ? 'font-bold text-red-700 dark:text-red-300' : 'font-semibold text-red-600 dark:text-red-400'} ${isOverdue ? 'group-hover:scale-105' : ''} transition-transform`}>
                             {formatCurrencyMWK(summary?.outstanding_amount ?? 0)}
                           </td>
                         </tr>

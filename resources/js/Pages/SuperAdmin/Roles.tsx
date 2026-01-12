@@ -85,9 +85,9 @@ const RoleCard = React.memo(function RoleCard({ role, permissions, users, toggli
           </section>
 
           <section aria-label="assigned-users">
-            <div className="flex items-center justify-between mb-2">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-2">
               <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">Assigned Users</h4>
-              <div className="relative w-64">
+              <div className="relative w-full sm:w-64">
                 <select onChange={(e) => { const userId = Number((e.target as HTMLSelectElement).value); if (userId) { onAssignUser(role.id, userId); (e.target as HTMLSelectElement).value = ''; } }} disabled={!!assigning[role.id]} aria-label={`Assign user to ${role.name}`} className="block w-full pl-3 pr-10 py-2 text-base border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-coin-500 focus:border-coin-500 dark:bg-gray-700 dark:text-white sm:text-sm disabled:opacity-60 disabled:cursor-not-allowed" defaultValue="">
                   <option value="">Select a user to add...</option>
                   {users?.filter((u: User) => !role.users?.some((ru: User) => ru.id === u.id)).map((u: User) => (<option key={u.id} value={u.id}>{u.name} — {u.email}</option>))}

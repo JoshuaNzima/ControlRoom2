@@ -91,7 +91,7 @@ export default function ApprovalShow({ approval }: Props) {
             </div>
             <Link
               href={route(prefix + '.approvals.index')}
-              className="w-full sm:w-auto inline-flex items-center justify-center text-sm font-medium text-coin-700 hover:text-coin-800 dark:text-coin-300 dark:hover:text-coin-200"
+              className="w-full sm:w-auto inline-flex items-center justify-center text-sm font-medium text-coin-700 hover:text-coin-800 dark:text-coin-300 dark:hover:text-coin-200 focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950 rounded-md px-2 py-1 -mr-2"
             >
               Back to approvals
             </Link>
@@ -187,7 +187,7 @@ export default function ApprovalShow({ approval }: Props) {
                   )}
                 </div>
                 <textarea
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-coin-500 dark:bg-gray-900 dark:text-gray-100"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950 dark:bg-gray-900 dark:text-gray-100"
                   rows={4}
                   value={comments}
                   onChange={(e) => setComments(e.target.value)}
@@ -224,14 +224,14 @@ export default function ApprovalShow({ approval }: Props) {
                   <button
                     type="button"
                     onClick={() => handleAction('reject')}
-                    className="w-full sm:w-auto inline-flex items-center justify-center px-4 py-2 rounded-lg text-sm font-medium bg-red-600 text-white hover:bg-red-700"
+                    className="w-full sm:w-auto inline-flex items-center justify-center px-4 py-2 rounded-lg text-sm font-medium bg-red-600 text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950"
                   >
                     Reject
                   </button>
                   <button
                     type="button"
                     onClick={() => handleAction('approve')}
-                    className="w-full sm:w-auto inline-flex items-center justify-center px-4 py-2 rounded-lg text-sm font-medium bg-emerald-600 text-white hover:bg-emerald-700"
+                    className="w-full sm:w-auto inline-flex items-center justify-center px-4 py-2 rounded-lg text-sm font-medium bg-emerald-600 text-white hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950"
                   >
                     Approve
                   </button>

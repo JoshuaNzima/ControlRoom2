@@ -4,6 +4,27 @@ import { Head, usePage, router } from '@inertiajs/react';
 import Modal from '@/Components/Modal';
 import { useTheme } from '@/Providers/ThemeProvider';
 
+const settingsCardClassName =
+  'bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm shadow-black/5 dark:shadow-none p-4 sm:p-6';
+
+const settingsFieldClassName =
+  'mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950';
+
+const settingsInlineFieldClassName =
+  'rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950';
+
+const settingsPrimaryButtonClassName =
+  'px-4 py-2 rounded-lg bg-coin-700 text-white hover:bg-coin-600 focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950 disabled:opacity-60 disabled:pointer-events-none';
+
+const settingsSecondaryButtonClassName =
+  'px-4 py-2 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950 disabled:opacity-60 disabled:pointer-events-none';
+
+const settingsDangerButtonClassName =
+  'px-3 py-2 rounded-lg bg-red-700 text-white hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950 disabled:opacity-60 disabled:pointer-events-none';
+
+const settingsSuccessButtonClassName =
+  'px-3 py-2 rounded-lg bg-emerald-700 text-white hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950 disabled:opacity-60 disabled:pointer-events-none';
+
 type FinanceDefaults = {
   guard_absence_deduction_per_day: number;
   staff_absence_deduction_per_day: number;
@@ -122,7 +143,6 @@ export default function SettingIndex() {
 
   // HR: Guard Grades state & handlers
   type GuardGrade = Required<PageProps>['hr']['guardGrades'][number];
-  const [grades, setGrades] = React.useState<GuardGrade[]>(() => (hr?.guardGrades ?? []));
   const [showGradeModal, setShowGradeModal] = React.useState(false);
   const [editingGrade, setEditingGrade] = React.useState<GuardGrade | null>(null);
   const [gradeForm, setGradeForm] = React.useState<Partial<GuardGrade>>({
@@ -165,35 +185,61 @@ export default function SettingIndex() {
   return (
     <AdminLayout title="Settings" user={auth?.user as any}>
       <Head title="Settings" />
-      <div>
+      <div className="space-y-4">
         {/* Tabs */}
-        <div className="mb-4 inline-flex rounded-full bg-red-100 p-1 dark:bg-gray-800">
-          <button onClick={() => setTab('user')} className={`px-4 py-1.5 rounded-full text-sm font-medium ${tab==='user' ? 'bg-red-600 text-white' : 'text-red-700 hover:bg-red-200 dark:text-gray-200 dark:hover:bg-gray-700'}`}>User</button>
-          <button onClick={() => setTab('finance')} className={`px-4 py-1.5 rounded-full text-sm font-medium ${tab==='finance' ? 'bg-red-600 text-white' : 'text-red-700 hover:bg-red-200 dark:text-gray-200 dark:hover:bg-gray-700'}`}>Finance</button>
-          <button onClick={() => setTab('hr')} className={`px-4 py-1.5 rounded-full text-sm font-medium ${tab==='hr' ? 'bg-red-600 text-white' : 'text-red-700 hover:bg-red-200 dark:text-gray-200 dark:hover:bg-gray-700'}`}>HR</button>
-          <button onClick={() => setTab('system')} className={`px-4 py-1.5 rounded-full text-sm font-medium ${tab==='system' ? 'bg-red-600 text-white' : 'text-red-700 hover:bg-red-200 dark:text-gray-200 dark:hover:bg-gray-700'}`}>System</button>
+        <div className="mb-4 rounded-xl bg-coin-100/80 p-1 dark:bg-gray-800">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-1">
+            <button
+              type="button"
+              onClick={() => setTab('user')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950 ${tab==='user' ? 'bg-coin-700 text-white' : 'text-coin-800 hover:bg-coin-200 dark:text-gray-200 dark:hover:bg-gray-700'}`}
+            >
+              User
+            </button>
+            <button
+              type="button"
+              onClick={() => setTab('finance')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950 ${tab==='finance' ? 'bg-coin-700 text-white' : 'text-coin-800 hover:bg-coin-200 dark:text-gray-200 dark:hover:bg-gray-700'}`}
+            >
+              Finance
+            </button>
+            <button
+              type="button"
+              onClick={() => setTab('hr')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950 ${tab==='hr' ? 'bg-coin-700 text-white' : 'text-coin-800 hover:bg-coin-200 dark:text-gray-200 dark:hover:bg-gray-700'}`}
+            >
+              HR
+            </button>
+            <button
+              type="button"
+              onClick={() => setTab('system')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950 ${tab==='system' ? 'bg-coin-700 text-white' : 'text-coin-800 hover:bg-coin-200 dark:text-gray-200 dark:hover:bg-gray-700'}`}
+            >
+              System
+            </button>
+          </div>
         </div>
 
         {/* Content */}
         {tab === 'user' && (
-          <section className="bg-white dark:bg-gray-800 rounded-xl shadow p-6">
-            <h2 className="text-lg font-semibold mb-4">User Preferences</h2>
+          <section className={settingsCardClassName}>
+            <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">User Preferences</h2>
             <div className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Name</label>
-                  <input className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100" defaultValue={auth.user.name} disabled />
+                  <input className={`${settingsFieldClassName} opacity-80 cursor-not-allowed`} defaultValue={auth.user.name} disabled />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Email</label>
-                  <input className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100" defaultValue={auth.user.email} disabled />
+                  <input className={`${settingsFieldClassName} opacity-80 cursor-not-allowed`} defaultValue={auth.user.email} disabled />
                 </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Role(s)</label>
                 <div className="mt-2 flex flex-wrap gap-2">
                   {auth.user.roles?.map((r: string) => (
-                    <span key={r} className="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800 dark:bg-gray-700 dark:text-gray-100">{r}</span>
+                    <span key={r} className="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-medium bg-coin-100 text-coin-800 dark:bg-gray-800 dark:text-coin-200 border border-coin-200 dark:border-gray-700">{r}</span>
                   ))}
                 </div>
               </div>
@@ -201,13 +247,13 @@ export default function SettingIndex() {
                 <h3 className="text-sm font-medium text-gray-800 dark:text-gray-200 mb-2">Preferences</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <label className="inline-flex items-center">
-                    <input type="checkbox" className="rounded border-gray-300 text-red-600" defaultChecked />
+                    <input type="checkbox" className="rounded border-gray-300 dark:border-gray-700 text-coin-600 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950" defaultChecked />
                     <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">Enable desktop notifications</span>
                   </label>
                   <label className="inline-flex items-center">
                     <input
                       type="checkbox"
-                      className="rounded border-gray-300 text-red-600"
+                      className="rounded border-gray-300 dark:border-gray-700 text-coin-600 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950"
                       checked={theme === 'dark'}
                       onChange={() => toggle()}
                     />
@@ -222,15 +268,15 @@ export default function SettingIndex() {
         {tab === 'hr' && (
           <section className="space-y-6">
             {/* Guard Grades */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold">Guard Grades</h2>
-                <button onClick={openNewGrade} className="px-3 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700">Add Grade</button>
+            <div className={settingsCardClassName}>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Guard Grades</h2>
+                <button type="button" onClick={openNewGrade} className={`w-full sm:w-auto ${settingsPrimaryButtonClassName}`}>Add Grade</button>
               </div>
-              <div className="overflow-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="text-left text-gray-600 dark:text-gray-300">
+              <div className="overflow-x-auto">
+                <table className="min-w-[720px] w-full text-sm">
+                  <thead className="bg-gray-50 dark:bg-gray-950/40">
+                    <tr className="text-left text-gray-600 dark:text-gray-300 border-b border-gray-200 dark:border-gray-800">
                       <th className="px-2 py-2">Code</th>
                       <th className="px-2 py-2">Name</th>
                       <th className="px-2 py-2">Base Salary</th>
@@ -247,9 +293,11 @@ export default function SettingIndex() {
                         <td className="px-2 py-2">{Number(g.base_salary ?? 0).toFixed(2)}</td>
                         <td className="px-2 py-2">{Number(g.overtime_multiplier ?? 1.5).toFixed(2)}</td>
                         <td className="px-2 py-2">{Number(g.absence_deduction_per_day ?? 0).toFixed(2)}</td>
-                        <td className="px-2 py-2 space-x-2">
-                          <button onClick={() => openEditGrade(g)} className="px-3 py-1 rounded bg-emerald-600 text-white hover:bg-emerald-700">Edit</button>
-                          <button onClick={() => deleteGrade(g)} className="px-3 py-1 rounded bg-red-600 text-white hover:bg-red-700">Delete</button>
+                        <td className="px-2 py-2">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <button type="button" onClick={() => openEditGrade(g)} className={settingsSuccessButtonClassName}>Edit</button>
+                            <button type="button" onClick={() => deleteGrade(g)} className={settingsDangerButtonClassName}>Delete</button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -265,44 +313,44 @@ export default function SettingIndex() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Code</label>
-                    <input className="mt-1 w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100" value={gradeForm.code as any}
+                    <input className={settingsFieldClassName} value={gradeForm.code as any}
                       onChange={(e)=>setGradeForm(f=>({ ...f, code: e.target.value }))} required />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Name</label>
-                    <input className="mt-1 w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100" value={gradeForm.name as any}
+                    <input className={settingsFieldClassName} value={gradeForm.name as any}
                       onChange={(e)=>setGradeForm(f=>({ ...f, name: e.target.value }))} required />
                   </div>
                   <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Description</label>
-                    <textarea className="mt-1 w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100" rows={2} value={(gradeForm.description as any) ?? ''}
+                    <textarea className={settingsFieldClassName} rows={2} value={(gradeForm.description as any) ?? ''}
                       onChange={(e)=>setGradeForm(f=>({ ...f, description: e.target.value }))} />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Base Salary</label>
-                    <input type="number" step="0.01" className="mt-1 w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+                    <input type="number" step="0.01" className={settingsFieldClassName}
                       value={Number(gradeForm.base_salary ?? 0)} onChange={(e)=>setGradeForm(f=>({ ...f, base_salary: Number(e.target.value) }))} required />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">OT Multiplier</label>
-                    <input type="number" step="0.01" className="mt-1 w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+                    <input type="number" step="0.01" className={settingsFieldClassName}
                       value={Number(gradeForm.overtime_multiplier ?? 1.5)} onChange={(e)=>setGradeForm(f=>({ ...f, overtime_multiplier: Number(e.target.value) }))} />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Absence Deduction/Day</label>
-                    <input type="number" step="0.01" className="mt-1 w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+                    <input type="number" step="0.01" className={settingsFieldClassName}
                       value={Number(gradeForm.absence_deduction_per_day ?? 0)} onChange={(e)=>setGradeForm(f=>({ ...f, absence_deduction_per_day: Number(e.target.value) }))} />
                   </div>
                   <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Allowances (JSON)</label>
-                    <textarea className="mt-1 w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100" rows={2}
+                    <textarea className={settingsFieldClassName} rows={2}
                       value={typeof gradeForm.allowances === 'string' ? (gradeForm.allowances as any) : JSON.stringify(gradeForm.allowances ?? [])}
                       onChange={(e)=>setGradeForm(f=>({ ...f, allowances: e.target.value }))} />
                   </div>
                 </div>
                 <div className="mt-4 flex items-center justify-end gap-3">
-                  <button type="button" onClick={() => setShowGradeModal(false)} className="px-4 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200">Cancel</button>
-                  <button type="submit" className="px-4 py-2 rounded-md text-white bg-red-600 hover:bg-red-700">{editingGrade ? 'Save' : 'Create'}</button>
+                  <button type="button" onClick={() => setShowGradeModal(false)} className={settingsSecondaryButtonClassName}>Cancel</button>
+                  <button type="submit" className={settingsPrimaryButtonClassName}>{editingGrade ? 'Save' : 'Create'}</button>
                 </div>
               </form>
             </Modal>
@@ -312,52 +360,52 @@ export default function SettingIndex() {
         {tab === 'finance' && (
           <section className="space-y-6">
             {/* Payroll Defaults */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-6">
-              <h2 className="text-lg font-semibold mb-4">Payroll Defaults</h2>
-              <form onSubmit={submitDefaults} className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className={settingsCardClassName}>
+              <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">Payroll Defaults</h2>
+              <form onSubmit={submitDefaults} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Guard Absence Deduction/Day (MWK)</label>
                   <input type="number" step="0.01" value={defaults.guard_absence_deduction_per_day}
                     onChange={(e)=>setDefaults(d=>({...d, guard_absence_deduction_per_day: Number(e.target.value)}))}
-                    className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100" />
+                    className={settingsFieldClassName} />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Staff Absence Deduction/Day (MWK)</label>
                   <input type="number" step="0.01" value={defaults.staff_absence_deduction_per_day}
                     onChange={(e)=>setDefaults(d=>({...d, staff_absence_deduction_per_day: Number(e.target.value)}))}
-                    className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100" />
+                    className={settingsFieldClassName} />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Default OT Multiplier</label>
                   <input type="number" step="0.01" value={defaults.overtime_multiplier_default}
                     onChange={(e)=>setDefaults(d=>({...d, overtime_multiplier_default: Number(e.target.value)}))}
-                    className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100" />
+                    className={settingsFieldClassName} />
                 </div>
-                <div className="md:col-span-3 pt-2">
-                  <button type="submit" className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700">Save Defaults</button>
+                <div className="sm:col-span-2 lg:col-span-3 pt-2">
+                  <button type="submit" className={`w-full sm:w-auto ${settingsPrimaryButtonClassName}`}>Save Defaults</button>
                 </div>
               </form>
             </div>
 
             {/* Pay Profiles */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-6">
-              <h2 className="text-lg font-semibold mb-4">Pay Profiles</h2>
-              <form onSubmit={submitNewProfile} className="grid grid-cols-1 md:grid-cols-6 gap-3 mb-4">
-                <div>
+            <div className={settingsCardClassName}>
+              <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">Pay Profiles</h2>
+              <form onSubmit={submitNewProfile} className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-6 gap-3 mb-4">
+                <div className="md:col-span-1">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Type</label>
                   <select value={newProfile.payee_type} onChange={(e)=>setNewProfile(p=>({...p, payee_type: e.target.value as any}))}
-                    className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100">
+                    className={settingsFieldClassName}>
                     <option value="guard">Guard</option>
                     <option value="user">Staff</option>
                   </select>
                 </div>
-                <div>
+                <div className="sm:col-span-2 md:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Payee</label>
                   <input
                     list={newProfile.payee_type === 'guard' ? 'guards-list' : 'users-list'}
                     placeholder={newProfile.payee_type === 'guard' ? 'Search guard by name or ID' : 'Search staff by name or ID'}
                     onChange={(e)=>setNewProfile(p=>({...p, payee_id: Number(e.target.value || 0)}))}
-                    className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+                    className={settingsFieldClassName}
                   />
                   <datalist id="guards-list">
                     {(finance?.payeeOptions?.guards ?? []).map((g: { id: number; label: string }) => (
@@ -370,45 +418,45 @@ export default function SettingIndex() {
                     ))}
                   </datalist>
                 </div>
-                <div>
+                <div className="md:col-span-1">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Monthly Salary</label>
                   <input type="number" step="0.01" value={newProfile.monthly_salary as number}
                     onChange={(e)=>setNewProfile(p=>({...p, monthly_salary: Number(e.target.value)}))}
-                    className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100" />
+                    className={settingsFieldClassName} />
                 </div>
-                <div>
+                <div className="md:col-span-1">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">OT Multiplier</label>
                   <input type="number" step="0.01" value={Number(newProfile.overtime_multiplier ?? 1.5)}
                     onChange={(e)=>setNewProfile(p=>({...p, overtime_multiplier: Number(e.target.value)}))}
-                    className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100" />
+                    className={settingsFieldClassName} />
                 </div>
-                <div>
+                <div className="md:col-span-1">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Advance</label>
                   <input type="number" step="0.01" value={Number(newProfile.advance_amount ?? 0)}
                     onChange={(e)=>setNewProfile(p=>({...p, advance_amount: Number(e.target.value)}))}
-                    className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100" />
+                    className={settingsFieldClassName} />
                 </div>
-                <div>
+                <div className="md:col-span-1">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Absence Deduction/Day</label>
                   <input type="number" step="0.01" value={Number(newProfile.absence_deduction_per_day ?? 0)}
                     onChange={(e)=>setNewProfile(p=>({...p, absence_deduction_per_day: Number(e.target.value)}))}
-                    className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100" />
+                    className={settingsFieldClassName} />
                 </div>
-                <div className="md:col-span-6">
+                <div className="sm:col-span-2 md:col-span-6">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Allowances (JSON)</label>
                   <textarea value={typeof newProfile.allowances === 'string' ? newProfile.allowances : JSON.stringify(newProfile.allowances ?? [])}
                     onChange={(e)=>setNewProfile(p=>({...p, allowances: e.target.value}))}
-                    className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100" rows={2} />
+                    className={settingsFieldClassName} rows={2} />
                 </div>
-                <div className="md:col-span-6 pt-2">
-                  <button type="submit" className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700">Add Profile</button>
+                <div className="sm:col-span-2 md:col-span-6 pt-2">
+                  <button type="submit" className={`w-full sm:w-auto ${settingsPrimaryButtonClassName}`}>Add Profile</button>
                 </div>
               </form>
 
-              <div className="overflow-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="text-left text-gray-600 dark:text-gray-300">
+              <div className="overflow-x-auto">
+                <table className="min-w-[980px] w-full text-sm">
+                  <thead className="bg-gray-50 dark:bg-gray-950/40">
+                    <tr className="text-left text-gray-600 dark:text-gray-300 border-b border-gray-200 dark:border-gray-800">
                       <th className="px-2 py-2">ID</th>
                       <th className="px-2 py-2">Type</th>
                       <th className="px-2 py-2">Payee</th>
@@ -426,14 +474,54 @@ export default function SettingIndex() {
                         <td className="px-2 py-2">{p.id}</td>
                         <td className="px-2 py-2 capitalize">{p.payee_type}</td>
                         <td className="px-2 py-2">#{p.payee_id}</td>
-                        <td className="px-2 py-2"><input type="number" step="0.01" value={Number(p.monthly_salary)} onChange={(e)=>setProfiles(prev=>prev.map(x=>x.id===p.id?{...x, monthly_salary: Number(e.target.value)}:x))} className="w-32 rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900" /></td>
-                        <td className="px-2 py-2"><input type="number" step="0.01" value={Number(p.overtime_multiplier ?? 1.5)} onChange={(e)=>setProfiles(prev=>prev.map(x=>x.id===p.id?{...x, overtime_multiplier: Number(e.target.value)}:x))} className="w-24 rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900" /></td>
-                        <td className="px-2 py-2"><input type="number" step="0.01" value={Number(p.advance_amount ?? 0)} onChange={(e)=>setProfiles(prev=>prev.map(x=>x.id===p.id?{...x, advance_amount: Number(e.target.value)}:x))} className="w-28 rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900" /></td>
-                        <td className="px-2 py-2"><input type="number" step="0.01" value={Number(p.absence_deduction_per_day ?? 0)} onChange={(e)=>setProfiles(prev=>prev.map(x=>x.id===p.id?{...x, absence_deduction_per_day: Number(e.target.value)}:x))} className="w-28 rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900" /></td>
-                        <td className="px-2 py-2"><textarea value={typeof p.allowances === 'string' ? p.allowances : JSON.stringify(p.allowances ?? [])} onChange={(e)=>setProfiles(prev=>prev.map(x=>x.id===p.id?{...x, allowances: e.target.value}:x))} className="w-80 h-16 rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900" /></td>
-                        <td className="px-2 py-2 space-x-2">
-                          <button onClick={()=>updateProfile(p)} className="px-3 py-1 rounded bg-emerald-600 text-white hover:bg-emerald-700">Save</button>
-                          <button onClick={()=>deleteProfile(p.id)} className="px-3 py-1 rounded bg-red-600 text-white hover:bg-red-700">Delete</button>
+                        <td className="px-2 py-2">
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={Number(p.monthly_salary)}
+                            onChange={(e)=>setProfiles(prev=>prev.map(x=>x.id===p.id?{...x, monthly_salary: Number(e.target.value)}:x))}
+                            className={`w-32 ${settingsInlineFieldClassName}`}
+                          />
+                        </td>
+                        <td className="px-2 py-2">
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={Number(p.overtime_multiplier ?? 1.5)}
+                            onChange={(e)=>setProfiles(prev=>prev.map(x=>x.id===p.id?{...x, overtime_multiplier: Number(e.target.value)}:x))}
+                            className={`w-24 ${settingsInlineFieldClassName}`}
+                          />
+                        </td>
+                        <td className="px-2 py-2">
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={Number(p.advance_amount ?? 0)}
+                            onChange={(e)=>setProfiles(prev=>prev.map(x=>x.id===p.id?{...x, advance_amount: Number(e.target.value)}:x))}
+                            className={`w-28 ${settingsInlineFieldClassName}`}
+                          />
+                        </td>
+                        <td className="px-2 py-2">
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={Number(p.absence_deduction_per_day ?? 0)}
+                            onChange={(e)=>setProfiles(prev=>prev.map(x=>x.id===p.id?{...x, absence_deduction_per_day: Number(e.target.value)}:x))}
+                            className={`w-28 ${settingsInlineFieldClassName}`}
+                          />
+                        </td>
+                        <td className="px-2 py-2">
+                          <textarea
+                            value={typeof p.allowances === 'string' ? p.allowances : JSON.stringify(p.allowances ?? [])}
+                            onChange={(e)=>setProfiles(prev=>prev.map(x=>x.id===p.id?{...x, allowances: e.target.value}:x))}
+                            className={`w-80 h-16 ${settingsInlineFieldClassName}`}
+                          />
+                        </td>
+                        <td className="px-2 py-2">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <button type="button" onClick={()=>updateProfile(p)} className={settingsSuccessButtonClassName}>Save</button>
+                            <button type="button" onClick={()=>deleteProfile(p.id)} className={settingsDangerButtonClassName}>Delete</button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -445,8 +533,8 @@ export default function SettingIndex() {
         )}
 
         {tab === 'system' && (
-          <section className="bg-white dark:bg-gray-800 rounded-xl shadow p-6">
-            <h2 className="text-lg font-semibold mb-4">System Status</h2>
+          <section className={settingsCardClassName}>
+            <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">System Status</h2>
             <dl className="space-y-3">
               <div className="flex items-center justify-between">
                 <dt className="text-sm text-gray-600 dark:text-gray-300">Database</dt>

@@ -23,6 +23,12 @@ interface EditClientModalProps {
   services?: Array<{ id: number; name: string; monthly_price: number; required_guards?: number }>;
 }
 
+const clientFieldClassName =
+  'mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 px-3 py-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950 sm:text-sm';
+
+const clientInlineFieldClassName =
+  'rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 px-3 py-1 focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950';
+
 export default function EditClientModal({ client, open, onClose, services = [] }: EditClientModalProps) {
   const _form: any = useForm({
     name: client.name,
@@ -49,23 +55,23 @@ export default function EditClientModal({ client, open, onClose, services = [] }
   };
 
   return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="w-full max-w-2xl rounded-2xl bg-white p-6">
+    <Dialog open={open} onOpenChange={() => !processing && onClose()}>
+      <DialogContent className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 p-6">
         <DialogHeader>
           <DialogTitle>Edit Client</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">
                     Client Name
                   </label>
                   <input
                     type="text"
                     value={data.name}
                     onChange={e => setData('name', e.target.value)}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                    className={clientFieldClassName}
                   />
                   {errors.name && (
                     <p className="mt-1 text-sm text-red-600">{errors.name}</p>
@@ -73,38 +79,38 @@ export default function EditClientModal({ client, open, onClose, services = [] }
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">
                     Contact Person
                   </label>
                   <input
                     type="text"
                     value={data.contact_person}
                     onChange={e => setData('contact_person', e.target.value)}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                    className={clientFieldClassName}
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">
                     Phone
                   </label>
                   <input
                     type="tel"
                     value={data.phone}
                     onChange={e => setData('phone', e.target.value)}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                    className={clientFieldClassName}
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">
                     Email
                   </label>
                   <input
                     type="email"
                     value={data.email}
                     onChange={e => setData('email', e.target.value)}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                    className={clientFieldClassName}
                   />
                   {errors.email && (
                     <p className="mt-1 text-sm text-red-600">{errors.email}</p>
@@ -112,25 +118,25 @@ export default function EditClientModal({ client, open, onClose, services = [] }
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">
                     Billing Start Date
                   </label>
                   <input
                     type="date"
                     value={data.billing_start_date}
                     onChange={e => setData('billing_start_date', e.target.value)}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                    className={clientFieldClassName}
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">
                     Status
                   </label>
                   <select
                     value={data.status}
                     onChange={e => setData('status', e.target.value)}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                    className={clientFieldClassName}
                   >
                     <option value="active">Active</option>
                     <option value="inactive">Inactive</option>
@@ -138,39 +144,39 @@ export default function EditClientModal({ client, open, onClose, services = [] }
                   </select>
                 </div>
 
-                <div className="col-span-2">
-                  <label className="block text-sm font-medium text-gray-700">
+                <div className="sm:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">
                     Address
                   </label>
                   <textarea
                     value={data.address}
                     onChange={e => setData('address', e.target.value)}
                     rows={2}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                    className={clientFieldClassName}
                   />
                 </div>
 
-                <div className="col-span-2">
-                  <label className="block text-sm font-medium text-gray-700">
+                <div className="sm:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">
                     Notes
                   </label>
                   <textarea
                     value={data.notes}
                     onChange={e => setData('notes', e.target.value)}
                     rows={3}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                    className={clientFieldClassName}
                   />
                 </div>
               </div>
 
               {/* Services selection - allow toggling services and setting custom price/quantity */}
               <div className="pt-4">
-                <h3 className="text-sm font-medium text-gray-700 mb-2">Services</h3>
+                <h3 className="text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Services</h3>
                 <div className="grid grid-cols-1 gap-2">
                   {services.map((s) => {
                     const selected = (data.services || []).some((ds: any) => ds.id === s.id);
                     return (
-                      <div key={s.id} className="p-3 border rounded-lg flex items-center gap-4 bg-white hover:bg-gray-50 transition-colors">
+                      <div key={s.id} className="p-3 border border-gray-200 dark:border-gray-800 rounded-lg flex items-center gap-4 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors">
                         <input
                           type="checkbox"
                           checked={selected}
@@ -183,16 +189,16 @@ export default function EditClientModal({ client, open, onClose, services = [] }
                             }
                             setData('services', list);
                           }}
-                          className="h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300 rounded"
+                          className="h-4 w-4 text-coin-600 focus:ring-coin-500 border-gray-300 dark:border-gray-700 rounded"
                         />
                         <div className="flex-1">
-                          <div className="font-medium text-gray-900">{s.name}</div>
-                          <div className="text-sm text-gray-500">Base Rate: {new Intl.NumberFormat('en-MW', { style: 'currency', currency: 'MWK' }).format(s.monthly_price)}</div>
+                          <div className="font-medium text-gray-900 dark:text-gray-100">{s.name}</div>
+                          <div className="text-sm text-gray-500 dark:text-gray-400">Base Rate: {new Intl.NumberFormat('en-MW', { style: 'currency', currency: 'MWK' }).format(s.monthly_price)}</div>
                         </div>
                         {selected && (
                           <div className="flex items-center gap-4">
                             <div className="flex items-center gap-2">
-                              <span className="text-sm text-gray-500">Custom Rate:</span>
+                              <span className="text-sm text-gray-500 dark:text-gray-400">Custom Rate:</span>
                               <input
                                 type="number"
                                 step="0.01"
@@ -204,11 +210,11 @@ export default function EditClientModal({ client, open, onClose, services = [] }
                                   );
                                   setData('services', list);
                                 }}
-                                className="w-32 px-3 py-1 border rounded-md focus:ring-1 focus:ring-red-500"
+                                className={`w-32 ${clientInlineFieldClassName}`}
                               />
                             </div>
                             <div className="flex items-center gap-2">
-                              <span className="text-sm text-gray-500">Quantity:</span>
+                              <span className="text-sm text-gray-500 dark:text-gray-400">Quantity:</span>
                               <input
                                 type="number"
                                 min="1"
@@ -220,7 +226,7 @@ export default function EditClientModal({ client, open, onClose, services = [] }
                                   );
                                   setData('services', list);
                                 }}
-                                className="w-20 px-3 py-1 border rounded-md focus:ring-1 focus:ring-red-500"
+                                className={`w-20 ${clientInlineFieldClassName}`}
                               />
                             </div>
                           </div>
@@ -231,11 +237,11 @@ export default function EditClientModal({ client, open, onClose, services = [] }
                 </div>
               </div>
 
-          <div className="mt-6 flex justify-end gap-3">
-            <Button type="button" variant="outline" onClick={onClose}>
+          <div className="mt-6 flex flex-col sm:flex-row justify-end gap-3">
+            <Button type="button" variant="outline" onClick={() => !processing && onClose()} disabled={processing} className="w-full sm:w-auto">
               Cancel
             </Button>
-            <Button type="submit" disabled={processing}>
+            <Button type="submit" disabled={processing} className="w-full sm:w-auto">
               <IconMapper name="Save" className="w-4 h-4 mr-2" />
               Save Changes
             </Button>

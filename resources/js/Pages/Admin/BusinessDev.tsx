@@ -139,7 +139,7 @@ export default function BusinessDevPage({
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
-              <h1 className="text-2xl md:text-3xl font-bold text-red-700 dark:text-red-300">Business Development</h1>
+              <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-gray-100">Business Development</h1>
               <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
                 Liaise with clients, manage K9 and special events, and track per-event revenue.
               </p>
@@ -148,7 +148,7 @@ export default function BusinessDevPage({
               <button
                 type="button"
                 onClick={() => setCreateOpen(true)}
-                className="inline-flex w-full sm:w-auto justify-center items-center px-4 py-2 rounded-lg text-sm font-medium bg-red-700 text-white hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950"
+                className="inline-flex w-full sm:w-auto justify-center items-center px-4 py-2 rounded-lg text-sm font-medium bg-coin-700 text-white hover:bg-coin-600 focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950"
               >
                 <IconMapper name="calendar-plus" className="w-4 h-4 mr-2" />
                 New Event
@@ -171,12 +171,12 @@ export default function BusinessDevPage({
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <Card className="p-4 bg-gradient-to-br from-red-50 to-red-100 border-red-200 dark:from-red-900/20 dark:to-red-900/10 dark:border-red-900/30">
+            <Card className="p-4 bg-gradient-to-br from-coin-50 to-coin-100 border-coin-200 dark:from-coin-900/20 dark:to-coin-900/10 dark:border-coin-900/30">
               <div className="flex items-center justify-between mb-2">
-                <h3 className="text-sm font-medium text-red-900 dark:text-red-100">Upcoming Events</h3>
-                <IconMapper name="calendar" className="w-5 h-5 text-red-600 dark:text-red-300" />
+                <h3 className="text-sm font-medium text-coin-900 dark:text-coin-100">Upcoming Events</h3>
+                <IconMapper name="calendar" className="w-5 h-5 text-coin-600 dark:text-coin-300" />
               </div>
-              <p className="text-2xl font-bold text-red-900 dark:text-red-100">
+              <p className="text-2xl font-bold text-coin-900 dark:text-coin-100">
                 {summary.upcoming_events ?? 0}
               </p>
             </Card>
@@ -191,12 +191,12 @@ export default function BusinessDevPage({
               </p>
             </Card>
 
-            <Card className="p-4 bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 dark:from-blue-900/20 dark:to-blue-900/10 dark:border-blue-900/30">
+            <Card className="p-4 bg-gradient-to-br from-coin-50 to-coin-100 border-coin-200 dark:from-coin-900/20 dark:to-coin-900/10 dark:border-coin-900/30">
               <div className="flex items-center justify-between mb-2">
-                <h3 className="text-sm font-medium text-blue-900 dark:text-blue-100">K9 Events (This Month)</h3>
-                <IconMapper name="shield" className="w-5 h-5 text-blue-500 dark:text-blue-300" />
+                <h3 className="text-sm font-medium text-coin-900 dark:text-coin-100">K9 Events (This Month)</h3>
+                <IconMapper name="shield" className="w-5 h-5 text-coin-600 dark:text-coin-300" />
               </div>
-              <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">
+              <p className="text-2xl font-bold text-coin-900 dark:text-coin-100">
                 {summary.k9_events_month ?? 0}
               </p>
             </Card>
@@ -229,12 +229,12 @@ export default function BusinessDevPage({
               <p className="text-2xl font-bold text-amber-900 dark:text-amber-100">{summary.contracts_active ?? 0}</p>
             </Card>
 
-            <Card className="p-4 bg-gradient-to-br from-fuchsia-50 to-fuchsia-100 border-fuchsia-200 dark:from-fuchsia-900/20 dark:to-fuchsia-900/10 dark:border-fuchsia-900/30">
+            <Card className="p-4 bg-gradient-to-br from-coin-50 to-coin-100 border-coin-200 dark:from-coin-900/20 dark:to-coin-900/10 dark:border-coin-900/30">
               <div className="flex items-center justify-between mb-2">
-                <h3 className="text-sm font-medium text-fuchsia-900 dark:text-fuchsia-100">K9 Units (This Month)</h3>
-                <IconMapper name="shield" className="w-5 h-5 text-fuchsia-500 dark:text-fuchsia-300" />
+                <h3 className="text-sm font-medium text-coin-900 dark:text-coin-100">K9 Units (This Month)</h3>
+                <IconMapper name="shield" className="w-5 h-5 text-coin-600 dark:text-coin-300" />
               </div>
-              <p className="text-2xl font-bold text-fuchsia-900 dark:text-fuchsia-100">{summary.k9_units_month ?? 0}</p>
+              <p className="text-2xl font-bold text-coin-900 dark:text-coin-100">{summary.k9_units_month ?? 0}</p>
             </Card>
 
             <Card className="p-4 bg-gradient-to-br from-slate-50 to-slate-100 border-slate-200 dark:from-slate-900/20 dark:to-slate-900/10 dark:border-slate-900/30">
@@ -254,14 +254,88 @@ export default function BusinessDevPage({
               <button
                 type="button"
                 onClick={() => setCreateOpen(true)}
-                className="inline-flex w-full sm:w-auto justify-center items-center px-3 py-2 rounded-md bg-red-700 text-white text-sm hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950"
+                className="inline-flex w-full sm:w-auto justify-center items-center px-3 py-2 rounded-md bg-coin-700 text-white text-sm hover:bg-coin-600 focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950"
               >
                 <IconMapper name="plus" className="w-4 h-4 mr-1" />
                 New Event
               </button>
             </div>
 
-            <div className="overflow-x-auto">
+            <div className="md:hidden space-y-3">
+              {events?.data?.length ? (
+                events.data.map((ev) => {
+                  const clientName = ev.client?.name || clients.find((c) => c.id === ev.client_id)?.name || '—';
+                  return (
+                    <div key={ev.id} className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/60 p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="text-sm font-semibold text-gray-900 dark:text-gray-100 break-words">{ev.title}</div>
+                          <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">{ev.event_date}</div>
+                        </div>
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${statusColor(ev.status)}`}>{ev.status}</span>
+                      </div>
+
+                      <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                        <div className="min-w-0">
+                          <div className="text-xs text-gray-500 dark:text-gray-400">Client</div>
+                          <div className="text-gray-700 dark:text-gray-200 break-words">{clientName}</div>
+                        </div>
+                        <div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">Category</div>
+                          <div className="text-gray-700 dark:text-gray-200">{categoryLabel(ev.category)}</div>
+                        </div>
+                        <div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">Expected</div>
+                          <div className="font-semibold text-gray-900 dark:text-gray-100">MWK {Number(ev.expected_amount || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
+                        </div>
+                      </div>
+
+                      <div className="mt-4 flex flex-col gap-2">
+                        <button
+                          type="button"
+                          onClick={() => openView(ev)}
+                          className="w-full rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950 disabled:opacity-50"
+                          disabled={loadingId === ev.id}
+                        >
+                          {loadingId === ev.id ? 'Opening…' : 'View Details'}
+                        </button>
+
+                        <div className="grid grid-cols-2 gap-2">
+                          <button
+                            type="button"
+                            onClick={() => openEdit(ev)}
+                            className="w-full rounded-lg bg-gray-100 px-3 py-2 text-xs font-semibold text-gray-800 hover:bg-gray-200 dark:bg-gray-900/60 dark:text-gray-100 dark:hover:bg-gray-800/60 focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => openInvoice(ev)}
+                            className="w-full rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950"
+                          >
+                            Invoice
+                          </button>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(ev)}
+                          className="w-full rounded-lg bg-red-700 px-3 py-2 text-xs font-semibold text-white hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/60 p-6 text-center text-sm text-gray-500 dark:text-gray-400">
+                  No events yet.
+                </div>
+              )}
+            </div>
+
+            <div className="hidden md:block overflow-x-auto">
               <table className="min-w-[900px] w-full text-xs">
                 <thead className="bg-gray-50 dark:bg-gray-950 border-b border-gray-200 dark:border-gray-800">
                   <tr>
@@ -297,7 +371,7 @@ export default function BusinessDevPage({
                             <button
                               type="button"
                               onClick={() => openView(ev)}
-                              className="text-red-700 dark:text-red-300 hover:text-red-600 disabled:opacity-50"
+                              className="text-coin-700 dark:text-coin-300 hover:text-coin-800 dark:hover:text-coin-200 disabled:opacity-50"
                               disabled={loadingId === ev.id}
                             >
                               {loadingId === ev.id ? 'Opening…' : 'View'}
@@ -346,7 +420,7 @@ export default function BusinessDevPage({
                     href={link.url || '#'}
                     className={`px-3 py-1 rounded text-xs ${
                       link.active
-                        ? 'bg-red-700 text-white'
+                        ? 'bg-coin-700 text-white'
                         : 'bg-white dark:bg-gray-900/60 text-gray-700 dark:text-gray-100 border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/60'
                     }`}
                     dangerouslySetInnerHTML={{ __html: link.label }}
@@ -424,7 +498,7 @@ interface EventModalBaseProps {
 }
 
 const businessDevModalFieldClassName =
-  'w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 p-2 focus:border-red-500 focus:ring-1 focus:ring-red-500';
+  'w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 p-2 focus:border-coin-500 focus:ring-1 focus:ring-coin-500';
 
 function EventCreateModal({ open, onClose, clients }: EventModalBaseProps) {
   const { data, setData, post, processing, errors, reset } = useForm<EventForm>({
@@ -659,7 +733,7 @@ function EventCreateModal({ open, onClose, clients }: EventModalBaseProps) {
             <button
               type="submit"
               disabled={processing}
-              className="w-full sm:w-auto px-4 py-2 text-sm rounded-md bg-red-700 text-white hover:bg-red-600 disabled:bg-gray-400 dark:disabled:bg-gray-700"
+              className="w-full sm:w-auto px-4 py-2 text-sm rounded-md bg-coin-700 text-white hover:bg-coin-600 disabled:bg-gray-400 dark:disabled:bg-gray-700"
             >
               {processing ? 'Saving...' : 'Create Event'}
             </button>
@@ -907,7 +981,7 @@ function EventEditModal({ open, onClose, event, clients }: EventEditModalProps) 
             <button
               type="submit"
               disabled={processing}
-              className="w-full sm:w-auto px-4 py-2 text-sm rounded-md bg-red-700 text-white hover:bg-red-600 disabled:bg-gray-400 dark:disabled:bg-gray-700"
+              className="w-full sm:w-auto px-4 py-2 text-sm rounded-md bg-coin-700 text-white hover:bg-coin-600 disabled:bg-gray-400 dark:disabled:bg-gray-700"
             >
               {processing ? 'Saving...' : 'Save Changes'}
             </button>
@@ -1005,7 +1079,7 @@ function EventViewModal({ open, onClose, event }: EventViewModalProps) {
         <button
           type="button"
           onClick={onClose}
-          className="px-4 py-2 rounded-md bg-red-700 text-white hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950"
+          className="px-4 py-2 rounded-md bg-coin-700 text-white hover:bg-coin-600 focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950"
         >
           Close
         </button>
@@ -1207,7 +1281,7 @@ function EventInvoiceModal({ open, onClose, event }: EventInvoiceModalProps) {
             <button
               type="submit"
               disabled={processing}
-              className="w-full sm:w-auto px-4 py-2 text-sm rounded-md bg-red-700 text-white hover:bg-red-600 disabled:bg-gray-400 dark:disabled:bg-gray-700"
+              className="w-full sm:w-auto px-4 py-2 text-sm rounded-md bg-coin-700 text-white hover:bg-coin-600 disabled:bg-gray-400 dark:disabled:bg-gray-700"
             >
               {processing ? 'Creating…' : 'Create Invoice'}
             </button>

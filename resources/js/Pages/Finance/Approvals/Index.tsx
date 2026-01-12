@@ -52,13 +52,13 @@ export default function ApprovalsIndex({ approvals, budgets = { data: [], links:
             <div className="px-4 pt-4 border-b border-gray-200 dark:border-gray-800">
               <div className="flex w-full gap-2">
                 <button
-                  className={`flex-1 px-3 py-2 text-sm font-medium text-center border-b-2 ${selectedTab === 'requisitions' ? 'border-coin-600 text-coin-700 dark:text-coin-300' : 'border-transparent text-gray-600 dark:text-gray-300'}`}
+                  className={`flex-1 px-3 py-2 text-sm font-medium text-center border-b-2 ${selectedTab === 'requisitions' ? 'border-coin-600 text-coin-700 dark:text-coin-300' : 'border-transparent text-gray-600 dark:text-gray-300'} focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950 rounded-md`}
                   onClick={() => gotoTab('requisitions')}
                 >
                   Requisitions
                 </button>
                 <button
-                  className={`flex-1 px-3 py-2 text-sm font-medium text-center border-b-2 ${selectedTab === 'budgets' ? 'border-coin-600 text-coin-700 dark:text-coin-300' : 'border-transparent text-gray-600 dark:text-gray-300'}`}
+                  className={`flex-1 px-3 py-2 text-sm font-medium text-center border-b-2 ${selectedTab === 'budgets' ? 'border-coin-600 text-coin-700 dark:text-coin-300' : 'border-transparent text-gray-600 dark:text-gray-300'} focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950 rounded-md`}
                   onClick={() => gotoTab('budgets')}
                 >
                   Budgets
@@ -73,7 +73,7 @@ export default function ApprovalsIndex({ approvals, budgets = { data: [], links:
                 action={(
                   <Link
                     href={route(requisitionsIndexRoute)}
-                    className="inline-flex items-center px-4 py-2 text-sm font-medium rounded-lg bg-coin-600 text-white hover:bg-coin-700"
+                    className="inline-flex items-center px-4 py-2 text-sm font-medium rounded-lg bg-coin-600 text-white hover:bg-coin-700 focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950"
                   >
                     View all requisitions
                   </Link>
@@ -88,7 +88,7 @@ export default function ApprovalsIndex({ approvals, budgets = { data: [], links:
                         <div className="min-w-0">
                           <Link
                             href={route(expenseShowRoute, a.expense.id)}
-                            className="font-medium text-coin-700 hover:text-coin-800 dark:text-coin-300 dark:hover:text-coin-200 break-words"
+                            className="font-medium text-coin-700 hover:text-coin-800 dark:text-coin-300 dark:hover:text-coin-200 break-words focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950 rounded-md px-1 -ml-1"
                           >
                             {a.expense.description || `Requisition #${a.expense.id}`}
                           </Link>
@@ -122,7 +122,7 @@ export default function ApprovalsIndex({ approvals, budgets = { data: [], links:
                       <div className="mt-4 flex flex-col gap-2">
                         <Link
                           href={route(`${prefix}.approvals.show`, a.id)}
-                          className="w-full inline-flex items-center justify-center px-3 py-2 rounded-lg text-xs font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600"
+                          className="w-full inline-flex items-center justify-center px-3 py-2 rounded-lg text-xs font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950"
                         >
                           Details
                         </Link>
@@ -130,14 +130,14 @@ export default function ApprovalsIndex({ approvals, budgets = { data: [], links:
                           <button
                             type="button"
                             onClick={() => handleApprove(a.id)}
-                            className="w-full inline-flex items-center justify-center px-3 py-2 rounded-lg text-xs font-medium bg-emerald-600 text-white hover:bg-emerald-700"
+                            className="w-full inline-flex items-center justify-center px-3 py-2 rounded-lg text-xs font-medium bg-emerald-600 text-white hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950"
                           >
                             Approve
                           </button>
                           <button
                             type="button"
                             onClick={() => handleReject(a.id)}
-                            className="w-full inline-flex items-center justify-center px-3 py-2 rounded-lg text-xs font-medium bg-rose-600 text-white hover:bg-rose-700"
+                            className="w-full inline-flex items-center justify-center px-3 py-2 rounded-lg text-xs font-medium bg-rose-600 text-white hover:bg-rose-700 focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950"
                           >
                             Reject
                           </button>
@@ -177,7 +177,7 @@ export default function ApprovalsIndex({ approvals, budgets = { data: [], links:
                         <td className="px-6 py-4 text-sm">
                           <Link
                             href={route(expenseShowRoute, a.expense.id)}
-                            className="font-medium text-coin-700 hover:text-coin-800 dark:text-coin-300 dark:hover:text-coin-200"
+                            className="font-medium text-coin-700 hover:text-coin-800 dark:text-coin-300 dark:hover:text-coin-200 focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950 rounded-md px-1 -ml-1"
                           >
                             {a.expense.description || `Requisition #${a.expense.id}`}
                           </Link>
@@ -207,21 +207,21 @@ export default function ApprovalsIndex({ approvals, budgets = { data: [], links:
                         <td className="px-6 py-4 text-sm text-right space-x-2">
                           <Link
                             href={route(`${prefix}.approvals.show`, a.id)}
-                            className="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600"
+                            className="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950"
                           >
                             Details
                           </Link>
                           <button
                             type="button"
                             onClick={() => handleApprove(a.id)}
-                            className="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-medium bg-emerald-600 text-white hover:bg-emerald-700"
+                            className="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-medium bg-emerald-600 text-white hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950"
                           >
                             Approve
                           </button>
                           <button
                             type="button"
                             onClick={() => handleReject(a.id)}
-                            className="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-medium bg-rose-600 text-white hover:bg-rose-700"
+                            className="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-medium bg-rose-600 text-white hover:bg-rose-700 focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950"
                           >
                             Reject
                           </button>
@@ -304,7 +304,7 @@ export default function ApprovalsIndex({ approvals, budgets = { data: [], links:
                       {budgets.links.filter((l: any) => l.url).map((l: any, idx: number) => (
                         <button
                           key={idx}
-                          className={`px-3 py-1 rounded border border-gray-200 dark:border-gray-700 ${l.active ? 'bg-coin-600 text-white' : 'bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200'}`}
+                          className={`px-3 py-1 rounded border border-gray-200 dark:border-gray-700 ${l.active ? 'bg-coin-600 text-white' : 'bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200'} focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950`}
                           onClick={() => router.get(l.url, { tab: 'budgets' }, { preserveScroll: true, preserveState: true })}
                           dangerouslySetInnerHTML={{ __html: l.label }}
                         />

@@ -5,6 +5,9 @@ import IconMapper from '@/Components/IconMapper';
 import useNotification from '@/Providers/useNotifications';
 import Modal from '@/Components/Modal';
 
+const adminFieldClassName =
+  'mt-1 w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950';
+
 interface User {
   id: number;
   name: string;
@@ -185,6 +188,9 @@ export default function UsersIndex({ users, filters, roles, zones }: UsersIndexP
     );
   };
 
+  const handleCreateClose = () => { if (!creating) setShowCreate(false); };
+  const handleEditClose = () => { if (!updating) setShowEdit(false); };
+
   return (
     <AdminLayout title="Users Management">
       <Head title="Users" />
@@ -192,7 +198,7 @@ export default function UsersIndex({ users, filters, roles, zones }: UsersIndexP
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
         {/* Notifications are displayed by the global NotificationProvider */}
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Users Management</h1>
             <p className="text-gray-600 dark:text-gray-400">Manage system users and permissions</p>
@@ -200,7 +206,7 @@ export default function UsersIndex({ users, filters, roles, zones }: UsersIndexP
           <button
             type="button"
             onClick={openCreate}
-            className="flex items-center gap-2 px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-bold shadow-md transition-all transform hover:scale-105"
+            className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-bold shadow-md transition-all transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950"
           >
             <IconMapper name="Plus" size={20} />
             Add User
@@ -208,8 +214,8 @@ export default function UsersIndex({ users, filters, roles, zones }: UsersIndexP
         </div>
 
         {/* Search */}
-        <div className="bg-white dark:bg-gray-900 rounded-xl shadow-lg p-6">
-          <div className="flex gap-4">
+        <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm shadow-black/5 dark:shadow-none p-6">
+          <div className="flex flex-col sm:flex-row gap-4">
               <div className="flex-1 relative">
               <span className="absolute left-3 top-3 text-gray-400"><IconMapper name="Search" size={20} /></span>
               <input
@@ -218,12 +224,12 @@ export default function UsersIndex({ users, filters, roles, zones }: UsersIndexP
                 onChange={(e) => setSearch(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
                 placeholder="Search by name or email..."
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-red-500 dark:bg-gray-800 dark:text-gray-100"
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950"
               />
             </div>
             <button
               onClick={handleSearch}
-              className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium"
+              className="w-full sm:w-auto px-6 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950"
             >
               Search
             </button>
@@ -260,7 +266,7 @@ export default function UsersIndex({ users, filters, roles, zones }: UsersIndexP
                 <button
                   type="button"
                   onClick={() => openEdit(user)}
-                  className="flex-1 px-3 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 transition"
+                  className="flex-1 px-3 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 transition focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950"
                 >
                   Edit
                 </button>
@@ -271,7 +277,7 @@ export default function UsersIndex({ users, filters, roles, zones }: UsersIndexP
                       router.delete(route('admin.users.destroy', { user: user.id }));
                     }
                   }}
-                  className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition"
+                  className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950"
                 >
                   <IconMapper name="Trash" size={18} />
                 </button>
@@ -290,7 +296,7 @@ export default function UsersIndex({ users, filters, roles, zones }: UsersIndexP
                       setLoadingId(null);
                     }
                   }}
-                  className="p-2 text-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 rounded-lg transition"
+                  className="p-2 text-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 rounded-lg transition focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950 disabled:opacity-60"
                   title={user.status === 'active' ? 'Deactivate user' : 'Activate user'}
                   disabled={loadingId === user.id}
                 >
@@ -302,7 +308,7 @@ export default function UsersIndex({ users, filters, roles, zones }: UsersIndexP
         </div>
 
         {/* Users Table (desktop) */}
-        <div className="hidden md:block bg-white dark:bg-gray-900 rounded-xl shadow-lg overflow-hidden">
+        <div className="hidden md:block bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm shadow-black/5 dark:shadow-none overflow-hidden">
           <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-800">
             <thead className="bg-gray-50 dark:bg-gray-800">
               <tr>
@@ -347,7 +353,7 @@ export default function UsersIndex({ users, filters, roles, zones }: UsersIndexP
                       <button
                         type="button"
                         onClick={() => openEdit(user)}
-                        className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition"
+                        className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950"
                       >
                         <IconMapper name="Pencil" size={18} />
                       </button>
@@ -357,7 +363,7 @@ export default function UsersIndex({ users, filters, roles, zones }: UsersIndexP
                             router.delete(route('admin.users.destroy', { user: user.id }));
                           }
                         }}
-                        className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition"
+                        className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950"
                         >
                         <IconMapper name="Trash" size={18} />
                       </button>
@@ -375,7 +381,7 @@ export default function UsersIndex({ users, filters, roles, zones }: UsersIndexP
                             setLoadingId(null);
                           }
                         }}
-                        className="p-2 text-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 rounded-lg transition"
+                        className="p-2 text-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 rounded-lg transition focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950 disabled:opacity-60"
                         title={user.status === 'active' ? 'Deactivate user' : 'Activate user'}
                         disabled={loadingId === user.id}
                       >
@@ -391,7 +397,7 @@ export default function UsersIndex({ users, filters, roles, zones }: UsersIndexP
       </div>
 
       {/* Create User Modal */}
-    <Modal show={showCreate} onClose={() => setShowCreate(false)} maxWidth="2xl">
+    <Modal show={showCreate} onClose={handleCreateClose} maxWidth="2xl">
       <div className="p-4 sm:p-6 bg-white dark:bg-gray-800">
         <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">Add User</h2>
         <form onSubmit={submitCreate} className="space-y-4">
@@ -399,7 +405,7 @@ export default function UsersIndex({ users, filters, roles, zones }: UsersIndexP
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Name</label>
               <input
-                className="mt-1 w-full rounded-md border border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 px-3 py-2"
+                className={adminFieldClassName}
                 value={createData.name}
                 onChange={(e) => setCreateData('name', e.target.value)}
                 required
@@ -410,7 +416,7 @@ export default function UsersIndex({ users, filters, roles, zones }: UsersIndexP
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Employee ID</label>
               <input
-                className="mt-1 w-full rounded-md border border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 px-3 py-2"
+                className={adminFieldClassName}
                 value={createData.employee_id || ''}
                 onChange={(e) => setCreateData('employee_id', e.target.value)}
               />
@@ -421,7 +427,7 @@ export default function UsersIndex({ users, filters, roles, zones }: UsersIndexP
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Email</label>
               <input
                 type="email"
-                className="mt-1 w-full rounded-md border border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 px-3 py-2"
+                className={adminFieldClassName}
                 value={createData.email}
                 onChange={(e) => setCreateData('email', e.target.value)}
                 required
@@ -432,7 +438,7 @@ export default function UsersIndex({ users, filters, roles, zones }: UsersIndexP
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Phone</label>
               <input
-                className="mt-1 w-full rounded-md border border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 px-3 py-2"
+                className={adminFieldClassName}
                 value={createData.phone || ''}
                 onChange={(e) => setCreateData('phone', e.target.value)}
               />
@@ -443,7 +449,7 @@ export default function UsersIndex({ users, filters, roles, zones }: UsersIndexP
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Password</label>
               <input
                 type="password"
-                className="mt-1 w-full rounded-md border border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 px-3 py-2"
+                className={adminFieldClassName}
                 value={createData.password}
                 onChange={(e) => setCreateData('password', e.target.value)}
                 required
@@ -458,7 +464,7 @@ export default function UsersIndex({ users, filters, roles, zones }: UsersIndexP
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Confirm Password</label>
               <input
                 type="password"
-                className="mt-1 w-full rounded-md border border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 px-3 py-2"
+                className={adminFieldClassName}
                 value={createData.password_confirmation}
                 onChange={(e) => setCreateData('password_confirmation', e.target.value)}
                 required
@@ -472,7 +478,7 @@ export default function UsersIndex({ users, filters, roles, zones }: UsersIndexP
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Role</label>
               <select
-                className="mt-1 w-full rounded-md border border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 px-3 py-2"
+                className={adminFieldClassName}
                 value={createData.role || ''}
                 onChange={(e) => setCreateData('role', e.target.value)}
               >
@@ -488,7 +494,7 @@ export default function UsersIndex({ users, filters, roles, zones }: UsersIndexP
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Status</label>
               <select
-                className="mt-1 w-full rounded-md border border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 px-3 py-2"
+                className={adminFieldClassName}
                 value={createData.status}
                 onChange={(e) => setCreateData('status', e.target.value as 'active' | 'inactive')}
               >
@@ -502,7 +508,7 @@ export default function UsersIndex({ users, filters, roles, zones }: UsersIndexP
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Assigned Zone</label>
                 <select
-                  className="mt-1 w-full rounded-md border border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 px-3 py-2"
+                  className={adminFieldClassName}
                   value={createData.zone_id === null ? '' : String(createData.zone_id)}
                   onChange={(e) =>
                     setCreateData('zone_id', e.target.value ? (parseInt(e.target.value, 10) as any) : (null as any))
@@ -526,8 +532,8 @@ export default function UsersIndex({ users, filters, roles, zones }: UsersIndexP
           <div className="mt-4 flex items-center justify-end gap-3">
             <button
               type="button"
-              onClick={() => setShowCreate(false)}
-              className="px-4 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200"
+              onClick={handleCreateClose}
+              className="px-4 py-2 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950"
               disabled={creating}
             >
               Cancel
@@ -535,7 +541,7 @@ export default function UsersIndex({ users, filters, roles, zones }: UsersIndexP
             <button
               type="submit"
               disabled={!canCreate}
-              className={`px-4 py-2 rounded-md text-white ${canCreate ? 'bg-red-600 hover:bg-red-700' : 'bg-red-400 cursor-not-allowed'}`}
+              className={`px-4 py-2 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950 ${canCreate ? 'bg-red-600 hover:bg-red-700' : 'bg-red-400 dark:bg-red-700/60 cursor-not-allowed'}`}
             >
               {creating ? 'Creating...' : 'Create User'}
             </button>
@@ -545,7 +551,7 @@ export default function UsersIndex({ users, filters, roles, zones }: UsersIndexP
     </Modal>
 
     {/* Edit User Modal */}
-    <Modal show={showEdit} onClose={() => setShowEdit(false)} maxWidth="2xl">
+    <Modal show={showEdit} onClose={handleEditClose} maxWidth="2xl">
       <div className="p-4 sm:p-6 bg-white dark:bg-gray-800">
         <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">Edit User</h2>
         {!editForm ? (
@@ -556,7 +562,7 @@ export default function UsersIndex({ users, filters, roles, zones }: UsersIndexP
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Name</label>
                 <input
-                  className="mt-1 w-full rounded-md border border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 px-3 py-2"
+                  className={adminFieldClassName}
                   value={editForm.name}
                   onChange={(e) => setEditForm({ ...(editForm as EditUserForm), name: e.target.value })}
                 />
@@ -565,7 +571,7 @@ export default function UsersIndex({ users, filters, roles, zones }: UsersIndexP
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Email</label>
                 <input
-                  className="mt-1 w-full rounded-md border border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 px-3 py-2"
+                  className={adminFieldClassName}
                   value={editForm.email}
                   onChange={(e) => setEditForm({ ...(editForm as EditUserForm), email: e.target.value })}
                 />
@@ -574,7 +580,7 @@ export default function UsersIndex({ users, filters, roles, zones }: UsersIndexP
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Phone</label>
                 <input
-                  className="mt-1 w-full rounded-md border border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 px-3 py-2"
+                  className={adminFieldClassName}
                   value={editForm.phone || ''}
                   onChange={(e) => setEditForm({ ...(editForm as EditUserForm), phone: e.target.value })}
                 />
@@ -583,7 +589,7 @@ export default function UsersIndex({ users, filters, roles, zones }: UsersIndexP
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Employee ID</label>
                 <input
-                  className="mt-1 w-full rounded-md border border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 px-3 py-2"
+                  className={adminFieldClassName}
                   value={editForm.employee_id || ''}
                   onChange={(e) => setEditForm({ ...(editForm as EditUserForm), employee_id: e.target.value })}
                 />
@@ -592,7 +598,7 @@ export default function UsersIndex({ users, filters, roles, zones }: UsersIndexP
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Role</label>
                 <select
-                  className="mt-1 w-full rounded-md border border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 px-3 py-2"
+                  className={adminFieldClassName}
                   value={editForm.role}
                   onChange={(e) => setEditForm({ ...(editForm as EditUserForm), role: e.target.value })}
                 >
@@ -608,7 +614,7 @@ export default function UsersIndex({ users, filters, roles, zones }: UsersIndexP
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Status</label>
                 <select
-                  className="mt-1 w-full rounded-md border border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 px-3 py-2"
+                  className={adminFieldClassName}
                   value={editForm.status}
                   onChange={(e) => setEditForm({ ...(editForm as EditUserForm), status: e.target.value })}
                 >
@@ -621,7 +627,7 @@ export default function UsersIndex({ users, filters, roles, zones }: UsersIndexP
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Assigned Zone</label>
                   <select
-                    className="mt-1 w-full rounded-md border border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 px-3 py-2"
+                    className={adminFieldClassName}
                     value={editForm.zone_id === null ? '' : String(editForm.zone_id)}
                     onChange={(e) =>
                       setEditForm({
@@ -644,8 +650,8 @@ export default function UsersIndex({ users, filters, roles, zones }: UsersIndexP
             <div className="mt-4 flex items-center justify-end gap-3">
               <button
                 type="button"
-                onClick={() => setShowEdit(false)}
-                className="px-4 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200"
+                onClick={handleEditClose}
+                className="px-4 py-2 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950"
                 disabled={updating}
               >
                 Cancel
@@ -653,7 +659,7 @@ export default function UsersIndex({ users, filters, roles, zones }: UsersIndexP
               <button
                 type="submit"
                 disabled={updating}
-                className="px-4 py-2 rounded-md bg-red-600 text-white hover:bg-red-700"
+                className="px-4 py-2 rounded-md bg-red-600 text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950 disabled:opacity-60"
               >
                 {updating ? 'Saving...' : 'Save Changes'}
               </button>

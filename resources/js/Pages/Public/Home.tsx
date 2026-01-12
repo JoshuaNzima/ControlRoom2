@@ -507,7 +507,7 @@ export default function Home() {
                 whileHover={prefersReduced ? undefined : { rotateX: -2, rotateY: 2, scale: 1.02 }}
                 whileTap={{ scale: 0.99 }}
                 style={{ transformPerspective: 800 }}
-                className="group relative bg-white dark:bg-gray-950 rounded-2xl p-8 shadow-lg hover:shadow-2xl transition-all duration-300 border border-gray-100 dark:border-gray-800"
+                className="group relative overflow-hidden bg-white dark:bg-gray-950 rounded-2xl p-8 shadow-lg hover:shadow-2xl transition-all duration-300 border border-gray-100 dark:border-gray-800"
               >
                 <div className={`w-16 h-16 bg-gradient-to-r ${feature.color} rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300`}>
                   <IconMapper name={feature.icon} className="w-[clamp(24px,3vw,32px)] h-[clamp(24px,3vw,32px)] text-white" />

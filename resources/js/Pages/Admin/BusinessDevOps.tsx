@@ -61,19 +61,19 @@ export default function BusinessDevOps() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
-              <h1 className="text-2xl md:text-3xl font-bold text-red-900 dark:text-gray-100">Operations & KPIs</h1>
-              <p className="text-sm text-red-800/80 dark:text-gray-400 mt-1">Quick glance at pipeline metrics and site lookups.</p>
+              <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-gray-100">Operations & KPIs</h1>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Quick glance at pipeline metrics and site lookups.</p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <Link href={route('admin.business-dev')} className="inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium bg-white text-red-800 border border-red-200 hover:bg-red-50 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-700 dark:hover:bg-gray-700">
+              <Link href={route('admin.business-dev')} className="inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium bg-white text-coin-800 border border-coin-200 hover:bg-coin-50 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-700 dark:hover:bg-gray-700">
                 <IconMapper name="handshake" className="w-4 h-4 mr-2" />
                 Overview
               </Link>
-              <Link href={route('admin.business-dev.contracts.index')} className="inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium bg-white text-red-800 border border-red-200 hover:bg-red-50 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-700 dark:hover:bg-gray-700">
+              <Link href={route('admin.business-dev.contracts.index')} className="inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium bg-white text-coin-800 border border-coin-200 hover:bg-coin-50 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-700 dark:hover:bg-gray-700">
                 <IconMapper name="file-text" className="w-4 h-4 mr-2" />
                 Contracts
               </Link>
-              <Link href={route('admin.business-dev.k9.dashboard')} className="inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium bg-white text-red-800 border border-red-200 hover:bg-red-50 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-700 dark:hover:bg-gray-700">
+              <Link href={route('admin.business-dev.k9.dashboard')} className="inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium bg-white text-coin-800 border border-coin-200 hover:bg-coin-50 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-700 dark:hover:bg-gray-700">
                 <IconMapper name="layout-dashboard" className="w-4 h-4 mr-2" />
                 K9
               </Link>
@@ -81,12 +81,12 @@ export default function BusinessDevOps() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <Card className="p-4 bg-gradient-to-br from-indigo-50 to-indigo-100 border-indigo-200 dark:from-indigo-900/20 dark:to-indigo-900/10 dark:border-indigo-900/40">
+            <Card className="p-4 bg-gradient-to-br from-coin-50 to-coin-100 border-coin-200 dark:from-coin-900/20 dark:to-coin-900/10 dark:border-coin-900/40">
               <div className="flex items-center justify-between mb-2">
-                <h3 className="text-sm font-medium text-indigo-900 dark:text-indigo-200">Upcoming Events</h3>
-                <IconMapper name="calendar" className="w-5 h-5 text-indigo-500" />
+                <h3 className="text-sm font-medium text-coin-900 dark:text-coin-200">Upcoming Events</h3>
+                <IconMapper name="calendar" className="w-5 h-5 text-coin-600" />
               </div>
-              <p className="text-2xl font-bold text-indigo-900 dark:text-indigo-100">{summary.upcoming_events ?? 0}</p>
+              <p className="text-2xl font-bold text-coin-900 dark:text-coin-100">{summary.upcoming_events ?? 0}</p>
             </Card>
             <Card className="p-4 bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-200 dark:from-emerald-900/20 dark:to-emerald-900/10 dark:border-emerald-900/40">
               <div className="flex items-center justify-between mb-2">
@@ -95,19 +95,19 @@ export default function BusinessDevOps() {
               </div>
               <p className="text-2xl font-bold text-emerald-900 dark:text-emerald-100">MWK {Number(monthRevenue || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
             </Card>
-            <Card className="p-4 bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 dark:from-blue-900/20 dark:to-blue-900/10 dark:border-blue-900/40">
+            <Card className="p-4 bg-gradient-to-br from-coin-50 to-coin-100 border-coin-200 dark:from-coin-900/20 dark:to-coin-900/10 dark:border-coin-900/40">
               <div className="flex items-center justify-between mb-2">
-                <h3 className="text-sm font-medium text-blue-900 dark:text-blue-200">K9 Events (This Month)</h3>
-                <IconMapper name="shield" className="w-5 h-5 text-blue-500" />
+                <h3 className="text-sm font-medium text-coin-900 dark:text-coin-200">K9 Events (This Month)</h3>
+                <IconMapper name="shield" className="w-5 h-5 text-coin-600" />
               </div>
-              <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">{summary.k9_events_month ?? 0}</p>
+              <p className="text-2xl font-bold text-coin-900 dark:text-coin-100">{summary.k9_events_month ?? 0}</p>
             </Card>
-            <Card className="p-4 bg-gradient-to-br from-fuchsia-50 to-fuchsia-100 border-fuchsia-200 dark:from-fuchsia-900/20 dark:to-fuchsia-900/10 dark:border-fuchsia-900/40">
+            <Card className="p-4 bg-gradient-to-br from-coin-50 to-coin-100 border-coin-200 dark:from-coin-900/20 dark:to-coin-900/10 dark:border-coin-900/40">
               <div className="flex items-center justify-between mb-2">
-                <h3 className="text-sm font-medium text-fuchsia-900 dark:text-fuchsia-200">K9 Units (This Month)</h3>
-                <IconMapper name="shield" className="w-5 h-5 text-fuchsia-500" />
+                <h3 className="text-sm font-medium text-coin-900 dark:text-coin-200">K9 Units (This Month)</h3>
+                <IconMapper name="shield" className="w-5 h-5 text-coin-600" />
               </div>
-              <p className="text-2xl font-bold text-fuchsia-900 dark:text-fuchsia-100">{summary.k9_units_month ?? 0}</p>
+              <p className="text-2xl font-bold text-coin-900 dark:text-coin-100">{summary.k9_units_month ?? 0}</p>
             </Card>
           </div>
 
@@ -146,7 +146,7 @@ export default function BusinessDevOps() {
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Quick Site Lookup</h2>
               <input
-                className="w-full md:w-72 border rounded-md p-2 bg-white text-gray-900 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-700"
+                className="w-full md:w-72 border rounded-md p-2 bg-white text-gray-900 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950"
                 placeholder="Search active sites by name or client…"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}

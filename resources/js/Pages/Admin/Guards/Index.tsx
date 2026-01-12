@@ -218,7 +218,7 @@ export default function GuardsIndex({ guards, filters, canAssignSupervisor, canV
           </div>
           <button
             onClick={openAdd}
-            className="flex items-center gap-2 px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-bold shadow-md transition-all transform hover:scale-105"
+            className="flex items-center gap-2 px-6 py-3 bg-coin-600 hover:bg-coin-700 text-white rounded-lg font-bold shadow-md transition-all transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950"
           >
             <IconMapper name="Plus" size={20} />
             Add Guard
@@ -235,7 +235,7 @@ export default function GuardsIndex({ guards, filters, canAssignSupervisor, canV
                 onChange={(e) => setSearch(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
                 placeholder="Search by name, employee id or phone..."
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950"
               />
             </div>
             <div className="w-full md:w-56">
@@ -252,14 +252,157 @@ export default function GuardsIndex({ guards, filters, canAssignSupervisor, canV
             </div>
             <button
               onClick={handleSearch}
-              className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium"
+              className="px-6 py-2 bg-coin-600 hover:bg-coin-700 text-white rounded-lg font-medium focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950"
             >
               Search
             </button>
           </div>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
+        <div className="md:hidden grid gap-3">
+          {guards.data.map((guard) => (
+            <div key={guard.id} className="rounded-xl bg-white dark:bg-gray-800 shadow-md border border-gray-100 dark:border-gray-700 p-4 space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-gradient-to-br from-red-500 to-rose-600 rounded-full flex items-center justify-center text-white font-bold text-lg">
+                  {guard.name.charAt(0)}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <button type="button" onClick={() => openDetails(guard.id)} className="text-left w-full">
+                    <div className="font-semibold text-gray-900 dark:text-gray-100 truncate hover:underline">{guard.name}</div>
+                    <div className="mt-0.5 text-sm text-gray-500 dark:text-gray-400 truncate">{guard.employee_id}</div>
+                  </button>
+                </div>
+                {guard.is_profile_complete === false && (
+                  <span className="shrink-0 px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200 text-xs font-semibold">
+                    Incomplete
+                  </span>
+                )}
+              </div>
+
+              <div className="flex items-center justify-between gap-3">
+                <div className="text-sm text-gray-600 dark:text-gray-300 truncate">{guard.phone || 'N/A'}</div>
+                <span
+                  className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                    guard.status === 'active'
+                      ? 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300'
+                      : guard.status === 'suspended'
+                      ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-200'
+                      : guard.status === 'absconded'
+                      ? 'bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-200'
+                      : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300'
+                  }`}
+                >
+                  {guard.status || 'Active'}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => openEdit(guard.id)}
+                  className="w-full px-3 py-2 rounded-lg bg-gray-100 text-gray-800 hover:bg-gray-200 dark:bg-gray-900/60 dark:text-gray-100 dark:hover:bg-gray-700/60 focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950"
+                >
+                  Edit
+                </button>
+                <button
+                  type="button"
+                  onClick={() => openAssign(guard.id)}
+                  className="w-full px-3 py-2 rounded-lg bg-coin-600 text-white hover:bg-coin-700 focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950"
+                >
+                  Assign
+                </button>
+                <button
+                  type="button"
+                  onClick={() => openPromote(guard.id)}
+                  className="w-full px-3 py-2 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950"
+                >
+                  Promote
+                </button>
+                <button
+                  type="button"
+                  onClick={() => openConfirm('Delete guard', `Are you sure you want to delete ${guard.name}?`, () => router.delete(route('admin.guards.destroy', { guard: guard.id })))}
+                  className="w-full px-3 py-2 rounded-lg bg-red-700 text-white hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950"
+                >
+                  Delete
+                </button>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const isSuspending = guard.status === 'active';
+                    openConfirm(
+                      `${isSuspending ? 'Suspend' : 'Reinstate'} guard`,
+                      `${isSuspending ? 'Suspend' : 'Reinstate'} ${guard.name}?`,
+                      async () => {
+                        setLoadingId(guard.id);
+                        try {
+                          const routeName = isSuspending ? 'admin.guards.suspend' : 'admin.guards.reinstate';
+                          await router.post(route(routeName, { guard: guard.id }), {});
+                          showToast(`Guard ${guard.name} ${isSuspending ? 'suspended' : 'reinstated'}`);
+                        } catch (e) {
+                          showToast('Failed to update status');
+                        } finally {
+                          setLoadingId(null);
+                        }
+                      }
+                    );
+                  }}
+                  disabled={loadingId === guard.id}
+                  className="w-full px-3 py-2 rounded-lg bg-yellow-100 text-yellow-800 hover:bg-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-200 dark:hover:bg-yellow-900/40 focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950 disabled:opacity-60"
+                >
+                  {loadingId === guard.id ? '...' : guard.status === 'active' ? 'Suspend' : 'Reinstate'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => openReason('Dismiss Guard', `Provide a reason (optional) for dismissing ${guard.name}`, async (reason: string) => {
+                    setLoadingId(guard.id);
+                    try {
+                      await router.post(route('admin.guards.dismiss', { guard: guard.id }), { reason });
+                      showToast(`Guard ${guard.name} dismissed`);
+                    } catch (e) {
+                      showToast('Failed to dismiss guard');
+                    } finally {
+                      setLoadingId(null);
+                    }
+                  })}
+                  disabled={loadingId === guard.id}
+                  className="w-full px-3 py-2 rounded-lg bg-gray-100 text-gray-800 hover:bg-gray-200 dark:bg-gray-900/60 dark:text-gray-100 dark:hover:bg-gray-700/60 focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950 disabled:opacity-60"
+                >
+                  Dismiss
+                </button>
+                <button
+                  type="button"
+                  onClick={() => openReason('Mark as Absconded', `Provide a reason (optional) for marking ${guard.name} as absconded`, async (reason: string) => {
+                    setLoadingId(guard.id);
+                    try {
+                      await router.post(route('admin.guards.abscond', { guard: guard.id }), { reason });
+                      showToast(`Guard ${guard.name} marked absconded`);
+                    } catch (e) {
+                      showToast('Failed to mark absconded');
+                    } finally {
+                      setLoadingId(null);
+                    }
+                  })}
+                  disabled={loadingId === guard.id}
+                  className="w-full px-3 py-2 rounded-lg bg-rose-100 text-rose-800 hover:bg-rose-200 dark:bg-rose-900/30 dark:text-rose-200 dark:hover:bg-rose-900/40 focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950 disabled:opacity-60"
+                >
+                  Abscond
+                </button>
+                <button
+                  type="button"
+                  onClick={() => openDetails(guard.id)}
+                  className="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900/60 dark:text-gray-100 dark:hover:bg-gray-800/60 focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950"
+                >
+                  Details
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="hidden md:block bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
           <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
             <thead className="bg-gray-50 dark:bg-gray-900/50">
               <tr>
@@ -300,12 +443,12 @@ export default function GuardsIndex({ guards, filters, canAssignSupervisor, canV
                       {canAssignSupervisor ? (
                         <button
                           onClick={() => openEdit(guard.id)}
-                          className="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded-lg text-gray-700 transition"
+                          className="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded-lg text-gray-700 transition dark:bg-gray-900/60 dark:text-gray-100 dark:hover:bg-gray-800/60"
                         >
                           {guard.supervisor?.name || 'Assign Supervisor'}
                         </button>
                       ) : (
-                        <span className="text-sm text-gray-700">
+                        <span className="text-sm text-gray-700 dark:text-gray-200">
                           {guard.supervisor?.name || 'Unassigned'}
                         </span>
                       )}
@@ -316,12 +459,12 @@ export default function GuardsIndex({ guards, filters, canAssignSupervisor, canV
                     <span
                       className={`px-3 py-1 rounded-full text-xs font-semibold ${
                         guard.status === 'active'
-                          ? 'bg-green-100 text-green-800'
+                          ? 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300'
                           : guard.status === 'suspended'
-                          ? 'bg-yellow-100 text-yellow-800'
+                          ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-200'
                           : guard.status === 'absconded'
-                          ? 'bg-rose-100 text-rose-800'
-                          : 'bg-gray-100 text-gray-800'
+                          ? 'bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-200'
+                          : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300'
                       }`}
                     >
                       {guard.status || 'Active'}
@@ -331,14 +474,14 @@ export default function GuardsIndex({ guards, filters, canAssignSupervisor, canV
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => openEdit(guard.id)}
-                        className="p-2 text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition"
+                        className="p-2 text-coin-700 hover:bg-coin-50 dark:text-coin-300 dark:hover:bg-coin-900/20 rounded-lg transition"
                         title="Edit"
                       >
                         <IconMapper name="Pencil" size={18} />
                       </button>
                       <button
                         onClick={() => openAssign(guard.id)}
-                        className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition"
+                        className="p-2 text-coin-700 hover:bg-coin-50 dark:text-coin-300 dark:hover:bg-coin-900/20 rounded-lg transition"
                         title="Assign to site"
                       >
                         Assign
@@ -439,7 +582,7 @@ export default function GuardsIndex({ guards, filters, canAssignSupervisor, canV
                 type="file"
                 accept="image/*"
                 onChange={(e) => setPhotoCreate(e.target.files?.[0] || null)}
-                className="w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-red-50 file:text-red-700 hover:file:bg-red-100 dark:file:bg-gray-800 dark:file:text-gray-100"
+                className="w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-coin-50 file:text-coin-700 hover:file:bg-coin-100 dark:file:bg-gray-800 dark:file:text-gray-100"
               />
             </div>
             <GuardForm
@@ -466,7 +609,7 @@ export default function GuardsIndex({ guards, filters, canAssignSupervisor, canV
                 type="file"
                 accept="image/*"
                 onChange={(e) => setPhotoEdit(e.target.files?.[0] || null)}
-                className="w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-red-50 file:text-red-700 hover:file:bg-red-100 dark:file:bg-gray-800 dark:file:text-gray-100"
+                className="w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-coin-50 file:text-coin-700 hover:file:bg-coin-100 dark:file:bg-gray-800 dark:file:text-gray-100"
               />
             </div>
             {selectedGuard && (
@@ -490,7 +633,7 @@ export default function GuardsIndex({ guards, filters, canAssignSupervisor, canV
           <div className="p-4 sm:p-6 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold">Guard Details</h2>
-              <button onClick={printDetails} className="px-3 py-1.5 rounded bg-red-600 text-white hover:bg-red-700">Print</button>
+              <button onClick={printDetails} className="px-3 py-1.5 rounded bg-coin-600 text-white hover:bg-coin-700 focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950">Print</button>
             </div>
             {!selectedGuard ? (
               <div className="text-sm text-gray-500">Loading...</div>

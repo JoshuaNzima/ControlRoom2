@@ -24,6 +24,12 @@ interface AddClientModalPropsExtended extends AddClientModalProps {
   zones?: Zone[];
 }
 
+const clientFieldClassName =
+  'w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950';
+
+const clientInlineFieldClassName =
+  'rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 px-3 py-1 focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950';
+
 export default function AddClientModal({ open, onClose, services = [], zones = [] }: AddClientModalPropsExtended) {
   const { data, setData, post, processing, errors, reset } = useForm({
     name: '',
@@ -82,20 +88,20 @@ export default function AddClientModal({ open, onClose, services = [], zones = [
   };
 
   return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+    <Dialog open={open} onOpenChange={() => !processing && onClose()}>
+      <DialogContent className="w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-2xl bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800">
         <DialogHeader>
           <DialogTitle>Add New Client</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Client Name *</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Client Name *</label>
             <input
               type="text"
               value={data.name}
               onChange={(e) => setData('name', e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+              className={clientFieldClassName}
               required
             />
             {errors.name && <p className="text-red-600 text-sm mt-1">{errors.name}</p>}
@@ -103,73 +109,73 @@ export default function AddClientModal({ open, onClose, services = [], zones = [
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Monthly Rate (MWK)</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Monthly Rate (MWK)</label>
               <input 
                 type="number" 
                 step="0.01" 
                 value={data.monthly_rate} 
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50" 
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100" 
                 disabled 
                 title="Monthly rate is automatically calculated based on selected services"
               />
               {errors.monthly_rate && <p className="text-red-600 text-sm mt-1">{errors.monthly_rate}</p>}
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Billing Start Date</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Billing Start Date</label>
               <input 
                 type="date" 
                 value={data.billing_start_date} 
                 onChange={(e) => setData('billing_start_date', e.target.value)} 
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg" 
+                className={clientFieldClassName}
               />
-              <p className="text-xs text-gray-500 mt-1">Defaults to today if not specified</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Defaults to today if not specified</p>
               {errors.billing_start_date && <p className="text-red-600 text-sm mt-1">{errors.billing_start_date}</p>}
             </div>
           </div>
 
           <div className="border-t pt-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Contact Information</h3>
+            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">Contact Information</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Contact Person</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Contact Person</label>
                 <input 
                   type="text" 
                   value={data.contact_person} 
                   onChange={(e) => setData('contact_person', e.target.value)} 
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg" 
+                  className={clientFieldClassName}
                   placeholder="Primary contact name"
                 />
                 {errors.contact_person && <p className="text-red-600 text-sm mt-1">{errors.contact_person}</p>}
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Email</label>
                 <input 
                   type="email" 
                   value={data.email} 
                   onChange={(e) => setData('email', e.target.value)} 
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg" 
+                  className={clientFieldClassName}
                   placeholder="contact@example.com"
                 />
                 {errors.email && <p className="text-red-600 text-sm mt-1">{errors.email}</p>}
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Phone</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Phone</label>
                 <input 
                   type="tel" 
                   value={data.phone} 
                   onChange={(e) => setData('phone', e.target.value)} 
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg" 
+                  className={clientFieldClassName}
                   placeholder="Phone number"
                 />
                 {errors.phone && <p className="text-red-600 text-sm mt-1">{errors.phone}</p>}
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Address</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Address</label>
                 <input 
                   type="text" 
                   value={data.address} 
                   onChange={(e) => setData('address', e.target.value)} 
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg" 
+                  className={clientFieldClassName}
                   placeholder="Business address"
                 />
                 {errors.address && <p className="text-red-600 text-sm mt-1">{errors.address}</p>}
@@ -178,8 +184,8 @@ export default function AddClientModal({ open, onClose, services = [], zones = [
           </div>
           <div className="pt-4">
             <div className="flex items-center justify-between mb-2">
-              <label className="block text-sm font-medium text-gray-700">Select Services *</label>
-              <div className="text-sm text-gray-500">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">Select Services *</label>
+              <div className="text-sm text-gray-500 dark:text-gray-400">
                 Total Monthly Rate: <span className="font-semibold">{new Intl.NumberFormat('en-MW', { style: 'currency', currency: 'MWK' }).format(data.monthly_rate)}</span>
               </div>
             </div>
@@ -187,7 +193,7 @@ export default function AddClientModal({ open, onClose, services = [], zones = [
               {services.map((s) => {
                 const selected = (data.services || []).some((ds: any) => ds.id === s.id);
                 return (
-                  <div key={s.id} className="p-4 border rounded-lg flex items-center gap-4 bg-white hover:bg-gray-50 transition-colors">
+                  <div key={s.id} className="p-4 border border-gray-200 dark:border-gray-800 rounded-lg flex items-center gap-4 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors">
                     <input 
                       type="checkbox" 
                       checked={selected} 
@@ -200,18 +206,18 @@ export default function AddClientModal({ open, onClose, services = [], zones = [
                         }
                         setData('services', list);
                       }}
-                      className="h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300 rounded"
+                      className="h-4 w-4 text-coin-600 focus:ring-coin-500 border-gray-300 dark:border-gray-700 rounded"
                     />
                     <div className="flex-1">
-                      <div className="font-medium text-gray-900">{s.name}</div>
-                      <div className="text-sm text-gray-500 flex items-center gap-4">
+                      <div className="font-medium text-gray-900 dark:text-gray-100">{s.name}</div>
+                      <div className="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-4">
                         <span>Base Rate: {new Intl.NumberFormat('en-MW', { style: 'currency', currency: 'MWK' }).format(s.monthly_price)}</span>
                       </div>
                     </div>
                     {selected && (
                       <div className="flex items-center gap-4">
                         <div className="flex items-center gap-2">
-                          <span className="text-sm text-gray-500">Custom Rate:</span>
+                          <span className="text-sm text-gray-500 dark:text-gray-400">Custom Rate:</span>
                           <input 
                             type="number" 
                             step="0.01" 
@@ -223,11 +229,11 @@ export default function AddClientModal({ open, onClose, services = [], zones = [
                               );
                               setData('services', list);
                             }} 
-                            className="w-32 px-3 py-1 border rounded-md focus:ring-1 focus:ring-red-500" 
+                            className={`w-32 ${clientInlineFieldClassName}`}
                           />
                         </div>
                         <div className="flex items-center gap-2">
-                          <span className="text-sm text-gray-500">Quantity:</span>
+                          <span className="text-sm text-gray-500 dark:text-gray-400">Quantity:</span>
                           <input 
                             type="number" 
                             min="1"
@@ -239,7 +245,7 @@ export default function AddClientModal({ open, onClose, services = [], zones = [
                               );
                               setData('services', list);
                             }} 
-                            className="w-20 px-3 py-1 border rounded-md focus:ring-1 focus:ring-red-500" 
+                            className={`w-20 ${clientInlineFieldClassName}`}
                           />
                         </div>
                       </div>
@@ -248,30 +254,30 @@ export default function AddClientModal({ open, onClose, services = [], zones = [
                 );
               })}
             </div>
-            <p className="text-sm text-gray-500 mt-2">* Monthly rate and required guards will be automatically calculated based on selected services</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">* Monthly rate and required guards will be automatically calculated based on selected services</p>
           </div>
 
           <div className="pt-6 border-t">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Site Details</h2>
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">Site Details</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Site Name</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Site Name</label>
                 <input 
                   type="text" 
                   value={data.site.name} 
                   onChange={(e) => setData('site', { ...data.site, name: e.target.value })} 
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg" 
+                  className={clientFieldClassName}
                   placeholder="Home/Residence"
                 />
-                <p className="text-xs text-gray-500 mt-1">Defaults to Home/Residence if not specified</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Defaults to Home/Residence if not specified</p>
                 {errors['site.name'] && <p className="text-red-600 text-sm mt-1">{(errors as any)['site.name']}</p>}
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Site Type</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Site Type</label>
                 <select 
                   value={data.site.site_type || 'residential'} 
                   onChange={(e) => setData('site', { ...data.site, site_type: e.target.value })} 
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                  className={clientFieldClassName}
                 >
                   <option value="residential">Residential</option>
                   <option value="commercial">Commercial</option>
@@ -279,33 +285,33 @@ export default function AddClientModal({ open, onClose, services = [], zones = [
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Status</label>
                 <select 
                   value={data.site.status} 
                   onChange={(e) => setData('site', { ...data.site, status: e.target.value })} 
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                  className={clientFieldClassName}
                 >
                   <option value="active">Active</option>
                   <option value="inactive">Inactive</option>
                 </select>
               </div>
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-2">Address</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Address</label>
                 <textarea 
                   value={data.site.address} 
                   onChange={(e) => setData('site', { ...data.site, address: e.target.value })} 
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg" 
+                  className={clientFieldClassName}
                 />
               </div>
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-2">Location</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Location</label>
                 <div className="space-y-2">
-                  <div className="flex items-center justify-between text-xs text-gray-600">
+                  <div className="flex items-center justify-between text-xs text-gray-600 dark:text-gray-300">
                     <span>Use the map or enter coordinates manually.</span>
                     <button
                       type="button"
                       onClick={() => setShowSiteMap((v) => !v)}
-                      className="px-2 py-1 border rounded-md text-gray-700"
+                      className="px-2 py-1 border border-gray-300 dark:border-gray-700 rounded-md bg-white dark:bg-gray-950 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950"
                     >
                       {showSiteMap ? 'Hide map' : 'Show map'}
                     </button>
@@ -318,10 +324,10 @@ export default function AddClientModal({ open, onClose, services = [], zones = [
                     />
                   )}
                 </div>
-                <p className="text-xs text-gray-500 mt-1">Tap the map to set exact coordinates or enter them manually below.</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Tap the map to set exact coordinates or enter them manually below.</p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Latitude</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">Latitude</label>
                     <input
                       type="number"
                       step="0.000001"
@@ -355,13 +361,13 @@ export default function AddClientModal({ open, onClose, services = [], zones = [
                         n = Math.max(-90, Math.min(90, n));
                         setData('site', { ...data.site, latitude: n.toFixed(6) });
                       }}
-                      className="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg"
+                      className={`mt-1 ${clientFieldClassName}`}
                       placeholder="e.g. -13.962600"
                     />
                     {(errors as any)['site.latitude'] && <p className="text-red-600 text-sm mt-1">{(errors as any)['site.latitude']}</p>}
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Longitude</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">Longitude</label>
                     <input
                       type="number"
                       step="0.000001"
@@ -395,7 +401,7 @@ export default function AddClientModal({ open, onClose, services = [], zones = [
                         n = Math.max(-180, Math.min(180, n));
                         setData('site', { ...data.site, longitude: n.toFixed(6) });
                       }}
-                      className="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg"
+                      className={`mt-1 ${clientFieldClassName}`}
                       placeholder="e.g. 33.774100"
                     />
                     {(errors as any)['site.longitude'] && <p className="text-red-600 text-sm mt-1">{(errors as any)['site.longitude']}</p>}
@@ -403,8 +409,8 @@ export default function AddClientModal({ open, onClose, services = [], zones = [
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Zone</label>
-                <select value={data.site.zone_id ?? ''} onChange={(e) => setData('site', { ...data.site, zone_id: e.target.value })} className="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Zone</label>
+                <select value={data.site.zone_id ?? ''} onChange={(e) => setData('site', { ...data.site, zone_id: e.target.value })} className={clientFieldClassName}>
                   <option value="">Select zone (optional)</option>
                   {zones.map(z => (
                     <option key={z.id} value={z.id}>{z.name}</option>
@@ -412,40 +418,40 @@ export default function AddClientModal({ open, onClose, services = [], zones = [
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Site Contact</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Site Contact</label>
                 <input 
                   type="text" 
                   value={data.site.contact_person} 
                   onChange={(e) => setData('site', { ...data.site, contact_person: e.target.value })} 
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg" 
+                  className={clientFieldClassName}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Site Phone</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Site Phone</label>
                 <input 
                   type="tel" 
                   value={data.site.phone} 
                   onChange={(e) => setData('site', { ...data.site, phone: e.target.value })} 
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg" 
+                  className={clientFieldClassName}
                 />
               </div>
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-2">Special Instructions</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Special Instructions</label>
                 <textarea 
                   value={data.site.special_instructions} 
                   onChange={(e) => setData('site', { ...data.site, special_instructions: e.target.value })} 
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg" 
+                  className={clientFieldClassName}
                 />
               </div>
             </div>
           </div>
 
-          <div className="flex gap-4 mt-6">
-            <Button type="submit" disabled={processing} className="flex-1">
+          <div className="flex flex-col sm:flex-row gap-3 mt-6">
+            <Button type="submit" disabled={processing} className="w-full sm:flex-1">
               <IconMapper name="Plus" className="w-4 h-4 mr-2" />
               {processing ? 'Creating...' : 'Create Client'}
             </Button>
-            <Button type="button" variant="outline" onClick={onClose}>
+            <Button type="button" variant="outline" onClick={() => !processing && onClose()} disabled={processing} className="w-full sm:w-auto">
               Cancel
             </Button>
           </div>

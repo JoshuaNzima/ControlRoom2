@@ -101,7 +101,6 @@ export default function Dashboard({
   systemHealth = {},
   approvalsPending = 0,
 }: Props) {
-  const [showClientManagement, setShowClientManagement] = React.useState(true);
   const [showZoneHero, setShowZoneHero] = React.useState(true);
   const [showCoverageCards, setShowCoverageCards] = React.useState(true);
   const [showRecent, setShowRecent] = React.useState(true);
@@ -109,7 +108,7 @@ export default function Dashboard({
     <AdminLayout title="Admin Dashboard" user={auth?.user as any}>
       <Head title="Admin Dashboard" />
 
-      <Card className="p-6 bg-white dark:bg-gray-800 border dark:border-gray-700">
+      <Card className="p-4 sm:p-6 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-sm shadow-black/5 dark:shadow-none">
         <PageHeader
           title="KPI Summary"
           description="A quick snapshot of outstanding items and operational KPIs."
@@ -186,20 +185,20 @@ export default function Dashboard({
 
 
           {/* Client Management Overview */}
-          <Card className="p-6 bg-white dark:bg-gray-800 border dark:border-gray-700">
+          <Card className="p-4 sm:p-6 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-sm shadow-black/5 dark:shadow-none">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
               <div>
                 <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Client Management</h1>
                 <p className="text-gray-600 dark:text-gray-300">Overview of client services and performance</p>
               </div>
-              <div className="flex items-center gap-3">
-                <Button variant="outline" asChild>
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                <Button variant="outline" asChild className="w-full sm:w-auto">
                   <a href={route('admin.payments.index')}>
                     <IconMapper name="DollarSign" className="w-5 h-5 mr-2" />
                     View Payments
                   </a>
                 </Button>
-                <Button asChild>
+                <Button asChild className="w-full sm:w-auto">
                   <a href={route('admin.clients.index')} className="flex items-center">
                     <IconMapper name="Plus" className="w-5 h-5 mr-2" />
                     Manage Clients
@@ -209,7 +208,7 @@ export default function Dashboard({
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-              <Card className="p-4 bg-gradient-to-br from-coin-50 to-coin-100 border-coin-200 dark:bg-gray-800 dark:border-gray-700">
+              <Card className="p-4 bg-gradient-to-br from-coin-50 to-coin-100 border border-coin-200 dark:from-gray-800 dark:to-gray-800 dark:border-gray-700">
                 <div className="flex items-center justify-between mb-2">
                   <h3 className="text-sm font-medium text-coin-900 dark:text-coin-300">Total Clients</h3>
                   <IconMapper name="Users" className="w-5 h-5 text-coin-600" />
@@ -218,7 +217,7 @@ export default function Dashboard({
                 <p className="text-sm text-coin-700 dark:text-coin-300/80 mt-1">Active accounts</p>
               </Card>
 
-              <Card className="p-4 bg-gradient-to-br from-green-50 to-green-100 border-green-200 dark:bg-gray-800 dark:border-gray-700">
+              <Card className="p-4 bg-gradient-to-br from-green-50 to-green-100 border border-green-200 dark:from-gray-800 dark:to-gray-800 dark:border-gray-700">
                 <div className="flex items-center justify-between mb-2">
                   <h3 className="text-sm font-medium text-green-900 dark:text-green-300">Active Sites</h3>
                   <IconMapper name="MapPin" className="w-5 h-5 text-green-500" />
@@ -227,7 +226,7 @@ export default function Dashboard({
                 <p className="text-sm text-green-700 dark:text-green-300/80 mt-1">Managed locations</p>
               </Card>
 
-              <Card className="p-4 bg-gradient-to-br from-yellow-50 to-yellow-100 border-yellow-200 dark:bg-gray-800 dark:border-gray-700">
+              <Card className="p-4 bg-gradient-to-br from-yellow-50 to-yellow-100 border border-yellow-200 dark:from-gray-800 dark:to-gray-800 dark:border-gray-700">
                 <div className="flex items-center justify-between mb-2">
                   <h3 className="text-sm font-medium text-yellow-900 dark:text-yellow-300">Active Clients</h3>
                   <IconMapper name="UserCheck" className="w-5 h-5 text-yellow-500" />
@@ -236,7 +235,7 @@ export default function Dashboard({
                 <p className="text-sm text-yellow-700 dark:text-yellow-300/80 mt-1">Currently active</p>
               </Card>
 
-              <Card className="p-4 bg-gradient-to-br from-red-50 to-red-100 border-red-200 dark:bg-gray-800 dark:border-gray-700">
+              <Card className="p-4 bg-gradient-to-br from-red-50 to-red-100 border border-red-200 dark:from-gray-800 dark:to-gray-800 dark:border-gray-700">
                 <div className="flex items-center justify-between mb-2">
                   <h3 className="text-sm font-medium text-red-900 dark:text-red-300">Overdue Payments</h3>
                   <IconMapper name="AlertCircle" className="w-5 h-5 text-red-500" />
@@ -250,7 +249,7 @@ export default function Dashboard({
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <h3 className="text-sm font-semibold text-gray-700 mb-3">Quick Actions</h3>
+                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-3">Quick Actions</h3>
                 <div className="grid grid-cols-2 gap-3">
                   <Button variant="outline" asChild className="h-auto py-3 flex flex-col items-center justify-center gap-2">
                     <a href={route('admin.clients.index')}>
@@ -292,19 +291,19 @@ export default function Dashboard({
               </div>
 
               <div>
-                <h3 className="text-sm font-semibold text-gray-700 mb-3">Client Activity</h3>
+                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-3">Client Activity</h3>
                 <div className="space-y-3">
                   {recentActivity.filter(a => a.type === 'client').slice(0, 3).length > 0 ? (
                     recentActivity.filter(a => a.type === 'client').slice(0, 3).map((activity) => (
                       <div key={activity.id} className="flex items-center justify-between p-3 rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900/60">
                         <div>
-                          <div className="text-sm font-medium text-gray-900">{activity.message}</div>
-                          <div className="text-xs text-gray-500">{activity.time}</div>
+                          <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{activity.message}</div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">{activity.time}</div>
                         </div>
                       </div>
                     ))
                   ) : (
-                    <p className="text-sm text-gray-500 p-3">No recent client activity</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 p-3">No recent client activity</p>
                   )}
                 </div>
               </div>
@@ -314,22 +313,23 @@ export default function Dashboard({
           {/* Finance Overview merged into Finance KPIs below */}
 
           {/* Zone Coverage - Hero (collapsible) */}
-          <Card className="p-6 bg-white dark:bg-gray-800 border dark:border-gray-700">
+          <Card className="p-4 sm:p-6 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-sm shadow-black/5 dark:shadow-none">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
               <div className="flex items-center gap-3">
                 <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Zone Coverage</h1>
                 <button
-                  className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm transition ${showZoneHero ? 'bg-coin-100 text-coin-900 hover:bg-coin-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700'}`}
+                  type="button"
+                  className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm transition focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950 ${showZoneHero ? 'bg-coin-100 text-coin-900 hover:bg-coin-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700'}`}
                   onClick={() => setShowZoneHero(!showZoneHero)}
                   aria-expanded={showZoneHero}
                 >
                   {showZoneHero ? 'Hide' : 'Show'}
                 </button>
               </div>
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={() => window.location.reload()}>Refresh</Button>
-                <Button size="sm" onClick={() => window.location.href = route('reports.index')}>View Reports</Button>
-                <Button size="sm" onClick={() => window.location.href = route('admin.payments.index')}>Payments Checker</Button>
+              <div className="flex flex-col sm:flex-row flex-wrap gap-2">
+                <Button variant="outline" size="sm" className="w-full sm:w-auto" onClick={() => window.location.reload()}>Refresh</Button>
+                <Button size="sm" className="w-full sm:w-auto" onClick={() => window.location.href = route('reports.index')}>View Reports</Button>
+                <Button size="sm" className="w-full sm:w-auto" onClick={() => window.location.href = route('admin.payments.index')}>Payments Checker</Button>
               </div>
             </div>
             {showZoneHero && (
@@ -342,7 +342,7 @@ export default function Dashboard({
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
                   <div>
-                    <h3 className="text-sm font-semibold text-gray-700 mb-2">Attendance (7 days)</h3>
+                    <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">Attendance (7 days)</h3>
                     <ResponsiveContainerFixed width="100%" height={260}>
                       <LineChartFixed data={attendanceTrend}>
                         <CartesianGridFixed strokeDasharray="3 3" />
@@ -355,7 +355,7 @@ export default function Dashboard({
                     </ResponsiveContainerFixed>
                   </div>
                   <div>
-                    <h3 className="text-sm font-semibold text-gray-700 mb-2">Coverage (7 days)</h3>
+                    <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">Coverage (7 days)</h3>
                     <ResponsiveContainerFixed width="100%" height={260}>
                       <AreaChartFixed data={zoneCoverage}>
                         <defs>
@@ -378,7 +378,7 @@ export default function Dashboard({
           </Card>
 
           {/* Admin Snapshot: Approvals & System Health */}
-          <Card className="p-6 bg-white dark:bg-gray-800 border dark:border-gray-700">
+          <Card className="p-4 sm:p-6 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-sm shadow-black/5 dark:shadow-none">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <div className="flex items-center justify-between mb-3">
@@ -387,7 +387,7 @@ export default function Dashboard({
                     <a href={route('admin.approvals.index')}>Open Approvals</a>
                   </Button>
                 </div>
-                <div className="p-4 rounded-lg border bg-white dark:bg-gray-800 dark:border-gray-700">
+                <div className="p-4 rounded-lg border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-950/40">
                   <div className="text-sm text-gray-600 dark:text-gray-300">Pending Approvals</div>
                   <div className="text-3xl font-bold text-gray-900 dark:text-gray-100 mt-1">{approvalsPending ?? 0}</div>
                 </div>
@@ -397,7 +397,7 @@ export default function Dashboard({
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   <Health name="Database" status={systemHealth?.database} />
                   <Health name="Cache" status={systemHealth?.cache} />
-                  <div className={`p-4 rounded-lg border bg-white dark:bg-gray-800 dark:border-gray-700`}>
+                  <div className={`p-4 rounded-lg border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-950/40`}>
                     <div className="text-xs text-gray-500 dark:text-gray-400">Queue Driver</div>
                     <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">{systemHealth?.queue || 'default'}</div>
                   </div>
@@ -408,13 +408,13 @@ export default function Dashboard({
           </Card>
 
           {/* Modules Status */}
-          <Card className="p-6 bg-white dark:bg-gray-800 border dark:border-gray-700">
+          <Card className="p-4 sm:p-6 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-sm shadow-black/5 dark:shadow-none">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Modules</h2>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
               {(modules || []).map((m, idx) => (
-                <div key={`${m.name}-${idx}`} className={`p-3 rounded-lg border bg-white dark:bg-gray-800 dark:border-gray-700 flex items-center justify-between`}>
+                <div key={`${m.name}-${idx}`} className={`p-3 rounded-lg border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-950/40 flex items-center justify-between`}>
                   <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{m.display_name || m.name}</div>
                   <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs ${m.is_active ? 'bg-green-100 text-green-700 dark:bg-green-500/10 dark:text-green-300' : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'}`}>
                     {m.is_active ? 'Active' : 'Disabled'}
@@ -428,13 +428,13 @@ export default function Dashboard({
           </Card>
 
           {/* Top Guards */}
-          <Card className="p-6 bg-white dark:bg-gray-800 border dark:border-gray-700">
+          <Card className="p-4 sm:p-6 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-sm shadow-black/5 dark:shadow-none">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Top Guards</h2>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
               {(topGuards || []).slice(0, 6).map((g, i) => (
-                <div key={`${g.employee_id}-${i}`} className="p-3 rounded-lg border bg-white dark:bg-gray-800 dark:border-gray-700 flex items-center justify-between">
+                <div key={`${g.employee_id}-${i}`} className="p-3 rounded-lg border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-950/40 flex items-center justify-between">
                   <div>
                     <div className="font-medium text-gray-900 dark:text-gray-100">{g.name}</div>
                     <div className="text-xs text-gray-500 dark:text-gray-400">{g.employee_id}</div>
@@ -449,14 +449,15 @@ export default function Dashboard({
           </Card>
 
           {/* Coverage Summary Cards (collapsible) */}
-          <Card className="p-6 bg-white dark:bg-gray-800 border dark:border-gray-700">
+          <Card className="p-4 sm:p-6 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-sm shadow-black/5 dark:shadow-none">
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Coverage Summary</h2>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Today’s guards and sites coverage across all zones</p>
               </div>
               <button
-                className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm transition ${showCoverageCards ? 'bg-coin-100 text-coin-900 hover:bg-coin-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700'}`}
+                type="button"
+                className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm transition focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950 ${showCoverageCards ? 'bg-coin-100 text-coin-900 hover:bg-coin-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700'}`}
                 onClick={() => setShowCoverageCards(!showCoverageCards)}
                 aria-expanded={showCoverageCards}
                 aria-controls="coverage-summary-content"
@@ -466,8 +467,8 @@ export default function Dashboard({
             </div>
             {showCoverageCards && (
             <div id="coverage-summary-content" className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card className="p-6 bg-white dark:bg-gray-800 border dark:border-gray-700">
-              <h2 className="text-lg font-semibold mb-4">Guards Coverage</h2>
+            <Card className="p-4 sm:p-6 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800">
+              <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">Guards Coverage</h2>
               <div className="grid grid-cols-2 gap-4">
                 <ClickableStat label="Deployed Today" value={coverageSummary.guards_deployed_today ?? 0} routeName="guards.index" />
                 <ClickableStat label="Required (Total)" value={coverageSummary.guards_required_total ?? 0} routeName="zone.dashboard" />
@@ -485,8 +486,8 @@ export default function Dashboard({
               </div>
             </Card>
 
-            <Card className="p-6 bg-white dark:bg-gray-800 border dark:border-gray-700">
-              <h2 className="text-lg font-semibold mb-4">Sites Coverage</h2>
+            <Card className="p-4 sm:p-6 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800">
+              <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">Sites Coverage</h2>
               <div className="grid grid-cols-2 gap-4">
                 <ClickableStat label="Sites Covered Today" value={coverageSummary.sites_covered_today ?? 0} routeName="clients.index" />
                 <ClickableStat label="Total Sites" value={coverageSummary.sites_total ?? 0} routeName="clients.index" />
@@ -599,13 +600,13 @@ export default function Dashboard({
           <QRCodeGenerator />
 
           {/* Recent Activity (collapsible) */}
-          <Card className="p-6 bg-white dark:bg-gray-800 border dark:border-gray-700">
+          <Card className="p-4 sm:p-6 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-sm shadow-black/5 dark:shadow-none">
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h2 className="text-lg font-semibold dark:text-gray-100">Recent Activity</h2>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Latest events across the platform</p>
               </div>
-              <button className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm transition ${showRecent ? 'bg-coin-100 text-coin-900 hover:bg-coin-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700'}`} onClick={() => setShowRecent(!showRecent)} aria-expanded={showRecent}>{showRecent ? 'Hide' : 'Show'}</button>
+              <button type="button" className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm transition focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950 ${showRecent ? 'bg-coin-100 text-coin-900 hover:bg-coin-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700'}`} onClick={() => setShowRecent(!showRecent)} aria-expanded={showRecent}>{showRecent ? 'Hide' : 'Show'}</button>
             </div>
             {showRecent && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -613,7 +614,7 @@ export default function Dashboard({
                 <EmptyState title="No recent activity" description="When actions happen across the platform, they will show up here." />
               )}
               {(recentActivity || []).map((item: Activity) => (
-                <div key={item.id} className="flex items-center justify-between p-3 rounded-lg border bg-white dark:bg-gray-800 dark:border-gray-700">
+                <div key={item.id} className="flex items-center justify-between p-3 rounded-lg border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-950/40">
                   <div>
                     <div className="font-medium text-gray-900 dark:text-gray-100">{item.message}</div>
                     <div className="text-xs text-gray-500 dark:text-gray-400">{item.time}</div>
@@ -649,7 +650,7 @@ function Health({ name, status }: { name: string; status: string | number | unde
 
 function ClickableStat({ label, value, routeName }: { label: string; value?: number | string; routeName: string }) {
   return (
-    <button onClick={() => window.location.href = route(routeName)} className="text-left p-4 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 transition dark:border-gray-800 dark:bg-gray-950/40 dark:hover:bg-gray-900">
+    <button onClick={() => window.location.href = route(routeName)} className="text-left p-4 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 transition dark:border-gray-800 dark:bg-gray-950/40 dark:hover:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950">
       <div className="text-xs text-gray-500 dark:text-gray-400">{label}</div>
       <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{value ?? 0}</div>
     </button>
@@ -666,7 +667,7 @@ function KpiSection({ title, subtitle = '', data = {}, items = [] as KpiItem[], 
           <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{title}</h2>
           {subtitle && <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{subtitle}</p>}
         </div>
-        <button className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm transition ${open ? 'bg-coin-100 text-coin-900 hover:bg-coin-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700'}`} onClick={() => setOpen(!open)} aria-expanded={open}>{open ? 'Hide' : 'Show'}</button>
+        <button type="button" className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm transition focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950 ${open ? 'bg-coin-100 text-coin-900 hover:bg-coin-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700'}`} onClick={() => setOpen(!open)} aria-expanded={open}>{open ? 'Hide' : 'Show'}</button>
       </div>
       {open && (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
@@ -682,11 +683,11 @@ function KpiSection({ title, subtitle = '', data = {}, items = [] as KpiItem[], 
             );
             const routeName = linkMap[i.key];
             return routeName ? (
-              <button key={i.key} onClick={() => window.location.href = route(routeName)} className="text-left p-4 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 transition dark:border-gray-800 dark:bg-gray-950/40 dark:hover:bg-gray-900">
+              <button key={i.key} onClick={() => window.location.href = route(routeName)} className="text-left p-4 rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950/40 hover:bg-gray-50 dark:hover:bg-gray-900 transition focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950">
                 {content}
               </button>
             ) : (
-              <div key={i.key} className="p-4 rounded-lg border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-950/40">{content}</div>
+              <div key={i.key} className="p-4 rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950/40">{content}</div>
             );
           })}
         </div>

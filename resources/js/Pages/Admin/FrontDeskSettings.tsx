@@ -2,6 +2,9 @@ import React from 'react';
 import { Head, useForm, router } from '@inertiajs/react';
 import FrontDeskLayout from '@/Layouts/FrontDeskLayout';
 
+const frontDeskFieldClassName =
+  'w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-3 py-2 focus:border-red-500 focus:ring-1 focus:ring-red-500';
+
 interface Settings {
   visitor_badge_prefix: string;
   auto_notify_security: boolean;
@@ -41,7 +44,7 @@ export default function FrontDeskSettings({ auth = {}, settings, options = { pri
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Visitor badge prefix</label>
                   <input
-                    className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 py-2"
+                    className={frontDeskFieldClassName}
                     value={data.visitor_badge_prefix}
                     onChange={(e) => setData('visitor_badge_prefix', e.target.value)}
                   />
@@ -50,7 +53,7 @@ export default function FrontDeskSettings({ auth = {}, settings, options = { pri
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Default ticket priority</label>
                   <select
-                    className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 py-2"
+                    className={frontDeskFieldClassName}
                     value={data.default_ticket_priority}
                     onChange={(e) => setData('default_ticket_priority', e.target.value as any)}
                   >
@@ -62,7 +65,7 @@ export default function FrontDeskSettings({ auth = {}, settings, options = { pri
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Working hours</label>
                   <input
                     placeholder="08:00-17:00"
-                    className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 py-2"
+                    className={frontDeskFieldClassName}
                     value={data.working_hours}
                     onChange={(e) => setData('working_hours', e.target.value)}
                   />
@@ -74,7 +77,7 @@ export default function FrontDeskSettings({ auth = {}, settings, options = { pri
                     type="checkbox"
                     checked={!!data.auto_notify_security}
                     onChange={(e) => setData('auto_notify_security', e.target.checked)}
-                    className="h-4 w-4 rounded border-gray-300 text-red-600 focus:ring-red-500"
+                    className="h-4 w-4 rounded border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-red-600 focus:ring-2 focus:ring-red-500"
                   />
                   <label htmlFor="notify" className="text-sm text-gray-700 dark:text-gray-300">Auto-notify security on visitor check-in</label>
                 </div>
@@ -82,7 +85,13 @@ export default function FrontDeskSettings({ auth = {}, settings, options = { pri
             </div>
 
             <div className="flex justify-end gap-3">
-              <button type="submit" disabled={processing} className="px-4 py-2 rounded-md bg-red-600 text-white hover:bg-red-700 disabled:opacity-50">Save Settings</button>
+              <button
+                type="submit"
+                disabled={processing}
+                className="w-full sm:w-auto px-4 py-2 rounded-md bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950"
+              >
+                Save Settings
+              </button>
             </div>
           </form>
         </div>

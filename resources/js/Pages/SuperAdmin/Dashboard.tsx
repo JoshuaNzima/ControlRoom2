@@ -252,15 +252,15 @@ const Dashboard: React.FC<SuperAdminDashboardProps> = ({
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-8">
         {/* Header with Admin Badge */}
         <div className="bg-gradient-to-r from-red-700 via-rose-600 to-pink-600 rounded-2xl shadow-2xl p-8 text-white">
-          <div className="flex items-center justify-between">
-            <div>
-                <div className="flex items-center gap-3 mb-2">
+          <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0">
+                <div className="flex items-center gap-3 mb-2 min-w-0">
                   <IconMapper name="Shield" size={40} />
-                  <h1 className="text-4xl font-black">Super Admin Control Center</h1>
+                  <h1 className="text-2xl sm:text-4xl font-black break-words">Super Admin Control Center</h1>
                 </div>
               <p className="text-red-100">Complete system access and control</p>
             </div>
-            <div className="text-right">
+            <div className="text-left sm:text-right">
               <p className="text-sm opacity-90">System Status</p>
               <div className="mt-1 inline-flex items-center gap-2 rounded-full px-3 py-1 bg-white/10 backdrop-blur text-xs font-medium">
                 <span className={`inline-block h-2 w-2 rounded-full ${statusColor}`} />

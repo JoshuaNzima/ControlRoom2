@@ -4,6 +4,16 @@ import BusinessDevLayout from '@/Layouts/BusinessDevLayout';
 import Modal from '@/Components/Modal';
 
 interface Contract { id: number; client_name?: string | null; title: string; value: number; status: string; start_date?: string | null; end_date?: string | null; renewal_date?: string | null }
+
+function statusBadgeClass(status: string) {
+  const s = (status || '').toLowerCase();
+
+  if (s === 'active') return 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-200';
+  if (s === 'expired') return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200';
+  if (s === 'draft') return 'bg-coin-100 text-coin-800 dark:bg-coin-900/30 dark:text-coin-200';
+
+  return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200';
+}
 interface Paginated<T> { data: T[]; links: any[]; meta: any }
 interface Option { id: number; name: string }
 
@@ -58,7 +68,7 @@ export default function BusinessDevContracts({ auth = {}, contracts, filters, su
             <StatCard label="Total" value={summary.total || 0} color="gray" />
             <StatCard label="Active" value={summary.active || 0} color="emerald" />
             <StatCard label="Expired" value={summary.expired || 0} color="red" />
-            <StatCard label="Draft" value={summary.draft || 0} color="blue" />
+            <StatCard label="Draft" value={summary.draft || 0} color="coin" />
           </div>
 
           <div className="bg-white dark:bg-gray-950 rounded-xl border border-gray-200 dark:border-gray-800 shadow p-4">
@@ -95,7 +105,55 @@ export default function BusinessDevContracts({ auth = {}, contracts, filters, su
           </div>
 
           <div className="bg-white dark:bg-gray-950 rounded-xl border border-gray-200 dark:border-gray-800 shadow overflow-hidden">
-            <div className="overflow-x-auto">
+            <div className="md:hidden p-4 space-y-3">
+              {contracts?.data?.length ? (
+                contracts.data.map((c) => (
+                  <div key={c.id} className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="text-sm font-semibold text-gray-900 dark:text-gray-100 break-words">{c.title}</div>
+                        <div className="mt-1 text-xs text-gray-600 dark:text-gray-300">{c.client_name || '—'}</div>
+                      </div>
+                      <span className={`shrink-0 px-2 py-1 rounded text-xs ${statusBadgeClass(c.status)}`}>{c.status}</span>
+                    </div>
+
+                    <div className="mt-3 grid grid-cols-1 gap-2 text-xs">
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="text-gray-500 dark:text-gray-400">Value</span>
+                        <span className="text-gray-900 dark:text-gray-100 font-medium">MWK {Number(c.value || 0).toLocaleString()}</span>
+                      </div>
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="text-gray-500 dark:text-gray-400">Dates</span>
+                        <span className="text-gray-700 dark:text-gray-200 text-right">{c.start_date || '—'}{c.end_date ? ` → ${c.end_date}` : ''}</span>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 flex flex-col sm:flex-row gap-2">
+                      <button
+                        type="button"
+                        onClick={() => { setSelected(c); setEditOpen(true); }}
+                        className="w-full sm:w-auto px-3 py-2 rounded-md text-sm font-medium bg-gray-100 text-gray-800 hover:bg-gray-200 dark:bg-gray-900/60 dark:text-gray-100 dark:hover:bg-gray-800/60"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { if (confirm('Delete contract?')) router.delete(route('admin.business-dev.contracts.destroy', c.id)); }}
+                        className="w-full sm:w-auto px-3 py-2 rounded-md text-sm font-medium bg-red-700 text-white hover:bg-red-600"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 p-6 text-center text-sm text-gray-500 dark:text-gray-400">
+                  No contracts yet.
+                </div>
+              )}
+            </div>
+
+            <div className="hidden md:block overflow-x-auto">
               <table className="min-w-[900px] w-full text-sm">
                 <thead className="bg-gray-50 dark:bg-gray-950 border-b border-gray-200 dark:border-gray-800">
                   <tr>
@@ -163,7 +221,7 @@ function StatCard({ label, value, color }: { label: string; value: number; color
     gray: 'from-gray-50 to-gray-100 border-gray-200 text-gray-900 dark:from-gray-900 dark:to-gray-800 dark:border-gray-800 dark:text-gray-100',
     emerald: 'from-emerald-50 to-emerald-100 border-emerald-200 text-emerald-900 dark:from-emerald-900/20 dark:to-emerald-900/10 dark:border-emerald-900/30 dark:text-emerald-100',
     red: 'from-red-50 to-red-100 border-red-200 text-red-900 dark:from-red-900/20 dark:to-red-900/10 dark:border-red-900/30 dark:text-red-100',
-    blue: 'from-blue-50 to-blue-100 border-blue-200 text-blue-900 dark:from-blue-900/20 dark:to-blue-900/10 dark:border-blue-900/30 dark:text-blue-100',
+    coin: 'from-coin-50 to-coin-100 border-coin-200 text-coin-900 dark:from-coin-900/20 dark:to-coin-900/10 dark:border-coin-900/30 dark:text-coin-100',
   };
   return (
     <div className={`p-4 rounded-xl border bg-gradient-to-br ${colors[color]}`}>

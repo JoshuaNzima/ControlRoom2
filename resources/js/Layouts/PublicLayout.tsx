@@ -16,19 +16,19 @@ export default function PublicLayout({ title = 'Coin Security', children }: Prop
     }
   };
   return (
-    <div className="min-h-screen bg-red-50 text-gray-900 dark:bg-gray-950 dark:text-gray-100">
+    <div className="min-h-screen overflow-x-hidden bg-red-50 text-gray-900 dark:bg-gray-950 dark:text-gray-100">
       <Head title={title} />
 
       <header className="sticky top-0 z-50 border-b border-red-100 bg-white/95 backdrop-blur-sm shadow-lg dark:border-gray-800 dark:bg-gray-950/80 dark:shadow-black/30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            <div className="flex items-center gap-3">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between py-4">
+            <div className="flex items-center gap-3 min-w-0">
               <img src="/images/Coin-logo.png" alt="Coin Security" className="h-10 w-auto" />
               <span className="text-lg font-bold bg-gradient-to-r from-red-600 to-red-500 bg-clip-text text-transparent">
                 Coin Security
               </span>
             </div>
-            <nav className="flex items-center gap-6">
+            <nav className="flex w-full flex-wrap items-center justify-start gap-3 sm:w-auto sm:justify-end">
               <Link 
                 href={safeRoute('public.home', undefined, '/')} 
                 className="text-sm font-medium text-gray-700 hover:text-coin-700 transition-colors duration-200 dark:text-gray-200 dark:hover:text-coin-300"

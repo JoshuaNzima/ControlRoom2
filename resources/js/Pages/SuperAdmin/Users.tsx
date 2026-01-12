@@ -277,7 +277,7 @@ export default function SuperAdminUsers({ users, filters, roles, zones }: UsersI
           ))}
         </div>
 
-        <div className="hidden md:block bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
+        <div className="hidden md:block bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
             <thead className="bg-gray-50 dark:bg-gray-900/50">
               <tr>
