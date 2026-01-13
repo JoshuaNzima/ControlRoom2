@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Head, useForm, usePage, Link } from '@inertiajs/react';
 import ControlRoomLayout from '@/Layouts/ControlRoomLayout';
 import Modal from '@/Components/Modal';
@@ -188,8 +188,7 @@ function GenerateShiftsPanel({ weekStart, zoneId, supervisorId }: { weekStart: D
     setData('start', formatYmd(weekStart));
     setData('zone_id', zoneId);
     setData('supervisor_id', supervisorId);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [weekStart.getTime(), zoneId, supervisorId]);
+  }, [setData, weekStart, zoneId, supervisorId]);
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -255,7 +254,7 @@ function BundlesSection({ weekStart, zoneId, supervisorId, relievers, sites }: {
 
   const hasRelievers = Array.isArray(relievers) && relievers.length > 0;
 
-  const loadBundles = async () => {
+  const loadBundles = useCallback(async () => {
     setLoading(true);
     try {
       const params: any = {};
@@ -270,17 +269,15 @@ function BundlesSection({ weekStart, zoneId, supervisorId, relievers, sites }: {
     } finally {
       setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    loadBundles();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [zoneId, supervisorId]);
 
   useEffect(() => {
+    loadBundles();
+  }, [loadBundles]);
+
+  useEffect(() => {
     applyForm.setData('start', formatYmd(weekStart));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [weekStart.getTime()]);
+  }, [applyForm, weekStart]);
 
   const applyWeek = async (bundleId: number) => {
     applyForm.post(route('control-room.roster.bundles.apply-week', bundleId), {
@@ -399,8 +396,7 @@ function BundleFormModal({ open, onClose, initial, relievers, sites, filters, on
       setData('zone_id', filters.zone_id);
       setData('supervisor_id', filters.supervisor_id);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, initial, filters.zone_id, filters.supervisor_id]);
+  }, [open, initial, filters.zone_id, filters.supervisor_id, setData]);
 
   const toggleSite = (sid: number) => {
     const set = new Set(data.site_ids as any[]);
@@ -517,7 +513,7 @@ export default function RosterWeekly() {
   const [supervisorId, setSupervisorId] = useState<number | ''>('');
   const [guardTypeFilter, setGuardTypeFilter] = useState<string>('');
   const [reuseInfo, setReuseInfo] = useState<any | null>(null);
-  const [lastReuseToastKey, setLastReuseToastKey] = useState<string>('');
+  const lastReuseToastKeyRef = useRef<string>('');
 
   const hasRelieversInScope = useMemo(() => {
     return !!data?.relievers?.length;
@@ -532,7 +528,7 @@ export default function RosterWeekly() {
     return !!data?.guards?.some((g) => (g.guard_type || 'permanent') === 'standby');
   }, [data]);
 
-  const ensureReuse = async (params: { start: string; zone_id?: number; supervisor_id?: number; force?: boolean }) => {
+  const ensureReuse = useCallback(async (params: { start: string; zone_id?: number; supervisor_id?: number; force?: boolean }) => {
     try {
       const token = getCsrfToken();
       const res = await fetch(route('control-room.roster.weekly.reuse'), {
@@ -549,20 +545,20 @@ export default function RosterWeekly() {
       setReuseInfo(json);
       if (json?.reused) {
         const key = `${params.start}-${params.zone_id || ''}-${params.supervisor_id || ''}-${json.source_week_start || ''}`;
-        if (key !== lastReuseToastKey) {
+        if (key !== lastReuseToastKeyRef.current) {
           toast({
             title: 'Reused last roster',
             description: json.source_week_start ? `Copied ${json.copied || 0} reliever assignments from week of ${json.source_week_start}.` : 'Copied reliever assignments from the last saved week.',
           });
-          setLastReuseToastKey(key);
+          lastReuseToastKeyRef.current = key;
         }
       }
     } catch {
       return;
     }
-  };
+  }, [toast]);
 
-  const load = async (overrides?: { weekStart?: Date; zoneId?: number | ''; supervisorId?: number | ''; forceReuse?: boolean }) => {
+  const load = useCallback(async (overrides?: { weekStart?: Date; zoneId?: number | ''; supervisorId?: number | ''; forceReuse?: boolean }) => {
     setLoading(true);
     try {
       const ws = overrides?.weekStart ?? weekStart;
@@ -592,7 +588,7 @@ export default function RosterWeekly() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [ensureReuse, supervisorId, weekStart, zoneId]);
 
   const reuseOverwrite = async () => {
     if (!hasRelieversInScope) {
@@ -606,8 +602,7 @@ export default function RosterWeekly() {
 
   useEffect(() => {
     load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [weekStart.getTime()]);
+  }, [load]);
 
   const prevWeek = () => setWeekStart((d) => { const nd = new Date(d); nd.setDate(nd.getDate() - 7); return startOfWeekMonday(nd); });
   const nextWeek = () => setWeekStart((d) => { const nd = new Date(d); nd.setDate(nd.getDate() + 7); return startOfWeekMonday(nd); });
@@ -998,10 +993,10 @@ function AddOffDayModal({ open, onClose, guardId, date, onSaved }: { open: boole
   });
 
   useEffect(() => {
+    if (!open) return;
     setData('guard_id', guardId ?? ('' as any));
     setData('start_date', date ?? '');
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [guardId, date]);
+  }, [open, guardId, date, setData]);
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -1047,11 +1042,11 @@ function AssignReliefModal({ open, onClose, guardId, date, initialSiteId, sites,
   });
 
   useEffect(() => {
+    if (!open) return;
     setData('guard_id', guardId ?? ('' as any));
     setData('client_site_id', initialSiteId ?? ('' as any));
     setData('date', date ?? '');
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [guardId, date, initialSiteId]);
+  }, [open, guardId, date, initialSiteId, setData]);
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -1162,10 +1157,10 @@ function BulkReliefModal({ open, onClose, guardId, days, initialMap, sites, acti
   const [onlyActive, setOnlyActive] = useState(true);
 
   useEffect(() => {
+    if (!open) return;
     setData('guard_id', guardId ?? ('' as any));
     setData('day_site_map', days.reduce((acc: any, d) => { acc[d] = initialMap?.[d]?.id || ''; return acc; }, {} as Record<DayKey, number | ''>));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [guardId]);
+  }, [open, guardId, days, initialMap, setData]);
 
   const list = onlyActive ? activeSites : sites;
 

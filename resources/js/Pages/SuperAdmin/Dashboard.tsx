@@ -1,9 +1,6 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import React from 'react';
-import { formatDateMW, LOCALE_MW } from '@/Components/format';
 import { Head, Link, router } from '@inertiajs/react';
 import SuperAdminLayout from '@/Layouts/SuperAdminLayout';
-import ModuleCard from '@/Components/ModuleCard';
 import { route } from 'ziggy-js';
 import IconMapper from '@/Components/IconMapper';
 import QRCodeGenerator from '@/Components/QRCodeGenerator';

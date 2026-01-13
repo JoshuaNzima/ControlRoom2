@@ -58,6 +58,13 @@ export default function AddCameraForm({ onClose, sites }: AddCameraFormProps) {
     String((data as any).public_path ?? '')
   );
 
+  const getSiteLabel = (site: any) => {
+    const clientName = String(site?.client?.name ?? '').trim();
+    const siteName = String(site?.name ?? '').trim();
+    if (clientName && siteName) return `${clientName} • ${siteName}`;
+    return siteName || clientName || '-';
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     post(route('control-room.cameras.store'), {
@@ -104,7 +111,7 @@ export default function AddCameraForm({ onClose, sites }: AddCameraFormProps) {
             <SelectContent>
               {(sites || []).map((site: any) => (
                 <SelectItem key={site.id} value={String(site.id)}>
-                  {site.name}
+                  {getSiteLabel(site)}
                 </SelectItem>
               ))}
             </SelectContent>

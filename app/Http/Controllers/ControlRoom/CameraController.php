@@ -5,6 +5,7 @@ namespace App\Http\Controllers\ControlRoom;
 use App\Http\Controllers\Controller;
 use App\Models\Camera;
 use App\Models\CameraRecording;
+use App\Models\Client;
 use App\Models\ClientSite;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
@@ -15,7 +16,20 @@ class CameraController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Camera::query()->with(['site', 'alerts']);
+        $query = Camera::query()->with([
+            'site' => function ($q) {
+                $q->select(['id', 'name', 'client_id'])
+                    ->with('client:id,name');
+            },
+            'alerts',
+        ]);
+
+        $clientId = $request->query('client_id');
+        if (! empty($clientId)) {
+            $query->whereHas('site', function ($q) use ($clientId) {
+                $q->where('client_id', $clientId);
+            });
+        }
 
         $siteId = $request->query('site_id') ?? $request->query('client_site_id');
         if (! empty($siteId)) {
@@ -29,7 +43,18 @@ class CameraController extends Controller
 
         $cameras = $query->latest()->paginate(20)->withQueryString();
 
-        $sites = ClientSite::query()
+        $sitesQuery = ClientSite::query()
+            ->select(['id', 'name', 'client_id'])
+            ->with('client:id,name')
+            ->orderBy('name');
+
+        if (! empty($clientId)) {
+            $sitesQuery->where('client_id', $clientId);
+        }
+
+        $sites = $sitesQuery->get();
+
+        $clients = Client::query()
             ->select(['id', 'name'])
             ->orderBy('name')
             ->get();
@@ -37,8 +62,14 @@ class CameraController extends Controller
         return Inertia::render('ControlRoom/Cameras/Index', [
             'cameras' => $cameras,
             'sites' => $sites,
+            'clients' => $clients,
             'filters' => [
                 'statuses' => ['online', 'offline', 'maintenance', 'disabled'],
+            ],
+            'appliedFilters' => [
+                'client_id' => $clientId,
+                'site_id' => $siteId,
+                'status' => $status,
             ],
         ]);
     }

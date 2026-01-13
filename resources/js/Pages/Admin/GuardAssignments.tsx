@@ -151,10 +151,10 @@ export default function GuardAssignments({ guards, supervisors }: GuardAssignmen
 
           return (
             <div key={supervisor.id} className="bg-white dark:bg-gray-900/60 border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm shadow-black/5 dark:shadow-none overflow-hidden">
-              <div className="px-6 py-4 bg-red-50 dark:bg-red-900/20 border-b border-gray-200 dark:border-gray-800">
+              <div className="px-6 py-4 bg-coin-50 dark:bg-coin-900/20 border-b border-gray-200 dark:border-gray-800">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-gradient-to-br from-red-500 to-rose-600 rounded-full flex items-center justify-center text-white font-bold">
+                    <div className="w-10 h-10 bg-gradient-to-br from-coin-600 to-coin-700 rounded-full flex items-center justify-center text-white font-bold">
                       {supervisor.name.charAt(0)}
                     </div>
                     <div>
@@ -222,11 +222,11 @@ function GuardCard({ guard, selected, onToggle }: GuardCardProps) {
       </div>
       
       {guard.current_assignment && (
-        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-900/30 rounded p-2 text-xs">
-          <p className="font-medium text-blue-900 dark:text-blue-100">
+        <div className="bg-coin-50 dark:bg-coin-900/20 border border-coin-100 dark:border-coin-900/30 rounded p-2 text-xs">
+          <p className="font-medium text-coin-900 dark:text-coin-100">
             {guard.current_assignment.client_name}
           </p>
-          <p className="text-blue-700 dark:text-blue-200">{guard.current_assignment.site_name}</p>
+          <p className="text-coin-700 dark:text-coin-200">{guard.current_assignment.site_name}</p>
         </div>
       )}
     </div>

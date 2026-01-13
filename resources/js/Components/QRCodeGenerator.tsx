@@ -75,11 +75,11 @@ const QRCodeGenerator: React.FC = () => {
   };
 
   return (
-    <Card className="p-6">
+    <Card className="p-4 sm:p-6">
       <div className="space-y-6">
         <div>
-          <h2 className="text-lg font-semibold mb-4">QR Code Generator</h2>
-          <p className="text-sm text-gray-500 mb-4">
+          <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">QR Code Generator</h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
             Generate QR codes for zones, checkpoints, and assets that can be scanned by supervisors and guards.
           </p>
         </div>
@@ -130,27 +130,29 @@ const QRCodeGenerator: React.FC = () => {
                 onChange={(e) => setQrSize(Number(e.target.value))}
                 className="w-full"
               />
-              <span className="text-sm text-gray-500 w-16">{qrSize}px</span>
+              <span className="text-sm text-gray-500 dark:text-gray-400 w-16">{qrSize}px</span>
             </div>
           </div>
         </div>
 
         <div className="flex flex-col items-center space-y-4">
-          <div className="bg-white p-4 rounded-lg">
-            <QRCode
-              id="qr-code-canvas"
-              value={generateQRValue()}
-              size={qrSize}
-              level="H"
-              includeMargin
-              className="mx-auto"
-              imageSettings={{
-                src: '/images/Coin-logo.png',
-                height: Math.floor(qrSize * 0.2),
-                width: Math.floor(qrSize * 0.2),
-                excavate: true,
-              }}
-            />
+          <div className="w-full rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/60 p-4">
+            <div className="bg-white p-4 rounded-lg">
+              <QRCode
+                id="qr-code-canvas"
+                value={generateQRValue()}
+                size={qrSize}
+                level="H"
+                includeMargin
+                className="mx-auto"
+                imageSettings={{
+                  src: '/images/Coin-logo.png',
+                  height: Math.floor(qrSize * 0.2),
+                  width: Math.floor(qrSize * 0.2),
+                  excavate: true,
+                }}
+              />
+            </div>
           </div>
 
           <Button onClick={downloadQR} disabled={!qrData} className="w-full sm:w-auto">

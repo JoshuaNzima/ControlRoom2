@@ -45,8 +45,7 @@ export default function BudgetViewModal({ budgetId, open, onClose }: Props) {
       })
       .finally(() => active && setLoading(false));
     return () => { active = false; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, budgetId]);
+  }, [open, budgetId, resubmitForm]);
 
   const isOwner = !!item && userId === item.requested_by;
 

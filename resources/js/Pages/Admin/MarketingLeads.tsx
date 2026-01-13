@@ -86,10 +86,10 @@ export default function MarketingLeads({ auth = {}, leads, filters, summary = {}
 
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
             <StatCard label="Total" value={summary.total || 0} color="gray" />
-            <StatCard label="New" value={summary.new || 0} color="blue" />
+            <StatCard label="New" value={summary.new || 0} color="coin" />
             <StatCard label="Contacted" value={summary.contacted || 0} color="coin" />
             <StatCard label="Qualified" value={summary.qualified || 0} color="emerald" />
-            <StatCard label="Converted" value={summary.converted || 0} color="purple" />
+            <StatCard label="Converted" value={summary.converted || 0} color="coin" />
           </div>
 
           <div className="bg-white dark:bg-gray-950 rounded-xl border border-gray-200 dark:border-gray-800 shadow p-4">
@@ -134,7 +134,65 @@ export default function MarketingLeads({ auth = {}, leads, filters, summary = {}
           </div>
 
           <div className="bg-white dark:bg-gray-950 rounded-xl border border-gray-200 dark:border-gray-800 shadow overflow-hidden">
-            <div className="overflow-x-auto">
+            <div className="md:hidden p-4 space-y-3">
+              {leads?.data?.length ? (
+                leads.data.map((l) => (
+                  <div key={l.id} className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/60 p-4 space-y-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="font-semibold text-gray-900 dark:text-gray-100 truncate">{l.name}</div>
+                        <div className="mt-0.5 text-xs text-gray-600 dark:text-gray-300 truncate">
+                          {l.email || '—'}{l.phone ? ` • ${l.phone}` : ''}
+                        </div>
+                      </div>
+                      <span className="shrink-0 px-2 py-1 rounded text-xs bg-coin-100 text-coin-800 dark:bg-coin-900/30 dark:text-coin-200">{l.status}</span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3 text-xs">
+                      <div>
+                        <div className="text-gray-500 dark:text-gray-400">Source</div>
+                        <div className="text-gray-900 dark:text-gray-100 truncate">{l.source || '—'}</div>
+                      </div>
+                      <div>
+                        <div className="text-gray-500 dark:text-gray-400">Campaign</div>
+                        <div className="text-gray-900 dark:text-gray-100 truncate">{l.campaign || '—'}</div>
+                      </div>
+                      <div>
+                        <div className="text-gray-500 dark:text-gray-400">Score</div>
+                        <div className="text-gray-900 dark:text-gray-100">{l.score ?? 0}</div>
+                      </div>
+                      <div>
+                        <div className="text-gray-500 dark:text-gray-400">Created</div>
+                        <div className="text-gray-900 dark:text-gray-100 truncate">{l.created_at ? new Date(l.created_at).toLocaleDateString() : '—'}</div>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => { setSelected(l); setEditOpen(true); }}
+                        className="w-full px-3 py-2 rounded-lg bg-gray-100 text-gray-800 hover:bg-gray-200 dark:bg-gray-900/60 dark:text-gray-100 dark:hover:bg-gray-800/60 focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { if (confirm('Delete lead?')) router.delete(route('admin.marketing.leads.destroy', l.id)); }}
+                        className="w-full px-3 py-2 rounded-lg bg-red-700 text-white hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/60 p-6 text-center text-sm text-gray-500 dark:text-gray-400">
+                  No leads yet.
+                </div>
+              )}
+            </div>
+
+            <div className="hidden md:block overflow-x-auto">
               <table className="min-w-[900px] w-full text-sm">
                 <thead className="bg-gray-50 dark:bg-gray-950 border-b border-gray-200 dark:border-gray-800">
                   <tr>
@@ -198,10 +256,8 @@ export default function MarketingLeads({ auth = {}, leads, filters, summary = {}
 function StatCard({ label, value, color }: { label: string; value: number; color: string }) {
   const colors: Record<string,string> = {
     gray: 'from-gray-50 to-gray-100 border-gray-200 text-gray-900 dark:from-gray-900 dark:to-gray-800 dark:border-gray-800 dark:text-gray-100',
-    blue: 'from-blue-50 to-blue-100 border-blue-200 text-blue-900 dark:from-blue-900/20 dark:to-blue-900/10 dark:border-blue-900/30 dark:text-blue-100',
     coin: 'from-coin-50 to-coin-100 border-coin-200 text-coin-900 dark:from-coin-900/20 dark:to-coin-900/10 dark:border-coin-900/30 dark:text-coin-100',
     emerald: 'from-emerald-50 to-emerald-100 border-emerald-200 text-emerald-900 dark:from-emerald-900/20 dark:to-emerald-900/10 dark:border-emerald-900/30 dark:text-emerald-100',
-    purple: 'from-purple-50 to-purple-100 border-purple-200 text-purple-900 dark:from-purple-900/20 dark:to-purple-900/10 dark:border-purple-900/30 dark:text-purple-100',
   };
   return (
     <div className={`p-4 rounded-xl border bg-gradient-to-br ${colors[color]}`}>
@@ -285,7 +341,7 @@ function LeadModal({ open, onClose, campaigns, statuses, lead }: { open: boolean
           </div>
           <div className="sm:col-span-2 flex flex-col sm:flex-row justify-end gap-2 pt-2">
             <button type="button" onClick={handleClose} className="w-full sm:w-auto px-4 py-2 text-sm rounded-md bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700" disabled={processing}>Cancel</button>
-            <button type="submit" disabled={processing} className="w-full sm:w-auto px-4 py-2 text-sm rounded-md bg-coin-700 text-white hover:bg-coin-600 disabled:bg-gray-400">Save</button>
+            <button type="submit" disabled={processing} className="w-full sm:w-auto px-4 py-2 text-sm rounded-md bg-coin-700 text-white hover:bg-coin-600 disabled:bg-gray-400 dark:disabled:bg-gray-700 dark:disabled:text-gray-200 focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950">Save</button>
           </div>
         </form>
       </div>

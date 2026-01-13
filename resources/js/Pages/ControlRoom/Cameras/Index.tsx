@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { formatDateMW } from '@/Components/format';
 import { Head, router } from '@inertiajs/react';
 import ControlRoomLayout from '@/Layouts/ControlRoomLayout';
@@ -28,7 +28,8 @@ import AddCameraForm from './AddCameraForm';
 
 declare const route: any;
 
-type Site = { id: number | string; name: string };
+type Client = { id: number | string; name: string };
+type Site = { id: number | string; name: string; client?: Client | null };
 type Camera = {
 	id: number | string;
 	name: string;
@@ -40,16 +41,45 @@ type Camera = {
 	last_online?: string | null;
 };
 
+type GroupedCameras = Array<{
+	clientId: string;
+	clientName: string;
+	sites: Array<{
+		siteId: string;
+		siteName: string;
+		cameras: Camera[];
+	}>;
+}>;
+
 interface Props {
 	cameras?: { data: Camera[] };
 	sites?: Site[];
+	clients?: Client[];
 	filters?: { statuses?: string[] };
+	appliedFilters?: {
+		client_id?: number | string | null;
+		site_id?: number | string | null;
+		status?: string | null;
+	};
 }
 
-const CameraList: React.FC<Props> = ({ cameras = { data: [] }, sites = [], filters = { statuses: [] } }) => {
-	const [filterSite, setFilterSite] = useState<string>('');
-	const [filterStatus, setFilterStatus] = useState<string>('');
+const CameraList: React.FC<Props> = ({
+	cameras = { data: [] },
+	sites = [],
+	clients = [],
+	filters = { statuses: [] },
+	appliedFilters = {},
+}) => {
+	const initialFilterValue = (value: any) => {
+		if (value === undefined || value === null || String(value).trim() === '') return '__all__';
+		return String(value);
+	};
+
+	const [filterClient, setFilterClient] = useState<string>(() => initialFilterValue(appliedFilters.client_id));
+	const [filterSite, setFilterSite] = useState<string>(() => initialFilterValue(appliedFilters.site_id));
+	const [filterStatus, setFilterStatus] = useState<string>(() => initialFilterValue(appliedFilters.status));
 	const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+	const [groupedView, setGroupedView] = useState<boolean>(true);
 	const [showAddDialog, setShowAddDialog] = useState(false);
 
 	const statusColors: Record<string, string> = {
@@ -59,17 +89,64 @@ const CameraList: React.FC<Props> = ({ cameras = { data: [] }, sites = [], filte
 		disabled: 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-100',
 	};
 
-	const handleFilterChange = (type: string, value: string) => {
-		const normalized = value === '__all__' ? '' : value;
-		router.get(route('control-room.cameras.index'), {
-			[type]: normalized,
-		}, {
+	const normalizeFilter = (value: string) => (value === '__all__' ? '' : value);
+
+	const applyFilters = (next?: Partial<{ client_id: string; site_id: string; status: string }>) => {
+		const client_id = normalizeFilter(next?.client_id ?? filterClient);
+		const site_id = normalizeFilter(next?.site_id ?? filterSite);
+		const status = normalizeFilter(next?.status ?? filterStatus);
+
+		const params: Record<string, string> = {};
+		if (client_id) params.client_id = client_id;
+		if (site_id) params.site_id = site_id;
+		if (status) params.status = status;
+
+		router.get(route('control-room.cameras.index'), params, {
 			preserveState: true,
 			preserveScroll: true,
 		});
 	};
 
 	const cameraList = cameras?.data ?? [];
+
+	const getSiteLabel = (site: Site) => {
+		const clientName = site?.client?.name?.trim();
+		if (clientName) return `${clientName} • ${site.name}`;
+		return site.name;
+	};
+
+	const grouped = useMemo<GroupedCameras>(() => {
+		const groups = new Map<string, { clientId: string; clientName: string; sites: Map<string, { siteId: string; siteName: string; cameras: Camera[] }> }>();
+
+		for (const camera of cameraList) {
+			const siteName = camera.site?.name?.trim() || 'Unassigned Site';
+			const siteId = camera.site?.id !== undefined && camera.site?.id !== null ? String(camera.site.id) : '__no_site__';
+			const clientName = camera.site?.client?.name?.trim() || 'Unassigned Company';
+			const clientId = camera.site?.client?.id !== undefined && camera.site?.client?.id !== null ? String(camera.site.client.id) : '__no_client__';
+
+			if (!groups.has(clientId)) {
+				groups.set(clientId, { clientId, clientName, sites: new Map() });
+			}
+			const clientGroup = groups.get(clientId)!;
+
+			if (!clientGroup.sites.has(siteId)) {
+				clientGroup.sites.set(siteId, { siteId, siteName, cameras: [] });
+			}
+			clientGroup.sites.get(siteId)!.cameras.push(camera);
+		}
+
+		const out: GroupedCameras = Array.from(groups.values()).map((g) => {
+			const sitesArr = Array.from(g.sites.values())
+				.map((s) => ({
+					...s,
+					cameras: [...s.cameras].sort((a, b) => String(a.name).localeCompare(String(b.name))),
+				}))
+				.sort((a, b) => a.siteName.localeCompare(b.siteName));
+			return { clientId: g.clientId, clientName: g.clientName, sites: sitesArr };
+		}).sort((a, b) => a.clientName.localeCompare(b.clientName));
+
+		return out;
+	}, [cameraList]);
 
 	const content = (() => {
 		if (cameraList.length === 0) {
@@ -84,6 +161,163 @@ const CameraList: React.FC<Props> = ({ cameras = { data: [] }, sites = [], filte
 						</Button>
 					)}
 				/>
+			);
+		}
+
+		if (groupedView) {
+			if (viewMode === 'grid') {
+				return (
+					<div className="space-y-6">
+						{grouped.map((company) => (
+							<div key={company.clientId} className="space-y-3">
+								<div className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+									{company.clientName}
+								</div>
+								{company.sites.map((site) => (
+									<div key={`${company.clientId}-${site.siteId}`} className="rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/40">
+										<div className="px-4 py-3 border-b border-gray-200 dark:border-gray-800">
+											<div className="text-sm font-medium text-gray-800 dark:text-gray-200">
+												{site.siteName}
+											</div>
+											<div className="text-xs text-gray-500 dark:text-gray-400">
+												{site.cameras.length} camera{site.cameras.length === 1 ? '' : 's'}
+											</div>
+										</div>
+										<div className="p-4">
+											<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+												{site.cameras.map((camera) => (
+													<CameraCard key={camera.id} camera={camera} />
+												))}
+											</div>
+										</div>
+									</div>
+								))}
+							</div>
+						))}
+					</div>
+				);
+			}
+
+			return (
+				<>
+					<div className="lg:hidden divide-y divide-gray-200 dark:divide-gray-800">
+						{grouped.map((company) => (
+							<div key={company.clientId} className="py-2">
+								<div className="px-4 pt-2 text-sm font-semibold text-gray-900 dark:text-gray-100">
+									{company.clientName}
+								</div>
+								{company.sites.map((site) => (
+									<div key={`${company.clientId}-${site.siteId}`} className="pt-2">
+										<div className="px-4 text-xs font-medium text-gray-600 dark:text-gray-300">
+											{site.siteName}
+										</div>
+										{site.cameras.map((camera) => (
+											<div key={camera.id} className="p-4">
+												<div className="flex items-start justify-between gap-3">
+													<div className="min-w-0">
+														<div className="text-sm font-semibold text-gray-900 dark:text-gray-100 break-words">{camera.name}</div>
+														<div className="mt-1 text-xs text-gray-500 dark:text-gray-400 break-words">{camera.site?.name ?? '-'}</div>
+													</div>
+													<Badge className={statusColors[camera.status ?? ''] ?? 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-100'}>
+														{camera.status ?? '-'}
+													</Badge>
+												</div>
+
+												<div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+													<div>
+														<div className="text-xs text-gray-500 dark:text-gray-400">Type</div>
+														<div className="text-gray-700 dark:text-gray-200">{camera.type ?? '-'}</div>
+													</div>
+													<div>
+														<div className="text-xs text-gray-500 dark:text-gray-400">Location</div>
+														<div className="text-gray-700 dark:text-gray-200 break-words">{camera.location ?? '-'}</div>
+													</div>
+													<div>
+														<div className="text-xs text-gray-500 dark:text-gray-400">Last Online</div>
+														<div className="text-gray-700 dark:text-gray-200">{camera.last_online ? formatDateMW('en-MW', camera.last_online) : 'Never'}</div>
+													</div>
+												</div>
+
+												<Button
+													variant="outline"
+													className="mt-4 w-full"
+													onClick={() => router.visit(route('control-room.cameras.show', camera.id))}
+												>
+													View
+												</Button>
+											</div>
+										))}
+									</div>
+								))}
+							</div>
+						))}
+					</div>
+
+					<div className="hidden lg:block">
+						<Table className="min-w-[900px]">
+							<TableHeader>
+								<TableRow>
+									<TableHead>Name</TableHead>
+									<TableHead>Site</TableHead>
+									<TableHead>Type</TableHead>
+									<TableHead>Status</TableHead>
+									<TableHead>Location</TableHead>
+									<TableHead>Last Online</TableHead>
+									<TableHead>Actions</TableHead>
+								</TableRow>
+							</TableHeader>
+							<TableBody>
+								{grouped.flatMap((company) => {
+									const rows: any[] = [];
+									rows.push(
+										<TableRow key={`company-${company.clientId}`}>
+											<TableCell colSpan={7} className="bg-gray-50 dark:bg-gray-900/40 text-gray-900 dark:text-gray-100 font-semibold">
+												{company.clientName}
+											</TableCell>
+										</TableRow>
+									);
+									company.sites.forEach((site) => {
+										rows.push(
+											<TableRow key={`site-${company.clientId}-${site.siteId}`}>
+												<TableCell colSpan={7} className="bg-white dark:bg-gray-900/20 text-gray-700 dark:text-gray-200 font-medium">
+													{site.siteName}
+												</TableCell>
+											</TableRow>
+										);
+										site.cameras.forEach((camera) => {
+											rows.push(
+												<TableRow key={`camera-${camera.id}`}>
+													<TableCell>{camera.name}</TableCell>
+													<TableCell>{camera.site?.name ?? '-'}</TableCell>
+													<TableCell>{camera.type ?? '-'}</TableCell>
+													<TableCell>
+														<Badge className={statusColors[camera.status ?? ''] ?? 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-100'}>
+															{camera.status ?? '-'}
+														</Badge>
+													</TableCell>
+													<TableCell>{camera.location ?? '-'}</TableCell>
+													<TableCell>
+														{camera.last_online ? formatDateMW('en-MW', camera.last_online) : 'Never'}
+													</TableCell>
+													<TableCell>
+														<Button
+															variant="ghost"
+															size="sm"
+															onClick={() => router.visit(route('control-room.cameras.show', camera.id))}
+														>
+															View
+														</Button>
+													</TableCell>
+												</TableRow>
+											);
+										});
+									});
+									return rows;
+								})}
+							</TableBody>
+						</Table>
+					</div>
+				</>
 			);
 		}
 
@@ -197,6 +431,13 @@ const CameraList: React.FC<Props> = ({ cameras = { data: [] }, sites = [], filte
 							<>
 								<div className="flex gap-2">
 									<Button
+										variant={groupedView ? 'default' : 'outline'}
+										size="sm"
+										onClick={() => setGroupedView((v) => !v)}
+									>
+										Grouped
+									</Button>
+									<Button
 										variant={viewMode === 'grid' ? 'default' : 'outline'}
 										size="sm"
 										onClick={() => setViewMode('grid')}
@@ -225,7 +466,34 @@ const CameraList: React.FC<Props> = ({ cameras = { data: [] }, sites = [], filte
 					<Card>
 						<CardHeader>
 							<div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
-								<Select value={filterSite} onValueChange={(value) => { setFilterSite(value); handleFilterChange('site_id', value); }}>
+								<Select
+									value={filterClient}
+									onValueChange={(value) => {
+										setFilterClient(value);
+										setFilterSite('__all__');
+										applyFilters({ client_id: value, site_id: '__all__' });
+									}}
+								>
+									<SelectTrigger className="w-full sm:w-[220px]">
+										<SelectValue placeholder="Filter by company" />
+									</SelectTrigger>
+									<SelectContent>
+										<SelectItem value="__all__">All Companies</SelectItem>
+										{Array.isArray(clients) && clients.map((client) => (
+											<SelectItem key={client.id} value={String(client.id)}>
+												{client.name}
+											</SelectItem>
+										))}
+									</SelectContent>
+								</Select>
+
+								<Select
+									value={filterSite}
+									onValueChange={(value) => {
+										setFilterSite(value);
+										applyFilters({ site_id: value });
+									}}
+								>
 									<SelectTrigger className="w-full sm:w-[200px]">
 										<SelectValue placeholder="Filter by site" />
 									</SelectTrigger>
@@ -233,13 +501,19 @@ const CameraList: React.FC<Props> = ({ cameras = { data: [] }, sites = [], filte
 										<SelectItem value="__all__">All Sites</SelectItem>
 										{Array.isArray(sites) && sites.map((site) => (
 											<SelectItem key={site.id} value={String(site.id)}>
-												{site.name}
+												{getSiteLabel(site)}
 											</SelectItem>
 										))}
 									</SelectContent>
 								</Select>
 
-								<Select value={filterStatus} onValueChange={(value) => { setFilterStatus(value); handleFilterChange('status', value); }}>
+								<Select
+									value={filterStatus}
+									onValueChange={(value) => {
+										setFilterStatus(value);
+										applyFilters({ status: value });
+									}}
+								>
 									<SelectTrigger className="w-full sm:w-[180px]">
 										<SelectValue placeholder="Filter by status" />
 									</SelectTrigger>

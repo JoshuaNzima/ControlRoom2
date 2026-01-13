@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Head, Link, usePage, useForm, router } from '@inertiajs/react';
 import ControlRoomLayout from '@/Layouts/ControlRoomLayout';
 import { Card, CardContent, CardHeader } from '@/Components/ui/card';
@@ -42,7 +42,11 @@ export default function ShiftsIndex() {
 
   const storageKey = 'controlroom_shifts_filters';
 
+  const didInitFromStorageRef = useRef(false);
+
   useEffect(() => {
+    if (didInitFromStorageRef.current) return;
+    didInitFromStorageRef.current = true;
     const hasServerFilters = !!(filters.search || filters.zone_id || filters.supervisor_id || filters.site_id || filters.date_from || filters.date_to || filters.guard_type);
     if (!hasServerFilters) {
       try {
@@ -69,8 +73,7 @@ export default function ShiftsIndex() {
         }
       } catch {}
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [filters, storageKey]);
 
   const applyFilters = () => {
     const params: any = {};
@@ -567,8 +570,7 @@ function CreateShiftModal({ open, onClose, supervisors, sites }: { open: boolean
     };
     run();
     return () => controller.abort();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, data.is_global, (data.sites || []).join(',')]);
+  }, [open, data.is_global, data.sites]);
 
   const toggleSite = (siteId: number) => {
     const current = new Set(data.sites as any[]);
@@ -779,8 +781,7 @@ function EditShiftModal({ open, onClose, shift, supervisors, sites }: EditShiftM
     };
     run();
     return () => controller.abort();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, data.is_global, (data.sites || []).join(',')]);
+  }, [open, data.is_global, data.sites]);
 
   const toggleSite = (siteId: number) => {
     const current = new Set(data.sites as any[]);

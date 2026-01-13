@@ -52,6 +52,12 @@ class GuardController extends Controller
      */
     public function store(Request $request)
     {
+        $request->merge([
+            'id_number' => ($v = trim((string) $request->input('id_number'))) !== '' ? $v : null,
+            'emergency_contact_name' => ($v = trim((string) $request->input('emergency_contact_name'))) !== '' ? $v : null,
+            'emergency_contact_phone' => ($v = trim((string) $request->input('emergency_contact_phone'))) !== '' ? $v : null,
+        ]);
+
          $validated = $request->validate([
             'name' => 'required|string|max:255',
             'employee_id' => 'required|string|unique:guards,employee_id',
