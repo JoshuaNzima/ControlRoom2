@@ -36,6 +36,15 @@ class FinanceController extends Controller
 
         $netCashflow = $invoicesSummary['paid'] - $expensesSummary['approved'];
 
+        $recognizedRevenueYtd = 0.0;
+        try {
+            $recognizedRevenueYtd = (float) ClientPayment::where('year', $now->year)
+                ->where('month', '<=', $now->month)
+                ->sum('amount_paid');
+        } catch (\Throwable $e) {
+            $recognizedRevenueYtd = 0.0;
+        }
+
         // Budgets summary (only active budgets)
         $activeBudgets = Budget::active()->get();
         $budgetsSummary = [
@@ -93,10 +102,9 @@ class FinanceController extends Controller
             $label = $m->format('M Y');
             $months[] = $label;
 
-            $revenueSeries[] = (float) Invoice::whereYear('invoice_date', $m->year)
-                ->whereMonth('invoice_date', $m->month)
-                ->paid()
-                ->sum('total_amount');
+            $revenueSeries[] = (float) ClientPayment::where('year', $m->year)
+                ->where('month', $m->month)
+                ->sum('amount_paid');
 
             $expenseSeries[] = (float) Expense::whereYear('expense_date', $m->year)
                 ->whereMonth('expense_date', $m->month)
@@ -114,6 +122,7 @@ class FinanceController extends Controller
             'months' => $months,
             'revenueSeries' => $revenueSeries,
             'expenseSeries' => $expenseSeries,
+            'recognizedRevenueYtd' => $recognizedRevenueYtd,
             'auth' => [
                 'user' => [
                     'name' => auth()->user()->name,

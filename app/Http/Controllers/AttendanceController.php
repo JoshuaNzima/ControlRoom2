@@ -137,7 +137,7 @@ class AttendanceController extends Controller
         $sites = ClientSite::active()->get();
 
         return Inertia::render('Attendance/Edit', [
-            'attendance' => $attendance->load(['guard', 'clientSite']),
+            'attendance' => $attendance->load(['guardRelation', 'clientSite']),
             'guards' => $guards,
             'sites' => $sites,
         ]);

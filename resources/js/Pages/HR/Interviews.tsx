@@ -50,12 +50,12 @@ export default function Interviews() {
       <Head title="HR Interviews" />
       <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
-          <div className="flex items-center justify-between mb-4">
-            <div>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
+            <div className="min-w-0">
               <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Interviews</h1>
               <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">Schedule and track interviews</div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center justify-start sm:justify-end gap-2">
               <Link href={route('hr.jobs.index')} className="text-sm px-3 py-1.5 rounded-md bg-gray-100 text-gray-800 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700">Jobs</Link>
               <Link href={route('hr.jobs.applicants')} className="text-sm px-3 py-1.5 rounded-md bg-gray-100 text-gray-800 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700">Applicants</Link>
               <a href={route('hr.jobs.interviews.export', { status, from, to })} className="text-sm px-3 py-1.5 rounded-md bg-gray-100 text-gray-800 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700">Export CSV</a>

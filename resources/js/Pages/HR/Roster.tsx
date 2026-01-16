@@ -177,18 +177,18 @@ export default function Roster() {
           description="Register guard off days and holidays."
           actions={(
             <>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 w-full sm:w-auto">
                 <button
                   type="button"
-                  className="px-3 py-1.5 rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700"
+                  className="shrink-0 px-3 py-1.5 rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700"
                   onClick={() => setCurrentMonth((d) => new Date(d.getFullYear(), d.getMonth() - 1, 1))}
                 >
                   Prev
                 </button>
-                <div className="min-w-[10rem] text-center font-medium text-gray-900 dark:text-gray-100">{monthLabel}</div>
+                <div className="flex-1 min-w-0 text-center font-medium text-gray-900 dark:text-gray-100 truncate">{monthLabel}</div>
                 <button
                   type="button"
-                  className="px-3 py-1.5 rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700"
+                  className="shrink-0 px-3 py-1.5 rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700"
                   onClick={() => setCurrentMonth((d) => new Date(d.getFullYear(), d.getMonth() + 1, 1))}
                 >
                   Next
@@ -212,7 +212,7 @@ export default function Roster() {
           )}
         />
 
-        <div className="flex items-center gap-4 text-sm">
+        <div className="flex flex-wrap items-center gap-4 text-sm">
           <div className="flex items-center gap-2"><span className="inline-block w-3 h-3 rounded-sm bg-red-600" /> Holiday</div>
           <div className="flex items-center gap-2"><span className="inline-block w-3 h-3 rounded-sm bg-coin-700" /> Off Day</div>
           {loading && <div className="text-gray-500 dark:text-gray-400">Loading…</div>}

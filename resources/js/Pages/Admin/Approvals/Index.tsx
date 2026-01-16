@@ -25,7 +25,7 @@ interface RequisitionLite {
   id: number;
   title: string;
   amount?: number | string | null;
-  status: 'pending_admin' | 'needs_revision' | 'pending_disbursement' | 'disbursed' | 'expired';
+  status: 'pending_admin' | 'needs_revision' | 'pending_disbursement' | 'pending_funding' | 'disbursed' | 'expired';
   requested_by?: number;
   requestedBy?: { id: number; name: string } | null;
   created_at?: string;
@@ -69,6 +69,7 @@ export default function AdminApprovalsIndex({ budgets, selectedTab = 'requisitio
     pending_admin: 'px-2 py-1 rounded text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-500/20 dark:text-yellow-200 border border-yellow-500/30',
     needs_revision: 'px-2 py-1 rounded text-xs font-medium bg-red-100 text-red-800 dark:bg-red-500/10 dark:text-red-300 border border-red-500/30',
     pending_disbursement: 'px-2 py-1 rounded text-xs font-medium bg-coin-100 text-coin-800 dark:bg-coin-900/30 dark:text-coin-200 border border-coin-500/30',
+    pending_funding: 'px-2 py-1 rounded text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-200 border border-amber-500/30',
     disbursed: 'px-2 py-1 rounded text-xs font-medium bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-200 border border-emerald-500/30',
     expired: 'px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700/40 dark:text-gray-300 border border-gray-300 dark:border-gray-600',
   };

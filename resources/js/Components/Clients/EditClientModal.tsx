@@ -14,6 +14,7 @@ interface Client {
   billing_start_date?: string;
   notes?: string;
   status?: string;
+  monthly_rate?: number;
 }
 
 interface EditClientModalProps {
@@ -39,10 +40,28 @@ export default function EditClientModal({ client, open, onClose, services = [] }
     billing_start_date: client.billing_start_date || '',
     notes: client.notes || '',
     status: client.status || 'active',
+    monthly_rate: (client as any).monthly_rate ?? 0,
     // services array: { id, custom_price, quantity }
     services: (client as any).services ? (client as any).services.map((s: any) => ({ id: s.id, custom_price: s.pivot?.custom_price ?? null, quantity: s.pivot?.quantity ?? 1 })) : [] as Array<{ id: number; custom_price: number | null; quantity: number }>,
   });
   const { data, setData, put, processing, errors } = _form as any;
+
+  React.useEffect(() => {
+    const selectedServices = Array.isArray(data.services) ? data.services : [];
+    let totalMonthlyRate = 0;
+
+    selectedServices.forEach((selectedService: { id: number; custom_price: number | null; quantity: number }) => {
+      const service = services.find((s) => s.id === selectedService.id);
+      if (service) {
+        const serviceRate = selectedService.custom_price ?? service.monthly_price;
+        const quantity = selectedService.quantity || 1;
+        totalMonthlyRate += serviceRate * quantity;
+      }
+    });
+
+    setData('monthly_rate', totalMonthlyRate);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data.services]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -140,7 +159,6 @@ export default function EditClientModal({ client, open, onClose, services = [] }
                   >
                     <option value="active">Active</option>
                     <option value="inactive">Inactive</option>
-                    <option value="overdue">Overdue</option>
                   </select>
                 </div>
 

@@ -266,12 +266,12 @@ export default function SuperAdminGuards({ guards, filters, supervisors = [], gr
       <Head title="Guards" />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
             <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Guards Management</h1>
             <p className="text-gray-600 dark:text-gray-300">Manage field guards and assignments</p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center justify-start sm:justify-end gap-2">
             <button
               type="button"
               onClick={handleExport}
@@ -283,12 +283,13 @@ export default function SuperAdminGuards({ guards, filters, supervisors = [], gr
             </button>
             <button
               onClick={openAdd}
-              className="flex items-center gap-2 px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-bold shadow-md transition-all transform hover:scale-105"
+              className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-bold shadow-md transition-all transform hover:scale-105"
               title="Add Guard"
               aria-label="Add Guard"
             >
               <IconMapper name="Plus" size={20} />
               <span className="hidden sm:inline">Add Guard</span>
+              <span className="sm:hidden">Add</span>
             </button>
           </div>
         </div>

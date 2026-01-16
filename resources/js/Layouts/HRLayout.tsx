@@ -53,7 +53,7 @@ export default function HRLayout({ title, children, user }: Props) {
   ];
 
   return (
-    <div className="min-h-screen bg-red-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-red-50 dark:bg-gray-900 overflow-x-hidden">
       <Head title={title} />
       <div className={`fixed inset-0 bg-red-800 bg-opacity-50 dark:bg-gray-900 dark:bg-opacity-70 z-40 md:hidden ${sidebarOpen ? 'block' : 'hidden'}`} onClick={() => setSidebarOpen(false)} />
       <div className={`fixed top-0 left-0 bottom-0 flex flex-col w-64 bg-red-900 dark:bg-gray-950 text-white transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 transition-transform duration-300 ease-in-out z-50`}>
@@ -98,14 +98,15 @@ export default function HRLayout({ title, children, user }: Props) {
                 </button>
                 <h1 className="text-xl font-semibold text-red-900 dark:text-gray-100 truncate">{title}</h1>
               </div>
-              <div className="flex items-center gap-4">
+              <div className="flex flex-wrap items-center justify-end gap-2">
                 <NotificationBell />
-                <QuickBudgetButton />
-                <QuickRequisitionButton />
+                <QuickBudgetButton label="Budget" />
+                <QuickRequisitionButton label="Requisition" />
                 <button onClick={toggle} className="text-sm px-3 py-1 rounded-md bg-red-100 text-red-800 hover:bg-red-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700">
-                  {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
+                  <span className="hidden sm:inline">{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>
+                  <span className="sm:hidden">{theme === 'dark' ? 'Light' : 'Dark'}</span>
                 </button>
-                <div className="text-sm text-red-700 dark:text-gray-300">{user?.name}</div>
+                <div className="hidden sm:block text-sm text-red-700 dark:text-gray-300 max-w-[10rem] truncate">{user?.name}</div>
                 <Link href={route('logout')} method="post" as="button" className="text-sm px-3 py-1 rounded-md bg-white text-red-700 hover:bg-red-50 border border-red-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700">
                   Logout
                 </Link>

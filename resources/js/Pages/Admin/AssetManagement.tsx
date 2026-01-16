@@ -37,7 +37,7 @@ interface RequisitionLite {
   id: number;
   title: string;
   amount?: number | string | null;
-  status: 'pending_admin' | 'needs_revision' | 'pending_disbursement' | 'disbursed';
+  status: 'pending_admin' | 'needs_revision' | 'pending_disbursement' | 'pending_funding' | 'disbursed';
   requested_by?: number;
   requestedBy?: { id: number; name: string } | null;
   created_at?: string;

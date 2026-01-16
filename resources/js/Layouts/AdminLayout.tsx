@@ -125,7 +125,7 @@ export default function AdminLayout({ title, children, user }: Props) {
   ];
 
   return (
-    <div className="min-h-screen bg-red-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-red-50 dark:bg-gray-900 overflow-x-hidden">
       <Head title={title} />
 
       <div className={`fixed inset-0 bg-red-800 bg-opacity-50 dark:bg-gray-900 dark:bg-opacity-70 z-40 md:hidden ${sidebarOpen ? 'block' : 'hidden'}`} onClick={() => setSidebarOpen(false)} />
@@ -192,7 +192,7 @@ export default function AdminLayout({ title, children, user }: Props) {
       <div className="md:pl-64">
         <div className="sticky top-0 z-30 border-b border-red-100 bg-white/95 backdrop-blur-sm dark:border-gray-800 dark:bg-gray-950/80">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-3">
-            <div className="flex items-center justify-between gap-3">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-3 min-w-0">
                 <button
                   type="button"
@@ -204,19 +204,21 @@ export default function AdminLayout({ title, children, user }: Props) {
                 </button>
                 <h1 className="text-xl font-semibold text-red-900 dark:text-gray-100 truncate">{title}</h1>
               </div>
-              <div className="flex items-center gap-4">
+              <div className="flex flex-wrap items-center justify-end gap-2">
                 <NotificationBell />
                 <button onClick={toggle} className="text-sm px-3 py-1 rounded-md bg-red-100 text-red-800 hover:bg-red-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700">
-                  {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
+                  <span className="hidden sm:inline">{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>
+                  <span className="sm:hidden">{theme === 'dark' ? 'Light' : 'Dark'}</span>
                 </button>
-                <div className="text-sm text-red-700 dark:text-gray-300">{effectiveUser?.name}</div>
+                <div className="hidden sm:block text-sm text-red-700 dark:text-gray-300 max-w-[10rem] truncate">{effectiveUser?.name}</div>
                 {hasAnyRole(['super_admin']) && (
                   <Link
                     href={route('superadmin.dashboard')}
                     className="inline-flex items-center gap-2 rounded-md bg-red-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-600"
                   >
                     <IconMapper name="shield" className="h-4 w-4" />
-                    Super Admin
+                    <span className="hidden sm:inline">Super Admin</span>
+                    <span className="sm:hidden">SA</span>
                   </Link>
                 )}
                 <Link

@@ -173,14 +173,14 @@ export default function SuperAdminUsers({ users, filters, roles, zones }: UsersI
       <Head title="Users" />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
             <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Users Management</h1>
             <p className="text-gray-600 dark:text-gray-300">Create, edit and remove users and roles</p>
           </div>
           <button
             onClick={() => setShowAdd(true)}
-            className="flex items-center gap-2 px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-bold shadow-md transition-all transform hover:scale-105"
+            className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-bold shadow-md transition-all transform hover:scale-105"
           >
             <IconMapper name="Plus" size={20} />
             Add User
@@ -188,8 +188,8 @@ export default function SuperAdminUsers({ users, filters, roles, zones }: UsersI
         </div>
 
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
-          <div className="flex gap-4">
-            <div className="flex-1 relative">
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="flex-1 min-w-0 relative">
               <span className="absolute left-3 top-3 text-gray-400"><IconMapper name="Search" size={20} /></span>
               <input
                 type="text"
@@ -202,7 +202,7 @@ export default function SuperAdminUsers({ users, filters, roles, zones }: UsersI
             </div>
             <button
               onClick={handleSearch}
-              className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium"
+              className="w-full sm:w-auto px-6 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium"
             >
               Search
             </button>

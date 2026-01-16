@@ -25,7 +25,7 @@ class ExpireOldRequisitions extends Command
         $cutoffDate = now()->subDays(5)->toDateString();
 
         $affected = Requisition::query()
-            ->whereIn('status', ['pending_admin', 'pending_disbursement'])
+            ->whereIn('status', ['pending_admin', 'pending_disbursement', 'pending_funding'])
             ->whereNotNull('needed_by')
             ->whereDate('needed_by', '<=', $cutoffDate)
             ->update([

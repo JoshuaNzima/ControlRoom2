@@ -20,7 +20,7 @@ export interface Requisition {
   title: string;
   description?: string | null;
   category?: 'general' | 'fuel' | 'vehicle_hire' | string;
-  status: 'pending_admin' | 'needs_revision' | 'pending_disbursement' | 'disbursed' | 'expired';
+  status: 'pending_admin' | 'needs_revision' | 'pending_disbursement' | 'pending_funding' | 'disbursed' | 'expired';
   needed_by?: string | null;
   amount?: number | string | null;
   created_at: string;
@@ -59,6 +59,8 @@ const statusColors: Record<string, string> = {
     'bg-red-100 text-red-800 border border-red-200 dark:bg-red-500/10 dark:text-red-300 dark:border-red-500/40',
   pending_disbursement:
     'bg-indigo-100 text-indigo-800 border border-indigo-200 dark:bg-indigo-500/20 dark:text-indigo-200 dark:border-indigo-500/40',
+  pending_funding:
+    'bg-amber-100 text-amber-800 border border-amber-200 dark:bg-amber-500/20 dark:text-amber-200 dark:border-amber-500/40',
   disbursed:
     'bg-emerald-100 text-emerald-800 border border-emerald-200 dark:bg-emerald-500/20 dark:text-emerald-200 dark:border-emerald-500/40',
   expired:

@@ -267,11 +267,12 @@ export default function SuperAdminLayout({ title, children, user }: Props) {
                             <div className="flex flex-wrap items-center gap-2 sm:gap-4">
                                 <NotificationBell />
                                 <div className="hidden sm:flex items-center gap-4">
-                                    <QuickBudgetButton />
-                                    <QuickRequisitionButton />
+                                    <QuickBudgetButton label="Budget" />
+                                    <QuickRequisitionButton label="Requisition" />
                                 </div>
                                 <button onClick={toggle} className="text-sm px-3 py-1 rounded-md bg-red-100 text-red-800 hover:bg-red-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700">
-                                    {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
+                                    <span className="hidden sm:inline">{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>
+                                    <span className="sm:hidden">{theme === 'dark' ? 'Light' : 'Dark'}</span>
                                 </button>
                             </div>
                         </div>

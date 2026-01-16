@@ -42,6 +42,8 @@ Route::middleware(['auth'])
             ->name('batches.compile_today');
         Route::post('/batches/acknowledge-today', [RequisitionBatchController::class, 'acknowledgeToday'])
             ->name('batches.acknowledge_today');
+        Route::post('/batches/{batch}/fund', [RequisitionBatchController::class, 'fund'])
+            ->name('batches.fund');
         Route::get('/batches/today/export.csv', [RequisitionBatchController::class, 'exportTodayCsv'])
             ->name('batches.export_today_csv');
         Route::get('/batches/today/print', [RequisitionBatchController::class, 'printToday'])

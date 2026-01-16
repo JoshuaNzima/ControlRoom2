@@ -13,14 +13,17 @@ class RequisitionBatchCompiled extends Notification
 
     public RequisitionBatch $batch;
 
-    public function __construct(RequisitionBatch $batch)
+    public array $channels;
+
+    public function __construct(RequisitionBatch $batch, array $channels = ['database', 'mail'])
     {
         $this->batch = $batch;
+        $this->channels = $channels;
     }
 
     public function via(object $notifiable): array
     {
-        return ['database', 'mail'];
+        return $this->channels;
     }
 
     public function toMail(object $notifiable): MailMessage

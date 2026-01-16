@@ -184,57 +184,59 @@ export default function SuperAdminSettings() {
   return (
     <SuperAdminLayout title="System Settings" user={auth?.user as any}>
       <Head title="System Settings" />
-      <div>
+      <div className="max-w-6xl mx-auto">
         {/* Tabs */}
-        <div className="mb-4 inline-flex rounded-full bg-red-100 p-1 dark:bg-gray-800">
-          <button onClick={() => setTab('finance')} className={`px-4 py-1.5 rounded-full text-sm font-medium ${tab==='finance' ? 'bg-red-600 text-white' : 'text-red-700 hover:bg-red-200 dark:text-gray-200 dark:hover:bg-gray-700'}`}>Finance</button>
-          <button onClick={() => setTab('hr')} className={`px-4 py-1.5 rounded-full text-sm font-medium ${tab==='hr' ? 'bg-red-600 text-white' : 'text-red-700 hover:bg-red-200 dark:text-gray-200 dark:hover:bg-gray-700'}`}>HR</button>
-          <button onClick={() => setTab('attendance')} className={`px-4 py-1.5 rounded-full text-sm font-medium ${tab==='attendance' ? 'bg-red-600 text-white' : 'text-red-700 hover:bg-red-200 dark:text-gray-200 dark:hover:bg-gray-700'}`}>Attendance</button>
-          <button onClick={() => setTab('system')} className={`px-4 py-1.5 rounded-full text-sm font-medium ${tab==='system' ? 'bg-red-600 text-white' : 'text-red-700 hover:bg-red-200 dark:text-gray-200 dark:hover:bg-gray-700'}`}>System</button>
+        <div className="mb-4 w-full overflow-x-auto">
+          <div className="inline-flex whitespace-nowrap rounded-full bg-red-100 p-1 dark:bg-gray-800">
+            <button onClick={() => setTab('finance')} className={`px-4 py-1.5 rounded-full text-sm font-medium ${tab==='finance' ? 'bg-red-600 text-white' : 'text-red-700 hover:bg-red-200 dark:text-gray-200 dark:hover:bg-gray-700'}`}>Finance</button>
+            <button onClick={() => setTab('hr')} className={`px-4 py-1.5 rounded-full text-sm font-medium ${tab==='hr' ? 'bg-red-600 text-white' : 'text-red-700 hover:bg-red-200 dark:text-gray-200 dark:hover:bg-gray-700'}`}>HR</button>
+            <button onClick={() => setTab('attendance')} className={`px-4 py-1.5 rounded-full text-sm font-medium ${tab==='attendance' ? 'bg-red-600 text-white' : 'text-red-700 hover:bg-red-200 dark:text-gray-200 dark:hover:bg-gray-700'}`}>Attendance</button>
+            <button onClick={() => setTab('system')} className={`px-4 py-1.5 rounded-full text-sm font-medium ${tab==='system' ? 'bg-red-600 text-white' : 'text-red-700 hover:bg-red-200 dark:text-gray-200 dark:hover:bg-gray-700'}`}>System</button>
+          </div>
         </div>
 
-		{/* Attendance */}
-		{tab === 'attendance' && (
-			<section className="space-y-6">
-				<div className="bg-white dark:bg-gray-800 rounded-xl shadow p-6">
-					<h2 className="text-lg font-semibold mb-2">Attendance Methods</h2>
-					<p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
-						Enable/disable system-wide attendance automation. Auto-present assumes present at shift start until Control Room marks absent.
-					</p>
-					<form onSubmit={submitAttendanceMethods} className="space-y-4">
-						<div className="space-y-3">
-							<label className="flex items-center justify-between gap-3 p-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
-								<div>
-									<div className="text-sm font-medium text-gray-900 dark:text-gray-100">Auto-Absent</div>
-									<div className="text-xs text-gray-600 dark:text-gray-400">Automatically creates absent records for guards with shifts but no attendance.</div>
-								</div>
-								<input
-									type="checkbox"
-									checked={attendanceMethods.auto_absent}
-									onChange={(e) => setAttendanceMethods(m => ({ ...m, auto_absent: e.target.checked }))}
-									className="rounded border-gray-300 dark:border-gray-700"
-								/>
-							</label>
-							<label className="flex items-center justify-between gap-3 p-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
-								<div>
-									<div className="text-sm font-medium text-gray-900 dark:text-gray-100">Auto-Present</div>
-									<div className="text-xs text-gray-600 dark:text-gray-400">Marks guards as present at shift start, then Control Room can mark absent if needed.</div>
-								</div>
-								<input
-									type="checkbox"
-									checked={attendanceMethods.auto_present}
-									onChange={(e) => setAttendanceMethods(m => ({ ...m, auto_present: e.target.checked }))}
-									className="rounded border-gray-300 dark:border-gray-700"
-								/>
-							</label>
-						</div>
-						<div className="pt-2">
-							<button type="submit" className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700">Save Attendance Methods</button>
-						</div>
-					</form>
-				</div>
-			</section>
-		)}
+        {/* Attendance */}
+        {tab === 'attendance' && (
+          <section className="space-y-6">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-6">
+              <h2 className="text-lg font-semibold mb-2">Attendance Methods</h2>
+              <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+                Enable/disable system-wide attendance automation. Auto-present assumes present at shift start until Control Room marks absent.
+              </p>
+              <form onSubmit={submitAttendanceMethods} className="space-y-4">
+                <div className="space-y-3">
+                  <label className="flex items-center justify-between gap-3 p-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
+                    <div>
+                      <div className="text-sm font-medium text-gray-900 dark:text-gray-100">Auto-Absent</div>
+                      <div className="text-xs text-gray-600 dark:text-gray-400">Automatically creates absent records for guards with shifts but no attendance.</div>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={attendanceMethods.auto_absent}
+                      onChange={(e) => setAttendanceMethods(m => ({ ...m, auto_absent: e.target.checked }))}
+                      className="rounded border-gray-300 dark:border-gray-700"
+                    />
+                  </label>
+                  <label className="flex items-center justify-between gap-3 p-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
+                    <div>
+                      <div className="text-sm font-medium text-gray-900 dark:text-gray-100">Auto-Present</div>
+                      <div className="text-xs text-gray-600 dark:text-gray-400">Marks guards as present at shift start, then Control Room can mark absent if needed.</div>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={attendanceMethods.auto_present}
+                      onChange={(e) => setAttendanceMethods(m => ({ ...m, auto_present: e.target.checked }))}
+                      className="rounded border-gray-300 dark:border-gray-700"
+                    />
+                  </label>
+                </div>
+                <div className="pt-2">
+                  <button type="submit" className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700">Save Attendance Methods</button>
+                </div>
+              </form>
+            </div>
+          </section>
+        )}
 
         {/* HR */}
         {tab === 'hr' && (

@@ -79,12 +79,12 @@ export default function HRJobs() {
       <Head title="HR Careers" />
       <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
-          <div className="flex items-center justify-between mb-6">
-            <div>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
+            <div className="min-w-0">
               <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Careers</h1>
               <p className="text-gray-600 dark:text-gray-400 mt-1">Manage public job postings</p>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center justify-start sm:justify-end gap-2">
               <Link href={route('hr.jobs.applicants')} className="text-sm px-3 py-1.5 rounded-md bg-gray-100 text-gray-800 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700">Applicants</Link>
               <Link href={route('hr.jobs.interviews')} className="text-sm px-3 py-1.5 rounded-md bg-gray-100 text-gray-800 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700">Interviews</Link>
               <a href={route('hr.jobs.export', { search, status })} className="text-sm px-3 py-1.5 rounded-md bg-gray-100 text-gray-800 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700">Export CSV</a>

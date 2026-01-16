@@ -63,6 +63,7 @@ interface Props {
   recentActivity?: Activity[];
   topGuards?: TopGuard[];
   kpis?: KPIs;
+  recognizedRevenueYtd?: number;
   coverageSummary?: {
     guards_deployed_today?: number;
     guards_required_total?: number;
@@ -94,6 +95,7 @@ export default function Dashboard({
   recentActivity = [],
   topGuards = [],
   kpis = {},
+  recognizedRevenueYtd = 0,
   coverageSummary = {},
   auth = {},
   paymentsSummary = undefined,
@@ -130,6 +132,13 @@ export default function Dashboard({
               <IconMapper name="AlertTriangle" className="w-4 h-4 text-red-500" />
             </div>
             <div className="text-lg md:text-2xl font-bold text-red-900 dark:text-red-300">{formatCurrencyMWK(paymentsSummary?.outstanding_value || 0)}</div>
+          </div>
+          <div className="p-4 rounded-lg border bg-gradient-to-br from-coin-50 to-coin-100 dark:from-gray-800 dark:to-gray-800 dark:border-gray-700">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs font-medium text-coin-900 dark:text-coin-300">Revenue (YTD) (MWK)</span>
+              <IconMapper name="DollarSign" className="w-4 h-4 text-coin-600" />
+            </div>
+            <div className="text-lg md:text-2xl font-bold text-coin-900 dark:text-coin-300">{formatCurrencyMWK(recognizedRevenueYtd || 0)}</div>
           </div>
           <div className="p-4 rounded-lg border bg-gradient-to-br from-emerald-50 to-emerald-100 dark:from-gray-800 dark:to-gray-800 dark:border-gray-700">
             <div className="flex items-center justify-between mb-1">

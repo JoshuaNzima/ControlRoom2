@@ -138,7 +138,7 @@ class DashboardController extends Controller
 
         // Upcoming off-days (next 7 days) overlapping the window
         $end7 = $today->copy()->addDays(7);
-        $offDays = GuardOffDay::with('guard:id,name,employee_id')
+        $offDays = GuardOffDay::with('guardRelation:id,name,employee_id')
             ->whereDate('start_date', '<=', $end7->toDateString())
             ->where(function ($q) use ($today) {
                 $q->whereNull('end_date')->orWhereDate('end_date', '>=', $today->toDateString());
@@ -152,10 +152,10 @@ class DashboardController extends Controller
             $end = $off->end_date ? Carbon::parse($off->end_date)->toDateString() : $off->start_date;
             return [
                 'id' => $off->id,
-                'guard' => $off->guard ? [
-                    'id' => $off->guard->id,
-                    'name' => $off->guard->name,
-                    'employee_id' => $off->guard->employee_id,
+                'guard' => $off->guardRelation ? [
+                    'id' => $off->guardRelation->id,
+                    'name' => $off->guardRelation->name,
+                    'employee_id' => $off->guardRelation->employee_id,
                 ] : null,
                 'start_date' => $start,
                 'end_date' => $end,

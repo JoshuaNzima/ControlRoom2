@@ -26,12 +26,12 @@ export default function HRTraining() {
       <Head title="Training" />
       <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0 space-y-6">
-          <div className="flex items-center justify-between">
-            <div>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0">
               <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-slate-100">Training</h1>
               <p className="text-gray-600 dark:text-slate-400 mt-1">Manage training courses, sessions and enrollments.</p>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center justify-start sm:justify-end gap-2">
               <button onClick={() => { setEditCourse(null); setOpenCourse(true); }} className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white">
                 <IconMapper name="Plus" className="w-4 h-4" /> New Course
               </button>

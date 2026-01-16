@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Invoice;
 use App\Models\Expense;
 use App\Models\Budget;
+use App\Models\ClientPayment;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Gate;
@@ -25,16 +26,19 @@ class DashboardController extends Controller
             $label = $m->format('M Y');
             $months[] = $label;
 
-            $monthlyRevenue[] = (float) Invoice::whereYear('invoice_date', $m->year)
-                ->whereMonth('invoice_date', $m->month)
-                ->paid()
-                ->sum('total_amount');
+            $monthlyRevenue[] = (float) ClientPayment::where('year', $m->year)
+                ->where('month', $m->month)
+                ->sum('amount_paid');
 
             $monthlyExpenses[] = (float) Expense::whereYear('expense_date', $m->year)
                 ->whereMonth('expense_date', $m->month)
                 ->approved()
                 ->sum('amount');
         }
+
+        $recognizedRevenueYtd = (float) ClientPayment::where('year', now()->year)
+            ->where('month', '<=', now()->month)
+            ->sum('amount_paid');
 
         // High level summaries
         $invoicesSummary = [
@@ -194,6 +198,7 @@ class DashboardController extends Controller
             'months' => $months,
             'monthlyRevenue' => $monthlyRevenue,
             'monthlyExpenses' => $monthlyExpenses,
+            'recognizedRevenueYtd' => $recognizedRevenueYtd,
             'budgets' => $budgets,
             'recent' => $recent,
             'kpis' => [

@@ -146,14 +146,14 @@ class SupervisorController extends Controller
         // Upcoming shifts
         $upcomingShifts = Shift::where('date', '>=', $date)
             ->where('status', 'scheduled')
-            ->with(['guard', 'clientSite'])
+            ->with(['guardRelation', 'clientSite'])
             ->orderBy('date')
             ->orderBy('start_time')
             ->limit(10)
             ->get()
             ->map(fn($shift) => [
                 'id' => $shift->id,
-                'guard_name' => $shift->guard?->name ?? 'Unknown',
+                'guard_name' => $shift->guardRelation?->name ?? 'Unknown',
                 'site_name' => $shift->clientSite?->name ?? 'Unknown',
                 'type' => ucfirst($shift->shift_type),
                 'start_time' => $shift->start_time ? Carbon::parse($shift->start_time)->format('M d, H:i') : 'N/A',
@@ -271,7 +271,7 @@ class SupervisorController extends Controller
     $shifts = Shift::whereHas('guardRelation', function($query) use ($supervisorId) {
                 $query->where('supervisor_id', $supervisorId);
             })
-            ->with(['guard', 'clientSite'])
+            ->with(['guardRelation', 'clientSite'])
             ->when($date, function($query, $date) {
                 $query->whereDate('date', $date);
             })
@@ -279,7 +279,7 @@ class SupervisorController extends Controller
             ->paginate(20)
             ->through(fn ($shift) => [
                 'id' => $shift->id,
-                'guard' => $shift->guard ?? null,
+                'guard' => $shift->guardRelation ?? null,
                 'client_site' => $shift->clientSite ?? null,
                 'date' => $shift->date ? Carbon::parse($shift->date)->format('Y-m-d') : 'N/A',
                 'start_time' => $shift->start_time ? Carbon::parse($shift->start_time)->format('H:i') : null,

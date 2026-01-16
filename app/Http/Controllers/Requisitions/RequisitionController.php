@@ -20,7 +20,7 @@ class RequisitionController extends Controller
 
         $query = Requisition::query()->with(['requestedBy', 'approvedBy', 'disbursedBy', 'batch']);
         $filter = $request->query('filter', 'all');
-        $pendingStatuses = ['pending_admin', 'needs_revision', 'pending_disbursement'];
+        $pendingStatuses = ['pending_admin', 'needs_revision', 'pending_disbursement', 'pending_funding'];
 
         if ($user->hasAnyRole(['admin', 'super_admin'])) {
             // admins see everything
@@ -186,7 +186,7 @@ class RequisitionController extends Controller
         $user = $request->user();
 
         $myOpen = Requisition::where('requested_by', $user->id)
-            ->whereIn('status', ['pending_admin', 'needs_revision', 'pending_disbursement'])
+            ->whereIn('status', ['pending_admin', 'needs_revision', 'pending_disbursement', 'pending_funding'])
             ->count();
 
         $myNeedsRevision = Requisition::where('requested_by', $user->id)

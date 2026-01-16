@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Guards\{Guard, Attendance, Client, ClientSite, Shift};
+use App\Models\ClientPayment;
 use App\Models\User;
 use App\Models\Core\Module;
 use App\Models\Approval;
@@ -88,25 +89,101 @@ class DashboardController extends Controller
             'sites_coverage_pct' => $totalSites > 0 ? round(($sitesCoveredToday / $totalSites) * 100, 1) : 0,
         ];
 
+        $recognizedRevenueYtd = 0.0;
+        try {
+            $recognizedRevenueYtd = (float) ClientPayment::where('year', now()->year)
+                ->where('month', '<=', now()->month)
+                ->sum('amount_paid');
+        } catch (\Throwable $e) {
+            $recognizedRevenueYtd = 0.0;
+        }
+
         // Payments summary (top-level): total_clients_due, total_clients_outstanding_value
         $paymentsSummary = [
             'total_clients' => \App\Models\Guards\Client::count(),
             'clients_with_outstanding' => 0,
             'outstanding_value' => 0.0,
         ];
+        $totalDueYtd = 0.0;
+        $totalPaidYtd = 0.0;
+        $totalCoveredYtd = 0.0;
         try {
             $year = now()->year;
-            $clientPayments = \App\Models\ClientPayment::where('year', $year)->get();
-            $grouped = $clientPayments->groupBy('client_id');
-            foreach ($grouped as $clientId => $rows) {
-                $due = $rows->sum('amount_due');
-                $paid = $rows->sum('amount_paid');
-                if ($due > $paid) {
-                    $paymentsSummary['clients_with_outstanding']++;
-                    $paymentsSummary['outstanding_value'] += ($due - $paid);
-                }
-            }
-            $paymentsSummary['outstanding_value'] = round($paymentsSummary['outstanding_value'], 2);
+            $limitMonth = now()->month;
+
+            Client::select(['id', 'monthly_rate', 'billing_start_date', 'contract_start_date', 'contract_end_date', 'created_at'])
+                ->orderBy('id')
+                ->chunkById(200, function ($clientsChunk) use ($year, $limitMonth, &$paymentsSummary, &$totalDueYtd, &$totalPaidYtd, &$totalCoveredYtd) {
+                    $clientIds = $clientsChunk->pluck('id')->all();
+                    $rawPayments = ClientPayment::where('year', $year)
+                        ->whereIn('client_id', $clientIds)
+                        ->get(['client_id', 'month', 'amount_due', 'amount_paid', 'prepaid_amount'])
+                        ->groupBy('client_id');
+
+                    foreach ($clientsChunk as $client) {
+                        $rows = $rawPayments->get($client->id) ?? collect();
+                        $byMonth = $rows->keyBy('month');
+
+                        $billingStart = null;
+                        if (!empty($client->billing_start_date)) {
+                            $billingStart = Carbon::parse($client->billing_start_date);
+                        } else {
+                            $billingStart = $client->contract_start_date ? Carbon::parse($client->contract_start_date) : ($client->created_at ? Carbon::parse($client->created_at) : null);
+                        }
+                        $contractEnd = $client->contract_end_date ? Carbon::parse($client->contract_end_date) : null;
+                        $monthlyRate = (float) ($client->monthly_rate ?? optional($client)->getMonthlyDueAmount() ?? 0);
+
+                        $startMonth = 1;
+                        if ($billingStart) {
+                            if ((int) $billingStart->year > $year) {
+                                continue;
+                            }
+                            if ((int) $billingStart->year === $year) {
+                                $startMonth = (int) $billingStart->month;
+                            }
+                        }
+
+                        $clientDue = 0.0;
+                        $clientPaid = 0.0;
+                        $clientCovered = 0.0;
+
+                        for ($m = $startMonth; $m <= $limitMonth; $m++) {
+                            $ym = Carbon::createFromDate($year, $m, 1);
+                            $inWindow = true;
+                            if ($billingStart && $ym->lt($billingStart->copy()->startOfMonth())) {
+                                $inWindow = false;
+                            }
+                            if ($contractEnd && $ym->gt($contractEnd->copy()->endOfMonth())) {
+                                $inWindow = false;
+                            }
+                            $baseDue = $inWindow ? $monthlyRate : 0.0;
+
+                            $row = $byMonth->get($m);
+                            $rowDue = $row ? (float) ($row->amount_due ?? 0) : 0.0;
+                            $monthDue = $rowDue > 0 ? $rowDue : (float) round($baseDue, 2);
+
+                            $monthPaid = $row ? (float) ($row->amount_paid ?? 0) : 0.0;
+                            $monthPrepaid = $row ? (float) ($row->prepaid_amount ?? 0) : 0.0;
+                            $covered = $monthPaid + $monthPrepaid;
+
+                            $clientDue += $monthDue;
+                            $clientPaid += $monthPaid;
+                            $clientCovered += $covered;
+                        }
+
+                        $totalDueYtd += $clientDue;
+                        $totalPaidYtd += $clientPaid;
+                        $totalCoveredYtd += $clientCovered;
+
+                        $outstanding = round($clientDue - $clientCovered, 2);
+                        if ($outstanding > 0) {
+                            $paymentsSummary['clients_with_outstanding']++;
+                            $paymentsSummary['outstanding_value'] += $outstanding;
+                        }
+                    }
+                });
+
+            $paymentsSummary['outstanding_value'] = round((float) $paymentsSummary['outstanding_value'], 2);
         } catch (\Throwable $e) {
             // ignore if table missing during early dev
         }
@@ -142,6 +219,8 @@ class DashboardController extends Controller
                 // merged metrics
                 'requisitions_mtd_total' => 0,
                 'pending_requisitions_count' => 0,
+                'collection_rate' => $totalDueYtd > 0 ? round(($totalPaidYtd / $totalDueYtd) * 100, 1) : 100,
+                'recognized_revenue_ytd' => round($recognizedRevenueYtd, 2),
             ],
             'it' => [
                 'uptime_30d' => 99.9,
@@ -287,6 +366,7 @@ class DashboardController extends Controller
             'coverageSummary' => $coverageSummary,
             'kpis' => $kpis,
             'paymentsSummary' => $paymentsSummary,
+            'recognizedRevenueYtd' => round($recognizedRevenueYtd, 2),
             'systemHealth' => $systemHealth,
             'approvalsPending' => $approvalsPending,
             'approvalsDetail' => $approvalsDetail,

@@ -11,12 +11,17 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Pagination\LengthAwarePaginator;
 
 class PaymentController extends Controller
 {
     public function index(Request $request)
     {
         $year = (int) ($request->input('year') ?: now()->year);
+        $now = now();
+        $currentYear = (int) $now->year;
+        $currentMonth = (int) $now->month;
+        $limitMonth = $year < $currentYear ? 12 : ($year > $currentYear ? 0 : $currentMonth);
         $perPage = (int) ($request->input('per_page') ?: 20);
         $sortField = $request->input('sort_field', 'name');
         $sortDirection = $request->input('sort_direction', 'asc');
@@ -26,9 +31,7 @@ class PaymentController extends Controller
         $status = $request->input('status', 'all');
 
         // Build base query with site filter
-        $query = Client::with(['sites' => function ($query) {
-            $query->select('id', 'client_id', 'name', 'address');
-        }]);
+        $query = Client::query();
 
         // Apply filters
         if ($searchTerm) {
@@ -48,85 +51,35 @@ class PaymentController extends Controller
         }
 
         // Apply payment status filter using the scope
-        if ($status && $status !== 'all') {
-            $query->byPaymentStatus($status, $year);
-        }
 
         // Calculate payment aggregates using raw SQL for efficiency
-        $currentYear = now()->year;
-        $currentMonth = now()->month;
-        $aggregates = DB::table('clients')
-            ->leftJoin('client_payments', function ($join) use ($year) {
-                $join->on('clients.id', '=', 'client_payments.client_id')
-                    ->where('client_payments.year', '=', $year)
-                    ->where('client_payments.month', '<=', now()->year === $year ? now()->month : 12);
-            })
-            ->select([
-                DB::raw('COUNT(DISTINCT clients.id) as total_clients'),
-                DB::raw('SUM(client_payments.amount_due) as total_due'),
-                    DB::raw("SUM(CASE WHEN client_payments.month <= {$currentMonth} OR client_payments.year < {$currentYear} THEN client_payments.amount_paid ELSE 0 END) as total_paid"),
-                    DB::raw("COUNT(DISTINCT CASE WHEN (client_payments.month <= {$currentMonth} OR client_payments.year < {$currentYear}) AND client_payments.amount_due > (client_payments.amount_paid + client_payments.prepaid_amount) THEN clients.id END) as clients_with_outstanding")
-            ])
-            ->first();
+        // NOTE: We compute the user-visible aggregates using the same billing logic as per-client summaries,
+        // to ensure totals still show even when rows don't exist yet in client_payments.
+        $aggregates = (object) [
+            'total_clients' => 0,
+            'total_due' => 0,
+            'total_paid' => 0,
+            'total_covered' => 0,
+            'clients_with_outstanding' => 0,
+        ];
 
         // Get top 5 overdue clients
-        $overdueClients = $query->clone()
-            ->withOverduePayments($year)
-            ->select(['id', 'name'])
-            ->withSum(['payments as outstanding_amount' => function ($query) use ($year) {
-                $query->where('year', $year)
-                    ->whereRaw('amount_due > (amount_paid + prepaid_amount)');
-            }], DB::raw('amount_due - (amount_paid + prepaid_amount)'))
-            ->orderByDesc('outstanding_amount')
-            ->take(5)
-            ->get();
+        $overdueClients = collect();
+        $clientMinimal = [];
 
         // Apply sorting and get paginated results
-        $query = match ($sortField) {
-            'expected_amount' => $query->withSum(['payments' => function ($query) use ($year) {
-                $query->where('year', $year);
-            }], 'amount_due')->orderBy('payments_sum_amount_due', $sortDirection),
-            'outstanding_amount' => $query->withSum(['payments' => function ($query) use ($year) {
-                $query->where('year', $year);
-            }], DB::raw('amount_due - (amount_paid + prepaid_amount)'))->orderBy('payments_sum_amount_due_minus_amount_paid', $sortDirection),
-            default => $query->orderBy('name', $sortDirection)
-        };
-
-        $clients = $query->paginate($perPage);
-
-        // Get payment maps for the current page
-        $clientIds = $clients->pluck('id');
-        $payments = ClientPayment::where('year', $year)
-            ->whereIn('client_id', $clientIds)
-            ->get(['client_id', 'month', 'paid', 'amount_due', 'amount_paid', 'prepaid_amount'])
-            ->groupBy('client_id')
-            ->map(function ($clientPayments) {
-                $map = array_fill(1, 12, ['paid' => false, 'amount_due' => 0.0, 'amount_paid' => 0.0, 'prepaid_amount' => 0.0]);
-                foreach ($clientPayments as $payment) {
-                    $map[$payment->month] = [
-                        'paid' => (bool) $payment->paid,
-                        'amount_due' => (float) $payment->amount_due,
-                        'amount_paid' => (float) $payment->amount_paid,
-                        'prepaid_amount' => (float) $payment->prepaid_amount,
-                    ];
-                }
-                return $map;
-            });
-
-        // Calculate summaries for the current page
         $summaries = [];
-        foreach ($clients as $client) {
-            $summaries[$client->id] = $client->getPaymentSummary($year);
-        }
-
-        // Get flags for clients with 3+ unpaid months
-        $flags = array_filter($summaries, fn($s) => $s['is_overdue']);
-        $flags = array_combine(array_keys($flags), array_fill(0, count($flags), true));
+        $flags = [];
 
         // Chunk through clients matching the same filters to compute summary aggregates
+        $totalDueAllClients = 0.0;
+        $totalPaidAllClients = 0.0;
+        $totalCoveredAllClients = 0.0;
+        $clientsWithOutstanding = 0;
+        $maxOutstandingMonths = 0;
         $chunkSelect = ['id', 'name', 'monthly_rate', 'billing_start_date', 'contract_start_date', 'contract_end_date', 'created_at'];
         $chunkQuery = (clone $query)->select($chunkSelect)->orderBy('id');
-        $chunkQuery->chunkById(100, function ($clientsChunk) use ($year, &$totalDueAllClients, &$totalPaidAllClients, &$clientsWithOutstanding, &$maxOutstandingMonths, &$overdueClients, &$clientMinimal, &$summaries, &$flags) {
+        $chunkQuery->chunkById(100, function ($clientsChunk) use ($year, &$totalDueAllClients, &$totalPaidAllClients, &$totalCoveredAllClients, &$clientsWithOutstanding, &$maxOutstandingMonths, &$overdueClients, &$clientMinimal, &$summaries, &$flags, $limitMonth) {
             $clientIds = $clientsChunk->pluck('id')->all();
 
             // Fetch payments only for this chunk of clients
@@ -168,14 +121,10 @@ class PaymentController extends Controller
                 // Ensure we have a reliable monthly rate even if not stored on the model
                 $monthlyRate = (float) ($client->monthly_rate ?? optional($client)->getMonthlyDueAmount() ?? 0);
 
-                $carry = 0.0;
-                $currentYear = now()->year;
-                $currentMonth = now()->month;
-                $limitMonth = $year < $currentYear ? 12 : ($year > $currentYear ? 0 : $currentMonth);
-
                 $unpaidCount = 0;
                 $totalDue = 0.0;
                 $totalPaid = 0.0;
+                $totalCovered = 0.0;
 
                 // Only count months from billing start date onwards
                 $billingStartMonth = 1;
@@ -219,19 +168,23 @@ class PaymentController extends Controller
                     }
                     $baseDue = $inWindow ? $monthlyRate : 0.0;
 
-                    // Rolling carry logic: if month was paid, assume it covered base due; otherwise add base due to carry.
                     $computedDue = round($baseDue, 2);
-                    $computedPaid = ($monthState['paid'] ?? false) ? min($computedDue, (float) ($monthState['amount_paid'] ?? 0)) : 0.0;
+                    $monthDue = ((float) ($monthState['amount_due'] ?? 0)) > 0
+                        ? (float) ($monthState['amount_due'] ?? 0)
+                        : (float) $computedDue;
 
-                    // Consider prepaid_amount as coverage when determining unpaid months
-                    $covered = (($monthState['amount_paid'] ?? 0) + ($monthState['prepaid_amount'] ?? 0));
-                    if ($covered < ($monthState['amount_due'] ?? $computedDue)) {
+                    $monthPaid = (float) ($monthState['amount_paid'] ?? 0);
+                    $monthPrepaid = (float) ($monthState['prepaid_amount'] ?? 0);
+                    $covered = $monthPaid + $monthPrepaid;
+
+                    if ($monthDue > 0 && $monthDue > $covered) {
                         $unpaidCount++;
                     }
 
-                    $totalDue += (float) ($monthState['amount_due'] ?? $computedDue);
+                    $totalDue += (float) $monthDue;
                     // Only include actual paid amounts for revenue recognition. Prepaid amounts will be moved to amount_paid when the month arrives.
-                    $totalPaid += (float) ($monthState['amount_paid'] ?? $computedPaid);
+                    $totalPaid += (float) $monthPaid;
+                    $totalCovered += (float) $covered;
                 }
 
                 if ($unpaidCount >= 3) {
@@ -239,11 +192,12 @@ class PaymentController extends Controller
                 }
 
                 $billingStartStr = !empty($client->billing_start_date) ? (\Carbon\Carbon::parse($client->billing_start_date)->toDateString()) : ($client->contract_start_date ? (\Carbon\Carbon::parse($client->contract_start_date)->toDateString()) : ($client->created_at ? $client->created_at->toDateString() : null));
-                $outstandingAmount = round($totalDue - $totalPaid, 2);
+                $outstandingAmount = round($totalDue - $totalCovered, 2);
 
                 // Update global stats
                 $totalDueAllClients += $totalDue;
                 $totalPaidAllClients += $totalPaid;
+                $totalCoveredAllClients += $totalCovered;
                 if ($outstandingAmount > 0) {
                     $clientsWithOutstanding++;
                     $maxOutstandingMonths = max($maxOutstandingMonths, $unpaidCount);
@@ -304,6 +258,19 @@ class PaymentController extends Controller
         $currentPage = (int) $request->input('page', 1);
         $pagedIds = array_slice($clientIds, ($currentPage - 1) * $perPage, $perPage);
 
+        // Populate aggregates from computed totals
+        $aggregates->total_clients = $total;
+        $aggregates->total_due = $totalDueAllClients;
+        $aggregates->total_paid = $totalPaidAllClients;
+        $aggregates->total_covered = $totalCoveredAllClients;
+        $aggregates->clients_with_outstanding = $clientsWithOutstanding;
+
+        $overdueClients = collect($overdueClients)
+            ->sortByDesc('outstanding_amount')
+            ->values()
+            ->take(5)
+            ->values();
+
         // Fetch full client models for the page (including sites)
         $pagedClients = collect();
         if (!empty($pagedIds)) {
@@ -314,9 +281,23 @@ class PaymentController extends Controller
             }
         }
 
+        // Replace the paginator items with the computed + ordered page.
+        $clients = new LengthAwarePaginator(
+            $pagedClients,
+            $total,
+            $perPage,
+            $currentPage,
+            ['path' => $request->url(), 'query' => $request->query()]
+        );
+
         // Build detailed month maps only for clients on this page
+        $payments = collect();
         if (!empty($pagedIds)) {
-            $pagePayments = ClientPayment::where('year', $year)->whereIn('client_id', $pagedIds)->get(['client_id','month','paid','amount_due','amount_paid','prepaid_amount'])->groupBy('client_id');
+            $pagePayments = ClientPayment::where('year', $year)
+                ->whereIn('client_id', $pagedIds)
+                ->get(['client_id','month','paid','amount_due','amount_paid','prepaid_amount'])
+                ->groupBy('client_id');
+
             foreach ($pagedIds as $cid) {
                 $map = [];
                 for ($m = 1; $m <= 12; $m++) {
@@ -333,23 +314,30 @@ class PaymentController extends Controller
             }
         }
 
+        $pageSummaries = [];
+        $pageFlags = [];
+        foreach ($pagedIds as $id) {
+            if (isset($summaries[$id])) {
+                $pageSummaries[$id] = $summaries[$id];
+            }
+            if (!empty($flags[$id])) {
+                $pageFlags[$id] = true;
+            }
+        }
+
         // Sort overdue clients by outstanding amount and take top 5
         $overallSummary = [
-            'total_clients' => $aggregates->total_clients,
-            'clients_with_outstanding' => $aggregates->clients_with_outstanding,
-            'clients_overdue_percentage' => $aggregates->total_clients > 0 ? 
-                round(($aggregates->clients_with_outstanding / $aggregates->total_clients) * 100, 1) : 0,
-            'total_outstanding' => round(($aggregates->total_due ?? 0) - ($aggregates->total_paid ?? 0), 2),
-            'max_outstanding_months' => DB::table('client_payments')
-                ->where('year', $year)
-                ->where('paid', false)
-                ->groupBy('client_id')
-                ->count(),
+            'total_clients' => (int) ($aggregates->total_clients ?? 0),
+            'clients_with_outstanding' => (int) ($aggregates->clients_with_outstanding ?? 0),
+            'clients_overdue_percentage' => ($aggregates->total_clients ?? 0) > 0 ?
+                round((($aggregates->clients_with_outstanding ?? 0) / max(1, $aggregates->total_clients ?? 0)) * 100, 1) : 0,
+            'total_outstanding' => round((float) (($aggregates->total_due ?? 0) - ($aggregates->total_covered ?? 0)), 2),
+            'max_outstanding_months' => (int) $maxOutstandingMonths,
             'overdue_clients' => $overdueClients,
-            'total_due' => round($aggregates->total_due ?? 0, 2),
-            'total_paid' => round($aggregates->total_paid ?? 0, 2),
-            'collection_rate' => $aggregates->total_due > 0 ? 
-                round(($aggregates->total_paid / $aggregates->total_due) * 100, 1) : 100,
+            'total_due' => round((float) ($aggregates->total_due ?? 0), 2),
+            'total_paid' => round((float) ($aggregates->total_paid ?? 0), 2),
+            'collection_rate' => ((float) ($aggregates->total_due ?? 0)) > 0 ?
+                round(((float) ($aggregates->total_paid ?? 0) / (float) ($aggregates->total_due ?? 0)) * 100, 1) : 100,
         ];
 
         // Choose view based on current route namespace (admin vs finance)
@@ -362,8 +350,8 @@ class PaymentController extends Controller
             'year' => $year,
             'clients' => $clients,
             'payments' => $payments,
-            'flags' => $flags,
-            'summaries' => $summaries,
+            'flags' => $pageFlags,
+            'summaries' => $pageSummaries,
             'overallSummary' => $overallSummary,
             'sites' => ClientSite::select('id', 'name', 'address')->orderBy('name')->get(),
             'zones' => Zone::select('id', 'name')->orderBy('name')->get(),

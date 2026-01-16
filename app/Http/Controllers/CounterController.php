@@ -25,7 +25,7 @@ class CounterController extends Controller
         $notificationsUnread = $user->unreadNotifications()->count();
 
         $requisitionsMyOpen = Requisition::where('requested_by', $user->id)
-            ->whereIn('status', ['pending_admin', 'needs_revision', 'pending_disbursement'])
+            ->whereIn('status', ['pending_admin', 'needs_revision', 'pending_disbursement', 'pending_funding'])
             ->count();
         $requisitionsNeedsRevision = Requisition::where('requested_by', $user->id)
             ->where('status', 'needs_revision')
