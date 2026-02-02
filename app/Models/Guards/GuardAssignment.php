@@ -17,17 +17,19 @@ class GuardAssignment extends Model
         'assignment_type',
         'notes',
         'is_active',
+        'active',
     ];
 
     protected $casts = [
         'start_date' => 'date',
         'end_date' => 'date',
         'is_active' => 'boolean',
+        'active' => 'boolean',
     ];
 
     public function assignedGuard(): BelongsTo
     {
-        return $this->belongsTo(Guard::class);
+        return $this->belongsTo(Guard::class, 'guard_id');
     }
 
     public function clientSite(): BelongsTo

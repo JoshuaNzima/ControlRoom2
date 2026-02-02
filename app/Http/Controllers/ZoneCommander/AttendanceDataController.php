@@ -5,6 +5,7 @@ namespace App\Http\Controllers\ZoneCommander;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Guards\Attendance;
+use App\Models\Guards\GuardAssignment;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 
@@ -25,28 +26,35 @@ class AttendanceDataController extends Controller
         // Get the last 7 days including today
         for ($i = 6; $i >= 0; $i--) {
             $date = Carbon::today()->subDays($i);
-            $dates[] = $date->format('D'); // Short day name
-            
-            // Get total guards in the zone for that day
-            $totalGuards = \App\Models\Guards\Guard::whereHas('assignments.clientSite', function($query) use ($user) {
-                $query->where('zone_id', $user->zone_id);
-            })
-            ->whereDate('created_at', '<=', $date)
-            ->count();
+            $dates[] = $date->format('D');
+
+            $totalGuards = GuardAssignment::query()
+                ->whereHas('clientSite', function ($q) use ($user) {
+                    $q->where('zone_id', $user->zone_id);
+                })
+                ->where('start_date', '<=', $date)
+                ->where(function ($q) use ($date) {
+                    $q->whereNull('end_date')->orWhere('end_date', '>=', $date);
+                })
+                ->where('is_active', true)
+                ->whereHas('assignedGuard', fn($q) => $q->where('status', 'active'))
+                ->distinct('guard_id')
+                ->count('guard_id');
 
             if ($totalGuards === 0) {
                 $attendanceData[] = 0;
                 continue;
             }
 
-            // Get attendance for that day
-            $presentGuards = Attendance::whereDate('date', $date)
-                ->whereHas('guardRelation.assignments.clientSite', function($query) use ($user) {
-                    $query->where('zone_id', $user->zone_id);
+            $presentGuards = Attendance::query()
+                ->whereDate('date', $date)
+                ->whereNotNull('check_in_time')
+                ->whereHas('clientSite', function ($q) use ($user) {
+                    $q->where('zone_id', $user->zone_id);
                 })
-                ->count();
+                ->distinct('guard_id')
+                ->count('guard_id');
 
-            // Calculate attendance rate
             $attendanceRate = ($presentGuards / $totalGuards) * 100;
             $attendanceData[] = round($attendanceRate, 1);
         }
@@ -66,9 +74,18 @@ class AttendanceDataController extends Controller
             ], 400);
         }
 
-        $guards = \App\Models\Guards\Guard::whereHas('assignments.clientSite', function($query) use ($user) {
-            $query->where('zone_id', $user->zone_id);
-        })->get();
+        $guards = \App\Models\Guards\Guard::query()
+            ->whereHas('assignments', function ($q) use ($user) {
+                $q->whereHas('clientSite', fn($q2) => $q2->where('zone_id', $user->zone_id))
+                    ->where('start_date', '<=', today())
+                    ->where(function ($q3) {
+                        $q3->whereNull('end_date')->orWhere('end_date', '>=', today());
+                    })
+                    ->where('is_active', true)
+                    ;
+            })
+            ->where('status', 'active')
+            ->get();
 
         $distribution = [
             'normal' => 0,

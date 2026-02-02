@@ -47,12 +47,29 @@ class LiveMonitoringController extends Controller
             ->get()
             ->map(function ($attendance) {
                 $action = 'check_in';
-                $timestamp = $attendance->check_in_time ? $attendance->check_in_time->toIso8601String() : $attendance->updated_at?->toIso8601String();
+                $timestamp = $attendance->updated_at?->toIso8601String();
 
-                // If there's a check out time and a check in baseline, prefer the later event
-                if ($attendance->check_out_time && $attendance->check_in_time && $attendance->check_out_time->gt($attendance->check_in_time)) {
-                    $action = 'check_out';
-                    $timestamp = $attendance->check_out_time->toIso8601String();
+                $dateString = $attendance->date?->toDateString() ?: (string) $attendance->getRawOriginal('date');
+                $rawIn = $attendance->getRawOriginal('check_in_time') ?: null;
+                $rawOut = $attendance->getRawOriginal('check_out_time') ?: null;
+
+                try {
+                    $checkInAt = ($dateString && $rawIn) ? Carbon::parse($dateString.' '.$rawIn) : null;
+                    $checkOutAt = ($dateString && $rawOut) ? Carbon::parse($dateString.' '.$rawOut) : null;
+
+                    if ($checkInAt) {
+                        $timestamp = $checkInAt->toIso8601String();
+                    }
+
+                    if ($checkInAt && $checkOutAt) {
+                        if ($checkOutAt->lessThanOrEqualTo($checkInAt)) {
+                            $checkOutAt = $checkOutAt->addDay();
+                        }
+
+                        $action = 'check_out';
+                        $timestamp = $checkOutAt->toIso8601String();
+                    }
+                } catch (\Throwable $e) {
                 }
 
                 return [
@@ -78,8 +95,8 @@ class LiveMonitoringController extends Controller
 
         $stats = [
             'qr_scans_last_hour' => CheckpointScan::where('scanned_at', '>=', $oneHourAgo)->count(),
-            'check_ins_last_hour' => Attendance::where('check_in_time', '>=', $oneHourAgo)->count(),
-            'check_outs_last_hour' => Attendance::where('check_out_time', '>=', $oneHourAgo)->count(),
+            'check_ins_last_hour' => Attendance::whereNotNull('check_in_time')->where('updated_at', '>=', $oneHourAgo)->count(),
+            'check_outs_last_hour' => Attendance::whereNotNull('check_out_time')->where('updated_at', '>=', $oneHourAgo)->count(),
             'late_arrivals_last_hour' => Attendance::where('status', 'late')
                 ->where('updated_at', '>=', $oneHourAgo)
                 ->count(),
@@ -131,23 +148,51 @@ class LiveMonitoringController extends Controller
 
         $overdueHours = (int) config('attendance.alerts.overdue_checkout_hours', 12);
 
+        $now = Carbon::now();
+
         // Guards who checked in but haven't checked out after the configured number of hours
         $overdueCheckouts = Attendance::with(['guardRelation', 'clientSite.client'])
             ->whereDate('date', Carbon::today())
             ->whereNotNull('check_in_time')
             ->whereNull('check_out_time')
-            ->where('check_in_time', '<', Carbon::now()->subHours($overdueHours))
             ->get()
             ->map(function ($attendance) {
+                $dateString = $attendance->date?->toDateString() ?: (string) $attendance->getRawOriginal('date');
+                $rawIn = $attendance->getRawOriginal('check_in_time') ?: null;
+                $checkInIso = null;
+                $hoursOnDuty = null;
+
+                if ($dateString && $rawIn) {
+                    try {
+                        $checkInAt = Carbon::parse($dateString.' '.$rawIn);
+                        $checkInIso = $checkInAt->toIso8601String();
+                        $hoursOnDuty = $checkInAt->diffInHours(Carbon::now());
+                    } catch (\Throwable $e) {
+                    }
+                }
+
                 return [
                     'type' => 'overdue_checkout',
                     'guard_name' => $attendance->guardRelation?->name ?? 'Unknown',
                     'site_name' => $attendance->clientSite?->name ?? 'Unknown',
                     'client_name' => $attendance->clientSite?->client?->name ?? 'Unknown',
-                    'check_in_time' => $attendance->check_in_time ? $attendance->check_in_time->toIso8601String() : null,
-                    'hours_on_duty' => $attendance->check_in_time->diffInHours(Carbon::now()),
+                    'check_in_time' => $checkInIso,
+                    'hours_on_duty' => $hoursOnDuty,
                 ];
             });
+
+        $overdueCheckouts = $overdueCheckouts->filter(function ($row) use ($now, $overdueHours) {
+            $checkInIso = $row['check_in_time'] ?? null;
+            if (!$checkInIso) {
+                return false;
+            }
+            try {
+                $checkInAt = Carbon::parse($checkInIso);
+            } catch (\Throwable $e) {
+                return false;
+            }
+            return $now->greaterThanOrEqualTo($checkInAt->copy()->addHours($overdueHours));
+        })->values();
 
         $alerts = $alerts->merge($overdueCheckouts);
 

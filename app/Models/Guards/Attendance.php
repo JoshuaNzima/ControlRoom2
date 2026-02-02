@@ -104,22 +104,66 @@ class Attendance extends Model
 
     public function calculateHours(): void
     {
-        if ($this->check_in_time && $this->check_out_time) {
-            $totalHours = $this->check_out_time->diffInHours($this->check_in_time, true);
-            
-            // Standard work day is 8 hours
-            $standardHours = 8;
-            
-            if ($totalHours > $standardHours) {
-                $this->hours_worked = $standardHours;
-                $this->overtime_hours = $totalHours - $standardHours;
-            } else {
-                $this->hours_worked = $totalHours;
-                $this->overtime_hours = 0;
-            }
-            
-            $this->save();
+        if (!$this->check_in_time || !$this->check_out_time) {
+            return;
         }
+
+        $dateString = $this->date?->toDateString() ?: (string) $this->getRawOriginal('date');
+        if (!$dateString) {
+            return;
+        }
+
+        $inValue = $this->check_in_time;
+        $outValue = $this->check_out_time;
+
+        $rawIn = $inValue instanceof Carbon ? $inValue->format('H:i:s') : (string) $inValue;
+        $rawOut = $outValue instanceof Carbon ? $outValue->format('H:i:s') : (string) $outValue;
+
+        if (!$rawIn || !$rawOut) {
+            return;
+        }
+
+        try {
+            $rawInString = trim((string) $rawIn);
+            $rawOutString = trim((string) $rawOut);
+
+            if (str_contains($rawInString, '-') || str_contains($rawInString, 'T')) {
+                $checkInAt = Carbon::parse($rawInString);
+            } else {
+                $inParts = preg_split('/\s+/', $rawInString);
+                $inTimePart = $inParts ? (string) end($inParts) : $rawInString;
+                $checkInAt = Carbon::parse($dateString.' '.$inTimePart);
+            }
+
+            if (str_contains($rawOutString, '-') || str_contains($rawOutString, 'T')) {
+                $checkOutAt = Carbon::parse($rawOutString);
+            } else {
+                $outParts = preg_split('/\s+/', $rawOutString);
+                $outTimePart = $outParts ? (string) end($outParts) : $rawOutString;
+                $checkOutAt = Carbon::parse($dateString.' '.$outTimePart);
+            }
+        } catch (\Throwable $e) {
+            return;
+        }
+
+        if ($checkOutAt->lessThanOrEqualTo($checkInAt)) {
+            $checkOutAt = $checkOutAt->addDay();
+        }
+
+        $totalHours = round($checkInAt->diffInMinutes($checkOutAt, true) / 60, 2);
+
+        // Standard work day is 8 hours
+        $standardHours = 8;
+
+        if ($totalHours > $standardHours) {
+            $this->hours_worked = $standardHours;
+            $this->overtime_hours = max(0, $totalHours - $standardHours);
+        } else {
+            $this->hours_worked = $totalHours;
+            $this->overtime_hours = 0;
+        }
+
+        $this->save();
     }
 
     public function scopeToday($query)

@@ -1,11 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Head, usePage } from '@inertiajs/react';
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import { Link, usePage } from '@inertiajs/react';
+import MessagesLayout from '@/Layouts/MessagesLayout';
 import { Card, CardContent, CardHeader } from '@/Components/ui/card';
 import { Input } from '@/Components/ui/input';
 import { Button } from '@/Components/ui/button';
 import { Badge } from '@/Components/ui/badge';
-import { ScrollArea } from '@/Components/ui/scroll-area';
 import axios from 'axios';
 import { PageProps } from '@/types';
 
@@ -69,6 +68,7 @@ const Show: React.FC<ShowProps> = ({ auth, conversation }) => {
   const [messages, setMessages] = useState<Message[]>(conversation.messages || []);
   const [newMessage, setNewMessage] = useState('');
   const [isEmergency, setIsEmergency] = useState(false);
+  const scrollViewportRef = useRef<HTMLDivElement | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const userId = usePage<PageProps>().props.auth.user.id;
 
@@ -78,12 +78,20 @@ const Show: React.FC<ShowProps> = ({ auth, conversation }) => {
     } catch {}
   };
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
+    try {
+      if (messagesEndRef.current) {
+        messagesEndRef.current.scrollIntoView({ behavior, block: 'end' });
+        return;
+      }
+      if (scrollViewportRef.current) {
+        scrollViewportRef.current.scrollTop = scrollViewportRef.current.scrollHeight;
+      }
+    } catch {}
   };
 
   useEffect(() => {
-    scrollToBottom();
+    scrollToBottom('auto');
 
     try {
       const echo = (window as any).Echo;
@@ -95,14 +103,14 @@ const Show: React.FC<ShowProps> = ({ auth, conversation }) => {
         if (e?.message?.sender_id && Number(e.message.sender_id) !== Number(userId)) {
           markRead();
         }
-        scrollToBottom();
+        scrollToBottom('auto');
       });
 
       return () => {
         (echo as any).leave(`conversation.${conversation.id}`);
       };
     } catch {}
-  }, [conversation.id]);
+  }, [conversation.id, userId]);
 
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -120,81 +128,94 @@ const Show: React.FC<ShowProps> = ({ auth, conversation }) => {
       setMessages((current: Message[]) => [...current, data]);
       setNewMessage('');
       setIsEmergency(false);
-      scrollToBottom();
+      scrollToBottom('auto');
     } catch (error) {
       console.error('Failed to send message:', error);
     }
   };
 
   const title = conversation.type === 'direct'
-    ? (conversation.participants || []).find(p => p.id !== userId)?.name
+    ? (conversation.participants || []).find(p => String(p.id) !== String(userId))?.name
     : (conversation.title || conversation.name || 'Group');
 
   return (
-    <AuthenticatedLayout user={auth?.user as any}>
-      <Head title={`Chat - ${title}`} />
-
+    <MessagesLayout title={`Chat - ${title}`}>
       <div className="max-w-4xl mx-auto">
-        <Card className="dark:bg-gray-800 dark:border-gray-700">
-          <CardHeader className="flex flex-row items-center justify-between border-b border-gray-200 dark:border-gray-600">
-            <div>
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
-                {title}
-              </h2>
-              <div className="text-sm text-gray-500 dark:text-gray-400">
-                {conversation.participants.length} participants
+        <Card className="dark:bg-gray-800 dark:border-gray-700 overflow-hidden">
+          <CardHeader className="p-0">
+            <div className="sticky top-0 z-10 border-b border-gray-200 dark:border-gray-700 bg-white/95 dark:bg-gray-900/80 backdrop-blur">
+              <div className="px-4 py-3 flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <Link
+                      href={route('messages.conversations.index')}
+                      className="inline-flex items-center justify-center h-9 w-9 rounded-md border border-gray-200 text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800"
+                      aria-label="Back"
+                    >
+                      ←
+                    </Link>
+                    <h2 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-gray-100 truncate">{title}</h2>
+                    {conversation.type === 'group' && (
+                      <Badge variant="secondary" className="dark:bg-gray-700 dark:text-gray-100">Group</Badge>
+                    )}
+                  </div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    {conversation.participants.length} participant{conversation.participants.length === 1 ? '' : 's'}
+                  </div>
+                </div>
               </div>
             </div>
-            {conversation.type === 'group' && (
-              <Badge variant="secondary" className="dark:bg-gray-600 dark:text-gray-100">
-                Group Chat
-              </Badge>
-            )}
           </CardHeader>
 
           <CardContent className="p-0">
-            <ScrollArea className="h-[60vh] p-4">
-              <div className="space-y-4">
+            <div className="flex flex-col h-[calc(100vh-14rem)] sm:h-[70vh]">
+              <div
+                ref={scrollViewportRef}
+                className="flex-1 overflow-auto px-4 py-3 bg-white dark:bg-gray-900"
+              >
                 {messages.map((message) => (
                   <MessageBubble
                     key={message.id}
                     message={message}
-                    isOwnMessage={message.sender_id === userId}
+                    isOwnMessage={String(message.sender_id) === String(userId)}
                   />
                 ))}
                 <div ref={messagesEndRef} />
               </div>
-            </ScrollArea>
 
-            <form onSubmit={sendMessage} className="p-4 border-t border-gray-200 dark:border-gray-600">
-              <div className="flex items-center space-x-2">
-                <Button
-                  type="button"
-                  variant={isEmergency ? 'destructive' : 'outline'}
-                  size="icon"
-                  onClick={() => setIsEmergency(!isEmergency)}
-                  className={isEmergency ? '' : 'dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700'}
-                  aria-pressed={isEmergency}
-                >
-                  🚨
-                </Button>
-                <div className="flex-1">
-                  <Input
-                    value={newMessage}
-                    onChange={e => setNewMessage(e.target.value)}
-                    placeholder="Type your message..."
-                    className="w-full dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
-                  />
+              <form onSubmit={sendMessage} className="border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 py-3">
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    variant={isEmergency ? 'destructive' : 'outline'}
+                    size="icon"
+                    onClick={() => setIsEmergency(!isEmergency)}
+                    className={isEmergency ? '' : 'dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800'}
+                    aria-pressed={isEmergency}
+                    aria-label={isEmergency ? 'Emergency message enabled' : 'Toggle emergency message'}
+                  >
+                    🚨
+                  </Button>
+
+                  <div className="flex-1">
+                    <Input
+                      value={newMessage}
+                      onChange={e => setNewMessage(e.target.value)}
+                      placeholder={isEmergency ? 'Type an emergency message…' : 'Type your message…'}
+                      className="w-full dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100"
+                    />
+                  </div>
+
+                  <Button type="submit" className="dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600">
+                    Send
+                  </Button>
                 </div>
-                <Button type="submit" className="dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600">
-                  Send
-                </Button>
-              </div>
-            </form>
+              </form>
+            </div>
           </CardContent>
         </Card>
       </div>
-    </AuthenticatedLayout>
+    </MessagesLayout>
   );
 };
 

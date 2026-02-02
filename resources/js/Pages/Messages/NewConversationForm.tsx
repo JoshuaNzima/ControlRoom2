@@ -111,7 +111,7 @@ const NewConversationForm: React.FC<Props> = ({ onClose, agents = [] }) => {
                       {agents.map((agent) => (
                         <CommandItem
                           key={agent.id}
-                          onSelect={() => {
+                          onClick={() => {
                             const existing = data.participants || [];
                             const has = existing.includes(agent.id);
                             if (data.type === 'direct') {

@@ -57,28 +57,35 @@ export default function ZoneCommanderLayout({ title, children }: Props) {
 						title={title}
 						fullScreen={false}
 						header={
-							<div className="flex items-center justify-between">
-								<h1 className="text-xl font-bold text-red-900 dark:text-gray-100">{title}</h1>
-								<div className="flex items-center gap-3">
+							<div className="flex items-center justify-between gap-3">
+								<h1 className="text-xl font-bold text-red-900 dark:text-gray-100 truncate">{title}</h1>
+								<div className="flex items-center justify-end gap-2 sm:gap-3 shrink-0">
 									<NotificationBell />
 									<Link
 										href={route('profile.dashboard')}
-										className="inline-flex items-center px-3 py-1.5 rounded-md bg-gray-800 text-white hover:bg-gray-700 text-sm"
+										className="inline-flex items-center justify-center rounded-md bg-gray-800 text-white hover:bg-gray-700 px-2 py-2 sm:hidden"
+									>
+										<IconMapper name="user" className="h-5 w-5" />
+									</Link>
+									<Link
+										href={route('profile.dashboard')}
+										className="hidden sm:inline-flex items-center px-3 py-1.5 rounded-md bg-gray-800 text-white hover:bg-gray-700 text-sm"
 									>
 										My Profile
 									</Link>
 									{isSuperAdmin && (
 										<Link
 											href={route('superadmin.dashboard')}
-											className="inline-flex items-center px-3 py-1.5 rounded-md bg-red-700 text-white hover:bg-red-600 text-sm"
+											className="inline-flex items-center gap-2 rounded-md bg-red-700 px-2 py-2 sm:px-3 sm:py-1.5 text-sm font-medium text-white hover:bg-red-600"
 										>
 											<IconMapper name="shield" className="h-4 w-4" />
-											Super Admin
+											<span className="hidden sm:inline">Super Admin</span>
+											<span className="sm:hidden">SA</span>
 										</Link>
 									)}
 									<Link
 										href={route('expense.request.create')}
-										className="inline-flex items-center px-3 py-1.5 rounded-md bg-red-600 text-white hover:bg-red-700 text-sm"
+										className="hidden sm:inline-flex items-center px-3 py-1.5 rounded-md bg-red-600 text-white hover:bg-red-700 text-sm"
 									>
 										Request Requisition
 									</Link>

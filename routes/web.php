@@ -133,6 +133,7 @@ Route::middleware(['auth', 'role:super_admin'])->prefix('superadmin')->name('sup
         $sort = in_array(request('sort'), ['name','employee_id','status','supervisor_id']) ? request('sort') : 'name';
         $dir = request('dir') === 'desc' ? 'desc' : 'asc';
         $guards = \App\Models\Guards\Guard::with('supervisor')
+            ->where('employee_role', 'guard')
             ->when(request('search'), function($q, $search) {
                 $q->where(function($qq) use ($search) {
                     $qq->where('name', 'like', "%{$search}%")
@@ -338,11 +339,20 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/sites', [\App\Http\Controllers\ZoneCommander\SiteController::class, 'index'])
             ->middleware('permission:zone.view.sites')
             ->name('sites.index');
+        Route::get('/sites/json', [\App\Http\Controllers\ZoneCommander\SiteController::class, 'sitesJson'])
+            ->middleware('permission:zone.view.sites')
+            ->name('sites.json');
 
         // Guards & Supervisors
         Route::get('/guards', [\App\Http\Controllers\ZoneCommander\GuardController::class, 'index'])
             ->middleware('permission:zone.view.guards')
             ->name('guards.index');
+        Route::post('/guards/assign-site', [\App\Http\Controllers\ZoneCommander\GuardController::class, 'assignToSite'])
+            ->middleware('permission:zone.view.guards')
+            ->name('guards.assign-site');
+        Route::post('/guards/unassign-site', [\App\Http\Controllers\ZoneCommander\GuardController::class, 'unassignFromSite'])
+            ->middleware('permission:zone.view.guards')
+            ->name('guards.unassign-site');
         Route::get('/supervisors', [\App\Http\Controllers\ZoneCommander\SupervisorController::class, 'index'])
             ->middleware('permission:zone.view.supervisors')
             ->name('supervisors.index');

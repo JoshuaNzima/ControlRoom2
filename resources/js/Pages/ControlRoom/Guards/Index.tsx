@@ -8,8 +8,6 @@ import IconMapper from '@/Components/IconMapper';
 import Modal from '@/Components/Modal';
 import GuardForm from '@/Components/Guards/GuardForm';
 import AssignSiteModal from '@/Components/Guards/AssignSiteModal';
-import ManualCheckInModal from '@/Components/Guards/ManualCheckInModal';
-import ManualCheckOutModal from '@/Components/Guards/ManualCheckOutModal';
 
 type Guard = {
   id: number;
@@ -27,17 +25,19 @@ type PageProps = {
   guards?: { data: Guard[]; links?: any; meta?: any };
   filters?: { search?: string; status?: string; profile_status?: string; zone_id?: string; grade_id?: string; on_duty?: any; sort?: string; dir?: string; per_page?: any };
   supervisors?: Array<{ id: number; name: string }>;
+  clients?: Array<{ id: number; name: string }>;
   grades?: Array<{ id: number; code: string; name: string }>;
   zones?: Array<{ id: number; name: string }>;
   canAssignSupervisor?: boolean;
 };
 
 export default function GuardsIndex() {
-  const { guards: guardsProp = { data: [], links: [], meta: {} }, filters = {}, supervisors = [], grades = [], zones = [], canAssignSupervisor = false } = usePage<PageProps>().props as any;
+  const { guards: guardsProp = { data: [], links: [], meta: {} }, filters = {}, supervisors = [], clients = [], grades = [], zones = [], canAssignSupervisor = false } = usePage<PageProps>().props as any;
   const [search, setSearch] = useState(filters.search || '');
   const [status, setStatus] = useState<string>(filters.status || '');
   const [profileStatus, setProfileStatus] = useState<string>(filters.profile_status || '');
   const [zoneId, setZoneId] = useState<string>(filters.zone_id || '');
+  const [clientId, setClientId] = useState<string>((filters as any).client_id || '');
   const [gradeId, setGradeId] = useState<string>(filters.grade_id || '');
   const [onDuty, setOnDuty] = useState<boolean>(filters.on_duty === '1' || filters.on_duty === 1 || filters.on_duty === true || filters.on_duty === 'true');
   const [sort, setSort] = useState<string>(() => {
@@ -72,6 +72,24 @@ export default function GuardsIndex() {
     return true;
   };
 
+  const canMarkPresent = (g: Guard) => {
+    if (!g.today_attendance) return true;
+    if (g.today_attendance.check_in) return false;
+    if (g.today_attendance.status === 'present') return false;
+    return true;
+  };
+
+  const markPresent = (g: Guard) => {
+    if (!confirm(`Mark ${g.name} as present for today?`)) return;
+    router.post(route('control-room.attendance.mark-present'), {
+      guard_id: g.id,
+      client_site_id: g.active_assignment?.site_id || undefined,
+    }, {
+      preserveScroll: true,
+      onSuccess: () => router.reload(),
+    });
+  };
+
   const markAbsent = (g: Guard) => {
     if (!confirm(`Mark ${g.name} as absent for today?`)) return;
     router.post(route('control-room.attendance.mark-absent'), {
@@ -88,6 +106,7 @@ export default function GuardsIndex() {
       status: status || undefined,
       profile_status: profileStatus || undefined,
       zone_id: zoneId || undefined,
+      client_id: clientId || undefined,
       grade_id: gradeId || undefined,
       on_duty: onDuty ? 1 : undefined,
       sort,
@@ -98,24 +117,36 @@ export default function GuardsIndex() {
   };
 
   const resetFilters = () => {
-    setSearch(''); setStatus(''); setProfileStatus(''); setZoneId(''); setGradeId(''); setOnDuty(false); setSort('name'); setDir('asc'); setPerPage('20');
+    setSearch(''); setStatus(''); setProfileStatus(''); setZoneId(''); setClientId(''); setGradeId(''); setOnDuty(false); setSort('name'); setDir('asc'); setPerPage('20');
     router.get(route('control-room.guards'), {}, { preserveState: true, preserveScroll: true });
   };
   const [showAdd, setShowAdd] = useState(false);
   const [showAssign, setShowAssign] = useState(false);
   const [currentGuardId, setCurrentGuardId] = useState<number | null>(null);
-  const [showManualCheckIn, setShowManualCheckIn] = useState(false);
-  const [manualGuardId, setManualGuardId] = useState<number | null>(null);
-  const [showManualCheckOut, setShowManualCheckOut] = useState(false);
-  const [manualOutGuardId, setManualOutGuardId] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [errorsCreate, setErrorsCreate] = useState<Record<string, string>>({});
   const [showSupervisor, setShowSupervisor] = useState(false);
   const [selectedSupervisorId, setSelectedSupervisorId] = useState<string>('');
   const [selectedGuardIds, setSelectedGuardIds] = useState<number[]>([]);
+  const [bulkCoverOpen, setBulkCoverOpen] = useState(false);
+  const [bulkCoverNotes, setBulkCoverNotes] = useState('');
   const [viewOpen, setViewOpen] = useState(false);
   const [viewData, setViewData] = useState<any | null>(null);
   const [viewLoading, setViewLoading] = useState<number | null>(null);
+
+  const canBulkCover = !!clientId || !!zoneId;
+
+  const bulkMarkCovered = () => {
+    if (!canBulkCover) return;
+    router.post(route('control-room.attendance.mark-covered'), {
+      client_id: clientId ? Number(clientId) : undefined,
+      zone_id: zoneId ? Number(zoneId) : undefined,
+      notes: bulkCoverNotes || undefined,
+    }, {
+      preserveScroll: true,
+      onSuccess: () => { setBulkCoverOpen(false); setBulkCoverNotes(''); router.reload(); },
+    });
+  };
 
   React.useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -205,7 +236,7 @@ export default function GuardsIndex() {
         />
 
         <Card className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-7 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-8 gap-4">
             <div className="col-span-1">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Search</label>
               <div className="relative">
@@ -245,6 +276,13 @@ export default function GuardsIndex() {
               </select>
             </div>
             <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Client</label>
+              <select value={clientId} onChange={(e) => setClientId(e.target.value)} className="w-full rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-2 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+                <option value="">All</option>
+                {clients.map((c: any) => (<option key={c.id} value={c.id}>{c.name}</option>))}
+              </select>
+            </div>
+            <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Grade</label>
               <select value={gradeId} onChange={(e) => setGradeId(e.target.value)} className="w-full rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-2 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
                 <option value="">All</option>
@@ -263,6 +301,14 @@ export default function GuardsIndex() {
             <div className="flex flex-col sm:flex-row sm:items-end gap-2">
               <button onClick={applyFilters} className="w-full sm:w-auto px-4 py-2 bg-coin-600 hover:bg-coin-700 text-white rounded">Apply</button>
               <button onClick={resetFilters} className="w-full sm:w-auto px-4 py-2 border dark:border-gray-700 rounded bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200">Reset</button>
+              <button
+                type="button"
+                disabled={!canBulkCover}
+                onClick={() => setBulkCoverOpen(true)}
+                className={`w-full sm:w-auto px-4 py-2 rounded text-white ${canBulkCover ? 'bg-emerald-700 hover:bg-emerald-600' : 'bg-gray-400 cursor-not-allowed'}`}
+              >
+                Mark Covered
+              </button>
             </div>
           </div>
           <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -389,22 +435,13 @@ export default function GuardsIndex() {
                         <IconMapper name="MapPin" size={18} />
                       </button>
                       <button
-                        onClick={() => { setManualGuardId(g.id); setShowManualCheckIn(true); }}
-                        className={`p-2 rounded text-white ${g.today_attendance?.check_in ? 'bg-gray-400 cursor-not-allowed' : 'bg-coin-700 hover:bg-coin-800'}`}
-                        title={g.today_attendance?.check_in ? 'Already checked in' : 'Manual Check-In'}
-                        aria-label="Manual Check-In"
-                        disabled={!!g.today_attendance?.check_in}
+                        onClick={() => markPresent(g)}
+                        className={`p-2 rounded text-white disabled:opacity-60 ${canMarkPresent(g) ? 'bg-emerald-700 hover:bg-emerald-600' : 'bg-gray-400 dark:bg-gray-700 cursor-not-allowed'}`}
+                        title={canMarkPresent(g) ? 'Mark Present' : (g.today_attendance?.check_in ? 'Already checked in' : 'Already present')}
+                        aria-label="Mark Present"
+                        disabled={!canMarkPresent(g)}
                       >
                         <IconMapper name="CheckCircle" size={18} />
-                      </button>
-                      <button
-                        onClick={() => { setManualOutGuardId(g.id); setShowManualCheckOut(true); }}
-                        className={`p-2 rounded text-white ${(!g.today_attendance?.check_in || !!g.today_attendance?.check_out) ? 'bg-gray-400 cursor-not-allowed' : 'bg-coin-700 hover:bg-coin-800'}`}
-                        title={!g.today_attendance?.check_in ? 'No active check-in' : (g.today_attendance?.check_out ? 'Already checked out' : 'Manual Check-Out')}
-                        aria-label="Manual Check-Out"
-                        disabled={!g.today_attendance?.check_in || !!g.today_attendance?.check_out}
-                      >
-                        <IconMapper name="LogOut" size={18} />
                       </button>
 					  <button
 						onClick={() => markAbsent(g)}
@@ -520,22 +557,13 @@ export default function GuardsIndex() {
                               <IconMapper name="MapPin" size={18} />
                             </button>
                             <button
-                              onClick={() => { setManualGuardId(g.id); setShowManualCheckIn(true); }}
-                              className={`p-2 rounded text-white ${g.today_attendance?.check_in ? 'bg-gray-400 cursor-not-allowed' : 'bg-coin-700 hover:bg-coin-800'}`}
-                              title={g.today_attendance?.check_in ? 'Already checked in' : 'Manual Check-In'}
-                              aria-label="Manual Check-In"
-                              disabled={!!g.today_attendance?.check_in}
+                              onClick={() => markPresent(g)}
+                              className={`p-2 rounded text-white disabled:opacity-60 ${canMarkPresent(g) ? 'bg-emerald-700 hover:bg-emerald-600' : 'bg-gray-400 dark:bg-gray-700 cursor-not-allowed'}`}
+                              title={canMarkPresent(g) ? 'Mark Present' : (g.today_attendance?.check_in ? 'Already checked in' : 'Already present')}
+                              aria-label="Mark Present"
+                              disabled={!canMarkPresent(g)}
                             >
                               <IconMapper name="CheckCircle" size={18} />
-                            </button>
-                            <button
-                              onClick={() => { setManualOutGuardId(g.id); setShowManualCheckOut(true); }}
-                              className={`p-2 rounded text-white ${(!g.today_attendance?.check_in || !!g.today_attendance?.check_out) ? 'bg-gray-400 cursor-not-allowed' : 'bg-coin-700 hover:bg-coin-800'}`}
-                              title={!g.today_attendance?.check_in ? 'No active check-in' : (g.today_attendance?.check_out ? 'Already checked out' : 'Manual Check-Out')}
-                              aria-label="Manual Check-Out"
-                              disabled={!g.today_attendance?.check_in || !!g.today_attendance?.check_out}
-                            >
-                              <IconMapper name="LogOut" size={18} />
                             </button>
 						<button
 							onClick={() => markAbsent(g)}
@@ -660,6 +688,46 @@ export default function GuardsIndex() {
               <div className="md:col-span-2"><span className="font-medium text-gray-700 dark:text-gray-300">Next of Kin:</span> <span className="text-gray-900 dark:text-gray-100">{[viewData?.next_of_kin_name, viewData?.next_of_kin_relationship, viewData?.next_of_kin_phone].filter(Boolean).join(' • ') || '-'}</span></div>
               <div className="md:col-span-2"><span className="font-medium text-gray-700 dark:text-gray-300">Children:</span> <span className="text-gray-900 dark:text-gray-100">{viewData?.children_names || '-'}</span></div>
             </div>
+
+            {viewData?.attendance_tally ? (
+              <div className="mt-4">
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Attendance (This Month)</h3>
+                <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
+                  <div className="rounded-md border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 p-3">
+                    <div className="text-xs text-gray-500">Present</div>
+                    <div className="mt-1 text-lg font-semibold text-emerald-700 dark:text-emerald-400">{viewData.attendance_tally.by_status?.present ?? 0}</div>
+                  </div>
+                  <div className="rounded-md border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 p-3">
+                    <div className="text-xs text-gray-500">Absent</div>
+                    <div className="mt-1 text-lg font-semibold text-red-700 dark:text-red-400">{viewData.attendance_tally.by_status?.absent ?? 0}</div>
+                  </div>
+                  <div className="rounded-md border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 p-3">
+                    <div className="text-xs text-gray-500">Late</div>
+                    <div className="mt-1 text-lg font-semibold text-yellow-700 dark:text-yellow-400">{viewData.attendance_tally.by_status?.late ?? 0}</div>
+                  </div>
+                  <div className="rounded-md border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 p-3">
+                    <div className="text-xs text-gray-500">Half Day</div>
+                    <div className="mt-1 text-lg font-semibold text-orange-700 dark:text-orange-400">{viewData.attendance_tally.by_status?.half_day ?? 0}</div>
+                  </div>
+                  <div className="rounded-md border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 p-3">
+                    <div className="text-xs text-gray-500">Leave</div>
+                    <div className="mt-1 text-lg font-semibold text-sky-700 dark:text-sky-400">{viewData.attendance_tally.by_status?.leave ?? 0}</div>
+                  </div>
+                  <div className="rounded-md border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 p-3">
+                    <div className="text-xs text-gray-500">Hours</div>
+                    <div className="mt-1 text-lg font-semibold text-gray-900 dark:text-gray-100">
+                      {Number(viewData.attendance_tally.hours_worked ?? 0).toFixed(1)}
+                      {Number(viewData.attendance_tally.overtime_hours ?? 0) > 0 ? (
+                        <span className="ml-2 text-xs text-gray-500">OT {Number(viewData.attendance_tally.overtime_hours ?? 0).toFixed(1)}</span>
+                      ) : null}
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                  Range: {viewData.attendance_tally.range?.start} → {viewData.attendance_tally.range?.end}
+                </div>
+              </div>
+            ) : null}
             {Array.isArray(viewData?.assignments) && viewData.assignments.length > 0 && (
               <div className="mt-4">
                 <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Assignments</h3>
@@ -688,6 +756,39 @@ export default function GuardsIndex() {
           onClose={() => { setShowAssign(false); setCurrentGuardId(null); }}
           onSuccess={() => router.reload()}
         />
+
+        <Modal show={bulkCoverOpen} onClose={() => setBulkCoverOpen(false)} maxWidth="md">
+          <div className="p-4 sm:p-6 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 space-y-4">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Mark Covered</h3>
+            <div className="text-sm text-gray-600 dark:text-gray-300">
+              Marks all guards currently on shift for the selected Client/Zone as present.
+            </div>
+            <div className="grid grid-cols-1 gap-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Client</label>
+                <select value={clientId} onChange={(e) => setClientId(e.target.value)} className="w-full rounded-md border border-gray-300 dark:border-gray-700 px-3 py-2 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+                  <option value="">All</option>
+                  {clients.map((c: any) => (<option key={c.id} value={c.id}>{c.name}</option>))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Zone</label>
+                <select value={zoneId} onChange={(e) => setZoneId(e.target.value)} className="w-full rounded-md border border-gray-300 dark:border-gray-700 px-3 py-2 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+                  <option value="">All</option>
+                  {zones.map((z: any) => (<option key={z.id} value={z.id}>{z.name}</option>))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Notes (optional)</label>
+                <textarea value={bulkCoverNotes} onChange={(e) => setBulkCoverNotes(e.target.value)} rows={3} className="w-full rounded-md border border-gray-300 dark:border-gray-700 px-3 py-2 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100" />
+              </div>
+            </div>
+            <div className="flex items-center justify-end gap-2">
+              <button type="button" onClick={() => setBulkCoverOpen(false)} className="px-4 py-2 rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800">Cancel</button>
+              <button type="button" disabled={!canBulkCover} onClick={() => { if (!confirm('Mark covered for all guards currently on shift for these filters?')) return; bulkMarkCovered(); }} className={`px-4 py-2 rounded-md text-white ${canBulkCover ? 'bg-emerald-700 hover:bg-emerald-600' : 'bg-gray-400 cursor-not-allowed'}`}>Confirm</button>
+            </div>
+          </div>
+        </Modal>
 
         {/* Assign Supervisor Modal */}
         <Modal show={showSupervisor} onClose={() => setShowSupervisor(false)} maxWidth="md">
@@ -742,21 +843,6 @@ export default function GuardsIndex() {
           </form>
         </Modal>
 
-        {/* Manual Check-In Modal */}
-        <ManualCheckInModal
-          open={showManualCheckIn}
-          guardId={manualGuardId}
-          zones={zones}
-          onClose={() => { setShowManualCheckIn(false); setManualGuardId(null); }}
-          onSuccess={() => router.reload()}
-        />
-
-        <ManualCheckOutModal
-          open={showManualCheckOut}
-          guardId={manualOutGuardId}
-          onClose={() => { setShowManualCheckOut(false); setManualOutGuardId(null); }}
-          onSuccess={() => router.reload()}
-        />
       </div>
     </ControlRoomLayout>
   );

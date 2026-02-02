@@ -297,11 +297,19 @@ class MonitoringController extends Controller
             return $query
                 ->get()
                 ->map(function ($guard) {
+                    $loc = is_array($guard->last_known_location) ? $guard->last_known_location : [];
+                    $lat = data_get($loc, 'lat', data_get($loc, 'latitude'));
+                    $lng = data_get($loc, 'lng', data_get($loc, 'longitude'));
+                    if (!is_numeric($lat) || !is_numeric($lng)) {
+                        $lat = -26.2041;
+                        $lng = 28.0473;
+                    }
+
                     return [
                         'id' => $guard->id,
                         'name' => $guard->name,
                         'status' => $guard->status,
-                        'location' => $guard->last_known_location ?? ['lat' => -26.2041, 'lng' => 28.0473],
+                        'location' => ['lat' => (float) $lat, 'lng' => (float) $lng],
                         'lastCheckIn' => $guard->updated_at,
                         'currentSite' => $guard->currentSite?->name,
                         'currentShift' => [

@@ -159,30 +159,35 @@ export default function ControlRoomLayout({ title, children, user }: Props) {
                 </button>
                 <h1 className="text-xl font-semibold text-red-900 dark:text-gray-100 truncate">{title}</h1>
               </div>
-              <div className="flex items-center gap-4">
+              <div className="flex items-center justify-end gap-2 sm:gap-4 shrink-0">
                 <NotificationBell />
-                <QuickBudgetButton />
-                <QuickRequisitionButton />
+                <div className="hidden sm:flex items-center gap-4">
+                  <QuickBudgetButton />
+                  <QuickRequisitionButton />
+                </div>
                 {isSuperAdmin && (
                   <Link
                     href={route('superadmin.dashboard')}
                     className="inline-flex items-center gap-2 rounded-md bg-red-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-600"
                   >
                     <IconMapper name="shield" className="h-4 w-4" />
-                    Super Admin
+                    <span className="hidden sm:inline">Super Admin</span>
+                    <span className="sm:hidden">SA</span>
                   </Link>
                 )}
                 <button onClick={toggle} className="text-sm px-3 py-1 rounded-md bg-red-100 text-red-800 hover:bg-red-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700">
-                  {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
+                  <span className="hidden sm:inline">{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>
+                  <span className="sm:hidden">{theme === 'dark' ? 'Light' : 'Dark'}</span>
                 </button>
-                <div className="text-sm text-red-700 dark:text-gray-300">{user?.name}</div>
+                <div className="hidden sm:block text-sm text-red-700 dark:text-gray-300 max-w-[10rem] truncate">{user?.name}</div>
                 <Link
                   href={route('logout')}
                   method="post"
                   as="button"
-                  className="text-sm px-3 py-1 rounded-md bg-white text-red-700 hover:bg-red-50 border border-red-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700"
+                  className="inline-flex items-center justify-center rounded-md bg-white text-red-700 hover:bg-red-50 border border-red-200 px-2 py-2 sm:px-3 sm:py-1 text-sm dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700"
                 >
-                  Logout
+                  <IconMapper name="log-out" className="h-5 w-5 sm:hidden" />
+                  <span className="hidden sm:inline">Logout</span>
                 </Link>
               </div>
             </div>

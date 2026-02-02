@@ -676,6 +676,47 @@ export default function SuperAdminGuards({ guards, filters, supervisors = [], gr
                     <div><span className="text-gray-500">Supervisor</span><div>{selectedGuard.supervisor?.name || '—'}</div></div>
                   </div>
                 </div>
+
+                {selectedGuard.attendance_tally ? (
+                  <div>
+                    <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Attendance (This Month)</h3>
+                    <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
+                      <div className="rounded-md border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 p-3">
+                        <div className="text-xs text-gray-500">Present</div>
+                        <div className="mt-1 text-lg font-semibold text-emerald-700 dark:text-emerald-400">{(selectedGuard.attendance_tally.by_status?.present ?? 0) as any}</div>
+                      </div>
+                      <div className="rounded-md border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 p-3">
+                        <div className="text-xs text-gray-500">Absent</div>
+                        <div className="mt-1 text-lg font-semibold text-red-700 dark:text-red-400">{(selectedGuard.attendance_tally.by_status?.absent ?? 0) as any}</div>
+                      </div>
+                      <div className="rounded-md border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 p-3">
+                        <div className="text-xs text-gray-500">Late</div>
+                        <div className="mt-1 text-lg font-semibold text-yellow-700 dark:text-yellow-400">{(selectedGuard.attendance_tally.by_status?.late ?? 0) as any}</div>
+                      </div>
+                      <div className="rounded-md border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 p-3">
+                        <div className="text-xs text-gray-500">Half Day</div>
+                        <div className="mt-1 text-lg font-semibold text-orange-700 dark:text-orange-400">{(selectedGuard.attendance_tally.by_status?.half_day ?? 0) as any}</div>
+                      </div>
+                      <div className="rounded-md border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 p-3">
+                        <div className="text-xs text-gray-500">Leave</div>
+                        <div className="mt-1 text-lg font-semibold text-sky-700 dark:text-sky-400">{(selectedGuard.attendance_tally.by_status?.leave ?? 0) as any}</div>
+                      </div>
+                      <div className="rounded-md border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 p-3">
+                        <div className="text-xs text-gray-500">Hours</div>
+                        <div className="mt-1 text-lg font-semibold text-gray-900 dark:text-gray-100">
+                          {Number(selectedGuard.attendance_tally.hours_worked ?? 0).toFixed(1)}
+                          {Number(selectedGuard.attendance_tally.overtime_hours ?? 0) > 0 ? (
+                            <span className="ml-2 text-xs text-gray-500">OT {Number(selectedGuard.attendance_tally.overtime_hours ?? 0).toFixed(1)}</span>
+                          ) : null}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                      Range: {selectedGuard.attendance_tally.range?.start} → {selectedGuard.attendance_tally.range?.end}
+                    </div>
+                  </div>
+                ) : null}
+
                 <div>
                   <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Residence</h3>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">

@@ -15,6 +15,10 @@ use Illuminate\Support\Facades\Session;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\PermissionRegistrar;
+use App\Models\Down;
+use App\Models\Guards\Attendance;
+use App\Models\Guards\GuardAssignment;
+use App\Services\DownAttendanceSyncService;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -125,5 +129,38 @@ class AppServiceProvider extends ServiceProvider
         } catch (\Throwable $e) {
             // swallow
         }
+
+		try {
+			Attendance::saved(function (Attendance $attendance) {
+				try {
+					app(DownAttendanceSyncService::class)->syncFromAttendance($attendance);
+				} catch (\Throwable $e) {
+					// swallow
+				}
+			});
+			Down::saved(function (Down $down) {
+				try {
+					app(DownAttendanceSyncService::class)->syncFromDown($down);
+				} catch (\Throwable $e) {
+					// swallow
+				}
+				try {
+					if (in_array($down->status, ['open', 'escalated'], true) && ($down->wasRecentlyCreated || $down->wasChanged('status'))) {
+						app(DownAttendanceSyncService::class)->notifyZoneCommanderDownOpened($down);
+					}
+				} catch (\Throwable $e) {
+					// swallow
+				}
+			});
+			GuardAssignment::created(function (GuardAssignment $assignment) {
+				try {
+					app(DownAttendanceSyncService::class)->syncFromGuardAssignment($assignment);
+				} catch (\Throwable $e) {
+					// swallow
+				}
+			});
+		} catch (\Throwable $e) {
+			// swallow
+		}
     }
 }

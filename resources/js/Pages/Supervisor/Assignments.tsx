@@ -21,7 +21,7 @@ interface Assignment {
   client_name: string;
   start_date: string;
   end_date?: string;
-  assignment_type: 'permanent' | 'temporary' | 'relief';
+  assignment_type: 'permanent' | 'temporary';
 }
 
 interface Guard {
@@ -44,7 +44,7 @@ export default function Assignments({ guards, sites }: AssignmentsProps) {
     client_site_id: string;
     start_date: string;
     end_date: string;
-    assignment_type: 'permanent' | 'temporary' | 'relief';
+    assignment_type: 'permanent' | 'temporary';
     notes: string;
   }>({
     client_site_id: '',
@@ -76,7 +76,7 @@ export default function Assignments({ guards, sites }: AssignmentsProps) {
 
   const handleUnassign = (assignmentId: number) => {
     if (confirm('Unassign this guard from the location?')) {
-      router.delete(route('supervisor.assignments.unassign', { id: assignmentId }));
+      router.delete(route('supervisor.assignments.unassign', { assignment: assignmentId }));
     }
   };
 
@@ -200,12 +200,11 @@ export default function Assignments({ guards, sites }: AssignmentsProps) {
                 </label>
                 <select
                   value={formData.assignment_type}
-                  onChange={(e) => setFormData({...formData, assignment_type: e.target.value as 'permanent' | 'temporary' | 'relief'})}
+                  onChange={(e) => setFormData({...formData, assignment_type: e.target.value as 'permanent' | 'temporary'})}
                   className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
                 >
                   <option value="permanent">Permanent</option>
                   <option value="temporary">Temporary</option>
-                  <option value="relief">Relief</option>
                 </select>
               </div>
 

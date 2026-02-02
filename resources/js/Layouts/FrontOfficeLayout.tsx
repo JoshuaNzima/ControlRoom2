@@ -95,15 +95,16 @@ export default function FrontOfficeLayout({ title, children, user }: Props) {
 
           <div className="flex-1 flex items-center justify-between px-4">
             <h1 className="text-lg font-semibold text-gray-900 dark:text-white">{title}</h1>
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center justify-end gap-2 sm:gap-4 shrink-0">
               <NotificationBell />
               {isSuperAdmin && (
                 <Link
                   href={route('superadmin.dashboard')}
-                  className="inline-flex items-center gap-2 rounded-md bg-red-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-600"
+                  className="inline-flex items-center gap-2 rounded-md bg-red-700 px-2 py-2 sm:px-3 sm:py-1.5 text-sm font-medium text-white hover:bg-red-600"
                 >
                   <IconMapper name="shield" className="h-4 w-4" />
-                  Super Admin
+                  <span className="hidden sm:inline">Super Admin</span>
+                  <span className="sm:hidden">SA</span>
                 </Link>
               )}
               <button onClick={toggle} className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300" title="Toggle Theme">
@@ -113,8 +114,9 @@ export default function FrontOfficeLayout({ title, children, user }: Props) {
                   <IconMapper name="moon" className="h-5 w-5" />
                 )}
               </button>
-              <Link href={route('profile.dashboard')} className="inline-flex items-center px-3 py-1.5 rounded-md bg-gray-800 text-white hover:bg-gray-700 text-sm">
-                My Profile
+              <Link href={route('profile.dashboard')} className="inline-flex items-center justify-center rounded-md bg-gray-800 text-white hover:bg-gray-700 px-2 py-2 sm:px-3 sm:py-1.5 text-sm">
+                <IconMapper name="user" className="h-5 w-5 sm:hidden" />
+                <span className="hidden sm:inline">My Profile</span>
               </Link>
               <form method="POST" action={route('logout')} onSubmit={handleLogout} className="inline">
                 <button type="submit" className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300" title="Logout">

@@ -14,7 +14,10 @@ interface Site {
   name: string;
   address: string;
   status: string;
+  required_guards?: number;
   guard_count?: number;
+  zone_id?: number | null;
+  site_type?: string | null;
 }
 
 interface Service {
@@ -71,6 +74,8 @@ export default function ClientDetailsModal({ client, open, onClose, services = [
     status: 'active',
     latitude: '',
     longitude: '',
+    site_type: 'residential',
+    zone_id: '',
   });
 
   const [editSiteOpen, setEditSiteOpen] = React.useState(false);
@@ -94,7 +99,7 @@ export default function ClientDetailsModal({ client, open, onClose, services = [
     setDeleting(true);
     try {
       const url = route('admin.clients.sites.destroy', { client: client.id, site: deletingSiteId });
-      await axios.post(url, { _method: 'DELETE' }, { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } });
+      await axios.delete(url, { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } });
       await refreshClient();
       setConfirmDeleteOpen(false);
       setDeletingSiteId(null);
@@ -122,6 +127,8 @@ export default function ClientDetailsModal({ client, open, onClose, services = [
         status: 'active',
         latitude: '',
         longitude: '',
+        site_type: 'residential',
+        zone_id: '',
       });
       // ask parent to refresh client details if callback provided
       try {
@@ -329,6 +336,31 @@ export default function ClientDetailsModal({ client, open, onClose, services = [
                         <option value="inactive">Inactive</option>
                       </select>
                     </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">Site Type</label>
+                      <select
+                        value={(data as any).site_type}
+                        onChange={e => setData('site_type' as any, e.target.value)}
+                        className={clientFieldClassName}
+                      >
+                        <option value="residential">Residential</option>
+                        <option value="commercial">Commercial</option>
+                        <option value="office">Office</option>
+                      </select>
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">Zone</label>
+                      <select
+                        value={(data as any).zone_id ?? ''}
+                        onChange={e => setData('zone_id' as any, e.target.value)}
+                        className={clientFieldClassName}
+                      >
+                        <option value="">Unassigned</option>
+                        {zones.map(z => (
+                          <option key={z.id} value={z.id}>{z.name}</option>
+                        ))}
+                      </select>
+                    </div>
                     <div className="md:col-span-2">
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">Services Requested</label>
                       <textarea
@@ -466,11 +498,23 @@ export default function ClientDetailsModal({ client, open, onClose, services = [
                           <p className="text-sm text-gray-500 dark:text-gray-400">{site.address}</p>
                         </div>
                         <div className="flex items-center gap-2">
+                          <span className="px-2 py-1 text-xs rounded-full bg-coin-600/10 text-coin-800 dark:text-coin-200 dark:bg-coin-900/30">
+                            {site.required_guards ?? 0} required
+                          </span>
                           <span className={`px-2 py-1 text-xs rounded-full ${
                             site.status === 'active' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-200' : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200'
                           }`}>
-                            {site.guard_count || 0} guards
+                            {site.guard_count ?? 0} assigned
                           </span>
+                          {site.zone_id ? (
+                            <span className="px-2 py-1 text-xs rounded-full bg-coin-600/10 text-coin-800 dark:text-coin-200 dark:bg-coin-900/30">
+                              {zones.find((z) => z.id === site.zone_id)?.name || `Zone ${site.zone_id}`}
+                            </span>
+                          ) : (
+                            <span className="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-700 dark:bg-gray-900 dark:text-gray-300">
+                              Unassigned
+                            </span>
+                          )}
                           <Button variant="outline" size="sm" onClick={() => { setSelectedSiteId(site.id); setEditSiteOpen(true); }}>
                             <IconMapper name="Pencil" className="w-4 h-4" />
                           </Button>

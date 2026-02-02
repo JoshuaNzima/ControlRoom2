@@ -25,7 +25,7 @@ const ConversationList: React.FC<Props> = ({ conversations = [], currentUserId }
   const getConversationName = (conversation: Conversation) => {
     if (conversation.type === 'direct') {
       const other = (conversation.participants || []).find(
-        p => (currentUserId != null ? p.id !== currentUserId : true)
+        p => (currentUserId != null ? String(p.id) !== String(currentUserId) : true)
       );
       return other ? other.name : 'Deleted User';
     }
@@ -36,7 +36,7 @@ const ConversationList: React.FC<Props> = ({ conversations = [], currentUserId }
     const last = conversation.last_message || (conversation.messages && conversation.messages[0]);
     if (!last) return 'No messages yet';
 
-    const sender = currentUserId != null && last.sender_id === currentUserId
+    const sender = currentUserId != null && String(last.sender_id) === String(currentUserId)
       ? 'You'
       : last.sender?.name;
 

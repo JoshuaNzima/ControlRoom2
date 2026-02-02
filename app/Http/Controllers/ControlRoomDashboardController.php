@@ -107,6 +107,26 @@ class ControlRoomDashboardController extends Controller
     {
         $overdueHours = (int) config('attendance.alerts.overdue_checkout_hours', 12);
 
+        $now = Carbon::now();
+        $overdueCount = Attendance::whereDate('date', Carbon::today())
+            ->whereNotNull('check_in_time')
+            ->whereNull('check_out_time')
+            ->get(['id', 'date', 'check_in_time'])
+            ->filter(function ($attendance) use ($now, $overdueHours) {
+                $dateString = $attendance->date?->toDateString() ?: (string) $attendance->getRawOriginal('date');
+                $rawCheckIn = $attendance->getRawOriginal('check_in_time') ?: null;
+                if (!$dateString || !$rawCheckIn) {
+                    return false;
+                }
+                try {
+                    $checkInAt = Carbon::parse($dateString.' '.$rawCheckIn);
+                } catch (\Throwable $e) {
+                    return false;
+                }
+                return $now->greaterThanOrEqualTo($checkInAt->copy()->addHours($overdueHours));
+            })
+            ->count();
+
         return [
             'high_priority' => DownReport::where('created_at', '>=', Carbon::today())
                 ->count(),
@@ -116,10 +136,7 @@ class ControlRoomDashboardController extends Controller
             'low_priority' => DownReport::where('created_at', '>=', Carbon::today()->subDays(7))
                 ->where('created_at', '<', Carbon::today()->subDays(3))
                 ->count(),
-            'attendance_alerts' => Attendance::whereDate('date', Carbon::today())
-                ->whereNull('check_out_time')
-                ->where('check_in_time', '<', Carbon::now()->subHours($overdueHours))
-                ->count(),
+            'attendance_alerts' => $overdueCount,
             'camera_alerts' => CameraAlert::where('status', 'active')->count(),
         ];
     }

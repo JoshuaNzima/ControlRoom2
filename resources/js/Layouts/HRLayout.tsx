@@ -98,17 +98,20 @@ export default function HRLayout({ title, children, user }: Props) {
                 </button>
                 <h1 className="text-xl font-semibold text-red-900 dark:text-gray-100 truncate">{title}</h1>
               </div>
-              <div className="flex flex-wrap items-center justify-end gap-2">
+              <div className="flex items-center justify-end gap-2 sm:gap-3 shrink-0">
                 <NotificationBell />
-                <QuickBudgetButton label="Budget" />
-                <QuickRequisitionButton label="Requisition" />
+                <div className="hidden sm:flex items-center gap-3">
+                  <QuickBudgetButton label="Budget" />
+                  <QuickRequisitionButton label="Requisition" />
+                </div>
                 <button onClick={toggle} className="text-sm px-3 py-1 rounded-md bg-red-100 text-red-800 hover:bg-red-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700">
                   <span className="hidden sm:inline">{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>
                   <span className="sm:hidden">{theme === 'dark' ? 'Light' : 'Dark'}</span>
                 </button>
                 <div className="hidden sm:block text-sm text-red-700 dark:text-gray-300 max-w-[10rem] truncate">{user?.name}</div>
-                <Link href={route('logout')} method="post" as="button" className="text-sm px-3 py-1 rounded-md bg-white text-red-700 hover:bg-red-50 border border-red-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700">
-                  Logout
+                <Link href={route('logout')} method="post" as="button" className="inline-flex items-center justify-center rounded-md bg-white text-red-700 hover:bg-red-50 border border-red-200 px-2 py-2 sm:px-3 sm:py-1 text-sm dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700">
+                  <IconMapper name="log-out" className="h-5 w-5 sm:hidden" />
+                  <span className="hidden sm:inline">Logout</span>
                 </Link>
               </div>
             </div>

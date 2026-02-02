@@ -62,6 +62,12 @@ Route::middleware(['auth'])->group(function () {
 			Route::get('/', [\App\Http\Controllers\ControlRoom\RosterController::class, 'index'])->name('index');
 			Route::get('/weekly', [\App\Http\Controllers\ControlRoom\RosterController::class, 'weekly'])->name('weekly');
 			Route::get('/weekly/data', [\App\Http\Controllers\ControlRoom\RosterController::class, 'weeklyData'])->name('weekly.data');
+			Route::post('/manual-shifts/upsert', [\App\Http\Controllers\ControlRoom\RosterController::class, 'upsertManualShift'])
+				->middleware(['role_or_permission:control_room_operator|operations_officer|manager|super_admin'])
+				->name('manual-shifts.upsert');
+			Route::post('/manual-shifts/delete', [\App\Http\Controllers\ControlRoom\RosterController::class, 'deleteManualShift'])
+				->middleware(['role_or_permission:control_room_operator|operations_officer|manager|super_admin'])
+				->name('manual-shifts.delete');
 			Route::post('/weekly/reuse', [\App\Http\Controllers\ControlRoom\RosterController::class, 'reuseWeeklyRelief'])->name('weekly.reuse');
 			Route::get('/events', [\App\Http\Controllers\HR\LeaveController::class, 'events'])->name('events');
 			Route::post('/off-days', [\App\Http\Controllers\HR\LeaveController::class, 'storeOffDay'])->name('off-days.store');
@@ -179,9 +185,9 @@ Route::middleware(['auth'])->group(function () {
 		Route::get('/live/alerts', [\App\Http\Controllers\ControlRoom\LiveMonitoringController::class, 'getAttendanceAlerts'])->name('live.alerts');
 
 		Route::prefix('attendance')->name('attendance.')->middleware(['role_or_permission:control_room_operator|operations_officer|manager|super_admin'])->group(function () {
-			Route::post('/check-in', [\App\Http\Controllers\ControlRoom\AttendanceController::class, 'checkIn'])->name('check-in');
-			Route::post('/check-out', [\App\Http\Controllers\ControlRoom\AttendanceController::class, 'checkOut'])->name('check-out');
+			Route::post('/mark-present', [\App\Http\Controllers\ControlRoom\AttendanceController::class, 'markPresent'])->name('mark-present');
 			Route::post('/mark-absent', [\App\Http\Controllers\ControlRoom\AttendanceController::class, 'markAbsent'])->name('mark-absent');
+			Route::post('/mark-covered', [\App\Http\Controllers\ControlRoom\AttendanceController::class, 'markCovered'])->name('mark-covered');
 		});
 
 		// Public Intake Triage

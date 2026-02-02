@@ -143,28 +143,31 @@ export default function FinanceLayout({ title, children, user }: Props) {
                 </button>
                 <h1 className="text-xl font-semibold text-red-900 dark:text-gray-100 truncate">{title}</h1>
               </div>
-              <div className="flex items-center gap-4">
+              <div className="flex items-center justify-end gap-2 sm:gap-4 shrink-0">
                 <NotificationBell />
-                <QuickBudgetButton />
-                <QuickRequisitionButton />
-                <Link
-                  href={route('profile.dashboard') as unknown as string}
-                  className="inline-flex items-center px-3 py-1.5 rounded-md bg-gray-800 text-white hover:bg-gray-700 text-sm"
-                >
-                  My Profile
-                </Link>
+                <div className="hidden sm:flex items-center gap-4">
+                  <QuickBudgetButton />
+                  <QuickRequisitionButton />
+                  <Link
+                    href={route('profile.dashboard') as unknown as string}
+                    className="inline-flex items-center px-3 py-1.5 rounded-md bg-gray-800 text-white hover:bg-gray-700 text-sm"
+                  >
+                    My Profile
+                  </Link>
+                </div>
                 {Array.isArray(roles) && roles.includes('super_admin') && (
                   <Link
                     href={route('superadmin.dashboard') as unknown as string}
-                    className="inline-flex items-center gap-2 rounded-md bg-red-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-600"
+                    className="inline-flex items-center gap-2 rounded-md bg-red-700 px-2 py-2 sm:px-3 sm:py-1.5 text-sm font-medium text-white hover:bg-red-600"
                   >
                     <IconMapper name="shield" className="h-4 w-4" />
-                    Super Admin
+                    <span className="hidden sm:inline">Super Admin</span>
+                    <span className="sm:hidden">SA</span>
                   </Link>
                 )}
                 <Link
                   href={route('finance.expenses.create')}
-                  className="inline-flex items-center px-3 py-1.5 rounded-md bg-red-600 text-white hover:bg-red-700 text-sm"
+                  className="hidden sm:inline-flex items-center px-3 py-1.5 rounded-md bg-red-600 text-white hover:bg-red-700 text-sm"
                 >
                   Request Requisition
                 </Link>

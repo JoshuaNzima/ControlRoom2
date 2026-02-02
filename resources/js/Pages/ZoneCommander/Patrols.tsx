@@ -28,10 +28,10 @@ export default function Patrols({ patrols = [] }: PatrolsProps) {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'completed': return 'bg-green-100 text-green-800';
-      case 'in_progress': return 'bg-blue-100 text-blue-800';
-      case 'missed': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'completed': return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200';
+      case 'in_progress': return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200';
+      case 'missed': return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200';
+      default: return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200';
     }
   };
 
@@ -49,12 +49,12 @@ export default function Patrols({ patrols = [] }: PatrolsProps) {
           <Card className="hover:shadow-lg transition-shadow duration-300">
             <CardContent className="p-6">
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                  <IconMapper name="ScanLine" className="w-6 h-6 text-blue-600" />
+                <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
+                  <IconMapper name="ScanLine" className="w-6 h-6 text-blue-600 dark:text-blue-200" />
                 </div>
                 <div>
-                  <p className="text-sm text-gray-600">Total Patrols</p>
-                  <p className="text-2xl font-bold text-gray-900">{patrols.length}</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-300">Total Patrols</p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{patrols.length}</p>
                 </div>
               </div>
             </CardContent>
@@ -63,12 +63,12 @@ export default function Patrols({ patrols = [] }: PatrolsProps) {
           <Card className="hover:shadow-lg transition-shadow duration-300">
             <CardContent className="p-6">
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                  <IconMapper name="CheckCircle" className="w-6 h-6 text-green-600" />
+                <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
+                  <IconMapper name="CheckCircle" className="w-6 h-6 text-green-600 dark:text-green-200" />
                 </div>
                 <div>
-                  <p className="text-sm text-gray-600">Completed</p>
-                  <p className="text-2xl font-bold text-gray-900">{completedPatrols}</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-300">Completed</p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{completedPatrols}</p>
                 </div>
               </div>
             </CardContent>
@@ -77,12 +77,12 @@ export default function Patrols({ patrols = [] }: PatrolsProps) {
           <Card className="hover:shadow-lg transition-shadow duration-300">
             <CardContent className="p-6">
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
-                  <IconMapper name="Clock" className="w-6 h-6 text-yellow-600" />
+                <div className="w-12 h-12 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg flex items-center justify-center">
+                  <IconMapper name="Clock" className="w-6 h-6 text-yellow-600 dark:text-yellow-200" />
                 </div>
                 <div>
-                  <p className="text-sm text-gray-600">In Progress</p>
-                  <p className="text-2xl font-bold text-gray-900">{inProgressPatrols}</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-300">In Progress</p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{inProgressPatrols}</p>
                 </div>
               </div>
             </CardContent>
@@ -91,12 +91,12 @@ export default function Patrols({ patrols = [] }: PatrolsProps) {
           <Card className="hover:shadow-lg transition-shadow duration-300">
             <CardContent className="p-6">
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
-                  <IconMapper name="XCircle" className="w-6 h-6 text-red-600" />
+                <div className="w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-lg flex items-center justify-center">
+                  <IconMapper name="XCircle" className="w-6 h-6 text-red-600 dark:text-red-200" />
                 </div>
                 <div>
-                  <p className="text-sm text-gray-600">Missed</p>
-                  <p className="text-2xl font-bold text-gray-900">{missedPatrols}</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-300">Missed</p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{missedPatrols}</p>
                 </div>
               </div>
             </CardContent>
@@ -104,17 +104,17 @@ export default function Patrols({ patrols = [] }: PatrolsProps) {
         </div>
 
         {/* QR Scanner */}
-        <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
+        <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200 dark:from-gray-950 dark:to-gray-900 dark:border-gray-800">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-blue-900">
+            <CardTitle className="flex items-center gap-2 text-blue-900 dark:text-gray-100">
               <IconMapper name="QrCode" className="w-5 h-5" />
               QR Code Scanner
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-center py-8">
-              <div className="w-64 h-64 bg-gray-200 rounded-lg mx-auto mb-4 flex items-center justify-center">
-                <IconMapper name="QrCode" className="w-32 h-32 text-gray-400" />
+              <div className="w-64 h-64 bg-gray-200 dark:bg-gray-900 rounded-lg mx-auto mb-4 flex items-center justify-center">
+                <IconMapper name="QrCode" className="w-32 h-32 text-gray-400 dark:text-gray-500" />
               </div>
               <Button 
                 onClick={() => setActiveScan(!activeScan)}
@@ -122,7 +122,7 @@ export default function Patrols({ patrols = [] }: PatrolsProps) {
               >
                 {activeScan ? 'Stop Scanning' : 'Start QR Scan'}
               </Button>
-              <p className="text-sm text-gray-600 mt-2">
+              <p className="text-sm text-gray-600 dark:text-gray-300 mt-2">
                 Point your camera at a checkpoint QR code to scan
               </p>
             </div>
@@ -145,13 +145,13 @@ export default function Patrols({ patrols = [] }: PatrolsProps) {
                     <div className="flex justify-between items-start">
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-2">
-                          <h3 className="text-lg font-semibold text-gray-900">{patrol.checkpoint_name}</h3>
+                          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{patrol.checkpoint_name}</h3>
                           <Badge className={getStatusColor(patrol.status)}>
                             {patrol.status.toUpperCase()}
                           </Badge>
                         </div>
                         
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600 dark:text-gray-300">
                           <div className="flex items-center gap-2">
                             <IconMapper name="User" className="w-4 h-4" />
                             <span>{patrol.guard_name}</span>
@@ -167,18 +167,18 @@ export default function Patrols({ patrols = [] }: PatrolsProps) {
                         </div>
 
                         {patrol.notes && (
-                          <div className="mt-3 p-3 bg-gray-50 rounded-lg">
-                            <p className="text-sm text-gray-700">{patrol.notes}</p>
+                          <div className="mt-3 p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
+                            <p className="text-sm text-gray-700 dark:text-gray-200">{patrol.notes}</p>
                           </div>
                         )}
                       </div>
 
                       <div className="flex flex-col gap-2 ml-4">
-                        <Button variant="outline" size="sm" className="hover:bg-blue-50">
+                        <Button variant="outline" size="sm" className="hover:bg-blue-50 dark:hover:bg-gray-900">
                           <IconMapper name="Eye" className="w-4 h-4 mr-2" />
                           View Details
                         </Button>
-                        <Button variant="outline" size="sm" className="hover:bg-green-50">
+                        <Button variant="outline" size="sm" className="hover:bg-green-50 dark:hover:bg-gray-900">
                           <IconMapper name="Edit" className="w-4 h-4 mr-2" />
                           Edit
                         </Button>

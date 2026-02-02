@@ -11,6 +11,8 @@ class Shift extends Model
 {
     use HasFactory;
 
+    protected $table = 'schedule_shifts';
+
 
     protected $fillable = [
         'name',

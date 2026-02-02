@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Client;
 use App\Models\Zone;
 use App\Models\Guards\ClientSite;
+use App\Models\Guards\GuardAssignment;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use PhpOffice\PhpSpreadsheet\IOFactory;
@@ -199,6 +200,30 @@ class ClientController extends Controller
                     ->withPivot('custom_price', 'quantity');
             }
         ]);
+
+        $siteIds = $client->sites->pluck('id')->filter()->values();
+        if ($siteIds->isNotEmpty()) {
+            $requiredBySite = \App\Models\Guards\ClientSite::requiredGuardsBySiteFromScheduleShifts($siteIds->all());
+
+            $counts = GuardAssignment::query()
+                ->select('client_site_id', DB::raw('COUNT(DISTINCT guard_id) as guard_count'))
+                ->whereIn('client_site_id', $siteIds)
+                ->where('is_active', true)
+                ->where('start_date', '<=', today())
+                ->where(function ($q) {
+                    $q->whereNull('end_date')->orWhere('end_date', '>=', today());
+                })
+                ->groupBy('client_site_id')
+                ->pluck('guard_count', 'client_site_id');
+
+            $client->sites->each(function ($site) use ($counts, $requiredBySite) {
+                $derivedRequired = (int) ($requiredBySite[$site->id] ?? 0);
+                if ($derivedRequired > 0) {
+                    $site->setAttribute('required_guards', $derivedRequired);
+                }
+                $site->setAttribute('guard_count', (int) ($counts[$site->id] ?? 0));
+            });
+        }
 
         // include calculated monthly_rate
         $client->monthly_rate = $client->getMonthlyDueAmount();

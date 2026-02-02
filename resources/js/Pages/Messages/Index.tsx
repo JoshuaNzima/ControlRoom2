@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { Head, router, usePage } from '@inertiajs/react';
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import { router, usePage } from '@inertiajs/react';
+import MessagesLayout from '@/Layouts/MessagesLayout';
 import { Card, CardContent, CardHeader } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/Components/ui/dialog';
+import { Input } from '@/Components/ui/input';
 import NewConversationForm, { Agent } from './NewConversationForm';
 import ConversationList from './ConversationList';
 import { PageProps } from '@/types';
@@ -16,7 +17,20 @@ interface Props {
 
 const Index: React.FC<Props> = ({ auth, conversations = [], agents = [] }) => {
   const [showNewDialog, setShowNewDialog] = useState(false);
+  const [query, setQuery] = useState('');
   const currentUserId = usePage<PageProps>().props.auth.user.id;
+
+  const q = query.trim().toLowerCase();
+  const filteredConversations = !q
+    ? conversations
+    : (conversations || []).filter((c: any) => {
+        const name = String(c?.title || c?.name || '').toLowerCase();
+        const last = String(c?.last_message?.content || c?.messages?.[0]?.content || '').toLowerCase();
+        const participants = Array.isArray(c?.participants)
+          ? c.participants.map((p: any) => String(p?.name || '')).join(' ').toLowerCase()
+          : '';
+        return name.includes(q) || last.includes(q) || participants.includes(q);
+      });
 
   useEffect(() => {
     try {
@@ -41,10 +55,8 @@ const Index: React.FC<Props> = ({ auth, conversations = [], agents = [] }) => {
   }, []);
 
   return (
-    <AuthenticatedLayout user={auth?.user as any}>
-      <Head title="Messages" />
-
-      <div className="space-y-6">
+    <MessagesLayout title="Messages">
+      <div className="space-y-4">
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Messages</h1>
           <Dialog open={showNewDialog} onOpenChange={setShowNewDialog}>
@@ -60,16 +72,30 @@ const Index: React.FC<Props> = ({ auth, conversations = [], agents = [] }) => {
           </Dialog>
         </div>
 
+        <div className="flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-between">
+          <div className="flex-1">
+            <Input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search conversations…"
+              className="w-full dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100"
+            />
+          </div>
+          <div className="text-xs text-gray-500 dark:text-gray-400">
+            {filteredConversations.length} conversation{filteredConversations.length === 1 ? '' : 's'}
+          </div>
+        </div>
+
         <Card className="dark:bg-gray-800 dark:border-gray-700">
           <CardHeader>
             <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Recent Conversations</h3>
           </CardHeader>
           <CardContent>
-            <ConversationList conversations={conversations} currentUserId={currentUserId} />
+            <ConversationList conversations={filteredConversations} currentUserId={currentUserId} />
           </CardContent>
         </Card>
       </div>
-    </AuthenticatedLayout>
+    </MessagesLayout>
   );
 };
 

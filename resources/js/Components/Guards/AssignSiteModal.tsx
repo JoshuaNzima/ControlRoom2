@@ -18,7 +18,7 @@ export default function AssignSiteModal({
   zones: Array<{ id: number; name: string }>;
   onClose: () => void;
   onSuccess: () => void;
-  scope?: 'control-room' | 'admin';
+  scope?: 'control-room' | 'admin' | 'zone';
   currentAssignment?: { site_id?: number | null; site_name?: string | null; client_name?: string | null } | null;
 }) {
   const [search, setSearch] = React.useState('');
@@ -33,8 +33,12 @@ export default function AssignSiteModal({
       setLoading(true);
       const params = new URLSearchParams();
       if (search) params.set('search', search);
-      if (zoneId) params.set('zone_id', zoneId);
-      const listRoute = scope === 'admin' ? 'admin.clients.sites.json' : 'control-room.clients.sites.json';
+      if (scope !== 'zone' && zoneId) params.set('zone_id', zoneId);
+      const listRoute = scope === 'admin'
+        ? 'admin.clients.sites.json'
+        : scope === 'zone'
+          ? 'zone.sites.json'
+          : 'control-room.clients.sites.json';
       const qs = params.toString();
       const url = qs ? `${route(listRoute)}?${qs}` : route(listRoute);
       const res = await fetch(url, {
@@ -58,7 +62,11 @@ export default function AssignSiteModal({
     e.preventDefault();
     if (!guardId || !selectedSite) return;
     if (currentAssignment && currentAssignment.site_id && selectedSite === currentAssignment.site_id) return; // prevent duplicate submit
-    const assignRoute = scope === 'admin' ? 'admin.guards.assign-site' : 'control-room.guards.assign-site';
+    const assignRoute = scope === 'admin'
+      ? 'admin.guards.assign-site'
+      : scope === 'zone'
+        ? 'zone.guards.assign-site'
+        : 'control-room.guards.assign-site';
     router.post(route(assignRoute), {
       guard_id: guardId,
       client_site_id: selectedSite,
@@ -71,7 +79,11 @@ export default function AssignSiteModal({
   const unassign = () => {
     if (!guardId) return;
     if (!confirm('Unassign guard from current site?')) return;
-    const unassignRoute = scope === 'admin' ? 'admin.guards.unassign-site' : 'control-room.guards.unassign-site';
+    const unassignRoute = scope === 'admin'
+      ? 'admin.guards.unassign-site'
+      : scope === 'zone'
+        ? 'zone.guards.unassign-site'
+        : 'control-room.guards.unassign-site';
     router.post(route(unassignRoute), { guard_id: guardId }, {
       preserveScroll: true,
       onSuccess: () => { onSuccess(); onClose(); },
@@ -98,17 +110,19 @@ export default function AssignSiteModal({
               placeholder="Search site or client name"
             />
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Zone</label>
-            <select
-              value={zoneId}
-              onChange={(e) => setZoneId(e.target.value)}
-              className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
-            >
-              <option value="">All zones</option>
-              {zonesList.map(z => (<option key={z.id} value={z.id}>{z.name}</option>))}
-            </select>
-          </div>
+          {scope !== 'zone' && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Zone</label>
+              <select
+                value={zoneId}
+                onChange={(e) => setZoneId(e.target.value)}
+                className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+              >
+                <option value="">All zones</option>
+                {zonesList.map(z => (<option key={z.id} value={z.id}>{z.name}</option>))}
+              </select>
+            </div>
+          )}
         </div>
         <div>
           <div className="flex items-center justify-between mb-2">

@@ -522,6 +522,7 @@ type ShiftForm = {
   description: string;
   supervisor_id: number | '';
   sites: number[];
+  required_guards: number | null;
   status?: string;
   is_global?: boolean;
 };
@@ -541,6 +542,7 @@ function CreateShiftModal({ open, onClose, supervisors, sites }: { open: boolean
     description: '',
     supervisor_id: '',
     sites: [],
+    required_guards: null,
     is_global: false,
   });
 
@@ -667,10 +669,31 @@ function CreateShiftModal({ open, onClose, supervisors, sites }: { open: boolean
             />
             {errors.end_time && <p className="text-sm text-red-600">{errors.end_time}</p>}
           </div>
+          <div>
+            <label className="block text-sm font-medium">Required Guards</label>
+            <input
+              type="number"
+              min={0}
+              className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100"
+              value={data.required_guards ?? ''}
+              onChange={(e) => setData('required_guards', e.target.value === '' ? null : Number(e.target.value))}
+            />
+            {errors.required_guards && <p className="text-sm text-red-600">{errors.required_guards}</p>}
+          </div>
           <div className="sm:col-span-2 text-xs text-gray-500 dark:text-gray-400">
-            Required guards will be calculated automatically from selected site assignments.
             {!data.is_global && (data.sites || []).length > 0 && (
-              <span className="ml-2">{calcLoading ? 'Calculating…' : `(Estimated: ${calcRequired ?? 0})`}</span>
+              <span>
+                {calcLoading ? 'Calculating suggestion…' : `Suggested from current assigned guards: ${calcRequired ?? 0}`}
+                {data.required_guards == null && !calcLoading && (
+                  <button
+                    type="button"
+                    onClick={() => setData('required_guards', Number(calcRequired ?? 0))}
+                    className="ml-2 text-coin-700 hover:text-coin-800 dark:text-coin-300 dark:hover:text-coin-200"
+                  >
+                    Use suggested
+                  </button>
+                )}
+              </span>
             )}
           </div>
           <div className="sm:col-span-2">
@@ -752,6 +775,7 @@ function EditShiftModal({ open, onClose, shift, supervisors, sites }: EditShiftM
     supervisor_id: shift.supervisor_id ?? '',
     sites: Array.isArray(shift.sites) ? (shift.sites as any[]) : [],
     status: shift.status ?? 'active',
+    required_guards: shift.required_guards ?? null,
     is_global: !!shift.is_global,
   });
 
@@ -878,11 +902,32 @@ function EditShiftModal({ open, onClose, shift, supervisors, sites }: EditShiftM
             />
             {errors.end_time && <p className="text-sm text-red-600">{errors.end_time}</p>}
           </div>
-          <div className="text-xs text-gray-500 dark:text-gray-400">
-            Required guards is calculated automatically from selected site assignments.
+          <div className="sm:col-span-2 text-xs text-gray-500 dark:text-gray-400">
             {!data.is_global && (data.sites || []).length > 0 && (
-              <span className="ml-2">{calcLoading ? 'Calculating…' : `(Estimated: ${calcRequired ?? 0})`}</span>
+              <span>
+                {calcLoading ? 'Calculating suggestion…' : `Suggested from current assigned guards: ${calcRequired ?? 0}`}
+                {data.required_guards == null && !calcLoading && (
+                  <button
+                    type="button"
+                    onClick={() => setData('required_guards', Number(calcRequired ?? 0))}
+                    className="ml-2 text-coin-700 hover:text-coin-800 dark:text-coin-300 dark:hover:text-coin-200"
+                  >
+                    Use suggested
+                  </button>
+                )}
+              </span>
             )}
+          </div>
+          <div>
+            <label className="block text-sm font-medium">Required Guards</label>
+            <input
+              type="number"
+              min={0}
+              className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100"
+              value={data.required_guards ?? ''}
+              onChange={(e) => setData('required_guards', e.target.value === '' ? null : Number(e.target.value))}
+            />
+            {errors.required_guards && <p className="text-sm text-red-600">{errors.required_guards}</p>}
           </div>
           <div>
             <label className="block text-sm font-medium">Status</label>

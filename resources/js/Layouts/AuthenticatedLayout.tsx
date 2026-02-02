@@ -107,7 +107,8 @@ export default function Authenticated({
                             </div>
                         </div>
 
-                        <div className="-me-2 flex items-center sm:hidden">
+                        <div className="-me-2 flex items-center gap-2 sm:hidden">
+                            <NotificationBell />
                             <button
                                 onClick={() =>
                                     setShowingNavigationDropdown(

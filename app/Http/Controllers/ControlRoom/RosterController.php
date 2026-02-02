@@ -15,6 +15,7 @@ use App\Models\User;
 use App\Models\ReliefBundle;
 use App\Models\ReliefBundleSite;
 use App\Models\Guards\Shift as GuardShift;
+use App\Models\Guards\Attendance;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -61,10 +62,13 @@ class RosterController extends Controller
             'start' => ['required','date'],
             'supervisor_id' => ['nullable','integer','exists:users,id'],
             'zone_id' => ['nullable','integer','exists:zones,id'],
+            'shift_type' => ['nullable','in:day,night,morning,evening,custom'],
         ]);
 
         $weekStart = Carbon::parse($validated['start'])->startOfWeek(Carbon::MONDAY);
         $weekEnd = $weekStart->copy()->endOfWeek(Carbon::SUNDAY);
+
+        $shiftType = $validated['shift_type'] ?? 'day';
 
         $days = collect(range(0,6))->map(fn($i) => $weekStart->copy()->addDays($i)->toDateString());
 
@@ -81,6 +85,53 @@ class RosterController extends Controller
             ->get(['id','name','employee_id','guard_type','supervisor_id','zone_id']);
 
         $guardIds = $guards->pluck('id');
+
+        // Scheduled shifts for this week + selected roster type (used as manual roster overlays)
+        $shiftRows = GuardShift::with('clientSite:id,name')
+            ->whereIn('guard_id', $guardIds)
+            ->whereBetween('date', [$weekStart->toDateString(), $weekEnd->toDateString()])
+            ->where('shift_type', $shiftType)
+            ->where('status', '!=', 'cancelled')
+            ->orderByDesc('id')
+            ->get();
+
+        $shiftMap = [];
+        foreach ($shiftRows as $s) {
+            $d = $s->date ? Carbon::parse($s->date)->toDateString() : null;
+            if (!$d) {
+                continue;
+            }
+            if (!isset($shiftMap[$s->guard_id][$d])) {
+                $shiftMap[$s->guard_id][$d] = [
+                    'id' => $s->id,
+                    'client_site_id' => $s->client_site_id,
+                    'site' => $s->clientSite?->name,
+                    'start_time' => $s->start_time ? Carbon::parse($s->start_time)->format('H:i') : null,
+                    'end_time' => $s->end_time ? Carbon::parse($s->end_time)->format('H:i') : null,
+                ];
+            }
+        }
+
+        $today = Carbon::today()->toDateString();
+        $attendanceRows = Attendance::query()
+            ->whereIn('guard_id', $guardIds)
+            ->whereDate('date', $today)
+            ->orderByDesc('id')
+            ->get(['id', 'guard_id', 'client_site_id', 'date', 'check_in_time', 'check_out_time', 'status']);
+
+        $attendanceToday = [];
+        foreach ($attendanceRows as $a) {
+            if (isset($attendanceToday[$a->guard_id])) {
+                continue;
+            }
+            $attendanceToday[$a->guard_id] = [
+                'id' => $a->id,
+                'client_site_id' => $a->client_site_id,
+                'status' => $a->status,
+                'checked_in' => !empty($a->check_in_time),
+                'checked_out' => !empty($a->check_out_time),
+            ];
+        }
 
         // Prefetch assignments covering the week
         $assignments = GuardAssignment::with('clientSite:id,name')
@@ -127,9 +178,23 @@ class RosterController extends Controller
 
         // Build per-day site mapping per guard from assignments
         $guardDaySites = [];
+        $guardDayMeta = [];
         foreach ($guards as $g) {
             $gAssigns = $assignments->get($g->id) ?? collect();
             foreach ($days as $d) {
+                // Prefer scheduled shift site (manual roster)
+                if (!empty($shiftMap[$g->id][$d])) {
+                    $row = $shiftMap[$g->id][$d];
+                    $guardDaySites[$g->id][$d] = $row['client_site_id'] ? ['id' => $row['client_site_id'], 'name' => $row['site'] ?? 'Site'] : null;
+                    $guardDayMeta[$g->id][$d] = [
+                        'source' => 'shift',
+                        'shift_id' => $row['id'],
+                        'start_time' => $row['start_time'],
+                        'end_time' => $row['end_time'],
+                    ];
+                    continue;
+                }
+
                 $siteName = null; $siteId = null;
                 foreach ($gAssigns as $a) {
                     $aStart = Carbon::parse($a->start_date)->toDateString();
@@ -140,19 +205,47 @@ class RosterController extends Controller
                         break;
                     }
                 }
-                $guardDaySites[$g->id][$d] = $siteName ? ['id'=>$siteId,'name'=>$siteName] : null;
+                $guardDaySites[$g->id][$d] = $siteName ? ['id' => $siteId, 'name' => $siteName] : null;
+                if ($siteName) {
+                    $guardDayMeta[$g->id][$d] = ['source' => 'assignment'];
+                }
             }
         }
 
         // Build reliever per-day site mapping from rotations
         $relieverDaySites = [];
+        $relieverDayMeta = [];
         foreach ($relievers as $r) {
             $rRots = $rotations->get($r->id) ?? collect();
             $map = [];
             foreach ($rRots as $rot) {
                 $map[$rot->date->toDateString()] = ['id'=>$rot->client_site_id, 'name'=>$rot->site?->name];
             }
-            $relieverDaySites[$r->id] = $map;
+
+            $merged = [];
+            $meta = [];
+            foreach ($days as $d) {
+                if (!empty($shiftMap[$r->id][$d])) {
+                    $row = $shiftMap[$r->id][$d];
+                    $merged[$d] = $row['client_site_id'] ? ['id' => $row['client_site_id'], 'name' => $row['site'] ?? 'Site'] : null;
+                    $meta[$d] = [
+                        'source' => 'shift',
+                        'shift_id' => $row['id'],
+                        'start_time' => $row['start_time'],
+                        'end_time' => $row['end_time'],
+                    ];
+                    continue;
+                }
+                if (!empty($map[$d])) {
+                    $merged[$d] = $map[$d];
+                    $meta[$d] = ['source' => 'rotation'];
+                    continue;
+                }
+                $merged[$d] = null;
+            }
+
+            $relieverDaySites[$r->id] = $merged;
+            $relieverDayMeta[$r->id] = $meta;
         }
 
         // Active sites in this week scope (derived from guard assignments)
@@ -164,6 +257,8 @@ class RosterController extends Controller
         }
 
         return response()->json([
+            'shift_type' => $shiftType,
+            'today' => $today,
             'days' => $days,
             'guards' => $guards->map(fn($g) => [
                 'id' => $g->id,
@@ -172,16 +267,123 @@ class RosterController extends Controller
                 'guard_type' => $g->guard_type,
                 'sites' => $guardDaySites[$g->id] ?? [],
                 'off' => $offMap[$g->id] ?? [],
+                'meta' => $guardDayMeta[$g->id] ?? [],
+                'attendance_today' => $attendanceToday[$g->id] ?? null,
             ]),
             'relievers' => $relievers->map(fn($r) => [
                 'id' => $r->id,
                 'name' => $r->name,
                 'employee_id' => $r->employee_id,
                 'sites' => $relieverDaySites[$r->id] ?? [],
+                'meta' => $relieverDayMeta[$r->id] ?? [],
+                'attendance_today' => $attendanceToday[$r->id] ?? null,
             ]),
             'sites' => $sites,
             'active_sites' => collect($activeSiteMap)->map(fn($name,$id)=>['id'=>$id,'name'=>$name])->values(),
         ]);
+    }
+
+    public function upsertManualShift(Request $request)
+    {
+        $data = $request->validate([
+            'shift_id' => ['nullable', 'integer', 'exists:shifts,id'],
+            'guard_id' => ['required', 'integer', 'exists:guards,id'],
+            'client_site_id' => ['required', 'integer', 'exists:client_sites,id'],
+            'date' => ['required', 'date'],
+            'shift_type' => ['required', 'in:day,night,morning,evening,custom'],
+            'start_time' => ['required', 'date_format:H:i'],
+            'end_time' => ['required', 'date_format:H:i'],
+            'notes' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        $date = Carbon::parse($data['date'])->toDateString();
+        $startDt = Carbon::parse($date . ' ' . $data['start_time'] . ':00');
+        $endDt = Carbon::parse($date . ' ' . $data['end_time'] . ':00');
+        if ($endDt->lessThanOrEqualTo($startDt)) {
+            $endDt->addDay();
+        }
+
+        $shift = null;
+        if (!empty($data['shift_id'])) {
+            $shift = GuardShift::where('id', (int) $data['shift_id'])
+                ->where('guard_id', (int) $data['guard_id'])
+                ->firstOrFail();
+        } else {
+            $shift = GuardShift::where('guard_id', (int) $data['guard_id'])
+                ->whereDate('date', $date)
+                ->where('shift_type', $data['shift_type'])
+                ->where('status', '!=', 'cancelled')
+                ->orderByDesc('id')
+                ->first();
+        }
+
+        $errors = [];
+        $offDay = GuardOffDay::where('guard_id', (int) $data['guard_id'])
+            ->whereDate('start_date', '<=', $date)
+            ->where(function($q) use ($date) {
+                $q->whereNull('end_date')->orWhereDate('end_date', '>=', $date);
+            })
+            ->exists();
+        if ($offDay) {
+            $errors['date'] = 'Guard has an off-day on the selected date.';
+        }
+
+        $overlap = GuardShift::where('guard_id', (int) $data['guard_id'])
+            ->where('status', '!=', 'cancelled')
+            ->when($shift, fn($q) => $q->where('id', '!=', $shift->id))
+            ->where(function($q) use ($startDt, $endDt) {
+                $q->where('start_time', '<', $endDt)
+                    ->where('end_time', '>', $startDt);
+            })
+            ->exists();
+        if ($overlap) {
+            $errors['start_time'] = 'Overlapping shift exists for this guard at the selected time.';
+        }
+
+        if (!empty($errors)) {
+            return back()->withErrors($errors)->withInput();
+        }
+
+        $payload = [
+            'guard_id' => (int) $data['guard_id'],
+            'client_site_id' => (int) $data['client_site_id'],
+            'assigned_by' => $request->user()?->id,
+            'date' => $date,
+            'start_time' => $startDt,
+            'end_time' => $endDt,
+            'shift_type' => $data['shift_type'],
+            'instructions' => null,
+            'status' => 'scheduled',
+            'notes' => $data['notes'] ?? null,
+        ];
+
+        if ($shift) {
+            $shift->update($payload);
+        } else {
+            $shift = GuardShift::create($payload);
+        }
+
+        if ($request->wantsJson() && !$request->header('X-Inertia')) {
+            return response()->json(['saved' => true, 'shift_id' => $shift->id]);
+        }
+
+        return back()->with('success', 'Roster shift saved.');
+    }
+
+    public function deleteManualShift(Request $request)
+    {
+        $data = $request->validate([
+            'shift_id' => ['required', 'integer', 'exists:shifts,id'],
+        ]);
+
+        $shift = GuardShift::findOrFail((int) $data['shift_id']);
+        $shift->delete();
+
+        if ($request->wantsJson() && !$request->header('X-Inertia')) {
+            return response()->json(['deleted' => true]);
+        }
+
+        return back()->with('success', 'Roster shift removed.');
     }
 
     public function assignRelief(Request $request)

@@ -95,13 +95,17 @@ export default function SupervisorLayout({ children, title }: SupervisorLayoutPr
           {sidebarOpen ? <IconMapper name="X" size={24} /> : <IconMapper name="Menu" size={24} />}
         </button>
         <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-100 truncate">{title || "CoinSec"}</h1>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center justify-end gap-2 shrink-0">
           <NotificationBell />
-          <QuickBudgetButton />
-          <QuickRequisitionButton />
+          <div className="hidden sm:flex items-center gap-2">
+            <QuickBudgetButton />
+            <QuickRequisitionButton />
+          </div>
           {isSuperAdmin && (
-            <Link href={route('superadmin.dashboard')} className="px-3 py-1.5 rounded-md bg-red-700 text-white text-xs font-medium">
-              Super Admin
+            <Link href={route('superadmin.dashboard')} className="inline-flex items-center gap-2 rounded-md bg-red-700 px-2 py-2 sm:px-3 sm:py-1.5 text-xs font-medium text-white">
+              <IconMapper name="Shield" size={14} />
+              <span className="hidden sm:inline">Super Admin</span>
+              <span className="sm:hidden">SA</span>
             </Link>
           )}
           <button className="p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800" onClick={() => setSettingsOpen(!settingsOpen)}>

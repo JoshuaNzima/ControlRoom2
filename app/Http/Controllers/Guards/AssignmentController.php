@@ -34,7 +34,7 @@ class AssignmentController extends Controller
 
     public function assign(Request $request)
     {
-        $request->validate([
+        $validated = $request->validate([
             'guard_id' => 'required|exists:guards,id',
             'client_site_id' => 'required|exists:client_sites,id',
             'start_date' => 'required|date',
@@ -43,16 +43,36 @@ class AssignmentController extends Controller
         ]);
 
         // End previous assignment if any
-        GuardAssignment::where('guard_id', $request->guard_id)->whereNull('end_date')->update(['end_date' => now()]);
+        GuardAssignment::where('guard_id', $validated['guard_id'])
+            ->where('is_active', true)
+            ->whereNull('end_date')
+            ->update([
+                'end_date' => $validated['start_date'],
+                'is_active' => false,
+                'active' => false,
+            ]);
 
-        GuardAssignment::create($request->all());
+        GuardAssignment::create([
+            'guard_id' => $validated['guard_id'],
+            'client_site_id' => $validated['client_site_id'],
+            'assigned_by' => auth()->id(),
+            'start_date' => $validated['start_date'],
+            'end_date' => $validated['end_date'] ?? null,
+            'assignment_type' => $validated['assignment_type'],
+            'is_active' => true,
+            'active' => true,
+        ]);
 
         return redirect()->back()->with('success', 'Guard assigned successfully.');
     }
 
     public function unassign(GuardAssignment $assignment)
     {
-        $assignment->update(['end_date' => now()]);
+        $assignment->update([
+            'end_date' => now()->toDateString(),
+            'is_active' => false,
+            'active' => false,
+        ]);
 
         return redirect()->back()->with('success', 'Guard unassigned successfully.');
     }

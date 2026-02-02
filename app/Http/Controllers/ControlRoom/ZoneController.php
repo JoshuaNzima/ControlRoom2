@@ -5,8 +5,11 @@ namespace App\Http\Controllers\ControlRoom;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreZoneRequest;
 use App\Http\Requests\UpdateZoneRequest;
+use App\Models\Guards\ClientSite;
+use App\Models\User;
 use App\Models\Zone;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
 class ZoneController extends Controller
@@ -17,7 +20,7 @@ class ZoneController extends Controller
             ->select(['id', 'name', 'code', 'description', 'status', 'required_guard_count', 'target_sites_count'])
             ->get()
             ->map(function (Zone $zone) {
-                $commander = \App\Models\User::role('zone_commander')
+                $commander = User::role('zone_commander')
                     ->select(['id', 'name'])
                     ->where('zone_id', $zone->id)
                     ->first();
@@ -38,8 +41,8 @@ class ZoneController extends Controller
                 ];
             });
 
-        $commanders = \App\Models\User::role('zone_commander')->select(['id','name'])->orderBy('name')->get();
-        $sites = \App\Models\Guards\ClientSite::select(['id','name','zone_id'])->orderBy('name')->get();
+        $commanders = User::role('zone_commander')->select(['id','name'])->orderBy('name')->get();
+        $sites = ClientSite::select(['id','name','zone_id'])->orderBy('name')->get();
         $guards = \App\Models\Guards\Guard::select(['id','name','status'])->where('status','active')->orderBy('name')->get();
 
         return Inertia::render('ControlRoom/Zones', [
@@ -57,18 +60,27 @@ class ZoneController extends Controller
         $prefix = strtoupper(collect(explode(' ', $data['name']))->map(fn($w) => substr($w,0,1))->implode(''));
         $data['code'] = $prefix . '-' . strtoupper(str_pad(dechex(random_int(0, 0xFFFF)), 4, '0', STR_PAD_LEFT));
 
-        $zone = Zone::create($data);
+        $commanderId = $data['commander_id'] ?? null;
+        $siteIds = $data['site_ids'] ?? null;
+        unset($data['commander_id'], $data['site_ids']);
 
-        if (!empty($data['commander_id'])) {
-            \App\Models\User::where('id', $data['commander_id'])->update(['zone_id' => $zone->id]);
-        }
+        $affectedZoneIds = [];
+        $zone = DB::transaction(function () use ($data, $commanderId, $siteIds, &$affectedZoneIds) {
+            $zone = Zone::create($data);
 
-        if (!empty($data['site_ids'])) {
-            \App\Models\Guards\ClientSite::whereIn('id', $data['site_ids'])->update(['zone_id' => $zone->id]);
-        }
+            $this->syncZoneCommander($zone, $commanderId);
 
-        return redirect()->route('control-room.zones.index')
-            ->withSuccess('Zone created successfully');
+            if (is_array($siteIds)) {
+                $affectedZoneIds = array_merge($affectedZoneIds, $this->syncZoneSites($zone, $siteIds));
+            }
+
+            $affectedZoneIds[] = $zone->id;
+            $this->recalcRequiredGuardsForZones(array_unique(array_filter($affectedZoneIds)));
+
+            return $zone;
+        });
+
+        return redirect()->route('control-room.zones.index')->withSuccess('Zone created successfully');
     }
 
     public function update(UpdateZoneRequest $request, Zone $zone)
@@ -79,18 +91,88 @@ class ZoneController extends Controller
             $data['code'] = $prefix . '-' . strtoupper(str_pad(dechex(random_int(0, 0xFFFF)), 4, '0', STR_PAD_LEFT));
         }
 
-        $zone->update($data);
+        $commanderId = array_key_exists('commander_id', $data) ? ($data['commander_id'] ?: null) : null;
+        $hasCommanderKey = array_key_exists('commander_id', $data);
+        $siteIds = $data['site_ids'] ?? null;
+        $hasSiteIdsKey = array_key_exists('site_ids', $data);
+        unset($data['commander_id'], $data['site_ids']);
 
-        if (array_key_exists('commander_id', $data) && $data['commander_id']) {
-            \App\Models\User::where('id', $data['commander_id'])->update(['zone_id' => $zone->id]);
+        DB::transaction(function () use ($zone, $data, $hasCommanderKey, $commanderId, $hasSiteIdsKey, $siteIds) {
+            $zone->update($data);
+
+            if ($hasCommanderKey) {
+                $this->syncZoneCommander($zone, $commanderId);
+            }
+
+            $affectedZoneIds = [$zone->id];
+            if ($hasSiteIdsKey && is_array($siteIds)) {
+                $affectedZoneIds = array_merge($affectedZoneIds, $this->syncZoneSites($zone, $siteIds));
+            }
+
+            $this->recalcRequiredGuardsForZones(array_unique(array_filter($affectedZoneIds)));
+        });
+
+        return redirect()->route('control-room.zones.index')->withSuccess('Zone updated successfully');
+    }
+
+    protected function syncZoneCommander(Zone $zone, ?int $commanderId): void
+    {
+        $query = User::role('zone_commander')->where('zone_id', $zone->id);
+
+        if ($commanderId) {
+            $query->where('id', '!=', $commanderId)->update(['zone_id' => null]);
+            User::whereKey($commanderId)->update(['zone_id' => $zone->id]);
+            return;
         }
 
-        if (!empty($data['site_ids'])) {
-            \App\Models\Guards\ClientSite::whereIn('id', $data['site_ids'])->update(['zone_id' => $zone->id]);
+        $query->update(['zone_id' => null]);
+    }
+
+    protected function syncZoneSites(Zone $zone, array $siteIds): array
+    {
+        $siteIds = array_values(array_unique(array_filter(array_map('intval', $siteIds))));
+
+        $currentSiteIds = ClientSite::query()
+            ->where('zone_id', $zone->id)
+            ->pluck('id')
+            ->all();
+
+        $toDetach = array_values(array_diff($currentSiteIds, $siteIds));
+        $toAttach = array_values(array_diff($siteIds, $currentSiteIds));
+
+        $affectedZoneIds = [$zone->id];
+
+        if (!empty($toAttach)) {
+            $movedFromZoneIds = ClientSite::query()
+                ->whereIn('id', $toAttach)
+                ->pluck('zone_id')
+                ->filter()
+                ->unique()
+                ->all();
+
+            $affectedZoneIds = array_merge($affectedZoneIds, $movedFromZoneIds);
         }
 
-        return redirect()->route('control-room.zones.index')
-            ->withSuccess('Zone updated successfully');
+        if (!empty($toDetach)) {
+            ClientSite::query()->whereIn('id', $toDetach)->update(['zone_id' => null]);
+        }
+
+        if (!empty($toAttach)) {
+            ClientSite::query()->whereIn('id', $toAttach)->update(['zone_id' => $zone->id]);
+        }
+
+        return array_unique($affectedZoneIds);
+    }
+
+    protected function recalcRequiredGuardsForZones(array $zoneIds): void
+    {
+        if (empty($zoneIds)) {
+            return;
+        }
+
+        foreach ($zoneIds as $zoneId) {
+            ClientSite::recalcZoneRequiredGuards($zoneId);
+        }
     }
 
     public function destroy(Zone $zone)
@@ -171,7 +253,7 @@ class ZoneController extends Controller
         \App\Models\Guards\GuardAssignment::where('guard_id', $data['guard_id'])
             ->where('is_active', true)
             ->whereNull('end_date')
-            ->update(['end_date' => $startDate, 'is_active' => false]);
+            ->update(['end_date' => $startDate, 'is_active' => false, 'active' => false]);
 
         \App\Models\Guards\GuardAssignment::create([
             'guard_id' => $data['guard_id'],
@@ -180,6 +262,7 @@ class ZoneController extends Controller
             'start_date' => $startDate,
             'end_date' => null,
             'is_active' => true,
+            'active' => true,
         ]);
 
         return back()->withSuccess('Guard assigned to site.');
@@ -195,6 +278,7 @@ class ZoneController extends Controller
         $assignment->update([
             'is_active' => false,
             'end_date' => now()->startOfDay(),
+            'active' => false,
         ]);
 
         return back()->withSuccess('Guard unassigned from site.');
@@ -219,6 +303,7 @@ class ZoneController extends Controller
         $assignment->update([
             'end_date' => $data['end_date'],
             'is_active' => false,
+            'active' => false,
         ]);
 
         return back()->withSuccess('Assignment ended successfully.');

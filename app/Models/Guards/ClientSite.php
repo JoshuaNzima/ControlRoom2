@@ -4,6 +4,7 @@ namespace App\Models\Guards;
 
 use App\Models\Camera;
 use App\Models\CameraAlert;
+use App\Models\Shift as ScheduleShift;
 use App\Models\Zone;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -15,6 +16,61 @@ use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 class ClientSite extends Model
 {
     use SoftDeletes;
+
+    public static function requiredGuardsBySiteFromScheduleShifts(array $siteIds): array
+    {
+        $siteIds = array_values(array_unique(array_filter(array_map('intval', $siteIds))));
+        if (empty($siteIds)) {
+            return [];
+        }
+
+        $siteIdSet = array_fill_keys($siteIds, true);
+        $requiredBySite = array_fill_keys($siteIds, 0);
+
+        $shiftRows = ScheduleShift::query()
+            ->select(['required_guards', 'sites', 'status', 'is_global'])
+            ->where('is_global', false)
+            ->whereNotNull('sites')
+            ->whereIn('status', ['active', 'scheduled'])
+            ->get();
+
+        foreach ($shiftRows as $shift) {
+            $reqTotal = (int) ($shift->required_guards ?? 0);
+            if ($reqTotal <= 0) {
+                continue;
+            }
+
+            $shiftSites = is_array($shift->sites) ? $shift->sites : [];
+            $inScope = [];
+            foreach ($shiftSites as $sid) {
+                $sid = (int) $sid;
+                if (isset($siteIdSet[$sid])) {
+                    $inScope[$sid] = true;
+                }
+            }
+
+            $scopeSiteIds = array_keys($inScope);
+            $scopeCount = count($scopeSiteIds);
+            if ($scopeCount <= 0) {
+                continue;
+            }
+
+            sort($scopeSiteIds);
+            $base = intdiv($reqTotal, $scopeCount);
+            $rem = $reqTotal % $scopeCount;
+            foreach ($scopeSiteIds as $i => $sid) {
+                $add = $base + ($i < $rem ? 1 : 0);
+                $requiredBySite[$sid] = (int) ($requiredBySite[$sid] ?? 0) + $add;
+            }
+        }
+
+        return $requiredBySite;
+    }
+
+    public static function recalcZoneRequiredGuards($zoneId): void
+    {
+        self::updateZoneRequiredGuards($zoneId);
+    }
 
     protected $fillable = [
         'client_id',
@@ -105,10 +161,22 @@ class ClientSite extends Model
     {
         if (!$zoneId) return;
         try {
-            $sum = static::query()
+            $sites = static::query()
                 ->where('zone_id', $zoneId)
                 ->where('status', 'active')
-                ->sum('required_guards');
+                ->get(['id', 'required_guards']);
+
+            $siteIds = $sites->pluck('id')->filter()->map(fn ($v) => (int) $v)->values()->all();
+            $requiredBySite = self::requiredGuardsBySiteFromScheduleShifts($siteIds);
+
+            $sum = 0;
+            foreach ($sites as $site) {
+                $siteReq = (int) ($requiredBySite[$site->id] ?? 0);
+                if ($siteReq <= 0) {
+                    $siteReq = (int) ($site->required_guards ?? 0);
+                }
+                $sum += $siteReq;
+            }
 
             Zone::whereKey($zoneId)->update(['required_guard_count' => (int) $sum]);
         } catch (\Throwable $e) {}

@@ -72,7 +72,7 @@ export default function Edit({ client, services, zones = [] }: { client: any; se
     setDeleting(true);
     try {
       const url = route('admin.clients.sites.destroy', { client: client.id, site: deletingSiteId });
-      await axios.post(url, { _method: 'DELETE' }, { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } });
+      await axios.delete(url, { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } });
       await refreshClient();
       setConfirmDeleteOpen(false);
       setDeletingSiteId(null);

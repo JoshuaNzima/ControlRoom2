@@ -21,6 +21,7 @@ export default function EditSiteModal({ open, onClose, clientId, siteId, onSaved
   const [loading, setLoading] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
   const [errors, setErrors] = React.useState<Record<string, string>>({});
+  const [loadError, setLoadError] = React.useState<string | null>(null);
   const [showMap, setShowMap] = React.useState(true);
   const [form, setForm] = React.useState<any>({
     name: '',
@@ -42,9 +43,10 @@ export default function EditSiteModal({ open, onClose, clientId, siteId, onSaved
       if (!open || !siteId) return;
       setLoading(true);
       setErrors({});
+      setLoadError(null);
       try {
         const url = route('admin.clients.sites.show-json', { client: clientId, site: siteId });
-        const res = await axios.get(url, { headers: { 'Accept': 'application/json' } });
+        const res = await axios.get(url, { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } });
         const s = res.data || {};
         setForm({
           name: s.name || '',
@@ -60,7 +62,10 @@ export default function EditSiteModal({ open, onClose, clientId, siteId, onSaved
           longitude: s.longitude != null ? String(s.longitude) : '',
           zone_id: s.zone_id != null ? String(s.zone_id) : '',
         });
-      } catch (_) {
+      } catch (e: any) {
+        const msg = e?.response?.data?.message || 'Failed to load site.';
+        setLoadError(msg);
+        push(msg, 'error');
       } finally {
         setLoading(false);
       }
@@ -81,14 +86,18 @@ export default function EditSiteModal({ open, onClose, clientId, siteId, onSaved
         longitude: form.longitude === '' ? null : Number(form.longitude),
         zone_id: form.zone_id === '' ? null : Number(form.zone_id),
       };
-      await axios.put(url, payload, { headers: { 'Accept': 'application/json' } });
+      await axios.put(url, payload, { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } });
       onSaved?.();
+      push('Site updated successfully.', 'success');
       onClose();
     } catch (e: any) {
       if (e?.response?.data?.errors) {
         const errs: Record<string, string> = {};
         Object.entries(e.response.data.errors).forEach(([k, v]: any) => (errs[k] = Array.isArray(v) ? v[0] : String(v)));
         setErrors(errs);
+      } else {
+        const msg = e?.response?.data?.message || 'Failed to update site.';
+        push(msg, 'error');
       }
     } finally {
       setSaving(false);
@@ -101,13 +110,13 @@ export default function EditSiteModal({ open, onClose, clientId, siteId, onSaved
     setSaving(true);
     try {
       const url = route('admin.clients.sites.destroy', { client: clientId, site: siteId });
-      await axios.post(url, { _method: 'DELETE' }, { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } });
+      await axios.delete(url, { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } });
       onSaved?.();
       push('Site deleted successfully.', 'success');
       onClose();
     } catch (e: any) {
       const msg = e?.response?.data?.message || 'Failed to delete site.';
-      alert(msg);
+      push(msg, 'error');
     } finally {
       setSaving(false);
     }
@@ -122,6 +131,8 @@ export default function EditSiteModal({ open, onClose, clientId, siteId, onSaved
         <div className="space-y-4">
           {loading ? (
             <div className="text-sm text-gray-500 dark:text-gray-400">Loading...</div>
+          ) : loadError ? (
+            <div className="text-sm text-red-500">{loadError}</div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div>

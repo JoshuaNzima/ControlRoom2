@@ -59,7 +59,7 @@ class SupervisorAssignmentController extends Controller
             'client_site_id' => 'required|exists:client_sites,id',
             'start_date' => 'required|date',
             'end_date' => 'nullable|date|after:start_date',
-            'assignment_type' => 'required|in:permanent,temporary,relief',
+            'assignment_type' => 'required|in:permanent,temporary',
             'notes' => 'nullable|string|max:500',
         ]);
 
@@ -73,7 +73,7 @@ class SupervisorAssignmentController extends Controller
         // Deactivate previous assignments
         GuardAssignment::where('guard_id', $validated['guard_id'])
             ->where('is_active', true)
-            ->update(['is_active' => false, 'end_date' => today()]);
+            ->update(['is_active' => false, 'active' => false, 'end_date' => today()]);
 
         // Create new assignment
         GuardAssignment::create([
@@ -85,6 +85,7 @@ class SupervisorAssignmentController extends Controller
             'assignment_type' => $validated['assignment_type'],
             'notes' => $validated['notes'] ?? null,
             'is_active' => true,
+            'active' => true,
         ]);
 
         return back()->with('success', "{$guard->name} assigned successfully.");
@@ -101,6 +102,7 @@ class SupervisorAssignmentController extends Controller
 
         $assignment->update([
             'is_active' => false,
+            'active' => false,
             'end_date' => today(),
         ]);
 

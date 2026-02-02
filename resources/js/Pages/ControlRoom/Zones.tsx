@@ -28,7 +28,7 @@ const Zones = ({ auth, zones: zonesProp = [], commanders = [], sites = [], guard
     description: string;
     status: 'active' | 'inactive' | 'understaffed';
     target_sites_count: number;
-    commander_id: number | '';
+    commander_id: number | null;
     site_ids: number[];
   };
 
@@ -38,7 +38,7 @@ const Zones = ({ auth, zones: zonesProp = [], commanders = [], sites = [], guard
     description: '',
     status: 'active',
     target_sites_count: 0,
-    commander_id: '' ,
+    commander_id: null,
     site_ids: [] as number[],
   });
 
@@ -62,7 +62,7 @@ const Zones = ({ auth, zones: zonesProp = [], commanders = [], sites = [], guard
       description: z.description ?? '',
       status: z.status,
       target_sites_count: z.target_sites_count ?? 0,
-      commander_id: (z.commander_id ?? '') as any ,
+      commander_id: (z.commander_id ?? null) as any,
       site_ids: (sites.filter((s) => s.zone_id === z.id).map((s) => s.id)) as number[],
     });
     setOpen(true);
@@ -182,7 +182,7 @@ const Zones = ({ auth, zones: zonesProp = [], commanders = [], sites = [], guard
 
                       <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">Zone Commander</label>
-                        <select value={data.commander_id as any} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setData('commander_id', e.target.value ? Number(e.target.value) : '')} className="mt-1 w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800">
+                        <select value={data.commander_id as any} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setData('commander_id', e.target.value ? Number(e.target.value) : null)} className="mt-1 w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800">
                           <option value="">Select commander</option>
                           {commanders.map((c) => (
                             <option key={c.id} value={c.id}>{c.name}</option>

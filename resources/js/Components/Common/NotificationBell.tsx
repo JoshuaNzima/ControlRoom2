@@ -87,7 +87,7 @@ export default function NotificationBell({ className = '' }: { className?: strin
   };
 
   return (
-    <div className={`relative ${className}`}>
+    <div className={`relative shrink-0 ${className}`}>
       <button
         onClick={toggleOpen}
         className="relative p-2 rounded-md hover:bg-red-50 dark:hover:bg-gray-800 text-red-700 dark:text-gray-200"
@@ -115,7 +115,16 @@ export default function NotificationBell({ className = '' }: { className?: strin
             ) : (
               <ul className="divide-y divide-red-100 dark:divide-gray-800">
                 {items.map((n) => (
-                  <li key={n.id} className={`p-3 ${!n.read_at ? 'bg-red-50/40 dark:bg-gray-800/40' : ''}`}>
+                  <li
+                    key={n.id}
+                    className={`p-3 ${!n.read_at ? 'bg-red-50/40 dark:bg-gray-800/40' : ''} ${n.data?.url ? 'cursor-pointer hover:bg-red-50/60 dark:hover:bg-gray-800/60' : ''}`}
+                    onClick={() => {
+                      const url = n.data?.url;
+                      if (url) {
+                        window.location.href = url;
+                      }
+                    }}
+                  >
                     <div className="flex items-start gap-2">
                       <span className="mt-0.5 text-red-600 dark:text-red-400">
                         <IconMapper name="bell" className="h-4 w-4" />

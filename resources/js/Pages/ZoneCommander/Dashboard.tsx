@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import IconMapper from '@/Components/IconMapper';
 import { format } from 'date-fns';
-import { Line, Bar, Doughnut } from 'react-chartjs-2';
+import { Line, Doughnut } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -18,7 +18,6 @@ import {
   Legend,
   ArcElement,
 } from 'chart.js';
-import QuickRequisitionModal from '@/Components/Requisitions/QuickRequisitionModal';
 
 ChartJS.register(
   CategoryScale,
@@ -75,26 +74,26 @@ interface ZoneDashboardProps {
 const getSeverityColor = (severity: string) => {
   switch (severity) {
     case 'high':
-      return 'bg-red-100 text-red-800';
+      return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200';
     case 'medium':
-      return 'bg-yellow-100 text-yellow-800';
+      return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200';
     case 'low':
-      return 'bg-blue-100 text-blue-800';
+      return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200';
     default:
-      return 'bg-gray-100 text-gray-800';
+      return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200';
   }
 };
 
 const getRiskLevelColor = (level: string) => {
   switch (level) {
     case 'normal':
-      return 'bg-green-100 text-green-800';
+      return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200';
     case 'warning':
-      return 'bg-yellow-100 text-yellow-800';
+      return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200';
     case 'high':
-      return 'bg-red-100 text-red-800';
+      return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200';
     default:
-      return 'bg-gray-100 text-gray-800';
+      return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200';
   }
 };
 
@@ -167,8 +166,8 @@ export default function ZoneDashboard({ zone, sites, at_risk_guards, recent_aler
       try {
         // Fetch both datasets in parallel
         const [attendanceResponse, riskResponse] = await Promise.all([
-          fetch(route('zone.dashboard.data.weekly-attendance')),
-          fetch(route('zone.dashboard.data.risk-distribution'))
+          fetch(route('zone.data.weekly-attendance')),
+          fetch(route('zone.data.risk-distribution'))
         ]);
 
         if (!attendanceResponse.ok || !riskResponse.ok) {
@@ -292,32 +291,32 @@ export default function ZoneDashboard({ zone, sites, at_risk_guards, recent_aler
         {/* Charts Section */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Attendance Trend Chart */}
-          <Card className="hover:shadow-lg transition-shadow duration-300">
+          <Card className="hover:shadow-lg transition-shadow duration-300 dark:bg-gray-900 dark:border-gray-800">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <IconMapper name="TrendingUp" className="w-5 h-5 text-green-600" />
+                <IconMapper name="TrendingUp" className="w-5 h-5 text-green-600 dark:text-green-300" />
                 Weekly Attendance Trend
               </CardTitle>
             </CardHeader>
             <CardContent>
             <div className="h-64 relative">
               {isLoading ? (
-                <div className="absolute inset-0 flex items-center justify-center bg-gray-50/50">
+                <div className="absolute inset-0 flex items-center justify-center bg-gray-50/50 dark:bg-gray-950/40">
                   <div className="flex flex-col items-center gap-2">
-                    <IconMapper name="Loader2" className="w-8 h-8 animate-spin text-red-600" />
-                    <span className="text-sm text-gray-600">Loading data...</span>
+                    <IconMapper name="Loader2" className="w-8 h-8 animate-spin text-red-600 dark:text-red-300" />
+                    <span className="text-sm text-gray-600 dark:text-gray-300">Loading data...</span>
                   </div>
                 </div>
               ) : hasError ? (
-                <div className="absolute inset-0 flex items-center justify-center bg-red-50/50">
+                <div className="absolute inset-0 flex items-center justify-center bg-red-50/50 dark:bg-red-950/30">
                   <div className="flex flex-col items-center gap-2">
-                    <IconMapper name="AlertTriangle" className="w-8 h-8 text-red-600" />
-                    <span className="text-sm text-red-600">Failed to load attendance data</span>
+                    <IconMapper name="AlertTriangle" className="w-8 h-8 text-red-600 dark:text-red-300" />
+                    <span className="text-sm text-red-600 dark:text-red-300">Failed to load attendance data</span>
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => window.location.reload()}
-                      className="mt-2"
+                      className="mt-2 dark:border-gray-700 dark:text-gray-100 dark:hover:bg-gray-800"
                     >
                       Retry
                     </Button>
@@ -331,32 +330,32 @@ export default function ZoneDashboard({ zone, sites, at_risk_guards, recent_aler
           </Card>
 
           {/* Risk Distribution Chart */}
-          <Card className="hover:shadow-lg transition-shadow duration-300">
+          <Card className="hover:shadow-lg transition-shadow duration-300 dark:bg-gray-900 dark:border-gray-800">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <IconMapper name="PieChart" className="w-5 h-5 text-orange-600" />
+                <IconMapper name="PieChart" className="w-5 h-5 text-orange-600 dark:text-orange-300" />
                 Risk Level Distribution
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="h-64 relative">
                 {isLoading ? (
-                  <div className="absolute inset-0 flex items-center justify-center bg-gray-50/50">
+                  <div className="absolute inset-0 flex items-center justify-center bg-gray-50/50 dark:bg-gray-950/40">
                     <div className="flex flex-col items-center gap-2">
-                      <IconMapper name="Loader2" className="w-8 h-8 animate-spin text-red-600" />
-                      <span className="text-sm text-gray-600">Loading data...</span>
+                      <IconMapper name="Loader2" className="w-8 h-8 animate-spin text-red-600 dark:text-red-300" />
+                      <span className="text-sm text-gray-600 dark:text-gray-300">Loading data...</span>
                     </div>
                   </div>
                 ) : hasError ? (
-                  <div className="absolute inset-0 flex items-center justify-center bg-red-50/50">
+                  <div className="absolute inset-0 flex items-center justify-center bg-red-50/50 dark:bg-red-950/30">
                     <div className="flex flex-col items-center gap-2">
-                      <IconMapper name="AlertTriangle" className="w-8 h-8 text-red-600" />
-                      <span className="text-sm text-red-600">Failed to load risk data</span>
+                      <IconMapper name="AlertTriangle" className="w-8 h-8 text-red-600 dark:text-red-300" />
+                      <span className="text-sm text-red-600 dark:text-red-300">Failed to load risk data</span>
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => window.location.reload()}
-                        className="mt-2"
+                        className="mt-2 dark:border-gray-700 dark:text-gray-100 dark:hover:bg-gray-800"
                       >
                         Retry
                       </Button>
@@ -383,14 +382,14 @@ export default function ZoneDashboard({ zone, sites, at_risk_guards, recent_aler
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Site Overview */}
-          <Card className="hover:shadow-lg transition-shadow duration-300">
+          <Card className="hover:shadow-lg transition-shadow duration-300 dark:bg-gray-900 dark:border-gray-800">
             <CardHeader>
               <CardTitle className="flex justify-between items-center">
                 <span className="flex items-center gap-2">
-                  <IconMapper name="Building" className="w-5 h-5 text-blue-600" />
+                  <IconMapper name="Building" className="w-5 h-5 text-blue-600 dark:text-blue-200" />
                   Sites Overview
                 </span>
-                <Button variant="outline" size="sm" className="hover:bg-blue-50">View All Sites</Button>
+                <Button variant="outline" size="sm" className="hover:bg-blue-50 dark:hover:bg-blue-900/20 dark:border-gray-700 dark:text-gray-100">View All Sites</Button>
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -398,23 +397,23 @@ export default function ZoneDashboard({ zone, sites, at_risk_guards, recent_aler
                 {sites.map((site, index) => (
                   <div 
                     key={site.id} 
-                    className="p-4 rounded-lg border hover:border-blue-200 hover:bg-blue-50/50 transition-all duration-300 group"
+                    className="p-4 rounded-lg border hover:border-blue-200 hover:bg-blue-50/50 transition-all duration-300 group dark:border-gray-800 dark:hover:border-blue-700/40 dark:hover:bg-blue-900/10"
                     style={{ animationDelay: `${index * 100}ms` }}
                   >
                     <div className="flex justify-between items-start">
                       <div className="flex-1">
-                        <h4 className="font-medium group-hover:text-blue-900 transition-colors">{site.name}</h4>
-                        <p className="text-sm text-gray-500">{site.client_name}</p>
+                        <h4 className="font-medium group-hover:text-blue-900 transition-colors dark:text-gray-100 dark:group-hover:text-blue-200">{site.name}</h4>
+                        <p className="text-sm text-gray-500 dark:text-gray-300">{site.client_name}</p>
                         <div className="flex items-center gap-2 mt-2">
                           <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                          <span className="text-xs text-green-600">Active</span>
+                          <span className="text-xs text-green-600 dark:text-green-300">Active</span>
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className="font-medium text-blue-600">{site.guard_count} Guards</p>
-                        <p className="text-sm text-gray-500">{site.attendance_today} Present Today</p>
-                        <div className="text-xs text-gray-400 mt-1">
-                          {Math.round((site.attendance_today / site.guard_count) * 100)}% attendance
+                        <p className="font-medium text-blue-600 dark:text-blue-200">{site.guard_count} Guards</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-300">{site.attendance_today} Present Today</p>
+                        <div className="text-xs text-gray-400 dark:text-gray-400 mt-1">
+                          {site.guard_count > 0 ? Math.round((site.attendance_today / site.guard_count) * 100) : 0}% attendance
                         </div>
                       </div>
                     </div>
@@ -425,14 +424,14 @@ export default function ZoneDashboard({ zone, sites, at_risk_guards, recent_aler
           </Card>
 
           {/* At-Risk Guards */}
-          <Card className="hover:shadow-lg transition-shadow duration-300">
+          <Card className="hover:shadow-lg transition-shadow duration-300 dark:bg-gray-900 dark:border-gray-800">
             <CardHeader>
               <CardTitle className="flex justify-between items-center">
                 <span className="flex items-center gap-2">
-                  <IconMapper name="AlertTriangle" className="w-5 h-5 text-red-600" />
+                  <IconMapper name="AlertTriangle" className="w-5 h-5 text-red-600 dark:text-red-300" />
                   At-Risk Guards
                 </span>
-                <Button variant="outline" size="sm" className="hover:bg-red-50">View All Guards</Button>
+                <Button variant="outline" size="sm" className="hover:bg-red-50 dark:hover:bg-red-900/20 dark:border-gray-700 dark:text-gray-100">View All Guards</Button>
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -440,27 +439,27 @@ export default function ZoneDashboard({ zone, sites, at_risk_guards, recent_aler
                 {at_risk_guards.map((guard, index) => (
                   <div 
                     key={guard.id} 
-                    className="p-4 rounded-lg border hover:border-red-200 hover:bg-red-50/50 transition-all duration-300 group"
+                    className="p-4 rounded-lg border hover:border-red-200 hover:bg-red-50/50 transition-all duration-300 group dark:border-gray-800 dark:hover:border-red-700/40 dark:hover:bg-red-900/10"
                     style={{ animationDelay: `${index * 100}ms` }}
                   >
                     <div className="flex justify-between items-start">
                       <div className="flex-1">
-                        <h4 className="font-medium group-hover:text-red-900 transition-colors">{guard.name}</h4>
-                        <p className="text-sm text-gray-500">
+                        <h4 className="font-medium group-hover:text-red-900 transition-colors dark:text-gray-100 dark:group-hover:text-red-200">{guard.name}</h4>
+                        <p className="text-sm text-gray-500 dark:text-gray-300">
                           {guard.current_site 
                             ? `${guard.current_site.client_name} - ${guard.current_site.name}`
                             : 'Unassigned'}
                         </p>
                         <div className="flex items-center gap-2 mt-2">
                           <IconMapper name="Clock" className="w-3 h-3 text-gray-400" />
-                          <span className="text-xs text-gray-500">Last seen 2 hours ago</span>
+                          <span className="text-xs text-gray-500 dark:text-gray-400">Last seen 2 hours ago</span>
                         </div>
                       </div>
                       <div className="flex flex-col gap-2">
                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${getRiskLevelColor(guard.risk_level)}`}>
                           {guard.risk_level.toUpperCase()}
                         </span>
-                        <span className="text-sm text-gray-500 text-center">
+                        <span className="text-sm text-gray-500 dark:text-gray-300 text-center">
                           {guard.infraction_count} infractions
                         </span>
                       </div>
@@ -473,7 +472,7 @@ export default function ZoneDashboard({ zone, sites, at_risk_guards, recent_aler
         </div>
 
         {/* Recent Alerts */}
-        <Card className="hover:shadow-lg transition-shadow duration-300">
+        <Card className="hover:shadow-lg transition-shadow duration-300 dark:bg-gray-900 dark:border-gray-800">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <IconMapper name="Bell" className="w-5 h-5 text-yellow-600" />
@@ -488,7 +487,7 @@ export default function ZoneDashboard({ zone, sites, at_risk_guards, recent_aler
               {recent_alerts.map((alert, index) => (
                 <div 
                   key={index} 
-                  className="flex items-start gap-4 p-4 rounded-lg border hover:border-yellow-200 hover:bg-yellow-50/50 transition-all duration-300 group"
+                  className="flex items-start gap-4 p-4 rounded-lg border hover:border-yellow-200 hover:bg-yellow-50/50 transition-all duration-300 group dark:border-gray-800 dark:hover:border-yellow-700/40 dark:hover:bg-yellow-900/10"
                   style={{ animationDelay: `${index * 150}ms` }}
                 >
                   <div className={`p-2 rounded-full ${getSeverityColor(alert.severity)} group-hover:scale-110 transition-transform duration-300`}>
@@ -496,18 +495,18 @@ export default function ZoneDashboard({ zone, sites, at_risk_guards, recent_aler
                   </div>
                   <div className="flex-1">
                     <div className="flex justify-between items-start">
-                      <h4 className="font-medium group-hover:text-yellow-900 transition-colors">{alert.type}</h4>
-                      <span className="text-sm text-gray-500 flex items-center gap-1">
+                      <h4 className="font-medium group-hover:text-yellow-900 transition-colors dark:text-gray-100 dark:group-hover:text-yellow-200">{alert.type}</h4>
+                      <span className="text-sm text-gray-500 dark:text-gray-300 flex items-center gap-1">
                         <IconMapper name="Clock" className="w-3 h-3" />
                         {format(new Date(alert.created_at), 'MMM d, HH:mm')}
                       </span>
                     </div>
-                    <p className="text-sm text-gray-600 mt-1">{alert.message}</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">{alert.message}</p>
                     <div className="flex items-center gap-2 mt-2">
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${getSeverityColor(alert.severity)}`}>
                         {alert.severity.toUpperCase()}
                       </span>
-                      <button className="text-xs text-blue-600 hover:text-blue-800 transition-colors">
+                      <button className="text-xs text-blue-600 hover:text-blue-800 dark:text-blue-300 dark:hover:text-blue-200 transition-colors">
                         View Details →
                       </button>
                     </div>
@@ -519,9 +518,9 @@ export default function ZoneDashboard({ zone, sites, at_risk_guards, recent_aler
         </Card>
 
         {/* Quick Actions */}
-        <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
+        <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200 dark:from-gray-900 dark:to-gray-900 dark:border-gray-800">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-blue-900">
+            <CardTitle className="flex items-center gap-2 text-blue-900 dark:text-gray-100">
               <IconMapper name="Zap" className="w-5 h-5" />
               Quick Actions
             </CardTitle>
@@ -530,28 +529,28 @@ export default function ZoneDashboard({ zone, sites, at_risk_guards, recent_aler
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <Button 
                 onClick={() => window.location.href = route('zone.patrols.start')}
-                className="h-20 flex flex-col gap-2 bg-white hover:bg-blue-50 border border-blue-200 text-blue-700 hover:text-blue-800 transition-all duration-300 hover:scale-105"
+                className="h-20 flex flex-col gap-2 bg-white hover:bg-blue-50 border border-blue-200 text-blue-700 hover:text-blue-800 transition-all duration-300 hover:scale-105 dark:bg-gray-900 dark:hover:bg-blue-900/20 dark:border-gray-800 dark:text-blue-200"
               >
                 <IconMapper name="ScanLine" className="w-6 h-6" />
                 <span className="text-sm font-medium">Start Patrol</span>
               </Button>
               <Button 
-                onClick={() => window.location.href = route('zone.attendance.check-in')}
-                className="h-20 flex flex-col gap-2 bg-white hover:bg-green-50 border border-green-200 text-green-700 hover:text-green-800 transition-all duration-300 hover:scale-105"
+                onClick={() => window.location.href = route('zone.attendance.index')}
+                className="h-20 flex flex-col gap-2 bg-white hover:bg-green-50 border border-green-200 text-green-700 hover:text-green-800 transition-all duration-300 hover:scale-105 dark:bg-gray-900 dark:hover:bg-green-900/20 dark:border-gray-800 dark:text-green-200"
               >
                 <IconMapper name="UserCheck" className="w-6 h-6" />
                 <span className="text-sm font-medium">Check In</span>
               </Button>
               <Button 
                 onClick={() => window.location.href = route('zone.reports.generate')}
-                className="h-20 flex flex-col gap-2 bg-white hover:bg-orange-50 border border-orange-200 text-orange-700 hover:text-orange-800 transition-all duration-300 hover:scale-105"
+                className="h-20 flex flex-col gap-2 bg-white hover:bg-orange-50 border border-orange-200 text-orange-700 hover:text-orange-800 transition-all duration-300 hover:scale-105 dark:bg-gray-900 dark:hover:bg-orange-900/20 dark:border-gray-800 dark:text-orange-200"
               >
                 <IconMapper name="FileText" className="w-6 h-6" />
                 <span className="text-sm font-medium">Generate Report</span>
               </Button>
               <Button 
                 onClick={() => window.location.href = route('profile.edit')}
-                className="h-20 flex flex-col gap-2 bg-white hover:bg-purple-50 border border-purple-200 text-purple-700 hover:text-purple-800 transition-all duration-300 hover:scale-105"
+                className="h-20 flex flex-col gap-2 bg-white hover:bg-purple-50 border border-purple-200 text-purple-700 hover:text-purple-800 transition-all duration-300 hover:scale-105 dark:bg-gray-900 dark:hover:bg-purple-900/20 dark:border-gray-800 dark:text-purple-200"
               >
                 <IconMapper name="Settings" className="w-6 h-6" />
                 <span className="text-sm font-medium">Settings</span>

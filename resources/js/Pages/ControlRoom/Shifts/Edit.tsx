@@ -16,6 +16,7 @@ export default function ShiftsEdit() {
     sites: number[];
     status: string;
     is_global: boolean;
+    required_guards: number | null;
   };
 
   const { data, setData, put, processing, errors } = useForm<ShiftForm>({
@@ -27,6 +28,7 @@ export default function ShiftsEdit() {
     sites: Array.isArray(shift.sites) ? shift.sites : [],
     status: shift.status,
     is_global: !!shift.is_global,
+    required_guards: shift.required_guards ?? null,
   });
 
   const toggleSite = (siteId: number) => {
@@ -76,7 +78,17 @@ export default function ShiftsEdit() {
                 <input type="time" className="w-full border border-gray-300 dark:border-gray-700 rounded-md p-2 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100" value={data.end_time} onChange={(e) => setData('end_time', e.target.value)} />
                 {errors.end_time && <p className="text-sm text-red-600">{errors.end_time}</p>}
               </div>
-              <div className="sm:col-span-2 text-xs text-gray-500 dark:text-gray-400">Required guards is calculated automatically from selected site assignments.</div>
+              <div>
+                <label className="block text-sm font-medium">Required Guards</label>
+                <input
+                  type="number"
+                  min={0}
+                  className="w-full border border-gray-300 dark:border-gray-700 rounded-md p-2 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
+                  value={data.required_guards ?? ''}
+                  onChange={(e) => setData('required_guards', e.target.value === '' ? null : Number(e.target.value))}
+                />
+                {errors.required_guards && <p className="text-sm text-red-600">{errors.required_guards}</p>}
+              </div>
               <div className="sm:col-span-2">
                 <label className="inline-flex items-center gap-2 text-sm font-medium">
                   <input type="checkbox" checked={data.is_global} onChange={(e) => {

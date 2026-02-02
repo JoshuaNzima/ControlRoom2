@@ -15,6 +15,26 @@ use Inertia\Inertia;
 
 class ShiftController extends Controller
 {
+    protected function recalcZonesForSiteIds(array $siteIds): void
+    {
+        $siteIds = array_values(array_unique(array_filter(array_map('intval', $siteIds))));
+        if (empty($siteIds)) {
+            return;
+        }
+
+        $zoneIds = ClientSite::query()
+            ->whereIn('id', $siteIds)
+            ->pluck('zone_id')
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+
+        foreach ($zoneIds as $zoneId) {
+            ClientSite::recalcZoneRequiredGuards($zoneId);
+        }
+    }
+
     public function index(Request $request)
     {
         $search = trim((string) $request->query('search', ''));
@@ -113,6 +133,7 @@ class ShiftController extends Controller
             'end_time' => 'required|date_format:H:i',
             'description' => 'nullable|string',
             'supervisor_id' => 'nullable|exists:users,id',
+            'required_guards' => 'nullable|integer|min:0',
             'is_global' => 'sometimes|boolean',
         ];
 
@@ -132,18 +153,22 @@ class ShiftController extends Controller
         }
 
         $siteIds = collect($data['sites'] ?? [])->filter()->values();
-        $required = null;
-        if ($siteIds->isNotEmpty()) {
+        $required = array_key_exists('required_guards', $data) ? $data['required_guards'] : null;
+        if ($required === null && $siteIds->isNotEmpty()) {
             $required = GuardAssignment::active()->current()->whereIn('client_site_id', $siteIds)->count();
         }
 
         $shift = Shift::create([
             ...$data,
             'required_guards' => $required,
-            'status' => 'scheduled',
+            'status' => 'active',
             'created_by' => auth()->id(),
             'is_global' => (bool) ($data['is_global'] ?? false),
         ]);
+
+        if (!(bool) ($shift->is_global ?? false)) {
+            $this->recalcZonesForSiteIds((array) ($shift->sites ?? []));
+        }
 
         return redirect()->route('control-room.shifts.index')
             ->withSuccess('Shift created successfully.');
@@ -195,6 +220,10 @@ class ShiftController extends Controller
 
     public function update(Request $request, Shift $shift)
     {
+        $originalSitesRaw = $shift->getOriginal('sites');
+        $originalSites = is_string($originalSitesRaw) ? (json_decode($originalSitesRaw, true) ?: []) : (is_array($originalSitesRaw) ? $originalSitesRaw : []);
+        $originalIsGlobal = (bool) $shift->getOriginal('is_global');
+
         $rules = [
             'name' => 'required|string|max:255',
             'start_time' => 'required|date_format:H:i',
@@ -202,6 +231,7 @@ class ShiftController extends Controller
             'description' => 'nullable|string',
             'supervisor_id' => 'nullable|exists:users,id',
             'status' => 'required|in:active,inactive,completed',
+            'required_guards' => 'nullable|integer|min:0',
             'is_global' => 'sometimes|boolean',
         ];
         if (!$request->boolean('is_global')) {
@@ -218,8 +248,8 @@ class ShiftController extends Controller
         }
 
         $siteIds = collect($data['sites'] ?? [])->filter()->values();
-        $required = null;
-        if ($siteIds->isNotEmpty()) {
+        $required = array_key_exists('required_guards', $data) ? $data['required_guards'] : null;
+        if ($required === null && $siteIds->isNotEmpty()) {
             $required = GuardAssignment::active()->current()->whereIn('client_site_id', $siteIds)->count();
         }
 
@@ -229,13 +259,27 @@ class ShiftController extends Controller
             'is_global' => (bool) ($data['is_global'] ?? false),
         ]);
 
+        $newIsGlobal = (bool) ($shift->is_global ?? false);
+        if (!$originalIsGlobal || !$newIsGlobal) {
+            $siteIds = array_merge((array) $originalSites, (array) ($shift->sites ?? []));
+            $this->recalcZonesForSiteIds($siteIds);
+        }
+
         return redirect()->route('control-room.shifts.index')
             ->withSuccess('Shift updated successfully.');
     }
 
     public function destroy(Shift $shift)
     {
+        $sitesRaw = $shift->getOriginal('sites');
+        $siteIds = is_string($sitesRaw) ? (json_decode($sitesRaw, true) ?: []) : (is_array($sitesRaw) ? $sitesRaw : []);
+        $isGlobal = (bool) $shift->getOriginal('is_global');
+
         $shift->delete();
+
+        if (!$isGlobal) {
+            $this->recalcZonesForSiteIds((array) $siteIds);
+        }
 
         return redirect()->route('control-room.shifts.index')
             ->withSuccess('Shift deleted successfully.');

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Guards\Guard;
+use App\Models\Guards\Attendance;
 use App\Models\Guards\GuardAssignment;
 use App\Models\Guards\ClientSite;
 use App\Models\Guards\Client;
@@ -12,6 +13,7 @@ use App\Models\Zone;
 use App\Models\PayProfile;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
@@ -19,12 +21,17 @@ class GuardController extends Controller
 {
     public function dashboard()
     {
-        $total = Guard::count();
-        $active = Guard::where('status', 'active')->count();
-        $inactive = Guard::where('status', 'inactive')->count();
-        $suspended = Guard::where('status', 'suspended')->count();
+        $base = Guard::query()->where('employee_role', 'guard');
+        $total = (clone $base)->count();
+        $active = (clone $base)->where('status', 'active')->count();
+        $inactive = (clone $base)->where('status', 'inactive')->count();
+        $suspended = (clone $base)->where('status', 'suspended')->count();
 
-        $recent = Guard::latest()->limit(5)->get(['id', 'name', 'employee_id', 'status']);
+        $recent = Guard::query()
+            ->where('employee_role', 'guard')
+            ->latest()
+            ->limit(5)
+            ->get(['id', 'name', 'employee_id', 'status']);
 
         return Inertia::render('Admin/Guards/Dashboard', [
             'kpis' => [
@@ -39,6 +46,7 @@ class GuardController extends Controller
     public function index()
     {
         $guards = Guard::with('supervisor')
+            ->where('employee_role', 'guard')
             ->when(request('search'), function($q, $search) {
                 $q->where('name', 'like', "%{$search}%")
                   ->orWhere('employee_id', 'like', "%{$search}%");
@@ -203,9 +211,10 @@ class GuardController extends Controller
                     'assigned_by' => auth()->id(),
                     'start_date' => now()->toDateString(),
                     'end_date' => null,
-                    'assignment_type' => 'primary',
+                    'assignment_type' => 'permanent',
                     'notes' => null,
                     'is_active' => true,
+                    'active' => true,
                 ]);
             }
         }
@@ -368,7 +377,37 @@ class GuardController extends Controller
     public function apiShow(Guard $guard)
     {
         $guard->load(['supervisor']);
-        return response()->json($guard);
+
+        $monthStart = now()->startOfMonth()->toDateString();
+        $monthEnd = now()->endOfMonth()->toDateString();
+
+        $byStatus = Attendance::query()
+            ->where('guard_id', $guard->id)
+            ->whereBetween('date', [$monthStart, $monthEnd])
+            ->select('status', DB::raw('count(*) as total'))
+            ->groupBy('status')
+            ->pluck('total', 'status')
+            ->map(fn ($v) => (int) $v)
+            ->all();
+
+        $hoursRow = Attendance::query()
+            ->where('guard_id', $guard->id)
+            ->whereBetween('date', [$monthStart, $monthEnd])
+            ->select(
+                DB::raw('coalesce(sum(hours_worked), 0) as hours_worked'),
+                DB::raw('coalesce(sum(overtime_hours), 0) as overtime_hours')
+            )
+            ->first();
+
+        return response()->json(array_merge($guard->toArray(), [
+            'attendance_tally' => [
+                'range' => ['start' => $monthStart, 'end' => $monthEnd],
+                'by_status' => $byStatus,
+                'total' => array_sum($byStatus),
+                'hours_worked' => (float) ($hoursRow->hours_worked ?? 0),
+                'overtime_hours' => (float) ($hoursRow->overtime_hours ?? 0),
+            ],
+        ]));
     }
 
     public function destroy(Guard $guard)

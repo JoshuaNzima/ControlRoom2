@@ -22,23 +22,17 @@ class RecalcZoneRequiredGuards extends Command
                 $this->error('Zone not found');
                 return self::FAILURE;
             }
-            $sum = ClientSite::query()
-                ->where('zone_id', $zone->id)
-                ->where('status', 'active')
-                ->sum('required_guards');
-            $zone->update(['required_guard_count' => (int) $sum]);
-            $this->info("Zone {$zone->id} updated to {$sum}");
+            ClientSite::recalcZoneRequiredGuards($zone->id);
+            $zone->refresh();
+            $this->info("Zone {$zone->id} updated to {$zone->required_guard_count}");
             return self::SUCCESS;
         }
 
         Zone::query()->orderBy('id')->chunkById(100, function ($zones) {
             foreach ($zones as $zone) {
-                $sum = ClientSite::query()
-                    ->where('zone_id', $zone->id)
-                    ->where('status', 'active')
-                    ->sum('required_guards');
-                $zone->update(['required_guard_count' => (int) $sum]);
-                $this->line("Zone {$zone->id} => {$sum}");
+                ClientSite::recalcZoneRequiredGuards($zone->id);
+                $zone->refresh();
+                $this->line("Zone {$zone->id} => {$zone->required_guard_count}");
             }
         });
 

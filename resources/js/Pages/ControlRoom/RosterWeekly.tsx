@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Head, useForm, usePage, Link } from '@inertiajs/react';
+import { Head, useForm, usePage, Link, router } from '@inertiajs/react';
 import ControlRoomLayout from '@/Layouts/ControlRoomLayout';
 import Modal from '@/Components/Modal';
 import useToast from '@/Components/ui/use-toast';
@@ -10,6 +10,23 @@ type DayKey = string; // YYYY-MM-DD
 
 type Site = { id: number; name: string };
 
+type ShiftType = 'day' | 'night' | 'morning' | 'evening' | 'custom';
+
+type DayMeta = {
+  source?: 'shift' | 'assignment' | 'rotation';
+  shift_id?: number;
+  start_time?: string | null;
+  end_time?: string | null;
+};
+
+type AttendanceToday = {
+  id: number;
+  client_site_id: number | null;
+  status: string;
+  checked_in: boolean;
+  checked_out: boolean;
+};
+
 type GuardWeekly = {
   id: number;
   name: string;
@@ -17,6 +34,8 @@ type GuardWeekly = {
   guard_type?: 'permanent' | 'standby' | 'reliever' | string;
   sites: Record<DayKey, Site | null>;
   off: Record<DayKey, boolean>;
+  meta?: Record<DayKey, DayMeta>;
+  attendance_today?: AttendanceToday | null;
 };
 
 type RelieverWeekly = {
@@ -24,9 +43,13 @@ type RelieverWeekly = {
   name: string;
   employee_id?: string;
   sites: Record<DayKey, Site | null>;
+  meta?: Record<DayKey, DayMeta>;
+  attendance_today?: AttendanceToday | null;
 };
 
 type WeeklyData = {
+  shift_type?: ShiftType;
+  today?: string;
   days: DayKey[];
   guards: GuardWeekly[];
   relievers: RelieverWeekly[];
@@ -47,14 +70,29 @@ function formatYmd(d: Date): string {
   return `${y}-${m}-${dd}`;
 }
 
-function StandbyTable({ data, onRefresh }: { data: WeeklyData; onRefresh: () => void }) {
+function StandbyTable({ data, onRefresh, shiftType, canManageAttendance }: { data: WeeklyData; onRefresh: () => void; shiftType: ShiftType; canManageAttendance: boolean }) {
   const dayLabels = useMemo(() => data.days.map((d) => new Date(d).toLocaleDateString(undefined, { weekday: 'short' })), [data.days]);
   const [offModal, setOffModal] = useState<{ open: boolean; guardId?: number; date?: string }>({ open: false });
   const [selected, setSelected] = useState<Record<number, boolean>>({});
   const [bulkOffOpen, setBulkOffOpen] = useState(false);
+  const [manualModal, setManualModal] = useState<{ open: boolean; guardId?: number; date?: string; siteId?: number; shiftId?: number }>({ open: false });
+  const [attModal, setAttModal] = useState<{ open: boolean; guardId?: number; siteId?: number | null; action?: 'present' | 'absent' }>({ open: false });
+  const { toast } = useToast();
 
   const toggleSel = (id: number) => setSelected((prev) => ({ ...prev, [id]: !prev[id] }));
   const selectedIds = Object.entries(selected).filter(([_, v]) => !!v).map(([k]) => Number(k));
+
+  const todayKey = data.today;
+
+  const doQuick = (guardId: number, action: 'present' | 'absent', siteId?: number | null) => {
+    if (!canManageAttendance) return;
+    if (action === 'absent') {
+      if (!confirm('Mark this guard as absent for today?')) return;
+      router.post(route('control-room.attendance.mark-absent'), { guard_id: guardId }, { preserveScroll: true, onSuccess: () => { toast({ title: 'Marked absent' }); onRefresh(); } });
+      return;
+    }
+    router.post(route('control-room.attendance.mark-present'), { guard_id: guardId, client_site_id: siteId ?? undefined }, { preserveScroll: true, onSuccess: () => { toast({ title: 'Marked present' }); onRefresh(); } });
+  };
 
   const standbyGuards = (data.guards || []).filter((g) => (g.guard_type || 'permanent') === 'standby');
   if (!standbyGuards.length) return null;
@@ -91,20 +129,64 @@ function StandbyTable({ data, onRefresh }: { data: WeeklyData; onRefresh: () => 
               {data.days.map((d, idx) => {
                 const off = !!g.off?.[d];
                 const site = g.sites?.[d];
+                const meta = g.meta?.[d];
+                const isToday = !!todayKey && d === todayKey;
+                const att = g.attendance_today || null;
                 return (
                   <button
                     key={d}
                     type="button"
                     className={`flex items-center justify-between gap-2 w-full px-3 py-2 rounded-md border text-sm ${off ? 'bg-gray-800 text-gray-100 border-gray-700' : site ? 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100 border-gray-200 dark:border-gray-700' : 'bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-800'}`}
-                    onClick={() => setOffModal({ open: true, guardId: g.id, date: d })}
-                    title="Add off-day"
+                    onClick={() => {
+                      if (off) {
+                        setOffModal({ open: true, guardId: g.id, date: d });
+                        return;
+                      }
+                      setManualModal({
+                        open: true,
+                        guardId: g.id,
+                        date: d,
+                        siteId: site?.id,
+                        shiftId: meta?.shift_id,
+                      });
+                    }}
+                    title={off ? 'Add off-day' : 'Edit roster'}
                   >
                     <span className="text-xs font-medium text-gray-500 dark:text-gray-400">{dayLabels[idx]}</span>
-                    <span className="font-semibold truncate">{off ? 'OFF' : (site ? site.name : '—')}</span>
+                    <span className="font-semibold truncate">
+                      {off ? 'OFF' : (site ? site.name : '—')}
+                      {meta?.source === 'shift' ? <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded-full bg-coin-700 text-white">Manual</span> : null}
+                      {isToday && att?.checked_out ? <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded-full bg-sky-700 text-white">OUT</span> : null}
+                      {isToday && !att?.checked_out && att?.checked_in ? <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-700 text-white">IN</span> : null}
+                      {isToday && !att?.checked_in && (att?.status === 'present') ? <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-700 text-white">PRESENT</span> : null}
+                      {isToday && (att?.status === 'absent') ? <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded-full bg-red-700 text-white">ABSENT</span> : null}
+                    </span>
                   </button>
                 );
               })}
             </div>
+
+            {todayKey && canManageAttendance ? (
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  className="px-3 py-1.5 rounded-md bg-emerald-700 text-white text-xs"
+                  onClick={() => {
+                    const siteId = g.sites?.[todayKey!]?.id ?? null;
+                    setAttModal({ open: true, guardId: g.id, siteId, action: 'present' });
+                  }}
+                >
+                  Mark Present
+                </button>
+                <button
+                  type="button"
+                  className="px-3 py-1.5 rounded-md bg-red-700 text-white text-xs"
+                  onClick={() => setAttModal({ open: true, guardId: g.id, action: 'absent' })}
+                >
+                  Mark Absent
+                </button>
+              </div>
+            ) : null}
           </div>
         ))}
       </div>
@@ -134,16 +216,57 @@ function StandbyTable({ data, onRefresh }: { data: WeeklyData; onRefresh: () => 
                 {data.days.map((d) => {
                   const off = !!g.off?.[d];
                   const site = g.sites?.[d];
+                  const meta = g.meta?.[d];
+                  const isToday = !!todayKey && d === todayKey;
+                  const att = g.attendance_today || null;
                   return (
                     <td key={d} className="px-3 py-2 text-sm">
-                      <button
-                        type="button"
-                        className={`inline-flex items-center gap-2 px-2 py-1 rounded-md border text-xs ${off ? 'bg-gray-800 text-gray-100 border-gray-700' : site ? 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100 border-gray-200 dark:border-gray-700' : 'bg-white dark:bg-gray-900 text-gray-500 border-gray-200 dark:border-gray-800'}`}
-                        onClick={() => setOffModal({ open: true, guardId: g.id, date: d })}
-                        title="Add off-day"
-                      >
-                        {off ? 'OFF' : (site ? site.name : '—')}
-                      </button>
+                      <div className="flex flex-col gap-1">
+                        <button
+                          type="button"
+                          className={`inline-flex items-center gap-2 px-2 py-1 rounded-md border text-xs ${off ? 'bg-gray-800 text-gray-100 border-gray-700' : site ? 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100 border-gray-200 dark:border-gray-700' : 'bg-white dark:bg-gray-900 text-gray-500 border-gray-200 dark:border-gray-800'}`}
+                          onClick={() => {
+                            if (off) {
+                              setOffModal({ open: true, guardId: g.id, date: d });
+                              return;
+                            }
+                            setManualModal({
+                              open: true,
+                              guardId: g.id,
+                              date: d,
+                              siteId: site?.id,
+                              shiftId: meta?.shift_id,
+                            });
+                          }}
+                          title={off ? 'Add off-day' : 'Edit roster'}
+                        >
+                          {off ? 'OFF' : (site ? site.name : '—')}
+                          {meta?.source === 'shift' ? <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-coin-700 text-white">M</span> : null}
+                          {isToday && att?.checked_out ? <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-sky-700 text-white">OUT</span> : null}
+                          {isToday && !att?.checked_out && att?.checked_in ? <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-700 text-white">IN</span> : null}
+                          {isToday && !att?.checked_in && (att?.status === 'present') ? <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-700 text-white">PRESENT</span> : null}
+                          {isToday && (att?.status === 'absent') ? <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-red-700 text-white">ABSENT</span> : null}
+                        </button>
+
+                        {isToday && canManageAttendance ? (
+                          <div className="flex items-center gap-1">
+                            <button
+                              type="button"
+                              className="px-2 py-1 rounded-md bg-emerald-700 text-white text-[10px]"
+                              onClick={() => doQuick(g.id, 'present', site?.id ?? null)}
+                            >
+                              Present
+                            </button>
+                            <button
+                              type="button"
+                              className="px-2 py-1 rounded-md bg-red-700 text-white text-[10px]"
+                              onClick={() => doQuick(g.id, 'absent')}
+                            >
+                              Absent
+                            </button>
+                          </div>
+                        ) : null}
+                      </div>
                     </td>
                   );
                 })}
@@ -167,17 +290,42 @@ function StandbyTable({ data, onRefresh }: { data: WeeklyData; onRefresh: () => 
         guardIds={selectedIds}
         onSaved={() => { setBulkOffOpen(false); onRefresh(); }}
       />
+
+      <ManualRosterShiftModal
+        open={manualModal.open}
+        onClose={() => setManualModal({ open: false })}
+        guardId={manualModal.guardId}
+        date={manualModal.date}
+        sites={data.sites}
+        shiftType={shiftType}
+        initialSiteId={manualModal.siteId}
+        shiftId={manualModal.shiftId}
+        onSaved={() => { setManualModal({ open: false }); onRefresh(); }}
+        onDeleted={() => { setManualModal({ open: false }); onRefresh(); }}
+      />
+
+      <QuickAttendanceConfirmModal
+        open={attModal.open}
+        onClose={() => setAttModal({ open: false })}
+        guardId={attModal.guardId}
+        siteId={attModal.siteId}
+        action={attModal.action}
+        onConfirm={(guardId: number, action: 'present' | 'absent', siteId?: number | null) => {
+          setAttModal({ open: false });
+          doQuick(guardId, action, siteId ?? undefined);
+        }}
+      />
     </div>
   );
 }
 
-function GenerateShiftsPanel({ weekStart, zoneId, supervisorId }: { weekStart: Date; zoneId: number | ''; supervisorId: number | '' }) {
+function GenerateShiftsPanel({ weekStart, zoneId, supervisorId, defaultShiftType }: { weekStart: Date; zoneId: number | ''; supervisorId: number | ''; defaultShiftType: ShiftType }) {
   const { toast } = useToast();
   const { data, setData, post, processing } = useForm<{ start: string; start_time: string; end_time: string; shift_type?: 'day' | 'night'; include_relievers?: boolean; include_standby?: boolean; zone_id?: number | ''; supervisor_id?: number | '' }>({
     start: formatYmd(weekStart),
     start_time: '06:00',
     end_time: '18:00',
-    shift_type: 'day',
+    shift_type: (defaultShiftType === 'night' ? 'night' : 'day'),
     include_relievers: false,
     include_standby: true,
     zone_id: zoneId,
@@ -188,6 +336,15 @@ function GenerateShiftsPanel({ weekStart, zoneId, supervisorId }: { weekStart: D
     setData('start', formatYmd(weekStart));
     setData('zone_id', zoneId);
     setData('supervisor_id', supervisorId);
+    setData('shift_type', (defaultShiftType === 'night' ? 'night' : 'day'));
+    setData('shift_type', defaultShiftType === 'night' ? 'night' : 'day');
+    if (defaultShiftType === 'night') {
+      setData('start_time', '18:00');
+      setData('end_time', '06:00');
+    } else {
+      setData('start_time', '06:00');
+      setData('end_time', '18:00');
+    }
   }, [setData, weekStart, zoneId, supervisorId]);
 
   const submit = (e: React.FormEvent) => {
@@ -512,8 +669,19 @@ export default function RosterWeekly() {
   const [zoneId, setZoneId] = useState<number | ''>('');
   const [supervisorId, setSupervisorId] = useState<number | ''>('');
   const [guardTypeFilter, setGuardTypeFilter] = useState<string>('');
+  const [shiftType, setShiftType] = useState<ShiftType>('day');
   const [reuseInfo, setReuseInfo] = useState<any | null>(null);
   const lastReuseToastKeyRef = useRef<string>('');
+
+  const canManageAttendance = useMemo(() => {
+    const can = (auth as any)?.user?.can;
+    if (can && can['attendance.manage']) return true;
+    const roles = (auth as any)?.user?.roles || [];
+    if (Array.isArray(roles)) {
+      return roles.includes('control_room_operator') || roles.includes('operations_officer') || roles.includes('manager') || roles.includes('super_admin');
+    }
+    return false;
+  }, [auth]);
 
   const hasRelieversInScope = useMemo(() => {
     return !!data?.relievers?.length;
@@ -570,6 +738,7 @@ export default function RosterWeekly() {
       const params: any = { start: formatYmd(ws) };
       if (zid) params.zone_id = zid;
       if (sid) params.supervisor_id = sid;
+      params.shift_type = shiftType;
 
       const currentWeekStart = startOfWeekMonday(new Date());
       const shouldAutoReuse = ws.getTime() >= currentWeekStart.getTime();
@@ -581,14 +750,30 @@ export default function RosterWeekly() {
 
       const url = route('control-room.roster.weekly.data', params);
       const res = await fetch(url, { headers: { Accept: 'application/json' } });
-      if (res.ok) {
+      if (!res.ok) {
+        let details = `Request failed (${res.status})`;
+        try {
+          const text = await res.text();
+          if (text) {
+            details = details + `: ${text.slice(0, 200)}`;
+          }
+        } catch {
+        }
+        toast({ title: 'Failed to load roster', description: details, variant: 'destructive' });
+        setData(null);
+        return;
+      }
+      try {
         const json = await res.json();
         setData(json as WeeklyData);
+      } catch {
+        toast({ title: 'Failed to load roster', description: 'Server returned an invalid response.', variant: 'destructive' });
+        setData(null);
       }
     } finally {
       setLoading(false);
     }
-  }, [ensureReuse, supervisorId, weekStart, zoneId]);
+  }, [ensureReuse, supervisorId, weekStart, zoneId, shiftType, toast]);
 
   const reuseOverwrite = async () => {
     if (!hasRelieversInScope) {
@@ -670,6 +855,26 @@ export default function RosterWeekly() {
               <option value="reliever">Reliever</option>
             </select>
           </div>
+
+          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+            <label className="text-sm text-gray-600 dark:text-gray-300 sm:min-w-[90px]">Roster</label>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setShiftType('day')}
+                className={`px-3 py-1.5 rounded-md text-sm border ${shiftType === 'day' ? 'bg-coin-700 border-coin-800 text-white' : 'bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200'}`}
+              >
+                Day (06:00-18:00)
+              </button>
+              <button
+                type="button"
+                onClick={() => setShiftType('night')}
+                className={`px-3 py-1.5 rounded-md text-sm border ${shiftType === 'night' ? 'bg-coin-700 border-coin-800 text-white' : 'bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200'}`}
+              >
+                Night (18:00-06:00)
+              </button>
+            </div>
+          </div>
         </div>
 
         <div className="rounded-md border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-3">
@@ -710,13 +915,14 @@ export default function RosterWeekly() {
               weekStart={weekStart}
               zoneId={zoneId}
               supervisorId={supervisorId}
+              defaultShiftType={shiftType}
             />
             {(!guardTypeFilter || guardTypeFilter === 'permanent') && (
-              <GuardsTable data={data} onRefresh={load} />
+              <GuardsTable data={data} onRefresh={load} shiftType={shiftType} canManageAttendance={canManageAttendance} />
             )}
             {(!guardTypeFilter || guardTypeFilter === 'standby') && (
               hasStandbyInScope
-                ? <StandbyTable data={data} onRefresh={load} />
+                ? <StandbyTable data={data} onRefresh={load} shiftType={shiftType} canManageAttendance={canManageAttendance} />
                 : (guardTypeFilter === 'standby' ? (
                   <EmptyState
                     title="No standby guards"
@@ -728,7 +934,7 @@ export default function RosterWeekly() {
             )}
             {(!guardTypeFilter || guardTypeFilter === 'reliever') && (
               data.relievers?.length
-                ? <RelieversTable data={data} onRefresh={load} />
+                ? <RelieversTable data={data} onRefresh={load} shiftType={shiftType} canManageAttendance={canManageAttendance} />
                 : (guardTypeFilter === 'reliever' ? (
                   <EmptyState
                     title="No relievers found"
@@ -752,14 +958,29 @@ export default function RosterWeekly() {
   );
 }
 
-function GuardsTable({ data, onRefresh }: { data: WeeklyData; onRefresh: () => void }) {
+function GuardsTable({ data, onRefresh, shiftType, canManageAttendance }: { data: WeeklyData; onRefresh: () => void; shiftType: ShiftType; canManageAttendance: boolean }) {
   const dayLabels = useMemo(() => data.days.map((d) => new Date(d).toLocaleDateString(undefined, { weekday: 'short' })), [data.days]);
   const [offModal, setOffModal] = useState<{ open: boolean; guardId?: number; date?: string }>({ open: false });
   const [selected, setSelected] = useState<Record<number, boolean>>({});
   const [bulkOffOpen, setBulkOffOpen] = useState(false);
+  const [manualModal, setManualModal] = useState<{ open: boolean; guardId?: number; date?: string; siteId?: number; shiftId?: number; notes?: string }>({ open: false });
+  const [attModal, setAttModal] = useState<{ open: boolean; guardId?: number; siteId?: number | null; action?: 'present' | 'absent' }>({ open: false });
+  const { toast } = useToast();
 
   const toggleSel = (id: number) => setSelected((prev) => ({ ...prev, [id]: !prev[id] }));
   const selectedIds = Object.entries(selected).filter(([_, v]) => !!v).map(([k]) => Number(k));
+
+  const todayKey = data.today;
+
+  const doQuick = (guardId: number, action: 'present' | 'absent', siteId?: number | null) => {
+    if (!canManageAttendance) return;
+    if (action === 'absent') {
+      if (!confirm('Mark this guard as absent for today?')) return;
+      router.post(route('control-room.attendance.mark-absent'), { guard_id: guardId }, { preserveScroll: true, onSuccess: () => { toast({ title: 'Marked absent' }); onRefresh(); } });
+      return;
+    }
+    router.post(route('control-room.attendance.mark-present'), { guard_id: guardId, client_site_id: siteId ?? undefined }, { preserveScroll: true, onSuccess: () => { toast({ title: 'Marked present' }); onRefresh(); } });
+  };
 
   return (
     <div className="space-y-2">
@@ -873,10 +1094,24 @@ function GuardsTable({ data, onRefresh }: { data: WeeklyData; onRefresh: () => v
   );
 }
 
-function RelieversTable({ data, onRefresh }: { data: WeeklyData; onRefresh: () => void }) {
+function RelieversTable({ data, onRefresh, shiftType, canManageAttendance }: { data: WeeklyData; onRefresh: () => void; shiftType: ShiftType; canManageAttendance: boolean }) {
   const dayLabels = useMemo(() => data.days.map((d) => new Date(d).toLocaleDateString(undefined, { weekday: 'short' })), [data.days]);
   const [relModal, setRelModal] = useState<{ open: boolean; guardId?: number; date?: string; siteId?: number }>( { open: false } );
   const [bulkRel, setBulkRel] = useState<{ open: boolean; guardId?: number }>({ open: false });
+  const [manualModal, setManualModal] = useState<{ open: boolean; guardId?: number; date?: string; siteId?: number; shiftId?: number }>({ open: false });
+  const { toast } = useToast();
+
+  const todayKey = data.today;
+
+  const doQuick = (guardId: number, action: 'present' | 'absent', siteId?: number | null) => {
+    if (!canManageAttendance) return;
+    if (action === 'absent') {
+      if (!confirm('Mark this guard as absent for today?')) return;
+      router.post(route('control-room.attendance.mark-absent'), { guard_id: guardId }, { preserveScroll: true, onSuccess: () => { toast({ title: 'Marked absent' }); onRefresh(); } });
+      return;
+    }
+    router.post(route('control-room.attendance.mark-present'), { guard_id: guardId, client_site_id: siteId ?? undefined }, { preserveScroll: true, onSuccess: () => { toast({ title: 'Marked present' }); onRefresh(); } });
+  };
 
   return (
     <div className="space-y-2">
@@ -899,20 +1134,43 @@ function RelieversTable({ data, onRefresh }: { data: WeeklyData; onRefresh: () =
             <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
               {data.days.map((d, idx) => {
                 const site = r.sites?.[d];
+                const meta = r.meta?.[d];
+                const isToday = !!todayKey && d === todayKey;
+                const att = r.attendance_today || null;
                 return (
                   <button
                     key={d}
                     type="button"
                     className={`flex items-center justify-between gap-2 w-full px-3 py-2 rounded-md border text-sm ${site ? 'bg-coin-700 text-white border-coin-800' : 'bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-800'}`}
-                    onClick={() => setRelModal({ open: true, guardId: r.id, date: d, siteId: site?.id })}
-                    title="Assign site"
+                    onClick={() => {
+                      if (meta?.source === 'shift') {
+                        setManualModal({ open: true, guardId: r.id, date: d, siteId: site?.id, shiftId: meta?.shift_id });
+                        return;
+                      }
+                      setRelModal({ open: true, guardId: r.id, date: d, siteId: site?.id });
+                    }}
+                    title={meta?.source === 'shift' ? 'Edit roster' : 'Assign site'}
                   >
                     <span className={`text-xs font-medium ${site ? 'text-white/80' : 'text-gray-500 dark:text-gray-400'}`}>{dayLabels[idx]}</span>
-                    <span className="font-semibold truncate">{site ? site.name : 'Assign'}</span>
+                    <span className="font-semibold truncate">
+                      {site ? site.name : 'Assign'}
+                      {meta?.source === 'shift' ? <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded-full bg-black/20 text-white">Manual</span> : null}
+                      {isToday && att?.checked_out ? <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded-full bg-sky-700 text-white">OUT</span> : null}
+                      {isToday && !att?.checked_out && att?.checked_in ? <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-700 text-white">IN</span> : null}
+                      {isToday && !att?.checked_in && (att?.status === 'present') ? <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-700 text-white">PRESENT</span> : null}
+                      {isToday && (att?.status === 'absent') ? <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded-full bg-red-700 text-white">ABSENT</span> : null}
+                    </span>
                   </button>
                 );
               })}
             </div>
+
+            {todayKey && canManageAttendance ? (
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button type="button" className="px-3 py-1.5 rounded-md bg-emerald-700 text-white text-xs" onClick={() => doQuick(r.id, 'present', r.sites?.[todayKey!]?.id ?? null)}>Mark Present</button>
+                <button type="button" className="px-3 py-1.5 rounded-md bg-red-700 text-white text-xs" onClick={() => doQuick(r.id, 'absent')}>Mark Absent</button>
+              </div>
+            ) : null}
           </div>
         ))}
       </div>
@@ -938,16 +1196,38 @@ function RelieversTable({ data, onRefresh }: { data: WeeklyData; onRefresh: () =
                 </td>
                 {data.days.map((d) => {
                   const site = r.sites?.[d];
+                  const meta = r.meta?.[d];
+                  const isToday = !!todayKey && d === todayKey;
+                  const att = r.attendance_today || null;
                   return (
                     <td key={d} className="px-3 py-2 text-sm">
-                      <button
-                        type="button"
-                        className={`inline-flex items-center gap-2 px-2 py-1 rounded-md border text-xs ${site ? 'bg-coin-700 text-white border-coin-800' : 'bg-white dark:bg-gray-900 text-gray-500 border-gray-200 dark:border-gray-800'}`}
-                        onClick={() => setRelModal({ open: true, guardId: r.id, date: d, siteId: site?.id })}
-                        title="Assign site"
-                      >
-                        {site ? site.name : 'Assign'}
-                      </button>
+                      <div className="flex flex-col gap-1">
+                        <button
+                          type="button"
+                          className={`inline-flex items-center gap-2 px-2 py-1 rounded-md border text-xs ${site ? 'bg-coin-700 text-white border-coin-800' : 'bg-white dark:bg-gray-900 text-gray-500 border-gray-200 dark:border-gray-800'}`}
+                          onClick={() => {
+                            if (meta?.source === 'shift') {
+                              setManualModal({ open: true, guardId: r.id, date: d, siteId: site?.id, shiftId: meta?.shift_id });
+                              return;
+                            }
+                            setRelModal({ open: true, guardId: r.id, date: d, siteId: site?.id });
+                          }}
+                          title={meta?.source === 'shift' ? 'Edit roster' : 'Assign site'}
+                        >
+                          {site ? site.name : 'Assign'}
+                          {meta?.source === 'shift' ? <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-black/20 text-white">M</span> : null}
+                          {isToday && att?.checked_out ? <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-sky-700 text-white">OUT</span> : null}
+                          {isToday && !att?.checked_out && att?.checked_in ? <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-700 text-white">IN</span> : null}
+                          {isToday && !att?.checked_in && (att?.status === 'present') ? <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-700 text-white">PRESENT</span> : null}
+                          {isToday && (att?.status === 'absent') ? <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-red-700 text-white">ABSENT</span> : null}
+                        </button>
+                        {isToday && canManageAttendance ? (
+                          <div className="flex items-center gap-1">
+                            <button type="button" className="px-2 py-1 rounded-md bg-emerald-700 text-white text-[10px]" onClick={() => doQuick(r.id, 'present', site?.id ?? null)}>Present</button>
+                            <button type="button" className="px-2 py-1 rounded-md bg-red-700 text-white text-[10px]" onClick={() => doQuick(r.id, 'absent')}>Absent</button>
+                          </div>
+                        ) : null}
+                      </div>
                     </td>
                   );
                 })}
@@ -980,7 +1260,128 @@ function RelieversTable({ data, onRefresh }: { data: WeeklyData; onRefresh: () =
         activeSites={data.active_sites || []}
         onSaved={() => { setBulkRel({ open: false }); onRefresh(); }}
       />
+
+      <ManualRosterShiftModal
+        open={manualModal.open}
+        onClose={() => setManualModal({ open: false })}
+        guardId={manualModal.guardId}
+        date={manualModal.date}
+        sites={data.sites}
+        shiftType={shiftType}
+        initialSiteId={manualModal.siteId}
+        shiftId={manualModal.shiftId}
+        onSaved={() => { setManualModal({ open: false }); onRefresh(); }}
+        onDeleted={() => { setManualModal({ open: false }); onRefresh(); }}
+      />
     </div>
+  );
+}
+
+function QuickAttendanceConfirmModal({ open, onClose, guardId, siteId, action, onConfirm }: { open: boolean; onClose: () => void; guardId?: number; siteId?: number | null; action?: 'present' | 'absent'; onConfirm: (guardId: number, action: 'present' | 'absent', siteId?: number | null) => void }) {
+  if (!open || !guardId || !action) return null;
+  const title = action === 'present' ? 'Mark Present' : 'Mark Absent';
+  const desc = action === 'present'
+    ? 'This will mark the guard present for today (no check-in/out times).'
+    : 'This will mark the guard absent for today.';
+
+  return (
+    <Modal show={open} onClose={onClose} maxWidth="sm">
+      <div className="px-6 py-4 border-b flex items-center justify-between bg-white dark:bg-gray-900 dark:border-gray-800">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{title}</h2>
+        <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-200">✕</button>
+      </div>
+      <div className="px-6 py-4 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 space-y-3">
+        <div className="text-sm text-gray-600 dark:text-gray-300">{desc}</div>
+        <div className="flex justify-end gap-2 pt-2">
+          <button type="button" onClick={onClose} className="px-4 py-2 text-sm rounded-md bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700">Cancel</button>
+          <button type="button" onClick={() => onConfirm(guardId, action, siteId)} className={`px-4 py-2 rounded-md text-white ${action === 'absent' ? 'bg-red-700 hover:bg-red-600' : 'bg-emerald-700 hover:bg-emerald-600'}`}>Confirm</button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+function ManualRosterShiftModal({ open, onClose, guardId, date, sites, shiftType, initialSiteId, shiftId, onSaved, onDeleted }: { open: boolean; onClose: () => void; guardId?: number; date?: string; sites: Site[]; shiftType: ShiftType; initialSiteId?: number; shiftId?: number; onSaved: () => void; onDeleted: () => void }) {
+  const { post, processing, setData, data, reset } = useForm<{ guard_id: number | string; client_site_id: number | string; date: string; shift_type: ShiftType; start_time: string; end_time: string; notes?: string; shift_id?: number }>(
+    {
+      guard_id: guardId ?? ('' as any),
+      client_site_id: initialSiteId ?? ('' as any),
+      date: date ?? '',
+      shift_type: shiftType,
+      start_time: shiftType === 'night' ? '18:00' : '06:00',
+      end_time: shiftType === 'night' ? '06:00' : '18:00',
+      notes: '',
+      shift_id: shiftId,
+    }
+  );
+
+  useEffect(() => {
+    if (!open) return;
+    setData('guard_id', guardId ?? ('' as any));
+    setData('client_site_id', initialSiteId ?? ('' as any));
+    setData('date', date ?? '');
+    setData('shift_type', shiftType);
+    setData('start_time', shiftType === 'night' ? '18:00' : '06:00');
+    setData('end_time', shiftType === 'night' ? '06:00' : '18:00');
+    setData('shift_id', shiftId);
+  }, [open, guardId, initialSiteId, date, shiftType, shiftId, setData]);
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    post(route('control-room.roster.manual-shifts.upsert'), {
+      preserveScroll: true,
+      onSuccess: () => { reset(); onSaved(); },
+    });
+  };
+
+  const remove = () => {
+    if (!shiftId) return;
+    if (!confirm('Remove this manual roster entry?')) return;
+    router.post(route('control-room.roster.manual-shifts.delete'), { shift_id: shiftId }, { preserveScroll: true, onSuccess: () => { onDeleted(); } });
+  };
+
+  return (
+    <Modal show={open} onClose={onClose} maxWidth="sm">
+      <div className="px-6 py-4 border-b flex items-center justify-between bg-white dark:bg-gray-900 dark:border-gray-800">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Manual Roster</h2>
+        <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-200">✕</button>
+      </div>
+      <div className="px-6 py-4 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+        <form className="grid grid-cols-1 gap-3" onSubmit={submit}>
+          <div>
+            <label className="block text-sm font-medium">Site</label>
+            <select className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100" value={data.client_site_id as any} onChange={(e) => setData('client_site_id', Number(e.target.value) as any)}>
+              <option value="">Select site</option>
+              {sites.map((s) => (
+                <option key={s.id} value={s.id}>{s.name}</option>
+              ))}
+            </select>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="block text-sm font-medium">Start</label>
+              <input type="time" className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100" value={data.start_time} onChange={(e) => setData('start_time', e.target.value)} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium">End</label>
+              <input type="time" className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100" value={data.end_time} onChange={(e) => setData('end_time', e.target.value)} />
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium">Notes (optional)</label>
+            <input className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100" value={data.notes || ''} onChange={(e) => setData('notes', e.target.value)} />
+          </div>
+
+          <div className="flex items-center justify-between gap-2 pt-2">
+            <button type="button" onClick={remove} className="px-4 py-2 text-sm rounded-md bg-red-600 text-white hover:bg-red-500 disabled:opacity-50" disabled={!shiftId}>Remove</button>
+            <div className="flex items-center gap-2">
+              <button type="button" onClick={onClose} className="px-4 py-2 text-sm rounded-md bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700" disabled={processing}>Cancel</button>
+              <button type="submit" disabled={processing || !data.client_site_id || !data.start_time || !data.end_time} className="px-4 py-2 text-sm rounded-md bg-coin-700 text-white hover:bg-coin-600">{processing ? 'Saving…' : 'Save'}</button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </Modal>
   );
 }
 

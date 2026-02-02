@@ -1,3 +1,4 @@
+import { useCallback } from 'react';
 import { toast as hotToast } from 'react-hot-toast';
 
 export type ToastOptions = {
@@ -7,7 +8,7 @@ export type ToastOptions = {
 };
 
 export function useToast() {
-  const toast = (opts: ToastOptions) => {
+  const toast = useCallback((opts: ToastOptions) => {
     // Minimal fallback toast using alert; replace with your UI library's toast system
     const msg = `${opts.title ? opts.title + '\n' : ''}${opts.description ?? ''}`.trim();
     if (msg) {
@@ -17,10 +18,8 @@ export function useToast() {
         hotToast(msg);
       }
     }
-  };
+  }, []);
   return { toast };
 }
 
 export default useToast;
-
-
