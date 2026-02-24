@@ -45,6 +45,7 @@ class GuardController extends Controller
     }
     public function index()
     {
+        $perPage = request('per_page', 20);
         $guards = Guard::with('supervisor')
             ->where('employee_role', 'guard')
             ->when(request('search'), function($q, $search) {
@@ -56,7 +57,7 @@ class GuardController extends Controller
             })
             ->profileStatus(request('profile_status'))
             ->orderBy('name')
-            ->paginate(20)
+            ->paginate($perPage)
             ->withQueryString();
 
         $guards->getCollection()->transform(function ($g) {
@@ -86,7 +87,7 @@ class GuardController extends Controller
 
         return Inertia::render('Admin/Guards/Index', [
             'guards' => $guards,
-            'filters' => request()->only(['search', 'status', 'profile_status']),
+            'filters' => request()->only(['search', 'status', 'profile_status', 'per_page']),
             'canAssignSupervisor' => $canAssignSupervisor,
             'canViewSupervisor' => $canViewSupervisor,
             'supervisors' => $supervisors,

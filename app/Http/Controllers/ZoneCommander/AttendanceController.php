@@ -106,13 +106,17 @@ class AttendanceController extends Controller
 			'photo' => ['required','image','max:5120'],
 		]);
 
+		$guard = Guard::findOrFail($validated['guard_id']);
+		if (in_array($guard->status, ['dismissed', 'absconded'], true)) {
+			return back()->withErrors(['guard_id' => 'Cannot check in dismissed or absconded guards.']);
+		}
+
 		$user = Auth::user();
 		$site = ClientSite::findOrFail($validated['client_site_id']);
 		if ((int)$site->zone_id !== (int)$user->zone_id) {
 			abort(403, 'Site not in your zone');
 		}
 
-		$guard = Guard::findOrFail($validated['guard_id']);
 		$guardZoneId = (int) ($guard->zone_id ?? 0);
 		if ($guardZoneId && (int) $user->zone_id !== $guardZoneId) {
 			abort(403, 'Guard not in your zone');

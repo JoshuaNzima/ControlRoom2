@@ -113,6 +113,28 @@ export default function ClientsIndex({ clients, filters, services = [], zones = 
     }
   };
 
+  const toggleClientStatus = async (client: Client) => {
+    const newStatus = client.status === 'active' ? 'inactive' : 'active';
+    const actionText = newStatus === 'active' ? 'activate' : 'deactivate';
+    const confirmMessage = newStatus === 'inactive'
+      ? `Deactivate "${client.name}"?\n\nThis will:\n- Set the client status to inactive\n- Deactivate all client sites\n- Preserve all historical data\n\nThe client can be reactivated at any time.`
+      : `Activate "${client.name}"? This will restore the client and their sites to active status.`;
+
+    if (!confirm(confirmMessage)) return;
+
+    try {
+      await axios.post(route('admin.clients.toggle-status', { client: client.id }), {
+        status: newStatus,
+      }, {
+        headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+      });
+      router.reload({ only: ['clients'] });
+    } catch (e: any) {
+      const msg = e?.response?.data?.message || `Failed to ${actionText} client.`;
+      alert(msg);
+    }
+  };
+
   // Normalize paginator meta for shared Pagination component
   const defaultMeta: any = { current_page: 1, last_page: 1, per_page: perPage || 20, total: clients?.data?.length || 0, from: 0, to: 0 };
   const rawClients: any = clients as any;
@@ -338,6 +360,19 @@ export default function ClientsIndex({ clients, filters, services = [], zones = 
                     <Button
                       variant="outline"
                       size="sm"
+                      onClick={() => toggleClientStatus(client)}
+                      className={`bg-white dark:bg-gray-950 dark:border-gray-700 ${
+                        client.status === 'active'
+                          ? 'text-amber-600 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300'
+                          : 'text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300'
+                      }`}
+                    >
+                      <IconMapper name={client.status === 'active' ? 'PauseCircle' : 'PlayCircle'} size={16} className="mr-2" />
+                      {client.status === 'active' ? 'Deactivate' : 'Activate'}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
                       onClick={() => deleteClient(client)}
                       className="bg-white dark:bg-gray-950 dark:text-gray-100 dark:border-gray-700"
                     >
@@ -440,6 +475,19 @@ export default function ClientsIndex({ clients, filters, services = [], zones = 
                           ) : (
                             <IconMapper name="Pencil" size={16} />
                           )}
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => toggleClientStatus(client)}
+                          className={`${
+                            client.status === 'active'
+                              ? 'text-amber-600 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-900/20'
+                              : 'text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/20'
+                          }`}
+                          title={client.status === 'active' ? 'Deactivate client' : 'Activate client'}
+                        >
+                          <IconMapper name={client.status === 'active' ? 'PauseCircle' : 'PlayCircle'} size={16} />
                         </Button>
                         <Button 
                           variant="ghost" 

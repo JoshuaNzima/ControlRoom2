@@ -15,9 +15,25 @@ class AssignmentController extends Controller
     public function index()
     {
         $supervisor = Auth::user();
-        $guards = Guard::with('currentAssignment.site.client')
+        $guards = Guard::with('currentAssignmentRelation.site.client')
             ->where('supervisor_id', $supervisor->id)
-            ->get();
+            ->get()
+            ->map(function ($guard) {
+                $assignment = $guard->currentAssignmentRelation;
+                if ($assignment) {
+                    $guard->current_assignment = [
+                        'id' => $assignment->id,
+                        'site_name' => $assignment->site?->name,
+                        'client_name' => $assignment->site?->client?->name,
+                        'start_date' => $assignment->start_date,
+                        'end_date' => $assignment->end_date,
+                        'assignment_type' => $assignment->assignment_type,
+                    ];
+                } else {
+                    $guard->current_assignment = null;
+                }
+                return $guard;
+            });
 
         $sites = ClientSite::with('client')->whereHas('client', function ($query) {
             $query->where('status', 'active');

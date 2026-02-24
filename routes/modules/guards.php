@@ -3,7 +3,6 @@
 use App\Http\Controllers\Admin\ClientController;
 use App\Http\Controllers\Guards\AssignmentController;
 use App\Http\Controllers\Guards\CalendarController;
-use App\Http\Controllers\Guards\CheckpointScanController;
 use App\Http\Controllers\Guards\GuardController;
 use App\Http\Controllers\Guards\IncidentController;
 use App\Http\Controllers\Guards\OperationsController;
@@ -16,11 +15,15 @@ use App\Http\Controllers\HR\LeaveController;
 use App\Http\Controllers\Reports\ActivityLogController;
 use App\Http\Controllers\Reports\ReportController;
 
+use App\Http\Controllers\Guards\SiteScanController;
+
 Route::middleware(['auth'])->group(function () {
 
-    // Supervisor routes
-    Route::middleware(['permission:guards.view'])->prefix('supervisor')->name('supervisor.')->group(function () {
+    // Supervisor routes (also accessible by sergeants with roaming permissions)
+    Route::middleware(['role:supervisor|sergeant'])->prefix('supervisor')->name('supervisor.')->group(function () {
         Route::get('/dashboard', [SupervisorController::class, 'dashboard'])->name('dashboard');
+        Route::get('/overview', [SupervisorController::class, 'overview'])->name('overview');
+        Route::get('/analytics', [SupervisorController::class, 'analytics'])->name('analytics');
         Route::get('/attendance', [SupervisorController::class, 'attendance'])->name('attendance');
         Route::get('/guards', [SupervisorController::class, 'guards'])->name('guards');
         Route::get('/shifts', [SupervisorController::class, 'shifts'])->name('shifts');
@@ -38,15 +41,23 @@ Route::middleware(['auth'])->group(function () {
             Route::post('/attendance/check-in', [SupervisorController::class, 'checkIn'])->name('attendance.check-in');
             Route::post('/attendance/check-out', [SupervisorController::class, 'checkOut'])->name('attendance.check-out');
             Route::post('/attendance/manual', [SupervisorController::class, 'manualAttendance'])->name('attendance.manual');
-            Route::get('/scanner', [CheckpointScanController::class, 'showScanner'])->name('scanner.show');
-            Route::post('/checkpoint/scan', [CheckpointScanController::class, 'scan'])->name('checkpoint.scan');
-            Route::post('/checkpoint/clear', [CheckpointScanController::class, 'clearScan'])->name('checkpoint.clear');
-
-            // Site QR scan (for attendance site-lock)
-            Route::get('/site/scan/{site}', [\App\Http\Controllers\Guards\SiteScanController::class, 'scan'])->name('site.scan');
+            Route::post('/attendance/bulk-check-in', [SupervisorController::class, 'bulkCheckIn'])->name('attendance.bulk-check-in');
+            Route::post('/attendance/bulk-check-out', [SupervisorController::class, 'bulkCheckOut'])->name('attendance.bulk-check-out');
+            // Scanner now uses shared /scan/* routes - see routes/modules/scan.php
+            // Site QR scan (for attendance site-lock) - supports both route param and QR code lookup
+            Route::post('/site/scan', [SiteScanController::class, 'scan'])->name('site.scan.qr');
+            Route::get('/site/scan/{site}', [SiteScanController::class, 'scan'])->name('site.scan');
+            Route::post('/site/clear', [SiteScanController::class, 'clearScan'])->name('site.clear');
 
             // Downs reporting
             Route::post('/downs', [DownReportController::class, 'store'])->name('downs.store');
+
+            // Incentives - view my incentives
+            Route::get('/incentives', [\App\Http\Controllers\Admin\IncentiveController::class, 'myIncentives'])->name('incentives.index');
+            Route::get('/incentives/{record}', [\App\Http\Controllers\Admin\IncentiveController::class, 'showMyIncentive'])->name('incentives.show');
+
+            // Quick incident report
+            Route::post('/incident/quick', [SupervisorController::class, 'quickIncident'])->name('incident.quick');
 
         });
 

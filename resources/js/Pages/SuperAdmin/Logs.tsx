@@ -13,9 +13,23 @@ const Logs: React.FC<Props> = ({ auth, logLines = [] }) => {
   const [lines, setLines] = React.useState<string[]>(logLines);
   const [limit, setLimit] = React.useState<string>('200');
 
-  const refresh = async () => {
+  const safeRoute = React.useCallback((name: string, params?: any) => {
     try {
-      const res = await fetch(route('superadmin.logs.data', { limit }));
+      return route(name, params) as unknown as string;
+    } catch {
+      return null;
+    }
+  }, []);
+
+  const refresh = async () => {
+    const url = safeRoute('superadmin.logs.data', { limit });
+    if (!url) return;
+    try {
+      const res = await fetch(url, {
+        headers: {
+          Accept: 'application/json',
+        },
+      });
       const data = await res.json();
       setLines(Array.isArray(data?.lines) ? data.lines : []);
     } catch (e) {
@@ -40,7 +54,7 @@ const Logs: React.FC<Props> = ({ auth, logLines = [] }) => {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
             <div className="flex items-center gap-2">
               <label className="text-sm text-gray-700 dark:text-gray-300">Show last</label>
-              <select value={limit} onChange={(e) => setLimit(e.target.value)} className="px-2 py-1 rounded bg-gray-100 dark:bg-gray-900 text-sm">
+              <select value={limit} onChange={(e) => setLimit(e.target.value)} className="px-2 py-1 rounded bg-gray-100 dark:bg-gray-900/60 text-gray-900 dark:text-gray-100 text-sm border border-gray-200 dark:border-gray-700">
                 <option value="100">100</option>
                 <option value="200">200</option>
                 <option value="500">500</option>
@@ -50,7 +64,13 @@ const Logs: React.FC<Props> = ({ auth, logLines = [] }) => {
             </div>
             <div className="flex items-center gap-2">
               <button onClick={refresh} className="px-3 py-2 rounded bg-rose-600 hover:bg-rose-700 text-white text-sm font-semibold">Refresh</button>
-              <a href={route('superadmin.logs.download')} className="px-3 py-2 rounded bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 text-sm font-semibold">Download</a>
+              {(() => {
+                const href = safeRoute('superadmin.logs.download');
+                if (!href) return null;
+                return (
+                  <a href={href} className="px-3 py-2 rounded bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 text-sm font-semibold">Download</a>
+                );
+              })()}
             </div>
           </div>
           <pre className="text-xs leading-5 max-h-[60vh] overflow-auto bg-gray-50 dark:bg-gray-900 p-3 rounded">

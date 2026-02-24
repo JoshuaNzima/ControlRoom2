@@ -23,8 +23,10 @@ import {
 } from '@/Components/ui/select';
 import { Badge } from '@/Components/ui/badge';
 import { Dialog, DialogTrigger } from '@/Components/ui/dialog';
+import { HardDrive } from 'lucide-react';
 import CameraCard from './CameraCard';
 import AddCameraForm from './AddCameraForm';
+import AddNvrModal from './AddNvrModal';
 
 declare const route: any;
 
@@ -81,6 +83,7 @@ const CameraList: React.FC<Props> = ({
 	const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 	const [groupedView, setGroupedView] = useState<boolean>(true);
 	const [showAddDialog, setShowAddDialog] = useState(false);
+	const [showAddNvrDialog, setShowAddNvrDialog] = useState(false);
 
 	const statusColors: Record<string, string> = {
 		online: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200',
@@ -431,6 +434,14 @@ const CameraList: React.FC<Props> = ({
 							<>
 								<div className="flex gap-2">
 									<Button
+										variant="outline"
+										size="sm"
+										onClick={() => router.visit(route('control-room.cameras.nvrs.index'))}
+									>
+										<HardDrive className="w-4 h-4 mr-1" />
+										Manage NVRs
+									</Button>
+									<Button
 										variant={groupedView ? 'default' : 'outline'}
 										size="sm"
 										onClick={() => setGroupedView((v) => !v)}
@@ -457,6 +468,12 @@ const CameraList: React.FC<Props> = ({
 										<Button>Add Camera</Button>
 									</DialogTrigger>
 									<AddCameraForm onClose={() => setShowAddDialog(false)} sites={sites} />
+								</Dialog>
+								<Dialog open={showAddNvrDialog} onOpenChange={setShowAddNvrDialog}>
+									<DialogTrigger asChild>
+										<Button variant="secondary">Add NVR/DVR</Button>
+									</DialogTrigger>
+									<AddNvrModal onClose={() => setShowAddNvrDialog(false)} sites={sites} />
 								</Dialog>
 							</>
 						)}

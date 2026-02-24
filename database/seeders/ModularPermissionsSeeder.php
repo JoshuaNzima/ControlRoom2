@@ -116,6 +116,15 @@ class ModularPermissionsSeeder extends Seeder
                 'clients.contracts.view',
                 'clients.reports.view',
             ],
+
+            'training' => [
+                'training.dashboard.view',
+                'training.trainees.view',
+                'training.trainees.manage',
+                'training.trainees.decide',
+                'training.regimens.view',
+                'training.regimens.manage',
+            ],
         ];
 
         // Create all permissions
@@ -178,6 +187,19 @@ class ModularPermissionsSeeder extends Seeder
             'shifts.view',
             'incidents.view', 'incidents.create',
             'reports.view',
+        ]);
+
+        // Trainer - Training module access
+        $trainer = Role::firstOrCreate(['name' => 'trainer']);
+        $trainer->givePermissionTo([
+            'training.dashboard.view',
+            'training.trainees.view',
+            'training.trainees.manage',
+            'training.trainees.decide',
+            'training.regimens.view',
+            'training.regimens.manage',
+            'guards.create',
+            'guards.view',
         ]);
 
         // Client - Limited access

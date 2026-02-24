@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Head, useForm, usePage } from '@inertiajs/react';
 import ControlRoomLayout from '@/Layouts/ControlRoomLayout';
 import Modal from '@/Components/Modal';
+import ManualRosterEntryModal from '@/Components/Roster/ManualRosterEntryModal';
 
 type Guard = { id: number; name: string; employee_id?: string };
 type OffDay = { id?: number; guard_id: number; start_date: string; end_date?: string | null; reason?: string | null };
@@ -51,7 +52,7 @@ function getCalendarRange(d: Date) {
 }
 
 export default function Roster() {
-  const { auth, guards = [], initial_month } = (usePage().props as any);
+  const { auth, guards = [], sites = [], initial_month } = (usePage().props as any);
   const [currentMonth, setCurrentMonth] = useState<Date>(() => {
     if (initial_month) {
       const d = new Date(initial_month);
@@ -65,6 +66,7 @@ export default function Roster() {
   const [events, setEvents] = useState<EventItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [addOffDayOpen, setAddOffDayOpen] = useState(false);
+  const [manualEntryOpen, setManualEntryOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<EventItem | null>(null);
   const [editOffDayOpen, setEditOffDayOpen] = useState(false);
 
@@ -143,6 +145,13 @@ export default function Roster() {
             >
               Add Off Day
             </button>
+            <button
+              type="button"
+              className="px-3 py-1.5 rounded-md bg-emerald-700 text-white hover:bg-emerald-600"
+              onClick={() => setManualEntryOpen(true)}
+            >
+              Quick Entry
+            </button>
           </div>
         </div>
 
@@ -206,6 +215,16 @@ export default function Roster() {
           onSaved={() => {
             setEditOffDayOpen(false);
             setSelectedEvent(null);
+            refreshEvents();
+          }}
+        />
+        <ManualRosterEntryModal
+          open={manualEntryOpen}
+          onClose={() => setManualEntryOpen(false)}
+          guards={guards as Guard[]}
+          sites={sites as {id: number; name: string}[]}
+          onSaved={() => {
+            setManualEntryOpen(false);
             refreshEvents();
           }}
         />

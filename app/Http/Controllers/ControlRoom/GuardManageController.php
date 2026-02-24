@@ -37,14 +37,15 @@ class GuardManageController extends Controller
             'emergency_contact_name' => 'nullable|string|max:255',
             'emergency_contact_phone' => 'nullable|string|max:20',
             'supervisor_id' => 'nullable|exists:users,id',
+            'reports_to_guard_id' => 'nullable|exists:guards,id',
             'hire_date' => 'nullable|date',
             'guard_type' => 'required|in:permanent,standby,reliever',
+            'position' => 'required|in:guard,supervisor,sergeant',
             'guard_grade_id' => 'nullable|exists:guard_grades,id',
             'status' => 'required|in:active,inactive,suspended,dismissed,absconded',
             'notes' => 'nullable|string',
             'children_names' => 'nullable|string',
             'photo' => 'nullable|image|max:5120',
-            // Optional quick assignment by client site
             'client_site_id' => 'nullable|exists:client_sites,id',
         ]);
 
@@ -54,6 +55,7 @@ class GuardManageController extends Controller
 
         if (!auth()->user()->hasAnyRole(['operations_officer','manager','super_admin'])) {
             unset($validated['supervisor_id']);
+            unset($validated['reports_to_guard_id']);
         }
 
         if (empty($validated['employee_id'])) {
@@ -99,6 +101,11 @@ class GuardManageController extends Controller
 
     public function update(Request $request, Guard $guard)
     {
+        // Check edit limit
+        if ($guard->edit_count >= 3) {
+            return back()->with('error', 'This guard has reached the maximum edit limit (3 edits). Contact an administrator for further changes.');
+        }
+
         $request->merge([
             'id_number' => ($v = trim((string) $request->input('id_number'))) !== '' ? $v : null,
             'emergency_contact_name' => ($v = trim((string) $request->input('emergency_contact_name'))) !== '' ? $v : null,
@@ -118,29 +125,49 @@ class GuardManageController extends Controller
             'date_of_birth' => 'required|date',
             'gender' => 'required|in:male,female,other',
             'marital_status' => 'nullable|in:single,married,divorced,widowed',
+            'spouse_name' => 'nullable|string|max:255',
+            'spouse_phone' => 'nullable|string|max:20',
             'emergency_contact_name' => 'nullable|string|max:255',
             'emergency_contact_phone' => 'nullable|string|max:20',
+            'next_of_kin_name' => 'nullable|string|max:255',
+            'next_of_kin_relationship' => 'nullable|string|max:50',
+            'next_of_kin_phone' => 'nullable|string|max:20',
             'supervisor_id' => 'nullable|exists:users,id',
+            'reports_to_guard_id' => 'nullable|exists:guards,id',
             'hire_date' => 'nullable|date',
             'guard_type' => 'required|in:permanent,standby,reliever',
+            'position' => 'required|in:guard,supervisor,sergeant',
             'guard_grade_id' => 'nullable|exists:guard_grades,id',
             'status' => 'required|in:active,inactive,suspended,dismissed,absconded',
             'notes' => 'nullable|string',
             'children_names' => 'nullable|string',
+            'home_village' => 'nullable|string|max:255',
+            'home_ta' => 'nullable|string|max:255',
+            'home_district' => 'nullable|string|max:255',
+            'education_level' => 'nullable|string|max:100',
+            'qualifications' => 'nullable',
+            'languages' => 'nullable',
+            'dependents_count' => 'nullable|integer|min:0',
+            'default_off_day' => 'nullable|integer|between:0,6',
             'photo' => 'nullable|image|max:5120',
         ]);
 
         if (!auth()->user()->hasAnyRole(['operations_officer','manager','super_admin'])) {
             unset($validated['supervisor_id']);
+            unset($validated['reports_to_guard_id']);
         }
 
         if ($request->hasFile('photo')) {
             $validated['photo'] = $request->file('photo')->store('guards', 'public');
         }
 
+        // Increment edit count
+        $validated['edit_count'] = ($guard->edit_count ?? 0) + 1;
+
         $guard->update($validated);
 
-        return back()->with('success', 'Guard updated.');
+        $remaining = 3 - $guard->edit_count;
+        return back()->with('success', "Guard updated. {$remaining} edit(s) remaining.");
     }
 
     public function destroy(Guard $guard)
@@ -154,18 +181,18 @@ class GuardManageController extends Controller
         $validated = $request->validate([
             'guard_ids' => 'required|array',
             'guard_ids.*' => 'exists:guards,id',
-            'supervisor_id' => 'required|exists:users,id',
+            'leader_id' => 'required|exists:guards,id',
         ]);
 
-        $supervisor = User::findOrFail($validated['supervisor_id']);
-        if (!$supervisor->hasAnyRole(['supervisor','manager','operations_officer'])) {
-            return back()->with('error', 'Selected user is not a supervisor/manager.');
+        $leader = Guard::findOrFail($validated['leader_id']);
+        if (!$leader->isLeader()) {
+            return back()->with('error', 'Selected guard is not a supervisor or sergeant.');
         }
 
         Guard::whereIn('id', $validated['guard_ids'])
-            ->update(['supervisor_id' => $validated['supervisor_id']]);
+            ->update(['reports_to_guard_id' => $validated['leader_id']]);
 
-        return back()->with('success', 'Supervisor assigned.');
+        return back()->with('success', ucfirst($leader->position) . ' assigned to ' . count($validated['guard_ids']) . ' guards.');
     }
 
     public function unassignSupervisor(Request $request)
@@ -176,9 +203,9 @@ class GuardManageController extends Controller
         ]);
 
         Guard::whereIn('id', $validated['guard_ids'])
-            ->update(['supervisor_id' => null]);
+            ->update(['reports_to_guard_id' => null]);
 
-        return back()->with('success', 'Supervisor unassigned.');
+        return back()->with('success', 'Leader unassigned.');
     }
 
     public function assignToSite(Request $request)
@@ -193,7 +220,6 @@ class GuardManageController extends Controller
 
         $startDate = $validated['start_date'] ?? now()->toDateString();
 
-        // If already actively assigned to the same site, do nothing
         $alreadyAssigned = GuardAssignment::where('guard_id', $validated['guard_id'])
             ->where('client_site_id', $validated['client_site_id'])
             ->where('is_active', true)
@@ -203,7 +229,6 @@ class GuardManageController extends Controller
             return back()->with('success', 'Guard already assigned to this site.');
         }
 
-        // End any other active assignments for this guard
         GuardAssignment::where('guard_id', $validated['guard_id'])
             ->where('is_active', true)
             ->whereNull('end_date')

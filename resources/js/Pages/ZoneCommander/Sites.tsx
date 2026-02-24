@@ -73,7 +73,7 @@ export default function Sites({ sites = [] }: SitesProps) {
     <ZoneCommanderLayout title="Sites">
       <Head title="Sites Management" />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+      <div className="w-full min-h-screen p-3 sm:p-4 lg:p-6 space-y-4 sm:space-y-6">
         {/* Overview Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <Card className="hover:shadow-lg transition-shadow duration-300">
@@ -142,7 +142,7 @@ export default function Sites({ sites = [] }: SitesProps) {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-col lg:flex-row gap-4 mb-6">
+            <div className="flex flex-col gap-4 mb-6">
               <div className="flex-1">
                 <Input
                   placeholder="Search sites by name, client, or address..."
@@ -151,7 +151,7 @@ export default function Sites({ sites = [] }: SitesProps) {
                   className="w-full"
                 />
               </div>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <Button
                   variant={statusFilter === 'all' ? 'default' : 'outline'}
                   onClick={() => setStatusFilter('all')}
@@ -181,7 +181,7 @@ export default function Sites({ sites = [] }: SitesProps) {
                   Maintenance
                 </Button>
               </div>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <Button
                   variant={securityFilter === 'all' ? 'default' : 'outline'}
                   onClick={() => setSecurityFilter('all')}
@@ -211,8 +211,8 @@ export default function Sites({ sites = [] }: SitesProps) {
               {filteredSites.map((site) => (
                 <Card key={site.id} className="hover:shadow-lg transition-shadow duration-300">
                   <CardContent className="p-6">
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
+                    <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
+                      <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-3 mb-2">
                           <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{site.name}</h3>
                           <Badge className={getStatusColor(site.status)}>
@@ -268,20 +268,20 @@ export default function Sites({ sites = [] }: SitesProps) {
                         </div>
                       </div>
 
-                      <div className="flex flex-col gap-2 ml-4">
-                        <Button variant="outline" size="sm" className="hover:bg-blue-50 dark:hover:bg-gray-900">
+                      <div className="flex flex-col gap-2 sm:ml-4 w-full sm:w-auto">
+                        <Button variant="outline" size="sm" className="hover:bg-blue-50 dark:hover:bg-gray-900 w-full sm:w-auto">
                           <IconMapper name="Eye" className="w-4 h-4 mr-2" />
                           View Details
                         </Button>
-                        <Button variant="outline" size="sm" className="hover:bg-green-50 dark:hover:bg-gray-900">
+                        <Button variant="outline" size="sm" className="hover:bg-green-50 dark:hover:bg-gray-900 w-full sm:w-auto">
                           <IconMapper name="Map" className="w-4 h-4 mr-2" />
                           View Map
                         </Button>
-                        <Button variant="outline" size="sm" className="hover:bg-purple-50 dark:hover:bg-gray-900">
+                        <Button variant="outline" size="sm" className="hover:bg-purple-50 dark:hover:bg-gray-900 w-full sm:w-auto">
                           <IconMapper name="ScanLine" className="w-4 h-4 mr-2" />
                           Start Patrol
                         </Button>
-                        <Button variant="outline" size="sm" className="hover:bg-orange-50 dark:hover:bg-gray-900">
+                        <Button variant="outline" size="sm" className="hover:bg-orange-50 dark:hover:bg-gray-900 w-full sm:w-auto">
                           <IconMapper name="FileText" className="w-4 h-4 mr-2" />
                           Reports
                         </Button>

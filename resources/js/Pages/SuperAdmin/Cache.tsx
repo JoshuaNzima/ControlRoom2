@@ -9,6 +9,14 @@ interface Props {
 }
 
 const Cache: React.FC<Props> = ({ auth }) => {
+  const safeRoute = React.useCallback((name: string, params?: any) => {
+    try {
+      return route(name, params) as unknown as string;
+    } catch {
+      return null;
+    }
+  }, []);
+
   return (
     <SuperAdminLayout title="Cache" user={auth?.user}>
       <Head title="Cache" />
@@ -24,7 +32,10 @@ const Cache: React.FC<Props> = ({ auth }) => {
           </div>
           <button
             onClick={() => {
-              if (confirm('Clear all system caches?')) router.post(route('superadmin.cache.clear'));
+              if (!confirm('Clear all system caches?')) return;
+              const href = safeRoute('superadmin.cache.clear');
+              if (!href) return;
+              router.post(href);
             }}
             className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg font-semibold"
           >

@@ -19,7 +19,30 @@ interface ModuleNavItem {
   icon: React.ReactNode;
   current: boolean;
   badge?: string;
+  description?: string;
 }
+
+// Quick Stats Component for Header
+const QuickStats: React.FC = () => {
+  const { counters } = useCounters();
+  const stats = [
+    { label: 'Approvals', value: (Number(counters?.requisitions_pending_admin || 0) + Number(counters?.finance_approvals_pending || 0)), color: 'bg-amber-500' },
+    { label: 'Open Downs', value: counters?.control_downs_active || 0, color: 'bg-red-500' },
+    { label: 'Messages', value: counters?.notifications_unread || 0, color: 'bg-blue-500' },
+  ].filter(s => s.value > 0);
+
+  if (stats.length === 0) return null;
+
+  return (
+    <div className="hidden lg:flex items-center gap-2 mr-4">
+      {stats.map((stat) => (
+        <div key={stat.label} className={`${stat.color} text-white px-3 py-1 rounded-full text-xs font-medium`}>
+          {stat.value} {stat.label}
+        </div>
+      ))}
+    </div>
+  );
+};
 
 export default function AdminLayout({ title, children, user }: Props) {
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
@@ -52,6 +75,7 @@ export default function AdminLayout({ title, children, user }: Props) {
      { name: 'Messaging', href: route('messages.conversations.index'), icon: <IconMapper name="message-square-text" className="h-6 w-6" />, current: isCurrent(route('messages.conversations.index')) },
     { name: 'Reports', href: route('admin.reports.index'), icon: <IconMapper name="bar-chart-2" className="h-6 w-6" />, current: isCurrent(route('admin.reports.index')) },
     { name: 'Payments Checker', href: route('admin.payments.index'), icon: <IconMapper name="wallet" className="h-6 w-6" />, current: isCurrent(route('admin.payments.index')) },
+    { name: 'QR Codes', href: route('control-room.qr-codes.index'), icon: <IconMapper name="qr-code" className="h-6 w-6" />, current: isCurrent(route('control-room.qr-codes.index')) },
     { name: 'Requisitions', href: route('requisitions.index'), icon: <IconMapper name="clipboard-list" className="h-6 w-6" />, current: isCurrent(route('requisitions.index')), badge: (()=>{ const n = Number(counters?.requisitions_my_open||0); return n>0? String(n): undefined; })() },
     { name: 'Budgets', href: route('budgets.index'), icon: <IconMapper name="pie-chart" className="h-6 w-6" />, current: isCurrent(route('budgets.index')) },
     { name: 'Settings', href: route('admin.settings.index'), icon: <IconMapper name="settings" className="h-6 w-6" />, current: isCurrent(route('admin.settings.index')) },
@@ -205,6 +229,7 @@ export default function AdminLayout({ title, children, user }: Props) {
                 <h1 className="text-xl font-semibold text-red-900 dark:text-gray-100 truncate">{title}</h1>
               </div>
               <div className="flex items-center justify-end gap-2 sm:gap-3">
+                <QuickStats />
                 <NotificationBell />
                 <button onClick={toggle} className="text-sm px-3 py-1 rounded-md bg-red-100 text-red-800 hover:bg-red-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700">
                   <span className="hidden sm:inline">{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>

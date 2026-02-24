@@ -15,12 +15,15 @@ use App\Models\Alert;
 use App\Models\AssetHandover;
 use App\Models\BudgetRequest;
 use App\Models\RequisitionBatch;
+use App\Models\Guards\Attendance;
+use App\Models\Guards\GuardAssignment;
 
 class CounterController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
         $user = $request->user();
+		$today = now()->toDateString();
 
         $notificationsUnread = $user->unreadNotifications()->count();
 
@@ -63,6 +66,19 @@ class CounterController extends Controller
         $controlDownsActive = Down::whereNull('resolved_at')->count();
         $alertsActive = Alert::whereNull('resolved_at')->count();
 
+		$downsOpen = (int) Down::where('status', 'open')->count();
+		$downsEscalated = (int) Down::where('status', 'escalated')->count();
+		$downsResolvedToday = (int) Down::where('status', 'resolved')->whereDate('resolved_at', $today)->count();
+
+		$attendanceAbsentToday = (int) Attendance::whereDate('date', $today)->where('status', 'absent')->count();
+		$attendanceCoveredToday = (int) Attendance::whereDate('date', $today)->where('status', 'covered')->count();
+		$attendanceCheckedInToday = (int) Attendance::whereDate('date', $today)
+			->whereNotNull('check_in_time')
+			->distinct('guard_id')
+			->count('guard_id');
+
+		$deploymentsToday = (int) GuardAssignment::whereDate('created_at', $today)->count();
+
         $assetsHandoversOutstanding = AssetHandover::whereNull('returned_at')->count();
 
         return response()->json([
@@ -83,6 +99,13 @@ class CounterController extends Controller
             'control_flags_pending' => $controlFlagsPending,
             'control_downs_active' => $controlDownsActive,
             'alerts_active' => $alertsActive,
+            'downs_open' => $downsOpen,
+            'downs_escalated' => $downsEscalated,
+            'downs_resolved_today' => $downsResolvedToday,
+            'attendance_absent_today' => $attendanceAbsentToday,
+            'attendance_covered_today' => $attendanceCoveredToday,
+            'attendance_checked_in_today' => $attendanceCheckedInToday,
+            'deployments_today' => $deploymentsToday,
             'assets_handovers_outstanding' => $assetsHandoversOutstanding,
         ]);
     }

@@ -30,6 +30,7 @@ class GuardsController extends Controller
 
         $guards = Guard::with(['supervisor', 'todayAttendance', 'activeAssignments.clientSite.client'])
             ->where('employee_role', 'guard')
+            ->whereNotIn('status', ['dismissed', 'absconded'])
             ->when($request->input('search'), function ($q, $search) {
                 $q->where(function ($qq) use ($search) {
                     $qq->where('name', 'like', "%{$search}%")
@@ -91,6 +92,7 @@ class GuardsController extends Controller
             'guards' => $guards,
             'filters' => $request->only(['search','status','profile_status','zone_id','client_id','grade_id','on_duty','sort','dir','per_page']),
             'supervisors' => User::role(['supervisor','manager','operations_officer'])->orderBy('name')->get(['id','name']),
+            'leaders' => Guard::leaders()->where('status', 'active')->orderBy('name')->get(['id','name','position']),
             'clients' => Client::orderBy('name')->get(['id','name']),
             'grades' => GuardGrade::orderBy('name')->get(['id','code','name']),
             'zones' => Zone::orderBy('name')->get(['id','name']),
@@ -141,6 +143,7 @@ class GuardsController extends Controller
         $dir = strtolower((string) $request->input('dir', 'asc')) === 'desc' ? 'desc' : 'asc';
 
         $guards = Guard::with(['supervisor', 'grade', 'activeAssignments.clientSite.client'])
+            ->whereNotIn('status', ['dismissed', 'absconded'])
             ->when($request->input('search'), function ($q, $search) {
                 $q->where(function ($qq) use ($search) {
                     $qq->where('name', 'like', "%{$search}%")
@@ -238,6 +241,7 @@ class GuardsController extends Controller
             'residence_district' => $guard->residence_district,
             'gender' => $guard->gender,
             'date_of_birth' => optional($guard->date_of_birth)->format('Y-m-d'),
+            'marital_status' => $guard->marital_status,
             'spouse_name' => $guard->spouse_name,
             'spouse_phone' => $guard->spouse_phone,
             'emergency_contact_name' => $guard->emergency_contact_name,
@@ -250,10 +254,19 @@ class GuardsController extends Controller
             'languages' => $guard->languages,
             'dependents_count' => $guard->dependents_count,
             'children_names' => $guard->children_names,
+            'home_village' => $guard->home_village,
+            'home_ta' => $guard->home_ta,
+            'home_district' => $guard->home_district,
+            'notes' => $guard->notes,
+            'supervisor_id' => $guard->supervisor_id,
+            'guard_grade_id' => $guard->guard_grade_id,
+            'client_id' => $guard->client_id,
+            'default_off_day' => $guard->default_off_day,
             'zone' => $guard->zone ? ['id' => $guard->zone->id, 'name' => $guard->zone->name] : null,
             'grade' => $guard->grade ? ['id' => $guard->grade->id, 'name' => $guard->grade->name, 'code' => $guard->grade->code ?? null] : null,
             'supervisor' => $guard->supervisor ? ['id' => $guard->supervisor->id, 'name' => $guard->supervisor->name] : null,
             'photo_url' => $guard->photo ? url('storage/'.$guard->photo) : null,
+            'edit_count' => $guard->edit_count ?? 0,
             'attendance_tally' => [
                 'range' => ['start' => $monthStart, 'end' => $monthEnd],
                 'by_status' => $byStatus,

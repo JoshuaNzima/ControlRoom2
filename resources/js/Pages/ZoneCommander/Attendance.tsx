@@ -127,7 +127,7 @@ export default function Attendance({ sites = [], guards = [] }: { sites: Site[];
     <ZoneCommanderLayout title="Attendance">
       <Head title="Zone Attendance" />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+      <div className="w-full min-h-screen p-3 sm:p-4 lg:p-6 space-y-4 sm:space-y-6">
         <div className="rounded-2xl border border-red-200/40 dark:border-gray-800 bg-gradient-to-r from-red-700 via-rose-700 to-pink-700 text-white p-5 sm:p-6 shadow-sm shadow-black/10">
           <div className="flex flex-col gap-2">
             <h2 className="text-2xl font-bold">Zone Attendance</h2>

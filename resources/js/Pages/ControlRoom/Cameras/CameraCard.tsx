@@ -2,6 +2,9 @@ import React from 'react';
 import { router } from '@inertiajs/react';
 import { Card } from '@/Components/ui/card';
 import { Badge } from '@/Components/ui/badge';
+import { Button } from '@/Components/ui/button';
+import { ExternalLink } from 'lucide-react';
+import { useDetachedCamera } from '@/Hooks/useDetachedCamera';
 
 declare const route: any;
 
@@ -22,6 +25,9 @@ interface Props {
 }
 
 const CameraCard: React.FC<Props> = ({ camera }) => {
+	const { detachCamera, isDetached } = useDetachedCamera();
+	const isPoppedOut = isDetached(camera.id);
+
 	const statusColors: Record<string, string> = {
 		online: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200',
 		offline: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200',
@@ -33,9 +39,19 @@ const CameraCard: React.FC<Props> = ({ camera }) => {
 		router.visit(route('control-room.cameras.show', camera.id));
 	};
 
+	const handleDetach = (e: React.MouseEvent) => {
+		e.stopPropagation();
+		detachCamera({
+			id: camera.id,
+			name: camera.name,
+			stream_url: camera.stream_url,
+			status: camera.status ?? undefined,
+		});
+	};
+
 	return (
 		<Card
-			className="cursor-pointer transition-transform hover:scale-[1.02]"
+			className="cursor-pointer transition-transform hover:scale-[1.02] group"
 			onClick={handleClick}
 		>
 			<div className="relative">
@@ -61,6 +77,18 @@ const CameraCard: React.FC<Props> = ({ camera }) => {
 				>
 					{camera.status ?? '-'}
 				</Badge>
+				{camera.status === 'online' && (
+					<Button
+						variant="secondary"
+						size="sm"
+						className={`absolute top-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity ${isPoppedOut ? 'bg-green-600 text-white' : ''}`}
+						onClick={handleDetach}
+						title={isPoppedOut ? 'Already in pop-out window' : 'Pop out to new window'}
+					>
+						<ExternalLink className="w-3 h-3 mr-1" />
+						{isPoppedOut ? 'Popped Out' : 'Pop Out'}
+					</Button>
+				)}
 			</div>
 			<div className="p-4">
 				<h3 className="font-medium text-gray-900 dark:text-gray-100">{camera.name}</h3>

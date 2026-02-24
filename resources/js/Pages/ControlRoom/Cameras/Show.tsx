@@ -14,6 +14,8 @@ import {
 	TableRow,
 } from '@/Components/ui/table';
 import { Alert, AlertDescription, AlertTitle } from '@/Components/ui/alert';
+import { ExternalLink } from 'lucide-react';
+import { useDetachedCamera } from '@/Hooks/useDetachedCamera';
 
 declare const route: any;
 
@@ -21,6 +23,8 @@ type Camera = any;
 
 const CameraShow: React.FC<{ camera: Camera; recentRecordings?: any[]; activeAlerts?: any[] }> = ({ camera, recentRecordings = [], activeAlerts = [] }) => {
 	const videoRef = useRef<HTMLVideoElement | null>(null);
+	const { detachCamera, isDetached } = useDetachedCamera();
+	const isPoppedOut = isDetached(camera?.id);
 
 	const statusColors: Record<string, string> = {
 		online: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200',
@@ -43,6 +47,15 @@ const CameraShow: React.FC<{ camera: Camera; recentRecordings?: any[]; activeAle
 			}
 		}
 	}, [camera?.status, camera?.stream_url]);
+
+	const handleDetach = () => {
+		detachCamera({
+			id: camera.id,
+			name: camera.name,
+			stream_url: camera.stream_url,
+			status: camera.status ?? undefined,
+		});
+	};
 
 	const handleDownloadRecording = (recordingId: any) => {
 		window.location.href = route('control-room.cameras.recordings.download', recordingId);
@@ -81,6 +94,14 @@ const CameraShow: React.FC<{ camera: Camera; recentRecordings?: any[]; activeAle
 										<div className="p-4 flex justify-between items-center">
 											<div className="space-x-2">
 												<Button variant="outline">Snapshot</Button>
+												<Button
+													variant={isPoppedOut ? 'default' : 'outline'}
+													onClick={handleDetach}
+													title={isPoppedOut ? 'Already popped out' : 'Pop out to new window'}
+												>
+													<ExternalLink className="w-4 h-4 mr-1" />
+													{isPoppedOut ? 'Popped Out' : 'Pop Out'}
+												</Button>
 											</div>
 											<div className="flex items-center space-x-2">
 												<Badge variant="outline">{camera?.type?.toUpperCase()}</Badge>
@@ -95,6 +116,32 @@ const CameraShow: React.FC<{ camera: Camera; recentRecordings?: any[]; activeAle
 						</div>
 
 						<div className="lg:col-span-1 space-y-6">
+							{camera?.nvr_device && (
+								<Card>
+									<CardHeader>
+										<CardTitle>NVR Device</CardTitle>
+									</CardHeader>
+									<CardContent className="space-y-3">
+										<div className="flex items-center gap-2">
+											<span className="text-sm text-gray-500 dark:text-gray-400">Device:</span>
+											<span className="font-medium">{camera.nvr_device.name}</span>
+										</div>
+										<div className="flex items-center gap-2">
+											<span className="text-sm text-gray-500 dark:text-gray-400">Channel:</span>
+											<span className="font-mono">{camera.nvr_channel}</span>
+										</div>
+										<Button
+											variant="outline"
+											size="sm"
+											className="w-full"
+											onClick={() => router.visit(route('control-room.cameras.nvrs.show', camera.nvr_device.id))}
+										>
+											View NVR
+										</Button>
+									</CardContent>
+								</Card>
+							)}
+
 							{Array.isArray(activeAlerts) && activeAlerts.length > 0 && (
 								<Card>
 									<CardHeader>

@@ -14,11 +14,13 @@ type Guard = {
   name: string;
   employee_id: string;
   status: string;
+  position?: string | null;
   is_profile_complete?: boolean;
   profile_missing_fields?: string[];
   supervisor?: { id: number; name: string } | null;
   today_attendance?: { check_in?: string | null; check_out?: string | null; status?: string | null; source?: string | null } | null;
   active_assignment?: { site_id?: number | null; site_name?: string | null; client_name?: string | null } | null;
+  edit_count?: number;
 };
 
 type PageProps = {
@@ -121,10 +123,15 @@ export default function GuardsIndex() {
     router.get(route('control-room.guards'), {}, { preserveState: true, preserveScroll: true });
   };
   const [showAdd, setShowAdd] = useState(false);
+  const [showEdit, setShowEdit] = useState(false);
+  const [currentGuard, setCurrentGuard] = useState<Guard | null>(null);
+  const [currentGuardData, setCurrentGuardData] = useState<any | null>(null);
   const [showAssign, setShowAssign] = useState(false);
   const [currentGuardId, setCurrentGuardId] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
+  const [editLoading, setEditLoading] = useState<number | null>(null);
   const [errorsCreate, setErrorsCreate] = useState<Record<string, string>>({});
+  const [errorsEdit, setErrorsEdit] = useState<Record<string, string>>({});
   const [showSupervisor, setShowSupervisor] = useState(false);
   const [selectedSupervisorId, setSelectedSupervisorId] = useState<string>('');
   const [selectedGuardIds, setSelectedGuardIds] = useState<number[]>([]);
@@ -196,6 +203,26 @@ export default function GuardsIndex() {
       // no-op
     } finally {
       setViewLoading(null);
+    }
+  };
+
+  const openEdit = async (g: Guard) => {
+    if (g.edit_count !== undefined && g.edit_count >= 3) {
+      alert('This guard has reached the maximum edit limit (3 edits). Contact an administrator for further changes.');
+      return;
+    }
+    setEditLoading(g.id);
+    try {
+      const res = await fetch(route('control-room.guards.json', { guard: g.id }), { headers: { Accept: 'application/json' } });
+      if (!res.ok) throw new Error('Failed');
+      const json = await res.json();
+      setCurrentGuard(g);
+      setCurrentGuardData(json);
+      setShowEdit(true);
+    } catch (e) {
+      // no-op
+    } finally {
+      setEditLoading(null);
     }
   };
 
@@ -376,6 +403,13 @@ export default function GuardsIndex() {
                         <span className="min-w-0">
                           <div className="text-sm font-semibold text-gray-900 dark:text-gray-100 break-words">{g.name}</div>
                           <div className="mt-1 text-xs text-gray-500 dark:text-gray-400 break-words">{g.employee_id}</div>
+                          {g.position && (
+                            <div className="mt-1">
+                              <span className="inline-flex px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-200 text-xs font-medium capitalize">
+                                {g.position}
+                              </span>
+                            </div>
+                          )}
                           {g.is_profile_complete === false ? (
                             <div className="mt-2">
                               <span className="inline-flex px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200 text-xs">
@@ -443,15 +477,15 @@ export default function GuardsIndex() {
                       >
                         <IconMapper name="CheckCircle" size={18} />
                       </button>
-					  <button
-						onClick={() => markAbsent(g)}
-						className={`p-2 rounded text-white disabled:opacity-60 ${canMarkAbsent(g) ? 'bg-red-700 hover:bg-red-800 dark:bg-red-700 dark:hover:bg-red-600' : 'bg-gray-400 dark:bg-gray-700 cursor-not-allowed'}`}
-						title={canMarkAbsent(g) ? 'Mark Absent' : (g.today_attendance?.check_in ? 'Already checked in' : 'Already absent')}
-						aria-label="Mark Absent"
-						disabled={!canMarkAbsent(g)}
-					  >
-						<IconMapper name="XCircle" size={18} />
-					  </button>
+                      <button
+                        onClick={() => markAbsent(g)}
+                        className={`p-2 rounded text-white disabled:opacity-60 ${canMarkAbsent(g) ? 'bg-red-700 hover:bg-red-800 dark:bg-red-700 dark:hover:bg-red-600' : 'bg-gray-400 dark:bg-gray-700 cursor-not-allowed'}`}
+                        title={canMarkAbsent(g) ? 'Mark Absent' : (g.today_attendance?.check_in ? 'Already checked in' : 'Already absent')}
+                        aria-label="Mark Absent"
+                        disabled={!canMarkAbsent(g)}
+                      >
+                        <IconMapper name="XCircle" size={18} />
+                      </button>
                       <button
                         onClick={() => openView(g.id)}
                         className="p-2 rounded bg-gray-100 hover:bg-gray-200 text-gray-800 border dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-100 dark:border-gray-700"
@@ -460,6 +494,15 @@ export default function GuardsIndex() {
                         disabled={viewLoading === g.id}
                       >
                         {viewLoading === g.id ? '...' : <IconMapper name="Eye" size={18} />}
+                      </button>
+                      <button
+                        onClick={() => openEdit(g)}
+                        disabled={editLoading === g.id || (g.edit_count !== undefined && g.edit_count >= 3)}
+                        className={`p-2 rounded text-white ${g.edit_count !== undefined && g.edit_count >= 3 ? 'bg-gray-400 cursor-not-allowed' : 'bg-amber-600 hover:bg-amber-700'}`}
+                        title={g.edit_count !== undefined && g.edit_count >= 3 ? 'Edit limit reached (3/3)' : `Edit Guard (${g.edit_count || 0}/3 edits used)`}
+                        aria-label="Edit Guard"
+                      >
+                        {editLoading === g.id ? '...' : <IconMapper name="Pencil" size={18} />}
                       </button>
                       {canAssignSupervisor && (
                         <button
@@ -511,6 +554,11 @@ export default function GuardsIndex() {
                         <td className="px-6 py-3 text-sm text-gray-900 dark:text-gray-100">
                           <div className="flex items-center gap-2">
                             <span>{g.name}</span>
+                            {g.position && (
+                              <span className="px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-200 text-xs font-medium capitalize">
+                                {g.position}
+                              </span>
+                            )}
                             {g.is_profile_complete === false ? (
                               <span className="px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200 text-xs">
                                 Profile incomplete
@@ -583,6 +631,15 @@ export default function GuardsIndex() {
                             >
                               {viewLoading === g.id ? '...' : <IconMapper name="Eye" size={18} />}
                             </button>
+                            <button
+                              onClick={() => openEdit(g)}
+                              disabled={editLoading === g.id || (g.edit_count !== undefined && g.edit_count >= 3)}
+                              className={`p-2 rounded text-white ${g.edit_count !== undefined && g.edit_count >= 3 ? 'bg-gray-400 cursor-not-allowed' : 'bg-amber-600 hover:bg-amber-700'}`}
+                              title={g.edit_count !== undefined && g.edit_count >= 3 ? 'Edit limit reached (3/3)' : `Edit Guard (${g.edit_count || 0}/3 edits used)`}
+                              aria-label="Edit Guard"
+                            >
+                              {editLoading === g.id ? '...' : <IconMapper name="Pencil" size={18} />}
+                            </button>
                             {canAssignSupervisor && (
                               <button
                                 onClick={() => { setCurrentGuardId(g.id); setSelectedSupervisorId(''); setShowSupervisor(true); }}
@@ -652,6 +709,52 @@ export default function GuardsIndex() {
               hideCancel={false}
               onCancel={() => setShowAdd(false)}
             />
+          </div>
+        </Modal>
+
+        {/* Edit Guard Modal */}
+        <Modal show={showEdit} onClose={() => { setShowEdit(false); setCurrentGuard(null); setCurrentGuardData(null); }} maxWidth="2xl">
+          <div className="p-4 sm:p-6 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Edit Guard</h2>
+              {currentGuardData?.edit_count !== undefined && (
+                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                  currentGuardData.edit_count >= 3
+                    ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200'
+                    : currentGuardData.edit_count >= 2
+                    ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200'
+                    : 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200'
+                }`}>
+                  {currentGuardData.edit_count}/3 edits used
+                </span>
+              )}
+            </div>
+            {currentGuardData && currentGuard && (
+              <GuardForm
+                initialData={currentGuardData}
+                supervisors={supervisors}
+                grades={grades}
+                onSubmit={(form: any) => {
+                  setSaving(true);
+                  setErrorsEdit({});
+                  router.put(route('control-room.guards.update', { guard: currentGuard.id }), form, {
+                    preserveScroll: true,
+                    forceFormData: true,
+                    onFinish: () => setSaving(false),
+                    onSuccess: () => { setShowEdit(false); setCurrentGuard(null); setCurrentGuardData(null); },
+                    onError: (errs: any) => setErrorsEdit(errs as Record<string, string>),
+                  });
+                }}
+                canAssignSupervisor={!!canAssignSupervisor}
+                processing={saving}
+                errors={errorsEdit}
+                hideCancel={false}
+                onCancel={() => { setShowEdit(false); setCurrentGuard(null); setCurrentGuardData(null); }}
+              />
+            )}
+            {!currentGuardData && currentGuard && (
+              <div className="py-8 text-center text-gray-500 dark:text-gray-400">Loading guard data...</div>
+            )}
           </div>
         </Modal>
 

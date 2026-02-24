@@ -86,6 +86,7 @@ export default function GuardForm({
     notes: initialData.notes || '',
     status: initialData.status || 'active',
     employee_role: (initialData as any).employee_role || 'guard',
+    default_off_day: (initialData as any).default_off_day ?? '',
   });
 
   const set = (field: string, value: any) => (setData as any)(field as any, value);
@@ -547,6 +548,25 @@ export default function GuardForm({
             <option value="suspended">Suspended</option>
           </select>
           {err('status') && <p className="text-red-600 text-sm mt-1">{err('status')}</p>}
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Default Off Day</label>
+          <select
+            value={(data.default_off_day as any) ?? ''}
+            onChange={(e) => set('default_off_day', e.target.value === '' ? null : Number(e.target.value))}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
+          >
+            <option value="">None (no regular off day)</option>
+            <option value="0">Sunday</option>
+            <option value="1">Monday</option>
+            <option value="2">Tuesday</option>
+            <option value="3">Wednesday</option>
+            <option value="4">Thursday</option>
+            <option value="5">Friday</option>
+            <option value="6">Saturday</option>
+          </select>
+          <p className="text-xs text-gray-500 mt-1">Regular off day for roster scheduling</p>
         </div>
 
         <div className="md:col-span-2">

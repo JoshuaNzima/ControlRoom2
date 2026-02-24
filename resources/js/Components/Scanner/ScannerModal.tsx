@@ -133,7 +133,7 @@ export default function ScannerModal({ open, onClose, activeScan }: Props) {
   const submitScan = async (code: string) => {
     const loadingToast = toast.loading('Processing scan...');
     
-    router.post(route('supervisor.checkpoint.scan'), {
+    router.post(route('scan.checkpoint'), {
       code: code,
       latitude: location?.lat,
       longitude: location?.lon,
@@ -144,7 +144,7 @@ export default function ScannerModal({ open, onClose, activeScan }: Props) {
         toast.success('Scan successful!');
         onClose();
         // Navigate to dashboard (site lock is shown and quick actions available)
-        router.visit(route('supervisor.dashboard'));
+        router.visit(route('scan'));
       },
       onError: (errors) => {
         toast.dismiss(loadingToast);
@@ -162,7 +162,7 @@ export default function ScannerModal({ open, onClose, activeScan }: Props) {
         const obj = JSON.parse(raw);
         const siteId = obj.site_id ?? obj.site ?? obj.id;
         if ((obj.type === 'site' || obj.t === 'site') && siteId) {
-          router.visit(route('supervisor.site.scan', { site: siteId, latitude: location?.lat, longitude: location?.lon }));
+          router.visit(route('scan.site', { site: siteId, latitude: location?.lat, longitude: location?.lon }));
           return true;
         }
       }
@@ -177,14 +177,14 @@ export default function ScannerModal({ open, onClose, activeScan }: Props) {
         if (siteIdx !== -1) {
           const idPart = parts[siteIdx + 2];
           if (idPart) {
-            router.visit(route('supervisor.site.scan', { site: idPart, latitude: location?.lat, longitude: location?.lon }));
+            router.visit(route('scan.site', { site: idPart, latitude: location?.lat, longitude: location?.lon }));
             return true;
           }
         }
         // query param ?site=<id>
         const siteParam = url.searchParams.get('site');
         if (siteParam) {
-          router.visit(route('supervisor.site.scan', { site: siteParam, latitude: location?.lat, longitude: location?.lon }));
+          router.visit(route('scan.site', { site: siteParam, latitude: location?.lat, longitude: location?.lon }));
           return true;
         }
       }
@@ -196,7 +196,7 @@ export default function ScannerModal({ open, onClose, activeScan }: Props) {
   const clearScan = () => {
     const loadingToast = toast.loading('Clearing site lock...');
     
-    router.post(route('supervisor.checkpoint.clear'), {}, {
+    router.post(route('scan.clear'), {}, {
       preserveState: true,
       onSuccess: () => {
         toast.dismiss(loadingToast);

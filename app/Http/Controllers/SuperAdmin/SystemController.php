@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\SuperAdmin;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Response;
 use Illuminate\Support\Facades\Schema;
@@ -175,6 +177,107 @@ class SystemController extends Controller
             }
         }
         return back()->with('error', 'Backup file not found.');
+    }
+
+    public function securityOverview(Request $request)
+    {
+        $sessionDriver = (string) config('session.driver');
+        $sessionTable = (string) config('session.table', 'sessions');
+        $passwordResetTable = (string) config('auth.passwords.users.table', 'password_reset_tokens');
+
+        $hasSessionsTable = $sessionDriver === 'database' && Schema::hasTable($sessionTable);
+        $hasPasswordResetTable = Schema::hasTable($passwordResetTable);
+        $hasPersonalAccessTokens = Schema::hasTable('personal_access_tokens');
+
+        $usersCount = Schema::hasTable('users') ? (int) DB::table('users')->count() : null;
+        $activeUsersCount = Schema::hasTable('users') ? (int) DB::table('users')->where('status', 'active')->count() : null;
+        $sessionsCount = $hasSessionsTable ? (int) DB::table($sessionTable)->count() : null;
+        $passwordResetTokensCount = $hasPasswordResetTable ? (int) DB::table($passwordResetTable)->count() : null;
+        $apiTokensCount = $hasPersonalAccessTokens ? (int) DB::table('personal_access_tokens')->count() : null;
+
+        return response()->json([
+            'app' => [
+                'env' => (string) config('app.env'),
+                'debug' => (bool) config('app.debug'),
+                'url' => (string) config('app.url'),
+            ],
+            'session' => [
+                'driver' => $sessionDriver,
+                'encrypt' => (bool) config('session.encrypt'),
+                'secure' => (bool) config('session.secure'),
+                'http_only' => (bool) config('session.http_only'),
+                'same_site' => config('session.same_site'),
+            ],
+            'auth' => [
+                'default_guard' => (string) config('auth.defaults.guard'),
+                'password_reset_table' => $passwordResetTable,
+            ],
+            'capabilities' => [
+                'sessions_table' => $hasSessionsTable,
+                'password_reset_table' => $hasPasswordResetTable,
+                'personal_access_tokens_table' => $hasPersonalAccessTokens,
+                'spatie_roles_table' => Schema::hasTable('roles'),
+                'spatie_permissions_table' => Schema::hasTable('permissions'),
+            ],
+            'counts' => [
+                'users' => $usersCount,
+                'active_users' => $activeUsersCount,
+                'sessions' => $sessionsCount,
+                'password_reset_tokens' => $passwordResetTokensCount,
+                'api_tokens' => $apiTokensCount,
+            ],
+        ]);
+    }
+
+    public function securityForceLogout(Request $request)
+    {
+        $sessionDriver = (string) config('session.driver');
+        $sessionTable = (string) config('session.table', 'sessions');
+
+        if ($sessionDriver !== 'database' || ! Schema::hasTable($sessionTable)) {
+            return back()->with('error', 'Force logout requires database sessions.');
+        }
+
+        $currentSessionId = (string) $request->session()->getId();
+
+        DB::table($sessionTable)
+            ->where('id', '!=', $currentSessionId)
+            ->delete();
+
+        return back()->with('success', 'All other sessions have been revoked.');
+    }
+
+    public function securityInvalidateRememberTokens(Request $request)
+    {
+        $userId = (int) ($request->user()?->id ?? 0);
+        if ($userId > 0) {
+            User::query()->where('id', '!=', $userId)->update(['remember_token' => null]);
+        } else {
+            User::query()->update(['remember_token' => null]);
+        }
+
+        return back()->with('success', 'Remember tokens invalidated.');
+    }
+
+    public function securityClearPasswordResetTokens(Request $request)
+    {
+        $passwordResetTable = (string) config('auth.passwords.users.table', 'password_reset_tokens');
+        if (! Schema::hasTable($passwordResetTable)) {
+            return back()->with('error', 'Password reset token table not found.');
+        }
+
+        DB::table($passwordResetTable)->delete();
+        return back()->with('success', 'Password reset tokens cleared.');
+    }
+
+    public function securityRevokeApiTokens(Request $request)
+    {
+        if (! Schema::hasTable('personal_access_tokens')) {
+            return back()->with('error', 'API token table not found.');
+        }
+
+        DB::table('personal_access_tokens')->delete();
+        return back()->with('success', 'API tokens revoked.');
     }
 
     private function tailLog(int $limit): array

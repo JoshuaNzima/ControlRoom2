@@ -18,7 +18,6 @@ interface Client {
   contract_end: string;
   total_sites: number;
   active_guards: number;
-  monthly_revenue: number;
   last_contact: string;
 }
 
@@ -46,14 +45,13 @@ export default function Clients({ clients = [] }: ClientsProps) {
     }
   };
 
-  const totalRevenue = clients.reduce((sum, client) => sum + client.monthly_revenue, 0);
   const activeClients = clients.filter(c => c.status === 'active').length;
 
   return (
     <ZoneCommanderLayout title="Clients">
       <Head title="Clients Management" />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+      <div className="w-full min-h-screen p-3 sm:p-4 lg:p-6 space-y-4 sm:space-y-6">
         {/* Overview Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <Card className="hover:shadow-lg transition-shadow duration-300">
@@ -105,10 +103,6 @@ export default function Clients({ clients = [] }: ClientsProps) {
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 bg-orange-100 dark:bg-orange-900/30 rounded-lg flex items-center justify-center">
                   <IconMapper name="DollarSign" className="w-6 h-6 text-orange-600 dark:text-orange-200" />
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600 dark:text-gray-300">Monthly Revenue</p>
-                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">${totalRevenue.toLocaleString()}</p>
                 </div>
               </div>
             </CardContent>
@@ -204,10 +198,6 @@ export default function Clients({ clients = [] }: ClientsProps) {
                             <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
                               {format(new Date(client.contract_start), 'MMM yyyy')} - {format(new Date(client.contract_end), 'MMM yyyy')}
                             </p>
-                          </div>
-                          <div className="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-3">
-                            <p className="text-xs text-gray-500 dark:text-gray-400">Monthly Revenue</p>
-                            <p className="text-sm font-medium text-gray-900 dark:text-gray-100">${client.monthly_revenue.toLocaleString()}</p>
                           </div>
                           <div className="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-3">
                             <p className="text-xs text-gray-500 dark:text-gray-400">Last Contact</p>

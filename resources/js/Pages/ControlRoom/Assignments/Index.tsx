@@ -129,7 +129,7 @@ export default function AssignmentsIndex() {
                 Page {guards?.meta?.current_page ?? ''} of {guards?.meta?.last_page ?? ''}
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                {guards.links.filter((l: any) => l.url !== null).map((l: any, idx: number) => (
+                {(guards?.links || []).filter((l: any) => l.url !== null).map((l: any, idx: number) => (
                   <button
                     key={idx}
                     className={`px-3 py-1 rounded border dark:border-gray-700 ${l.active ? 'bg-coin-600 text-white' : 'bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200'}`}

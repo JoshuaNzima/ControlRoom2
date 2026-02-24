@@ -1,5 +1,5 @@
 import React from 'react';
-import { Head, router } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import AdminLayout from '@/Layouts/AdminLayout';
 import IconMapper from '@/Components/IconMapper';
 import useNotification from '@/Providers/useNotifications';
@@ -25,6 +25,7 @@ interface Filters {
   search?: string;
   status?: string;
   profile_status?: string;
+  per_page?: number | string;
 }
 
 interface Supervisor { id: number; name: string }
@@ -34,6 +35,7 @@ interface GuardsIndexProps {
   guards: {
     data: Guard[];
     meta?: any;
+    links?: Array<{ url: string | null; label: string; active: boolean }>;
   };
   filters: Filters;
   canAssignSupervisor: boolean;
@@ -46,6 +48,8 @@ interface GuardsIndexProps {
 export default function GuardsIndex({ guards, filters, canAssignSupervisor, canViewSupervisor, supervisors = [], grades = [], zones = [] }: GuardsIndexProps) {
   const [search, setSearch] = React.useState(filters.search || '');
   const [profileStatus, setProfileStatus] = React.useState(filters.profile_status || '');
+  const initialPerPage = Number(filters?.per_page ?? guards.meta?.per_page ?? 20);
+  const [perPage, setPerPage] = React.useState<number>(initialPerPage);
   const [loadingId, setLoadingId] = React.useState<number | null>(null);
   const { push } = useNotification();
 
@@ -63,7 +67,7 @@ export default function GuardsIndex({ guards, filters, canAssignSupervisor, canV
   const handleSearch = () => {
     router.get(
       route('admin.guards.index'),
-      { search, profile_status: profileStatus || undefined },
+      { search, profile_status: profileStatus || undefined, per_page: perPage },
       { preserveState: true }
     );
   };
@@ -226,7 +230,7 @@ export default function GuardsIndex({ guards, filters, canAssignSupervisor, canV
         </div>
 
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
-          <div className="flex flex-col md:flex-row gap-4">
+          <div className="flex flex-col md:flex-row gap-4 mb-4">
               <div className="flex-1 relative">
               <span className="absolute left-3 top-3 text-gray-400"><IconMapper name="Search" size={20} /></span>
               <input
@@ -256,6 +260,28 @@ export default function GuardsIndex({ guards, filters, canAssignSupervisor, canV
             >
               Search
             </button>
+          </div>
+          <div className="flex items-center gap-3">
+            <label className="text-sm text-gray-600 dark:text-gray-400">Per Page:</label>
+            <select
+              value={String(perPage)}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                setPerPage(v);
+                router.get(route('admin.guards.index'), { search, profile_status: profileStatus || undefined, per_page: v, page: 1 }, { preserveState: true });
+              }}
+              className="px-3 py-1.5 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-coin-500"
+            >
+              <option value={10}>10</option>
+              <option value={20}>20</option>
+              <option value={50}>50</option>
+              <option value={100}>100</option>
+            </select>
+            {guards.meta && (
+              <span className="text-sm text-gray-500 dark:text-gray-400">
+                Showing {guards.meta.from || 0} to {guards.meta.to || 0} of {guards.meta.total || 0}
+              </span>
+            )}
           </div>
         </div>
 
@@ -571,6 +597,26 @@ export default function GuardsIndex({ guards, filters, canAssignSupervisor, canV
             </tbody>
           </table>
         </div>
+
+        {/* Pagination */}
+        {guards.meta && guards.meta.last_page > 1 && (
+          <div className="flex flex-wrap justify-center gap-2">
+            {guards.links && guards.links.map((link: any, index: number) => (
+              <Link
+                key={index}
+                href={link.url || '#'}
+                className={`px-3 py-2 rounded ${
+                  link.active
+                    ? 'bg-coin-600 text-white'
+                    : link.url
+                    ? 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 dark:bg-gray-900 dark:text-gray-200 dark:border-gray-700 dark:hover:bg-gray-800'
+                    : 'bg-transparent text-gray-400 cursor-default'
+                }`}
+                dangerouslySetInnerHTML={{ __html: link.label }}
+              />
+            ))}
+          </div>
+        )}
 
         {/* Add Guard Modal */}
         <Modal show={showAdd} onClose={() => setShowAdd(false)} maxWidth="2xl">

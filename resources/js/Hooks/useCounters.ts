@@ -18,30 +18,74 @@ export type Counters = {
   control_flags_pending?: number;
   control_downs_active?: number;
   alerts_active?: number;
+
+  downs_open?: number;
+  downs_escalated?: number;
+  downs_resolved_today?: number;
+  attendance_absent_today?: number;
+  attendance_covered_today?: number;
+  attendance_checked_in_today?: number;
+  deployments_today?: number;
+
   assets_handovers_outstanding?: number;
 };
 
-export default function useCounters(pollMs: number = 30000) {
-  const [counters, setCounters] = useState<Counters>({});
-  const timer = useRef<number | null>(null);
+let sharedCounters: Counters = {};
+let listeners = new Set<(counters: Counters) => void>();
+let sharedTimer: number | null = null;
+let sharedPollMs = 30000;
+let inFlight: Promise<void> | null = null;
 
-  async function fetchCounters() {
+async function fetchAndBroadcast() {
+  if (inFlight) return inFlight;
+
+  inFlight = (async () => {
     try {
       const res = await fetch('/counters', { credentials: 'same-origin' });
       if (!res.ok) return;
       const json = await res.json();
-      setCounters(json || {});
-    } catch {}
-  }
+      sharedCounters = (json || {}) as Counters;
+      listeners.forEach((fn) => fn(sharedCounters));
+    } catch {
+    }
+  })().finally(() => {
+    inFlight = null;
+  });
+
+  return inFlight;
+}
+
+function ensureTimer(pollMs: number) {
+  if (typeof window === 'undefined') return;
+
+  if (sharedTimer && sharedPollMs === pollMs) return;
+  if (sharedTimer) window.clearInterval(sharedTimer);
+  sharedPollMs = pollMs;
+  sharedTimer = window.setInterval(fetchAndBroadcast, pollMs);
+}
+
+export default function useCounters(pollMs: number = 30000) {
+  const [counters, setCounters] = useState<Counters>(sharedCounters);
+  const timer = useRef<number | null>(null);
 
   useEffect(() => {
-    fetchCounters();
-    // @ts-ignore
-    timer.current = window.setInterval(fetchCounters, pollMs);
+    listeners.add(setCounters);
+    setCounters(sharedCounters);
+
+    ensureTimer(pollMs);
+    if (typeof window !== 'undefined' && timer.current === null) {
+      timer.current = 1;
+      fetchAndBroadcast();
+    }
+
     return () => {
-      if (timer.current) window.clearInterval(timer.current);
+      listeners.delete(setCounters);
+      if (listeners.size === 0 && sharedTimer) {
+        window.clearInterval(sharedTimer);
+        sharedTimer = null;
+      }
     };
   }, [pollMs]);
 
-  return { counters, refresh: fetchCounters };
+  return { counters, refresh: fetchAndBroadcast };
 }

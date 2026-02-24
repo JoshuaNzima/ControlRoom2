@@ -63,6 +63,7 @@ class NavigationService
         return match ($moduleName) {
             'guards' => 'guards.index',
             'hr' => 'hr.leaves',
+            'training' => 'training.dashboard',
             'clients' => 'clients.index',
             'k9' => 'k9.dashboard',
             'control_room' => 'control-room.dashboard',
@@ -92,6 +93,11 @@ class NavigationService
                 ['name' => 'Dashboard', 'route' => 'hr.dashboard', 'permission' => 'hr.employees.view', 'icon' => 'HiOutlineViewGrid'],
                 ['name' => 'Leave Management', 'route' => 'hr.leaves', 'permission' => 'hr.leaves.view', 'icon' => 'HiOutlineCalendar'],
                 ['name' => 'Archived Guards', 'route' => 'hr.archived', 'permission' => 'hr.employees.view', 'icon' => 'HiOutlineArchive'],
+            ],
+            'training' => [
+                ['name' => 'Dashboard', 'route' => 'training.dashboard', 'permission' => 'training.dashboard.view', 'icon' => 'HiOutlineViewGrid'],
+                ['name' => 'Trainees', 'route' => 'training.trainees.index', 'permission' => 'training.trainees.view', 'icon' => 'HiOutlineAcademicCap'],
+                ['name' => 'Regimens', 'route' => 'training.regimens.index', 'permission' => 'training.regimens.view', 'icon' => 'HiOutlineClipboardList'],
             ],
             'clients' => [
                 ['name' => 'All Clients', 'route' => 'clients.index', 'permission' => 'clients.view', 'icon' => 'HiOutlineOfficeBuilding'],

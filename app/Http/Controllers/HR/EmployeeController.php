@@ -17,6 +17,7 @@ class EmployeeController extends Controller
 {
     public function index(Request $request)
     {
+        $perPage = $request->input('per_page', 20);
         $query = Guard::query()
             ->when($request->input('search'), function ($q, $search) {
                 $q->where(function($qq) use ($search) {
@@ -35,13 +36,13 @@ class EmployeeController extends Controller
             })
             ->orderBy('name');
 
-        $guards = $query->paginate(15)->withQueryString();
+        $guards = $query->paginate($perPage)->withQueryString();
 
         $zones = Zone::select(['id','name'])->orderBy('name')->get();
 
         return Inertia::render('HR/Employees', [
             'guards' => $guards,
-            'filters' => $request->only(['search', 'status', 'employee_role']),
+            'filters' => $request->only(['search', 'status', 'employee_role', 'per_page']),
             'zones' => $zones,
         ]);
     }
@@ -53,16 +54,18 @@ class EmployeeController extends Controller
             'zone_id' => ['nullable', 'required_if:role,zone_commander', 'integer', 'exists:zones,id'],
         ]);
 
-        if (!$guard->email) {
-            return back()->withErrors(['email' => 'Guard has no email; cannot create a login account.']);
+        // Generate unique email if guard doesn't have one
+        $email = $guard->email;
+        if (!$email) {
+            $email = 'guard.' . $guard->id . '@coinsecurity.local';
         }
 
-        $user = User::where('email', $guard->email)->first();
+        $user = User::where('email', $email)->first();
         $isNew = false;
         if (!$user) {
             $user = new User();
             $user->name = $guard->name;
-            $user->email = $guard->email;
+            $user->email = $email;
             $user->phone = $guard->phone;
             if (!empty($validated['zone_id'])) {
                 $user->zone_id = $validated['zone_id'];

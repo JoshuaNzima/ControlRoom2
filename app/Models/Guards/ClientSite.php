@@ -13,6 +13,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 
+use Illuminate\Support\Str;
+
 class ClientSite extends Model
 {
     use SoftDeletes;
@@ -86,6 +88,7 @@ class ClientSite extends Model
         'status',
         'site_type',
         'zone_id',
+        'qr_code',
     ];
 
     protected $casts = [
@@ -93,6 +96,13 @@ class ClientSite extends Model
         'longitude' => 'decimal:8',
         'required_guards' => 'integer',
     ];
+
+    protected $appends = ['site_name'];
+
+    public function getSiteNameAttribute(): string
+    {
+        return $this->name;
+    }
 
     public function client(): BelongsTo
     {
@@ -120,6 +130,11 @@ class ClientSite extends Model
     public function cameras(): HasMany
     {
         return $this->hasMany(Camera::class, 'client_site_id');
+    }
+
+    public function checkpoints(): HasMany
+    {
+        return $this->hasMany(Checkpoint::class, 'client_site_id');
     }
 
     public function cameraAlerts(): HasManyThrough
@@ -194,5 +209,52 @@ class ClientSite extends Model
             ->whereNotNull('check_in_time')
             ->whereNull('check_out_time')
             ->count();
+    }
+
+    protected static function boot(): void
+    {
+        parent::boot();
+
+        static::creating(function ($site) {
+            if (!$site->qr_code) {
+                $site->qr_code = self::generateUniqueQrCode();
+            }
+        });
+    }
+
+    public static function generateUniqueQrCode(): string
+    {
+        do {
+            $code = 'SITE-' . strtoupper(Str::random(8));
+        } while (self::where('qr_code', $code)->exists());
+
+        return $code;
+    }
+
+    public function getQrCodeUrl(): string
+    {
+        $payload = json_encode([
+            'issuer' => 'CoinSecurity',
+            'type' => 'site',
+            'site_id' => $this->id,
+            'code' => $this->qr_code,
+            'site_name' => $this->name,
+            'client' => optional($this->client)->name,
+            'ver' => 'v2'
+        ]);
+        return 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=' . urlencode($payload);
+    }
+
+    public function getQrPayload(): array
+    {
+        return [
+            'issuer' => 'CoinSecurity',
+            'type' => 'site',
+            'site_id' => $this->id,
+            'code' => $this->qr_code,
+            'site_name' => $this->name,
+            'client' => optional($this->client)->name,
+            'ver' => 'v2'
+        ];
     }
 }

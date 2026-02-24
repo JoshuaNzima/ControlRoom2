@@ -92,6 +92,15 @@ Route::middleware(['auth', 'role:admin,super_admin'])
             Route::get('/{client}/sites/deleted/json', [\App\Http\Controllers\Admin\ClientController::class, 'deletedSitesJson'])->name('sites.deleted-json');
             Route::post('/{client}/sites/{site}/restore', [\App\Http\Controllers\Admin\ClientController::class, 'restoreSite'])->whereNumber('site')->name('sites.restore');
             Route::post('/sites/bulk-update', [\App\Http\Controllers\Admin\ClientController::class, 'bulkUpdateSites'])->name('sites.bulk-update');
+            
+            // Client status toggle (activate/deactivate)
+            Route::post('/{client}/toggle-status', [\App\Http\Controllers\Admin\ClientController::class, 'toggleStatus'])->name('toggle-status');
+
+            // Supervisor/Sergeant assignment
+            Route::post('/{client}/assign-supervisor', [\App\Http\Controllers\Admin\ClientController::class, 'assignSupervisor'])->name('assign-supervisor');
+            Route::post('/{client}/unassign-supervisor', [\App\Http\Controllers\Admin\ClientController::class, 'unassignSupervisor'])->name('unassign-supervisor');
+            Route::post('/{client}/assign-sergeant', [\App\Http\Controllers\Admin\ClientController::class, 'assignSergeant'])->name('assign-sergeant');
+            Route::post('/{client}/unassign-sergeant', [\App\Http\Controllers\Admin\ClientController::class, 'unassignSergeant'])->name('unassign-sergeant');
         });
 
         // Services Management
@@ -119,12 +128,6 @@ Route::middleware(['auth', 'role:admin,super_admin'])
         Route::post('/guards/unassign-site', [\App\Http\Controllers\Admin\GuardAssignmentController::class, 'unassignFromSite'])->name('guards.unassign-site');
         // Guard promotion (admin access)
         Route::post('/guards/{guard}/promote', [\App\Http\Controllers\HR\EmployeeController::class, 'promote'])->name('guards.promote');
-        Route::get('/qr-codes', [\App\Http\Controllers\SupervisorQRCodesController::class, 'index'])
-            ->middleware(['role:super_admin'])
-            ->name('qr-codes');
-        Route::get('/qr-codes/download-bulk', [\App\Http\Controllers\SupervisorQRCodesController::class, 'downloadBulk'])
-            ->middleware(['role:super_admin'])
-            ->name('qr-codes.download-bulk');
         // Admin Finance landing (module-level admin page)
         Route::get('/finance', [\App\Http\Controllers\Admin\FinanceController::class, 'index'])->name('finance');
 
@@ -223,6 +226,29 @@ Route::middleware(['auth', 'role:admin,super_admin,business_dev,business_develop
                 Route::get('/dogs', fn() => Inertia::render('K9/Dogs'))->name('dogs');
                 Route::get('/handlers', fn() => Inertia::render('K9/Handlers'))->name('handlers');
             });
+
+            // Commissions - for client acquisition
+            Route::prefix('commissions')->name('commissions.')->group(function () {
+                Route::get('/', [\App\Http\Controllers\Admin\CommissionController::class, 'index'])->name('index');
+                Route::get('/create', [\App\Http\Controllers\Admin\CommissionController::class, 'create'])->name('create');
+                Route::post('/', [\App\Http\Controllers\Admin\CommissionController::class, 'store'])->name('store');
+                Route::get('/{commission}', [\App\Http\Controllers\Admin\CommissionController::class, 'show'])->name('show');
+                Route::get('/{commission}/edit', [\App\Http\Controllers\Admin\CommissionController::class, 'edit'])->name('edit');
+                Route::put('/{commission}', [\App\Http\Controllers\Admin\CommissionController::class, 'update'])->name('update');
+                Route::delete('/{commission}', [\App\Http\Controllers\Admin\CommissionController::class, 'destroy'])->name('destroy');
+                Route::post('/{commission}/approve', [\App\Http\Controllers\Admin\CommissionController::class, 'approve'])->name('approve');
+                Route::post('/{commission}/pay', [\App\Http\Controllers\Admin\CommissionController::class, 'markAsPaid'])->name('pay');
+                Route::post('/{commission}/reject', [\App\Http\Controllers\Admin\CommissionController::class, 'reject'])->name('reject');
+            });
+
+            // Incentives - monthly performance-based for supervisors/sergeants
+            Route::prefix('incentives')->name('incentives.')->group(function () {
+                Route::get('/', [\App\Http\Controllers\Admin\IncentiveController::class, 'index'])->name('index');
+                Route::get('/profiles', [\App\Http\Controllers\Admin\IncentiveController::class, 'profiles'])->name('profiles');
+                Route::put('/profiles/{profile}', [\App\Http\Controllers\Admin\IncentiveController::class, 'updateProfile'])->name('profiles.update');
+                Route::post('/calculate', [\App\Http\Controllers\Admin\IncentiveController::class, 'calculate'])->name('calculate');
+                Route::post('/records/{record}/approve', [\App\Http\Controllers\Admin\IncentiveController::class, 'approve'])->name('approve');
+                Route::post('/records/{record}/pay', [\App\Http\Controllers\Admin\IncentiveController::class, 'markAsPaid'])->name('pay');
+            });
         });
     });
-

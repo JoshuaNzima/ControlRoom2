@@ -11,9 +11,24 @@ interface Props {
 
 const Audit: React.FC<Props> = ({ auth, entries = [] }) => {
   const [data, setData] = React.useState(entries);
-  const refresh = async () => {
+
+  const safeRoute = React.useCallback((name: string, params?: any) => {
     try {
-      const res = await fetch(route('superadmin.audit.data'));
+      return route(name, params) as unknown as string;
+    } catch {
+      return null;
+    }
+  }, []);
+
+  const refresh = async () => {
+    const url = safeRoute('superadmin.audit.data');
+    if (!url) return;
+    try {
+      const res = await fetch(url, {
+        headers: {
+          Accept: 'application/json',
+        },
+      });
       const json = await res.json();
       setData(Array.isArray(json?.entries) ? json.entries : []);
     } catch (e) {}
@@ -44,7 +59,7 @@ const Audit: React.FC<Props> = ({ auth, entries = [] }) => {
                 <li key={i} className="py-2 flex items-center justify-between">
                   <div className="text-sm">
                     <div className="text-gray-900 dark:text-gray-100 font-medium">{e.who || 'System'} <span className="text-gray-500 font-normal">{e.action}</span></div>
-                    <div className="text-xs text-gray-500">{e.model}#{e.id} • {e.at ? new Date(e.at).toLocaleString() : ''}</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">{e.model}#{e.id} • {e.at ? new Date(e.at).toLocaleString() : ''}</div>
                   </div>
                 </li>
               ))}

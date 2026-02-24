@@ -16,12 +16,16 @@ use Illuminate\Support\Facades\DB;
 use App\Models\VehicleDispatch;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
+use App\Services\OperationalAnalyticsService;
+use App\Models\SupervisorIncentiveProfile;
+use App\Models\SupervisorIncentiveRecord;
 
 class DashboardController extends Controller
 {
     public function index()
     {
         $today = today();
+		$opsAnalytics = (new OperationalAnalyticsService())->getSummary($today->toDateString());
         
         // Overall Statistics
         $stats = [
@@ -263,6 +267,17 @@ class DashboardController extends Controller
                 'documents_new_month' => 0,
                 'compliance_updates_pending' => 0,
             ],
+            'supervisor_incentives' => [
+                'total_profiles' => SupervisorIncentiveProfile::where('is_active', true)->count(),
+                'pending_calculations' => SupervisorIncentiveRecord::where('status', 'pending')->count(),
+                'approved_pending_payment' => SupervisorIncentiveRecord::where('status', 'approved')->count(),
+                'total_paid_this_month' => SupervisorIncentiveRecord::where('status', 'paid')
+                    ->whereMonth('created_at', now()->month)
+                    ->count(),
+                'pending_amount_total' => SupervisorIncentiveRecord::whereIn('status', ['pending', 'approved'])
+                    ->sum('net_amount') ?? 0,
+                'supervisors_count' => Guard::whereIn('position', ['supervisor', 'sergeant'])->where('status', 'active')->count(),
+            ],
             'cross_module' => [
                 'critical_alerts_today' => 0,
                 'overall_incident_trend' => 'stable',
@@ -349,19 +364,28 @@ class DashboardController extends Controller
                 'status' => $i->status,
                 'time' => optional($i->created_at)->diffForHumans(),
             ]);
+
+        $openIncidents = (int) ($statusCounts['open'] ?? 0);
+        $recentIncidents = (int) Incident::whereDate('created_at', $today)->count();
+        $incidents = [
+            'open' => $openIncidents,
+            'recent' => $recentIncidents,
+            'latest' => $latestIncidents,
+        ];
+
         $incidentsOverview = [
             'status' => $statusCounts,
             'severity' => $severityCounts,
-            'latest' => $latestIncidents,
+            'incidents' => $incidents,
         ];
 
         return Inertia::render('Admin/Dashboard', [
             'stats' => $stats,
+            'ops_analytics' => $opsAnalytics,
             'modules' => $modules,
             'recentActivity' => $recentActivity,
             'guardStats' => $guardStats,
             'attendanceTrend' => $attendanceTrend,
-            'topGuards' => $topGuards,
             'zoneCoverage' => $zoneCoverage,
             'coverageSummary' => $coverageSummary,
             'kpis' => $kpis,

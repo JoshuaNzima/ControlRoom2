@@ -43,7 +43,7 @@ export default function Patrols({ patrols = [] }: PatrolsProps) {
     <ZoneCommanderLayout title="Patrols">
       <Head title="Patrol Management" />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+      <div className="w-full min-h-screen p-3 sm:p-4 lg:p-6 space-y-4 sm:space-y-6">
         {/* Overview Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <Card className="hover:shadow-lg transition-shadow duration-300">

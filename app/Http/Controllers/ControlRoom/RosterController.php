@@ -35,8 +35,14 @@ class RosterController extends Controller
                 'employee_id' => $g->employee_id,
             ]);
 
+        $sites = ClientSite::query()
+            ->where('status', 'active')
+            ->orderBy('name')
+            ->get(['id','name']);
+
         return Inertia::render('ControlRoom/Roster', [
             'guards' => $guards,
+            'sites' => $sites,
             'initial_month' => $today->format('Y-m-01'),
         ]);
     }
@@ -857,5 +863,252 @@ class RosterController extends Controller
         }
 
         return back()->with('success', 'Bundle rotation applied for the week.');
+    }
+
+    /**
+     * Quick manual roster entry for work times and off-days
+     */
+    public function manualEntry(Request $request)
+    {
+        $data = $request->validate([
+            'guard_id' => ['required', 'integer', 'exists:guards,id'],
+            'date' => ['required', 'date'],
+            'entry_type' => ['required', 'in:work,off'],
+            // For work entries
+            'client_site_id' => ['nullable', 'integer', 'exists:client_sites,id'],
+            'start_time' => ['nullable', 'date_format:H:i'],
+            'end_time' => ['nullable', 'date_format:H:i'],
+            'shift_type' => ['nullable', 'in:day,night,morning,evening,custom'],
+            'notes' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        $guard = Guard::findOrFail($data['guard_id']);
+        $date = Carbon::parse($data['date'])->toDateString();
+
+        // Check for dismissed/absconded guards
+        if (in_array($guard->status, ['dismissed', 'absconded'], true)) {
+            return back()->withErrors(['guard_id' => 'Cannot set roster for dismissed or absconded guards.']);
+        }
+
+        if ($data['entry_type'] === 'off') {
+            // Create off-day
+            $exists = GuardOffDay::where('guard_id', $guard->id)
+                ->whereDate('start_date', '<=', $date)
+                ->where(function($q) use ($date) {
+                    $q->whereNull('end_date')->orWhereDate('end_date', '>=', $date);
+                })
+                ->exists();
+
+            if ($exists) {
+                return back()->withErrors(['date' => 'Guard already has an off-day on this date.']);
+            }
+
+            GuardOffDay::create([
+                'guard_id' => $guard->id,
+                'start_date' => $date,
+                'end_date' => $date,
+                'reason' => $data['notes'] ?? 'Manual roster entry',
+            ]);
+
+            // Cancel any existing shifts for this date
+            GuardShift::where('guard_id', $guard->id)
+                ->whereDate('date', $date)
+                ->whereNotIn('status', ['cancelled', 'missed'])
+                ->update(['status' => 'cancelled']);
+
+            return back()->with('success', 'Off-day saved for ' . $guard->name . ' on ' . $date);
+        }
+
+        // Work entry validation
+        if (empty($data['client_site_id'])) {
+            return back()->withErrors(['client_site_id' => 'Site is required for work entry.']);
+        }
+        if (empty($data['start_time']) || empty($data['end_time'])) {
+            return back()->withErrors(['start_time' => 'Start and end times are required for work entry.']);
+        }
+
+        // Check for off-day conflict
+        $offDay = GuardOffDay::where('guard_id', $guard->id)
+            ->whereDate('start_date', '<=', $date)
+            ->where(function($q) use ($date) {
+                $q->whereNull('end_date')->orWhereDate('end_date', '>=', $date);
+            })
+            ->exists();
+
+        if ($offDay) {
+            return back()->withErrors(['date' => 'Guard has an off-day on the selected date. Remove it first.']);
+        }
+
+        $startDt = Carbon::parse($date . ' ' . $data['start_time'] . ':00');
+        $endDt = Carbon::parse($date . ' ' . $data['end_time'] . ':00');
+        if ($endDt->lessThanOrEqualTo($startDt)) {
+            $endDt->addDay();
+        }
+
+        // Check for overlapping shifts
+        $overlap = GuardShift::where('guard_id', $guard->id)
+            ->where('status', '!=', 'cancelled')
+            ->where(function($q) use ($startDt, $endDt) {
+                $q->where('start_time', '<', $endDt)
+                    ->where('end_time', '>', $startDt);
+            })
+            ->exists();
+
+        if ($overlap) {
+            return back()->withErrors(['start_time' => 'Overlapping shift exists for this guard at the selected time.']);
+        }
+
+        // Create or update shift
+        $shift = GuardShift::where('guard_id', $guard->id)
+            ->whereDate('date', $date)
+            ->whereNotIn('status', ['cancelled', 'missed'])
+            ->first();
+
+        $payload = [
+            'guard_id' => $guard->id,
+            'client_site_id' => (int) $data['client_site_id'],
+            'assigned_by' => $request->user()?->id,
+            'date' => $date,
+            'start_time' => $startDt,
+            'end_time' => $endDt,
+            'shift_type' => $data['shift_type'] ?? 'custom',
+            'instructions' => null,
+            'status' => 'scheduled',
+            'notes' => $data['notes'] ?? null,
+        ];
+
+        if ($shift) {
+            $shift->update($payload);
+        } else {
+            $shift = GuardShift::create($payload);
+        }
+
+        return back()->with('success', 'Work time saved for ' . $guard->name . ' on ' . $date);
+    }
+
+    /**
+     * Bulk manual roster entry
+     */
+    public function manualEntryBulk(Request $request)
+    {
+        $data = $request->validate([
+            'guard_ids' => ['required', 'array', 'min:1'],
+            'guard_ids.*' => ['integer', 'exists:guards,id'],
+            'dates' => ['required', 'array', 'min:1'],
+            'dates.*' => ['date'],
+            'entry_type' => ['required', 'in:work,off'],
+            // For work entries
+            'client_site_id' => ['nullable', 'integer', 'exists:client_sites,id'],
+            'start_time' => ['nullable', 'date_format:H:i'],
+            'end_time' => ['nullable', 'date_format:H:i'],
+            'shift_type' => ['nullable', 'in:day,night,morning,evening,custom'],
+            'notes' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        $guardIds = $data['guard_ids'];
+        $dates = collect($data['dates'])->map(fn($d) => Carbon::parse($d)->toDateString())->toArray();
+        $entryType = $data['entry_type'];
+
+        // Filter out dismissed/absconded guards
+        $validGuards = Guard::whereIn('id', $guardIds)
+            ->whereNotIn('status', ['dismissed', 'absconded'])
+            ->get(['id', 'name']);
+
+        $skipped = 0;
+        $created = 0;
+
+        foreach ($validGuards as $guard) {
+            foreach ($dates as $date) {
+                if ($entryType === 'off') {
+                    // Check existing off-day
+                    $exists = GuardOffDay::where('guard_id', $guard->id)
+                        ->whereDate('start_date', '<=', $date)
+                        ->where(function($q) use ($date) {
+                            $q->whereNull('end_date')->orWhereDate('end_date', '>=', $date);
+                        })
+                        ->exists();
+
+                    if (!$exists) {
+                        GuardOffDay::create([
+                            'guard_id' => $guard->id,
+                            'start_date' => $date,
+                            'end_date' => $date,
+                            'reason' => $data['notes'] ?? 'Bulk roster entry',
+                        ]);
+
+                        // Cancel shifts
+                        GuardShift::where('guard_id', $guard->id)
+                            ->whereDate('date', $date)
+                            ->whereNotIn('status', ['cancelled', 'missed'])
+                            ->update(['status' => 'cancelled']);
+
+                        $created++;
+                    } else {
+                        $skipped++;
+                    }
+                } else {
+                    // Work entry - requires site and times
+                    if (empty($data['client_site_id']) || empty($data['start_time']) || empty($data['end_time'])) {
+                        $skipped++;
+                        continue;
+                    }
+
+                    $startDt = Carbon::parse($date . ' ' . $data['start_time'] . ':00');
+                    $endDt = Carbon::parse($date . ' ' . $data['end_time'] . ':00');
+                    if ($endDt->lessThanOrEqualTo($startDt)) {
+                        $endDt->addDay();
+                    }
+
+                    // Check off-day
+                    $offDay = GuardOffDay::where('guard_id', $guard->id)
+                        ->whereDate('start_date', '<=', $date)
+                        ->where(function($q) use ($date) {
+                            $q->whereNull('end_date')->orWhereDate('end_date', '>=', $date);
+                        })
+                        ->exists();
+
+                    if ($offDay) {
+                        $skipped++;
+                        continue;
+                    }
+
+                    // Check overlap
+                    $overlap = GuardShift::where('guard_id', $guard->id)
+                        ->where('status', '!=', 'cancelled')
+                        ->where(function($q) use ($startDt, $endDt) {
+                            $q->where('start_time', '<', $endDt)
+                                ->where('end_time', '>', $startDt);
+                        })
+                        ->exists();
+
+                    if ($overlap) {
+                        $skipped++;
+                        continue;
+                    }
+
+                    GuardShift::create([
+                        'guard_id' => $guard->id,
+                        'client_site_id' => (int) $data['client_site_id'],
+                        'assigned_by' => $request->user()?->id,
+                        'date' => $date,
+                        'start_time' => $startDt,
+                        'end_time' => $endDt,
+                        'shift_type' => $data['shift_type'] ?? 'custom',
+                        'instructions' => null,
+                        'status' => 'scheduled',
+                        'notes' => $data['notes'] ?? null,
+                    ]);
+
+                    $created++;
+                }
+            }
+        }
+
+        $msg = "Roster entries created: {$created}";
+        if ($skipped > 0) {
+            $msg .= ", skipped: {$skipped}";
+        }
+
+        return back()->with('success', $msg);
     }
 }

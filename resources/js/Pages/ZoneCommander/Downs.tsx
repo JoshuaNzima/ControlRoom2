@@ -195,7 +195,7 @@ export default function Downs({ downs = [], guards = [] }: { downs: DownRecord[]
 		<ZoneCommanderLayout title="Downs">
 			<Head title="Downs" />
 
-			<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+			<div className="w-full min-h-screen p-3 sm:p-4 lg:p-6 space-y-4 sm:space-y-6">
 				<div className="flex items-start justify-between gap-3">
 					<div>
 						<h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Coverage Downs</h2>

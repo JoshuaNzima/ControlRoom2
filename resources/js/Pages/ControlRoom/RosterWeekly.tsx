@@ -5,6 +5,7 @@ import Modal from '@/Components/Modal';
 import useToast from '@/Components/ui/use-toast';
 import PageHeader from '@/Components/ui/page-header';
 import EmptyState from '@/Components/ui/empty-state';
+import ManualRosterEntryModal from '@/Components/Roster/ManualRosterEntryModal';
 
 type DayKey = string; // YYYY-MM-DD
 
@@ -671,6 +672,7 @@ export default function RosterWeekly() {
   const [guardTypeFilter, setGuardTypeFilter] = useState<string>('');
   const [shiftType, setShiftType] = useState<ShiftType>('day');
   const [reuseInfo, setReuseInfo] = useState<any | null>(null);
+  const [manualEntryOpen, setManualEntryOpen] = useState(false);
   const lastReuseToastKeyRef = useRef<string>('');
 
   const canManageAttendance = useMemo(() => {
@@ -803,6 +805,13 @@ export default function RosterWeekly() {
             description="Show guard off-days and reliever sites for each day."
             actions={(
               <>
+                <button
+                  type="button"
+                  onClick={() => setManualEntryOpen(true)}
+                  className="w-full sm:w-auto px-3 py-1.5 rounded-md bg-emerald-700 text-white hover:bg-emerald-600 text-sm"
+                >
+                  Quick Entry
+                </button>
                 <Link href={route('control-room.shifts.index')} className="w-full sm:w-auto px-3 py-1.5 rounded-md bg-coin-700 text-white hover:bg-coin-600 text-sm">View Guard Shifts</Link>
                 <button onClick={prevWeek} className="w-full sm:w-auto px-3 py-1.5 rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700">Prev</button>
                 <button onClick={thisWeek} className="w-full sm:w-auto px-3 py-1.5 rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700">This Week</button>
@@ -953,6 +962,16 @@ export default function RosterWeekly() {
             />
           </div>
         )}
+        <ManualRosterEntryModal
+          open={manualEntryOpen}
+          onClose={() => setManualEntryOpen(false)}
+          guards={(data?.guards || [])}
+          sites={(data?.sites || [])}
+          onSaved={() => {
+            setManualEntryOpen(false);
+            load();
+          }}
+        />
       </div>
     </ControlRoomLayout>
   );

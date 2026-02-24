@@ -9,7 +9,9 @@ use App\Models\Guards\Attendance;
 use App\Models\Guards\Guard;
 use App\Models\Guards\ClientSite;
 use App\Models\Guards\Shift as GuardShift;
+use App\Models\User;
 use Carbon\Carbon;
+use Inertia\Inertia;
 
 class AttendanceController extends Controller
 {
@@ -20,6 +22,11 @@ class AttendanceController extends Controller
             'client_site_id' => ['nullable','integer','exists:client_sites,id'],
             'notes' => ['nullable','string','max:500'],
         ]);
+
+        $guard = Guard::findOrFail($validated['guard_id']);
+        if (in_array($guard->status, ['dismissed', 'absconded'], true)) {
+            return back()->withErrors(['guard_id' => 'Cannot mark attendance for dismissed or absconded guards.']);
+        }
 
         $date = Carbon::today();
         $notes = $validated['notes'] ?? null;
@@ -130,6 +137,12 @@ class AttendanceController extends Controller
                     return;
                 }
 
+                // Filter out dismissed/absconded guards
+                $validGuardIds = Guard::whereIn('id', $guardIds)
+                    ->whereNotIn('status', ['dismissed', 'absconded'])
+                    ->pluck('id')
+                    ->flip();
+
                 $existing = Attendance::query()
                     ->whereIn('guard_id', $guardIds)
                     ->whereDate('date', $dateString)
@@ -141,6 +154,12 @@ class AttendanceController extends Controller
                 foreach ($shifts as $shift) {
                     $guardId = (int) ($shift->guard_id ?? 0);
                     if (!$guardId) {
+                        continue;
+                    }
+                    // Skip dismissed/absconded guards
+                    if (!$validGuardIds->has($guardId)) {
+                        $skippedCount++;
+                        $processed[$guardId] = true;
                         continue;
                     }
                     if (isset($processed[$guardId])) {
@@ -249,6 +268,11 @@ class AttendanceController extends Controller
 			'notes' => ['nullable','string','max:500'],
 		]);
 
+		$guard = Guard::findOrFail($validated['guard_id']);
+		if (in_array($guard->status, ['dismissed', 'absconded'], true)) {
+			return back()->withErrors(['guard_id' => 'Cannot mark attendance for dismissed or absconded guards.']);
+		}
+
 		$date = Carbon::today();
 		$attendance = Attendance::where('guard_id', $validated['guard_id'])
 			->whereDate('date', $date)
@@ -301,4 +325,220 @@ class AttendanceController extends Controller
 
 		return back()->with('success', 'Guard marked absent.');
 	}
+
+    /**
+     * Display previous week's attendance records for Control Room editing.
+     * Only shows records from the previous week (Mon-Sun).
+     */
+    public function index(Request $request)
+    {
+        $today = Carbon::today();
+        $isTuesday = $today->isTuesday();
+
+        // Calculate previous week range (Monday-Sunday)
+        $lastWeekStart = $today->copy()->subWeek()->startOfWeek();
+        $lastWeekEnd = $today->copy()->subWeek()->endOfWeek();
+
+        $perPage = (int) $request->input('per_page', 20);
+        $perPage = max(5, min($perPage, 100));
+
+        $attendance = Attendance::with(['guardRelation', 'clientSite.client', 'supervisor'])
+            ->whereBetween('date', [$lastWeekStart->toDateString(), $lastWeekEnd->toDateString()])
+            ->when($request->input('search'), function ($q, $search) {
+                $q->whereHas('guardRelation', function ($qq) use ($search) {
+                    $qq->where('name', 'like', "%{$search}%")
+                       ->orWhere('employee_id', 'like', "%{$search}%");
+                });
+            })
+            ->when($request->input('status'), function ($q, $status) {
+                $q->where('status', $status);
+            })
+            ->when($request->input('site_id'), function ($q, $siteId) {
+                $q->where('client_site_id', (int) $siteId);
+            })
+            ->when($request->input('date'), function ($q, $date) {
+                $q->whereDate('date', $date);
+            })
+            ->orderByDesc('date')
+            ->orderByDesc('id')
+            ->paginate($perPage)
+            ->withQueryString();
+
+        $sites = ClientSite::with('client')
+            ->where('status', 'active')
+            ->orderBy('name')
+            ->get(['id', 'name', 'client_id']);
+
+        $user = Auth::user();
+        $isSuperAdmin = $user && $user->hasRole('super_admin');
+
+        return Inertia::render('ControlRoom/Attendance/Index', [
+            'attendance' => $attendance,
+            'filters' => $request->only(['search', 'status', 'site_id', 'date', 'per_page']),
+            'sites' => $sites,
+            'isTuesday' => $isTuesday,
+            'isSuperAdmin' => $isSuperAdmin,
+            'lastWeekRange' => [
+                'start' => $lastWeekStart->toDateString(),
+                'end' => $lastWeekEnd->toDateString(),
+                'display' => $lastWeekStart->format('M d') . ' - ' . $lastWeekEnd->format('M d, Y'),
+            ],
+            'canEdit' => $isSuperAdmin || $isTuesday,
+        ]);
+    }
+
+    /**
+     * Show edit form for an attendance record.
+     * Control Room can only edit on Tuesdays and only previous week's records.
+     */
+    public function edit(Attendance $attendance)
+    {
+        $user = Auth::user();
+        $isSuperAdmin = $user && $user->hasRole('super_admin');
+
+        if (!$isSuperAdmin) {
+            $today = Carbon::today();
+
+            // Must be Tuesday
+            if (!$today->isTuesday()) {
+                return redirect()->route('control-room.attendance.index')
+                    ->withErrors(['edit_window' => 'Attendance records can only be edited on Tuesdays.']);
+            }
+
+            // Must be from previous week
+            $recordDate = Carbon::parse($attendance->date);
+            $lastWeekStart = $today->copy()->subWeek()->startOfWeek();
+            $lastWeekEnd = $today->copy()->subWeek()->endOfWeek();
+
+            if ($recordDate->lt($lastWeekStart) || $recordDate->gt($lastWeekEnd)) {
+                return redirect()->route('control-room.attendance.index')
+                    ->withErrors(['edit_window' => 'Control Room can only edit attendance records from the previous week.']);
+            }
+        }
+
+        $attendance->load(['guardRelation', 'clientSite.client']);
+
+        $sites = ClientSite::with('client')
+            ->where('status', 'active')
+            ->orderBy('name')
+            ->get(['id', 'name', 'client_id']);
+
+        $guards = Guard::where('status', 'active')
+            ->whereNotIn('status', ['dismissed', 'absconded'])
+            ->orderBy('name')
+            ->get(['id', 'name', 'employee_id']);
+
+        return Inertia::render('ControlRoom/Attendance/Edit', [
+            'attendance' => $attendance,
+            'sites' => $sites,
+            'guards' => $guards,
+            'isSuperAdmin' => $isSuperAdmin,
+        ]);
+    }
+
+    /**
+     * Update an attendance record.
+     * Control Room can only update on Tuesdays and only previous week's records.
+     */
+    public function update(Request $request, Attendance $attendance)
+    {
+        $user = Auth::user();
+        $isSuperAdmin = $user && $user->hasRole('super_admin');
+
+        if (!$isSuperAdmin) {
+            $today = Carbon::today();
+
+            // Must be Tuesday
+            if (!$today->isTuesday()) {
+                return redirect()->route('control-room.attendance.index')
+                    ->withErrors(['edit_window' => 'Attendance records can only be edited on Tuesdays.']);
+            }
+
+            // Must be from previous week
+            $recordDate = Carbon::parse($attendance->date);
+            $lastWeekStart = $today->copy()->subWeek()->startOfWeek();
+            $lastWeekEnd = $today->copy()->subWeek()->endOfWeek();
+
+            if ($recordDate->lt($lastWeekStart) || $recordDate->gt($lastWeekEnd)) {
+                return redirect()->route('control-room.attendance.index')
+                    ->withErrors(['edit_window' => 'Control Room can only edit attendance records from the previous week.']);
+            }
+        }
+
+        $validated = $request->validate([
+            'guard_id' => 'required|exists:guards,id',
+            'client_site_id' => 'required|exists:client_sites,id',
+            'date' => 'required|date',
+            'check_in_time' => 'nullable|date_format:H:i',
+            'check_out_time' => 'nullable|date_format:H:i|after_or_equal:check_in_time',
+            'status' => 'required|in:present,absent,late,half_day,leave',
+            'check_in_notes' => 'nullable|string|max:500',
+            'check_out_notes' => 'nullable|string|max:500',
+            'edit_reason' => $isSuperAdmin ? 'nullable|string|max:500' : 'required|string|max:500',
+        ]);
+
+        // Build edit notes with reason
+        $editNote = '';
+        if (!$isSuperAdmin) {
+            $editNote = '[Control Room Edit - Tuesday Window] ' . ($validated['edit_reason'] ?? '');
+        } else {
+            $editNote = '[Super Admin Edit] ' . ($validated['edit_reason'] ?? '');
+        }
+
+        // Combine date and times
+        $checkInDateTime = $validated['check_in_time']
+            ? Carbon::parse($validated['date'] . ' ' . $validated['check_in_time'])
+            : null;
+        $checkOutDateTime = $validated['check_out_time']
+            ? Carbon::parse($validated['date'] . ' ' . $validated['check_out_time'])
+            : null;
+
+        // Append edit note to existing notes
+        $checkInNotes = $validated['check_in_notes'] ?? $attendance->check_in_notes ?? '';
+        if ($editNote) {
+            $checkInNotes = trim($checkInNotes . ' ' . $editNote);
+        }
+
+        $attendance->update([
+            'guard_id' => $validated['guard_id'],
+            'client_site_id' => $validated['client_site_id'],
+            'date' => $validated['date'],
+            'check_in_time' => $checkInDateTime,
+            'check_out_time' => $checkOutDateTime,
+            'status' => $validated['status'],
+            'check_in_notes' => $checkInNotes,
+            'check_out_notes' => $validated['check_out_notes'] ?? $attendance->check_out_notes,
+            'source' => $attendance->source ?? 'manual_edit',
+        ]);
+
+        // Calculate hours if both times are present
+        if ($checkInDateTime && $checkOutDateTime) {
+            $attendance->calculateHours();
+        }
+
+        // Dispatch event for real-time notifications
+        $guard = Guard::find($validated['guard_id']);
+        $site = ClientSite::find($validated['client_site_id']);
+
+        try {
+            event(new \App\Events\AttendanceUpdated(
+                $attendance->id,
+                "Attendance record updated by " . ($isSuperAdmin ? 'Super Admin' : 'Control Room'),
+                [
+                    'id' => $attendance->id,
+                    'guard_name' => $guard?->name ?? 'Unknown',
+                    'site_name' => $site?->name ?? 'Unknown',
+                    'client_name' => $site?->client?->name ?? 'Unknown',
+                    'action' => 'manual_edit',
+                    'timestamp' => now()->toISOString(),
+                    'status' => $validated['status'],
+                    'supervisor_id' => Auth::id(),
+                    'edited_by_role' => $isSuperAdmin ? 'super_admin' : 'control_room',
+                ]
+            ));
+        } catch (\Throwable $e) {}
+
+        return redirect()->route('control-room.attendance.index')
+            ->with('success', 'Attendance record updated successfully.');
+    }
 }

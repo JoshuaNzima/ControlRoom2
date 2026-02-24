@@ -63,7 +63,7 @@ class ClientController extends Controller
             ->with(['services' => function ($query) {
                 $query->select('services.id', 'services.name', 'services.monthly_price')
                     ->withPivot('custom_price', 'quantity');
-            }])
+            }, 'supervisor:id,name', 'sergeant:id,name'])
             ->when(request('search'), function($q, $search) {
                 $q->where('name', 'like', "%{$search}%");
             })
@@ -84,11 +84,23 @@ class ClientController extends Controller
 
         $zones = \App\Models\Zone::orderBy('name')->get(['id', 'name']);
 
-        return Inertia::render('Admin/Clients/Index', [
+        // Get supervisors and sergeants for assignment
+        $supervisors = \App\Models\User::role('supervisor')->select(['id','name'])->orderBy('name')->get();
+        $sergeants = \App\Models\Guards\Guard::select(['id','name','position','is_leader'])
+            ->where('status','active')
+            ->where(function($q) {
+                $q->where('position','sergeant')->orWhere('is_leader', true);
+            })
+            ->orderBy('name')
+            ->get();
+
+        return Inertia::render('Admin/Clients', [
             'clients' => $clients,
             'filters' => array_merge(request()->only(['search']), ['per_page' => $perPage, 'show_add' => $request->input('show_add')]),
             'services' => $services,
             'zones' => $zones,
+            'supervisors' => $supervisors,
+            'sergeants' => $sergeants,
         ]);
     }
 
@@ -626,5 +638,115 @@ class ClientController extends Controller
             'client_import_template.xlsx',
             ['Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet']
         )->deleteFileAfterSend(true);
+    }
+
+    /**
+     * Toggle client status between active and inactive.
+     * Deactivating a client preserves all data but prevents new assignments.
+     */
+    public function toggleStatus(Request $request, Client $client)
+    {
+        $validated = $request->validate([
+            'status' => ['required', 'in:active,inactive'],
+            'reason' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $newStatus = $validated['status'];
+        $oldStatus = $client->status;
+
+        // Update client status
+        $client->update(['status' => $newStatus]);
+
+        // Also update all sites to match client status
+        $client->sites()->update(['status' => $newStatus]);
+
+        // Log the status change (optional audit trail)
+        if (class_exists(\App\Models\AuditLog::class)) {
+            \App\Models\AuditLog::create([
+                'user_id' => auth()->id(),
+                'action' => 'client_status_changed',
+                'entity_type' => Client::class,
+                'entity_id' => $client->id,
+                'old_values' => ['status' => $oldStatus],
+                'new_values' => ['status' => $newStatus, 'reason' => $validated['reason'] ?? null],
+                'description' => "Client '{$client->name}' status changed from {$oldStatus} to {$newStatus}",
+            ]);
+        }
+
+        $message = $newStatus === 'active' 
+            ? "Client '{$client->name}' has been activated." 
+            : "Client '{$client->name}' has been deactivated. All sites are now inactive.";
+
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'status' => $newStatus,
+                'message' => $message,
+            ]);
+        }
+
+        return redirect()->back()->with('success', $message);
+    }
+
+    public function assignSupervisor(Request $request, Client $client)
+    {
+        $data = $request->validate([
+            'supervisor_id' => ['required', 'exists:users,id'],
+        ]);
+
+        $client->supervisor_id = $data['supervisor_id'];
+        $client->save();
+
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json(['success' => true, 'message' => 'Supervisor assigned successfully.']);
+        }
+
+        return back()->with('success', 'Supervisor assigned to client.');
+    }
+
+    public function unassignSupervisor(Request $request, Client $client)
+    {
+        $client->supervisor_id = null;
+        $client->save();
+
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json(['success' => true, 'message' => 'Supervisor unassigned successfully.']);
+        }
+
+        return back()->with('success', 'Supervisor unassigned from client.');
+    }
+
+    public function assignSergeant(Request $request, Client $client)
+    {
+        $data = $request->validate([
+            'sergeant_id' => ['required', 'exists:guards,id'],
+        ]);
+
+        // Validate the guard is actually a sergeant
+        $sergeant = \App\Models\Guards\Guard::findOrFail($data['sergeant_id']);
+        if (!$sergeant->isLeader() && $sergeant->position !== 'sergeant') {
+            return response()->json(['success' => false, 'message' => 'Selected guard is not a sergeant.'], 422);
+        }
+
+        $client->sergeant_id = $data['sergeant_id'];
+        $client->save();
+
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json(['success' => true, 'message' => 'Sergeant assigned successfully.']);
+        }
+
+        return back()->with('success', 'Sergeant assigned to client.');
+    }
+
+    public function unassignSergeant(Request $request, Client $client)
+    {
+        $client->sergeant_id = null;
+        $client->save();
+
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json(['success' => true, 'message' => 'Sergeant unassigned successfully.']);
+        }
+
+        return back()->with('success', 'Sergeant unassigned from client.');
     }
 }

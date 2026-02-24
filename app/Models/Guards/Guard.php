@@ -4,13 +4,14 @@ namespace App\Models\Guards;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Database\Eloquent\Relations\{HasMany, BelongsTo};
+use Illuminate\Database\Eloquent\Relations\{HasMany, BelongsTo, HasManyThrough};
 use App\Models\User;
 use App\Models\ClientSite;
 use App\Models\Guards\{Attendance, Shift};
 use App\Models\Guards\GuardAssignment;
 use App\Models\Guards\GuardGrade;
 use App\Models\Flag;
+use App\Models\Training\RefresherTrainingRecord;
 
 class Guard extends Model
 {
@@ -58,6 +59,9 @@ class Guard extends Model
         'photo',
         'last_known_location',
         'supervisor_id',
+        'reports_to_guard_id',
+        'position',
+        'default_off_day',
     ];
 
     protected $casts = [
@@ -67,6 +71,8 @@ class Guard extends Model
         'languages' => 'array',
         'dependents_count' => 'integer',
         'last_known_location' => 'array',
+        'position' => 'string',
+        'default_off_day' => 'integer',
     ];
 
     protected $appends = ['status_color', 'is_on_duty', 'photo_url', 'is_profile_complete', 'profile_missing_fields'];
@@ -119,6 +125,46 @@ class Guard extends Model
     public function supervisor(): BelongsTo
     {
         return $this->belongsTo(User::class, 'supervisor_id');
+    }
+
+    public function reportsTo(): BelongsTo
+    {
+        return $this->belongsTo(Guard::class, 'reports_to_guard_id');
+    }
+
+    public function incentiveProfile(): HasOne
+    {
+        return $this->hasOne(\App\Models\SupervisorIncentiveProfile::class);
+    }
+
+    public function incentiveRecords(): HasMany
+    {
+        return $this->hasMany(\App\Models\SupervisorIncentiveRecord::class);
+    }
+
+    public function subordinates(): HasMany
+    {
+        return $this->hasMany(Guard::class, 'reports_to_guard_id');
+    }
+
+    public function scopeSupervisors($query)
+    {
+        return $query->where('position', 'supervisor');
+    }
+
+    public function scopeSergeants($query)
+    {
+        return $query->where('position', 'sergeant');
+    }
+
+    public function scopeLeaders($query)
+    {
+        return $query->whereIn('position', ['supervisor', 'sergeant']);
+    }
+
+    public function isLeader(): bool
+    {
+        return in_array($this->position, ['supervisor', 'sergeant']);
     }
 
     public function zone(): BelongsTo
@@ -187,6 +233,28 @@ class Guard extends Model
         return $this->hasMany(GuardAssignment::class)->where('is_active', true);
     }
 
+    public function sites(): HasManyThrough
+    {
+        return $this->hasManyThrough(
+            ClientSite::class,
+            GuardAssignment::class,
+            'guard_id',
+            'id',
+            'id',
+            'client_site_id'
+        )->where('guard_assignments.is_active', true);
+    }
+
+    public function currentAssignmentRelation(): HasOne
+    {
+        return $this->hasOne(GuardAssignment::class, 'guard_id')
+            ->where('is_active', true)
+            ->where('start_date', '<=', today())
+            ->where(function ($q) {
+                $q->whereNull('end_date')->orWhere('end_date', '>=', today());
+            })->latest('start_date');
+    }
+
     public function currentAssignment()
     {
         return $this->assignments()
@@ -233,6 +301,11 @@ class Guard extends Model
     public function todayShift()
     {
         return $this->shifts()->whereDate('date', today());
+    }
+
+    public function refresherTrainingRecords(): HasMany
+    {
+        return $this->hasMany(RefresherTrainingRecord::class, 'guard_id');
     }
 
     public function getStatusColorAttribute(): string

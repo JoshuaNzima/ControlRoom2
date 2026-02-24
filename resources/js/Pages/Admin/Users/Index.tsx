@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Head, router, useForm } from '@inertiajs/react';
+import { Head, Link, router, useForm } from '@inertiajs/react';
 import AdminLayout from '@/Layouts/AdminLayout';
 import IconMapper from '@/Components/IconMapper';
 import useNotification from '@/Providers/useNotifications';
@@ -24,6 +24,7 @@ interface User {
 
 interface Filters {
   search?: string;
+  per_page?: number | string;
 }
 
 interface Role { id: number; name: string }
@@ -55,6 +56,7 @@ interface UsersIndexProps {
   users: {
     data: User[];
     meta?: any;
+    links?: Array<{ url: string | null; label: string; active: boolean }>;
   };
   filters: Filters;
   roles: Role[];
@@ -64,6 +66,8 @@ interface UsersIndexProps {
 export default function UsersIndex({ users, filters, roles, zones }: UsersIndexProps) {
   const [search, setSearch] = useState(filters.search || '');
   const [loadingId, setLoadingId] = useState<number | null>(null);
+  const initialPerPage = Number(filters?.per_page ?? users.meta?.per_page ?? 20);
+  const [perPage, setPerPage] = useState<number>(initialPerPage);
   const { push } = useNotification();
 
   // Create User modal state
@@ -146,7 +150,7 @@ export default function UsersIndex({ users, filters, roles, zones }: UsersIndexP
   }
 
   const handleSearch = () => {
-    router.get(route('admin.users.index'), { search }, { preserveState: true });
+    router.get(route('admin.users.index'), { search, per_page: perPage }, { preserveState: true });
   };
 
   const openEdit = (user: User) => {
@@ -215,7 +219,7 @@ export default function UsersIndex({ users, filters, roles, zones }: UsersIndexP
 
         {/* Search */}
         <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm shadow-black/5 dark:shadow-none p-6">
-          <div className="flex flex-col sm:flex-row gap-4">
+          <div className="flex flex-col sm:flex-row gap-4 mb-4">
               <div className="flex-1 relative">
               <span className="absolute left-3 top-3 text-gray-400"><IconMapper name="Search" size={20} /></span>
               <input
@@ -233,6 +237,28 @@ export default function UsersIndex({ users, filters, roles, zones }: UsersIndexP
             >
               Search
             </button>
+          </div>
+          <div className="flex items-center gap-3">
+            <label className="text-sm text-gray-600 dark:text-gray-400">Per Page:</label>
+            <select
+              value={String(perPage)}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                setPerPage(v);
+                router.get(route('admin.users.index'), { search, per_page: v, page: 1 }, { preserveState: true });
+              }}
+              className="px-3 py-1.5 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+            >
+              <option value={10}>10</option>
+              <option value={20}>20</option>
+              <option value={50}>50</option>
+              <option value={100}>100</option>
+            </select>
+            {users.meta && (
+              <span className="text-sm text-gray-500 dark:text-gray-400">
+                Showing {users.meta.from || 0} to {users.meta.to || 0} of {users.meta.total || 0}
+              </span>
+            )}
           </div>
         </div>
 
@@ -394,6 +420,26 @@ export default function UsersIndex({ users, filters, roles, zones }: UsersIndexP
             </tbody>
           </table>
         </div>
+
+        {/* Pagination */}
+        {users.meta && users.meta.last_page > 1 && (
+          <div className="flex flex-wrap justify-center gap-2">
+            {users.links && users.links.map((link: any, index: number) => (
+              <Link
+                key={index}
+                href={link.url || '#'}
+                className={`px-3 py-2 rounded ${
+                  link.active
+                    ? 'bg-red-600 text-white'
+                    : link.url
+                    ? 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 dark:bg-gray-900 dark:text-gray-200 dark:border-gray-700 dark:hover:bg-gray-800'
+                    : 'bg-transparent text-gray-400 cursor-default'
+                }`}
+                dangerouslySetInnerHTML={{ __html: link.label }}
+              />
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Create User Modal */}

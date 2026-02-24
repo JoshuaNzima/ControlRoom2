@@ -4,22 +4,34 @@ import HRLayout from '@/Layouts/HRLayout';
 import Modal from '@/Components/Modal';
 import PageHeader from '@/Components/ui/page-header';
 
-type Guard = { id: number; name: string; employee_id?: string };
+type Employee = { id: number; name: string; employee_id?: string; type: string; type_label: string; model: string };
+type LeaveType = 'off_day' | 'sick_leave' | 'annual_leave' | 'unpaid_leave' | 'maternity_leave' | 'paternity_leave' | 'bereavement_leave';
+type LeaveStatus = 'pending' | 'approved' | 'rejected';
+type EmployeeLeave = {
+  id?: number;
+  employee_type: string;
+  employee_id: number;
+  start_date: string;
+  end_date?: string | null;
+  type: LeaveType;
+  reason?: string | null;
+  status: LeaveStatus;
+  notes?: string | null;
+};
 type Holiday = { id?: number; name: string; date: string; is_recurring?: boolean; type?: 'company' | 'public' };
-type OffDay = { id?: number; guard_id: number; start_date: string; end_date?: string | null; reason?: string | null };
 type EventItem = {
-  entity: 'holiday' | 'off_day';
+  entity: 'holiday' | 'employee_leave' | 'off_day';
   entity_id: number;
   date: string; // YYYY-MM-DD
   title: string;
-  type: 'holiday' | 'off_day';
-  color: 'red' | 'indigo';
+  type: string;
+  color: string;
   meta?: any;
 };
 type AttendanceWarning = {
   date: string;
   offCount: number;
-  totalGuards: number;
+  totalEmployees: number;
   ratio: number;
   hasHoliday: boolean;
   severity: 'medium' | 'high';
@@ -61,7 +73,7 @@ function getCalendarRange(d: Date) {
 }
 
 export default function Roster() {
-  const { auth, guards = [], initial_month } = (usePage().props as any);
+  const { auth, employees = [], initial_month } = (usePage().props as any);
   const [currentMonth, setCurrentMonth] = useState<Date>(() => {
     if (initial_month) {
       const d = new Date(initial_month);
@@ -75,22 +87,40 @@ export default function Roster() {
   const [events, setEvents] = useState<EventItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [addHolidayOpen, setAddHolidayOpen] = useState(false);
-  const [addOffDayOpen, setAddOffDayOpen] = useState(false);
+  const [addLeaveOpen, setAddLeaveOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<EventItem | null>(null);
   const [editHolidayOpen, setEditHolidayOpen] = useState(false);
-  const [editOffDayOpen, setEditOffDayOpen] = useState(false);
+  const [editLeaveOpen, setEditLeaveOpen] = useState(false);
 
   const { gridStart, gridEnd } = useMemo(() => getCalendarRange(currentMonth), [currentMonth]);
 
   const refreshEvents = useCallback(async () => {
     setLoading(true);
     try {
-      const url = route('hr.leaves.events', { start: formatYmd(gridStart), end: formatYmd(gridEnd) });
-      const res = await fetch(url, { headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' } });
-      if (res.ok) {
-        const json = await res.json();
-        setEvents(json.events || []);
+      // Fetch holidays from legacy endpoint
+      const holidaysUrl = route('hr.leaves.events', { start: formatYmd(gridStart), end: formatYmd(gridEnd) });
+      const holidaysRes = await fetch(holidaysUrl, { headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' } });
+      
+      // Fetch employee leaves from new endpoint
+      const leavesUrl = route('hr.employee-leaves.events', { start: formatYmd(gridStart), end: formatYmd(gridEnd) });
+      const leavesRes = await fetch(leavesUrl, { headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' } });
+      
+      let allEvents: EventItem[] = [];
+      
+      if (holidaysRes.ok) {
+        const holidaysJson = await holidaysRes.json();
+        // Filter only holidays from legacy endpoint
+        const holidays = (holidaysJson.events || []).filter((e: EventItem) => e.entity === 'holiday');
+        allEvents = [...allEvents, ...holidays];
       }
+      
+      if (leavesRes.ok) {
+        const leavesJson = await leavesRes.json();
+        const leaves = leavesJson.events || [];
+        allEvents = [...allEvents, ...leaves];
+      }
+      
+      setEvents(allEvents);
     } finally {
       setLoading(false);
     }
@@ -118,15 +148,15 @@ export default function Roster() {
   };
 
   const warningDays = useMemo<AttendanceWarning[]>(() => {
-    if (!Array.isArray(guards) || !guards.length || !events.length) return [];
-    const totalGuards = guards.length;
+    if (!Array.isArray(employees) || !employees.length || !events.length) return [];
+    const totalEmployees = employees.length;
     const byDate: Record<string, { offCount: number; hasHoliday: boolean }> = {};
 
     for (const e of events) {
       if (!byDate[e.date]) {
         byDate[e.date] = { offCount: 0, hasHoliday: false };
       }
-      if (e.type === 'off_day') {
+      if (e.type === 'off_day' || e.type === 'employee_leave') {
         byDate[e.date].offCount += 1;
       }
       if (e.type === 'holiday') {
@@ -137,14 +167,14 @@ export default function Roster() {
     const list: AttendanceWarning[] = [];
     Object.entries(byDate).forEach(([date, info]) => {
       if (!info.offCount) return;
-      const ratio = info.offCount / totalGuards;
-      // Only flag days where a significant share of guards are off
+      const ratio = info.offCount / totalEmployees;
+      // Only flag days where a significant share of employees are off
       const severity: AttendanceWarning['severity'] | null = ratio >= 0.5 ? 'high' : ratio >= 0.25 ? 'medium' : null;
       if (!severity) return;
       list.push({
         date,
         offCount: info.offCount,
-        totalGuards,
+        totalEmployees,
         ratio,
         hasHoliday: info.hasHoliday,
         severity,
@@ -157,14 +187,14 @@ export default function Roster() {
     });
 
     return list.slice(0, 6);
-  }, [events, guards]);
+  }, [events, employees]);
 
   const openEvent = (e: EventItem) => {
     setSelectedEvent(e);
     if (e.type === 'holiday') {
       setEditHolidayOpen(true);
-    } else {
-      setEditOffDayOpen(true);
+    } else if (e.entity === 'employee_leave' || e.type === 'off_day') {
+      setEditLeaveOpen(true);
     }
   };
 
@@ -197,9 +227,9 @@ export default function Roster() {
               <button
                 type="button"
                 className="px-3 py-1.5 rounded-md bg-coin-700 text-white hover:bg-coin-800"
-                onClick={() => setAddOffDayOpen(true)}
+                onClick={() => setAddLeaveOpen(true)}
               >
-                Add Off Day
+                Add Leave
               </button>
               <button
                 type="button"
@@ -215,6 +245,8 @@ export default function Roster() {
         <div className="flex flex-wrap items-center gap-4 text-sm">
           <div className="flex items-center gap-2"><span className="inline-block w-3 h-3 rounded-sm bg-red-600" /> Holiday</div>
           <div className="flex items-center gap-2"><span className="inline-block w-3 h-3 rounded-sm bg-coin-700" /> Off Day</div>
+          <div className="flex items-center gap-2"><span className="inline-block w-3 h-3 rounded-sm bg-amber-500" /> Sick Leave</div>
+          <div className="flex items-center gap-2"><span className="inline-block w-3 h-3 rounded-sm bg-emerald-500" /> Annual Leave</div>
           {loading && <div className="text-gray-500 dark:text-gray-400">Loading…</div>}
         </div>
 
@@ -246,7 +278,7 @@ export default function Roster() {
                           )}
                         </div>
                         <div className="text-xs text-gray-700 dark:text-gray-300">
-                          {w.offCount} off out of {w.totalGuards} guards ({Math.round(w.ratio * 100)}%)
+                          {w.offCount} off out of {w.totalEmployees} employees ({Math.round(w.ratio * 100)}%)
                         </div>
                       </div>
                       <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${badgeClass}`}>
@@ -302,40 +334,24 @@ export default function Roster() {
           }}
         />
 
-        <AddOffDayModal
-          open={addOffDayOpen}
-          onClose={() => setAddOffDayOpen(false)}
-          guards={guards as Guard[]}
+        <AddLeaveModal
+          open={addLeaveOpen}
+          onClose={() => setAddLeaveOpen(false)}
           onSaved={() => {
-            setAddOffDayOpen(false);
+            setAddLeaveOpen(false);
             refreshEvents();
           }}
         />
 
-        <EditHolidayModal
-          open={editHolidayOpen}
+        <EditLeaveModal
+          open={editLeaveOpen}
           onClose={() => {
-            setEditHolidayOpen(false);
+            setEditLeaveOpen(false);
             setSelectedEvent(null);
           }}
           event={selectedEvent}
           onSaved={() => {
-            setEditHolidayOpen(false);
-            setSelectedEvent(null);
-            refreshEvents();
-          }}
-        />
-
-        <EditOffDayModal
-          open={editOffDayOpen}
-          onClose={() => {
-            setEditOffDayOpen(false);
-            setSelectedEvent(null);
-          }}
-          event={selectedEvent}
-          guards={guards as Guard[]}
-          onSaved={() => {
-            setEditOffDayOpen(false);
+            setEditLeaveOpen(false);
             setSelectedEvent(null);
             refreshEvents();
           }}
@@ -545,94 +561,95 @@ function EditHolidayModal({
   );
 }
 
-function EditOffDayModal({
-  open,
-  onClose,
-  onSaved,
-  event,
-  guards,
-}: {
-  open: boolean;
-  onClose: () => void;
-  onSaved: () => void;
-  event: EventItem | null;
-  guards: Guard[];
-}) {
-  const { data, setData, put, processing, errors, reset, delete: destroy } = useForm<OffDay>({
-    guard_id: (guards?.[0]?.id as number) || ('' as any),
+function AddLeaveModal({ open, onClose, onSaved }: { open: boolean; onClose: () => void; onSaved: () => void }) {
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [loadingEmployees, setLoadingEmployees] = useState(false);
+
+  const { data, setData, post, processing, errors, reset } = useForm<EmployeeLeave>({
+    employee_type: 'App\\Models\\Guards\\Guard',
+    employee_id: 0,
     start_date: '',
     end_date: '',
+    type: 'off_day',
     reason: '',
+    status: 'approved',
+    notes: '',
   });
 
   useEffect(() => {
-    if (!open || !event || event.type !== 'off_day') return;
-    const guardId = Number(event.meta?.guard_id ?? event.meta?.guard?.id ?? '') || (guards?.[0]?.id as number);
-    setData({
-      guard_id: guardId as any,
-      start_date: event.meta?.start_date || event.date || '',
-      end_date: event.meta?.end_date || '',
-      reason: event.meta?.reason || '',
-    });
-  }, [open, event, guards, setData]);
+    if (open) {
+      setLoadingEmployees(true);
+      fetch(route('hr.employee-leaves.employees'), { headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
+        .then((r) => r.json())
+        .then((json) => {
+          const list = json.employees || [];
+          setEmployees(list);
+          if (list.length && !data.employee_id) {
+            setData('employee_id', list[0].id);
+            setData('employee_type', list[0].model);
+          }
+        })
+        .finally(() => setLoadingEmployees(false));
+    }
+  }, [open, data.employee_id, setData]);
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!event || event.type !== 'off_day') return;
-    put(route('hr.leaves.off-days.update', event.entity_id), {
-      preserveScroll: true,
-      onSuccess: () => {
-        reset();
-        onSaved();
-      },
+    post(route('hr.employee-leaves.store'), {
+      onSuccess: () => { reset(); onSaved(); },
     });
   };
 
-  const handleDelete = () => {
-    if (!event || event.type !== 'off_day') return;
-    if (!confirm('Delete this off day?')) return;
-    destroy(route('hr.leaves.off-days.destroy', event.entity_id), {
-      preserveScroll: true,
-      onSuccess: () => {
-        reset();
-        onSaved();
-      },
-    });
-  };
-
-  const handleClose = () => {
-    if (!processing) onClose();
-  };
+  const handleClose = () => { if (!processing) onClose(); };
 
   return (
     <Modal show={open} onClose={handleClose} maxWidth="md">
       <div className="px-6 py-4 border-b flex items-center justify-between bg-white dark:bg-gray-900 dark:border-gray-800">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Edit Off Day</h2>
-        <button
-          type="button"
-          onClick={handleClose}
-          className="text-gray-400 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-200"
-        >
-          ✕
-        </button>
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Add Employee Leave</h2>
+        <button type="button" onClick={handleClose} className="text-gray-400 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-200">✕</button>
       </div>
       <div className="px-6 py-4 bg-white dark:bg-gray-900">
         <form className="grid grid-cols-1 gap-3" onSubmit={submit}>
           <div>
-            <label className="block text-sm font-medium">Guard</label>
+            <label className="block text-sm font-medium">Employee</label>
             <select
               className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100"
-              value={data.guard_id as any}
-              onChange={(e) => setData('guard_id', Number(e.target.value))}
+              value={`${data.employee_type}|${data.employee_id}`}
+              onChange={(e) => {
+                const [type, id] = e.target.value.split('|');
+                setData('employee_type', type);
+                setData('employee_id', Number(id));
+              }}
+              disabled={loadingEmployees}
             >
-              {guards.map((g) => (
-                <option key={g.id} value={g.id}>
-                  {g.name} {g.employee_id ? `(${g.employee_id})` : ''}
+              {loadingEmployees && <option>Loading...</option>}
+              {employees.map((emp) => (
+                <option key={`${emp.model}|${emp.id}`} value={`${emp.model}|${emp.id}`}>
+                  {emp.name} ({emp.type_label}) {emp.employee_id ? `- ${emp.employee_id}` : ''}
                 </option>
               ))}
             </select>
-            {errors.guard_id && <p className="text-xs text-red-600 mt-1">{errors.guard_id}</p>}
+            {errors.employee_id && <p className="text-xs text-red-600 mt-1">{errors.employee_id}</p>}
           </div>
+
+          <div>
+            <label className="block text-sm font-medium">Leave Type</label>
+            <select
+              className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100"
+              value={data.type}
+              onChange={(e) => setData('type', e.target.value as LeaveType)}
+            >
+              <option value="off_day">Off Day</option>
+              <option value="sick_leave">Sick Leave</option>
+              <option value="annual_leave">Annual Leave</option>
+              <option value="unpaid_leave">Unpaid Leave</option>
+              <option value="maternity_leave">Maternity Leave</option>
+              <option value="paternity_leave">Paternity Leave</option>
+              <option value="bereavement_leave">Bereavement Leave</option>
+            </select>
+            {errors.type && <p className="text-xs text-red-600 mt-1">{errors.type}</p>}
+          </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-sm font-medium">Start Date</label>
@@ -655,6 +672,191 @@ function EditOffDayModal({
               {errors.end_date && <p className="text-xs text-red-600 mt-1">{errors.end_date}</p>}
             </div>
           </div>
+
+          <div>
+            <label className="block text-sm font-medium">Reason (optional)</label>
+            <input
+              className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100"
+              value={data.reason || ''}
+              onChange={(e) => setData('reason', e.target.value)}
+            />
+            {errors.reason && <p className="text-xs text-red-600 mt-1">{errors.reason}</p>}
+          </div>
+
+          <div className="flex justify-end gap-2 pt-2">
+            <button type="button" onClick={handleClose} className="px-4 py-2 text-sm rounded-md bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700" disabled={processing}>Cancel</button>
+            <button type="submit" disabled={processing} className="px-4 py-2 text-sm rounded-md bg-coin-700 text-white hover:bg-coin-800">{processing ? 'Saving…' : 'Save'}</button>
+          </div>
+        </form>
+      </div>
+    </Modal>
+  );
+}
+
+function EditLeaveModal({
+  open,
+  onClose,
+  onSaved,
+  event,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onSaved: () => void;
+  event: EventItem | null;
+}) {
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [loadingEmployees, setLoadingEmployees] = useState(false);
+
+  const { data, setData, put, processing, errors, reset, delete: destroy } = useForm<EmployeeLeave>({
+    employee_type: 'App\\Models\\Guards\\Guard',
+    employee_id: 0,
+    start_date: '',
+    end_date: '',
+    type: 'off_day',
+    reason: '',
+    status: 'approved',
+    notes: '',
+  });
+
+  useEffect(() => {
+    if (open) {
+      setLoadingEmployees(true);
+      fetch(route('hr.employee-leaves.employees'), { headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
+        .then((r) => r.json())
+        .then((json) => {
+          setEmployees(json.employees || []);
+        })
+        .finally(() => setLoadingEmployees(false));
+    }
+  }, [open]);
+
+  useEffect(() => {
+    if (!open || !event || event.entity !== 'employee_leave') return;
+    setData({
+      employee_type: event.meta?.employee_type || 'App\\Models\\Guards\\Guard',
+      employee_id: Number(event.meta?.employee_id) || 0,
+      start_date: event.meta?.start_date || event.date || '',
+      end_date: event.meta?.end_date || '',
+      type: (event.meta?.leave_type as LeaveType) || 'off_day',
+      reason: event.meta?.reason || '',
+      status: (event.meta?.status as LeaveStatus) || 'approved',
+      notes: '',
+    });
+  }, [open, event, setData]);
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!event || event.entity !== 'employee_leave') return;
+    put(route('hr.employee-leaves.update', event.entity_id), {
+      preserveScroll: true,
+      onSuccess: () => {
+        reset();
+        onSaved();
+      },
+    });
+  };
+
+  const handleDelete = () => {
+    if (!event || event.entity !== 'employee_leave') return;
+    if (!confirm('Delete this leave record?')) return;
+    destroy(route('hr.employee-leaves.destroy', event.entity_id), {
+      preserveScroll: true,
+      onSuccess: () => {
+        reset();
+        onSaved();
+      },
+    });
+  };
+
+  const handleClose = () => {
+    if (!processing) onClose();
+  };
+
+  return (
+    <Modal show={open} onClose={handleClose} maxWidth="md">
+      <div className="px-6 py-4 border-b flex items-center justify-between bg-white dark:bg-gray-900 dark:border-gray-800">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Edit Employee Leave</h2>
+        <button type="button" onClick={handleClose} className="text-gray-400 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-200">✕</button>
+      </div>
+      <div className="px-6 py-4 bg-white dark:bg-gray-900">
+        <form className="grid grid-cols-1 gap-3" onSubmit={submit}>
+          <div>
+            <label className="block text-sm font-medium">Employee</label>
+            <select
+              className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100"
+              value={`${data.employee_type}|${data.employee_id}`}
+              onChange={(e) => {
+                const [type, id] = e.target.value.split('|');
+                setData('employee_type', type);
+                setData('employee_id', Number(id));
+              }}
+              disabled={loadingEmployees}
+            >
+              {loadingEmployees && <option>Loading...</option>}
+              {employees.map((emp) => (
+                <option key={`${emp.model}|${emp.id}`} value={`${emp.model}|${emp.id}`}>
+                  {emp.name} ({emp.type_label}) {emp.employee_id ? `- ${emp.employee_id}` : ''}
+                </option>
+              ))}
+            </select>
+            {errors.employee_id && <p className="text-xs text-red-600 mt-1">{errors.employee_id}</p>}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium">Leave Type</label>
+            <select
+              className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100"
+              value={data.type}
+              onChange={(e) => setData('type', e.target.value as LeaveType)}
+            >
+              <option value="off_day">Off Day</option>
+              <option value="sick_leave">Sick Leave</option>
+              <option value="annual_leave">Annual Leave</option>
+              <option value="unpaid_leave">Unpaid Leave</option>
+              <option value="maternity_leave">Maternity Leave</option>
+              <option value="paternity_leave">Paternity Leave</option>
+              <option value="bereavement_leave">Bereavement Leave</option>
+            </select>
+            {errors.type && <p className="text-xs text-red-600 mt-1">{errors.type}</p>}
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium">Start Date</label>
+              <input
+                type="date"
+                className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100"
+                value={data.start_date}
+                onChange={(e) => setData('start_date', e.target.value)}
+              />
+              {errors.start_date && <p className="text-xs text-red-600 mt-1">{errors.start_date}</p>}
+            </div>
+            <div>
+              <label className="block text-sm font-medium">End Date</label>
+              <input
+                type="date"
+                className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100"
+                value={data.end_date || ''}
+                onChange={(e) => setData('end_date', e.target.value)}
+              />
+              {errors.end_date && <p className="text-xs text-red-600 mt-1">{errors.end_date}</p>}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium">Status</label>
+            <select
+              className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100"
+              value={data.status}
+              onChange={(e) => setData('status', e.target.value as LeaveStatus)}
+            >
+              <option value="approved">Approved</option>
+              <option value="pending">Pending</option>
+              <option value="rejected">Rejected</option>
+            </select>
+            {errors.status && <p className="text-xs text-red-600 mt-1">{errors.status}</p>}
+          </div>
+
           <div>
             <label className="block text-sm font-medium">Reason (optional)</label>
             <input
@@ -689,73 +891,6 @@ function EditOffDayModal({
             >
               {processing ? 'Saving…' : 'Save'}
             </button>
-          </div>
-        </form>
-      </div>
-    </Modal>
-  );
-}
-
-function AddOffDayModal({ open, onClose, guards, onSaved }: { open: boolean; onClose: () => void; guards: Guard[]; onSaved: () => void }) {
-  const { data, setData, post, processing, errors, reset } = useForm<OffDay>({
-    guard_id: (guards?.[0]?.id as number) || ('' as any),
-    start_date: '',
-    end_date: '',
-    reason: '',
-  });
-
-  useEffect(() => {
-    if (open && guards && guards.length && !data.guard_id) {
-      setData('guard_id', guards[0].id);
-    }
-  }, [open, guards, data.guard_id, setData]);
-
-  const submit = (e: React.FormEvent) => {
-    e.preventDefault();
-    post(route('hr.leaves.off-days.store'), {
-      onSuccess: () => { reset(); onSaved(); },
-    });
-  };
-
-  const handleClose = () => { if (!processing) onClose(); };
-
-  return (
-    <Modal show={open} onClose={handleClose} maxWidth="md">
-      <div className="px-6 py-4 border-b flex items-center justify-between bg-white dark:bg-gray-900 dark:border-gray-800">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Add Off Day</h2>
-        <button type="button" onClick={handleClose} className="text-gray-400 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-200">✕</button>
-      </div>
-      <div className="px-6 py-4 bg-white dark:bg-gray-900">
-        <form className="grid grid-cols-1 gap-3" onSubmit={submit}>
-          <div>
-            <label className="block text-sm font-medium">Guard</label>
-            <select className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100" value={data.guard_id as any} onChange={(e) => setData('guard_id', Number(e.target.value))}>
-              {guards.map((g) => (
-                <option key={g.id} value={g.id}>{g.name} {g.employee_id ? `(${g.employee_id})` : ''}</option>
-              ))}
-            </select>
-            {errors.guard_id && <p className="text-xs text-red-600 mt-1">{errors.guard_id}</p>}
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block text-sm font-medium">Start Date</label>
-              <input type="date" className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100" value={data.start_date} onChange={(e) => setData('start_date', e.target.value)} />
-              {errors.start_date && <p className="text-xs text-red-600 mt-1">{errors.start_date}</p>}
-            </div>
-            <div>
-              <label className="block text-sm font-medium">End Date</label>
-              <input type="date" className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100" value={data.end_date || ''} onChange={(e) => setData('end_date', e.target.value)} />
-              {errors.end_date && <p className="text-xs text-red-600 mt-1">{errors.end_date}</p>}
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm font-medium">Reason (optional)</label>
-            <input className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100" value={data.reason || ''} onChange={(e) => setData('reason', e.target.value)} />
-            {errors.reason && <p className="text-xs text-red-600 mt-1">{errors.reason}</p>}
-          </div>
-          <div className="flex justify-end gap-2 pt-2">
-            <button type="button" onClick={handleClose} className="px-4 py-2 text-sm rounded-md bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700" disabled={processing}>Cancel</button>
-            <button type="submit" disabled={processing} className="px-4 py-2 text-sm rounded-md bg-coin-700 text-white hover:bg-coin-800">{processing ? 'Saving…' : 'Save'}</button>
           </div>
         </form>
       </div>

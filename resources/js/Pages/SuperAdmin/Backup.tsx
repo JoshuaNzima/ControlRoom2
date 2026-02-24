@@ -12,27 +12,51 @@ const Backup: React.FC<Props> = ({ auth }) => {
   const [files, setFiles] = React.useState<Array<{ name: string; size: number; modified_at: string }>>([]);
   const [running, setRunning] = React.useState(false);
 
-  const load = async () => {
+  const safeRoute = React.useCallback((name: string, params?: any) => {
     try {
-      const res = await fetch(route('superadmin.backups.list'));
+      return route(name, params) as unknown as string;
+    } catch {
+      return null;
+    }
+  }, []);
+
+  const load = React.useCallback(async () => {
+    const url = safeRoute('superadmin.backups.list');
+    if (!url) {
+      setFiles([]);
+      return;
+    }
+    try {
+      const res = await fetch(url, {
+        headers: {
+          Accept: 'application/json',
+        },
+      });
       const data = await res.json();
       setFiles(Array.isArray(data?.files) ? data.files : []);
     } catch (e) {
       setFiles([]);
     }
-  };
+  }, [safeRoute]);
 
-  React.useEffect(() => { load(); }, []);
+  React.useEffect(() => {
+    load();
+  }, [load]);
 
-  const runBackup = async () => {
+  const runBackup = () => {
     if (!confirm('Start a new backup now? This may take a while.')) return;
-    try {
-      setRunning(true);
-      await router.post(route('superadmin.backup.run'), {}, { preserveScroll: true });
-    } finally {
-      setRunning(false);
-      setTimeout(load, 2000);
-    }
+
+    const url = safeRoute('superadmin.backup.run');
+    if (!url) return;
+
+    setRunning(true);
+    router.post(url, {}, {
+      preserveScroll: true,
+      onFinish: () => {
+        setRunning(false);
+        setTimeout(load, 2000);
+      },
+    });
   };
   return (
     <SuperAdminLayout title="Backup" user={auth?.user}>
@@ -73,9 +97,15 @@ const Backup: React.FC<Props> = ({ auth }) => {
                     <li key={i} className="py-2 flex items-center justify-between">
                       <div>
                         <div className="text-gray-900 dark:text-gray-100 font-medium">{f.name}</div>
-                        <div className="text-xs text-gray-500">{(f.size / 1024 / 1024).toFixed(2)} MB • {new Date(f.modified_at).toLocaleString()}</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">{(f.size / 1024 / 1024).toFixed(2)} MB • {new Date(f.modified_at).toLocaleString()}</div>
                       </div>
-                      <a href={route('superadmin.backups.download', { file: f.name })} className="text-xs text-rose-600 hover:underline">Download</a>
+                      {(() => {
+                        const href = safeRoute('superadmin.backups.download', { file: f.name });
+                        if (!href) return null;
+                        return (
+                          <a href={href} className="text-xs text-rose-600 dark:text-rose-300 hover:underline">Download</a>
+                        );
+                      })()}
                     </li>
                   ))}
                 </ul>

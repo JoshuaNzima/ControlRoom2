@@ -20,7 +20,7 @@ class SupervisorController extends Controller
 		}
 
 		$supervisors = User::query()
-			->role('supervisor')
+			->role(['supervisor', 'sergeant'])
 			->where('zone_id', $user->zone_id)
 			->orderBy('name')
 			->get(['id', 'name', 'employee_id', 'email', 'phone', 'status', 'zone_id', 'updated_at']);
@@ -43,7 +43,7 @@ class SupervisorController extends Controller
 				'email' => (string) ($sup->email ?? ''),
 				'phone' => (string) ($sup->phone ?? ''),
 				'status' => (string) ($sup->status ?? 'active'),
-				'position' => 'Supervisor',
+				'position' => $sup->getRoleNames()->first() ?? 'Supervisor',
 				'zone_name' => '',
 				'team_size' => (int) ($teamSizes->get($sup->id) ?? 0),
 				'performance_score' => 0,

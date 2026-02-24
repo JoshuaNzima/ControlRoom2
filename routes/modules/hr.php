@@ -150,7 +150,27 @@ Route::middleware(['auth'])->group(function () {
 		Route::post('/safety/near-misses', [\App\Http\Controllers\HR\SafetyController::class, 'storeNearMiss'])->name('safety.near-misses.store');
 		Route::get('/safety/incidents/export', [\App\Http\Controllers\HR\SafetyController::class, 'incidentsExport'])->name('safety.incidents.export');
 
-		// Leave & Roster management
+		// Employee Leaves (all employee types)
+		Route::get('/employee-leaves', [\App\Http\Controllers\HR\EmployeeLeaveController::class, 'index'])->name('employee-leaves.index');
+		Route::get('/employee-leaves/events', [\App\Http\Controllers\HR\EmployeeLeaveController::class, 'events'])->name('employee-leaves.events');
+		Route::get('/employee-leaves/employees', [\App\Http\Controllers\HR\EmployeeLeaveController::class, 'employees'])->name('employee-leaves.employees');
+		Route::post('/employee-leaves', [\App\Http\Controllers\HR\EmployeeLeaveController::class, 'store'])->name('employee-leaves.store');
+		Route::put('/employee-leaves/{leave}', [\App\Http\Controllers\HR\EmployeeLeaveController::class, 'update'])->name('employee-leaves.update');
+		Route::delete('/employee-leaves/{leave}', [\App\Http\Controllers\HR\EmployeeLeaveController::class, 'destroy'])->name('employee-leaves.destroy');
+		Route::post('/employee-leaves/{leave}/approve', [\App\Http\Controllers\HR\EmployeeLeaveController::class, 'approve'])->name('employee-leaves.approve');
+		Route::post('/employee-leaves/{leave}/reject', [\App\Http\Controllers\HR\EmployeeLeaveController::class, 'reject'])->name('employee-leaves.reject');
+
+		// Supervisor/Sergeant Incentives
+		Route::get('/supervisor-incentives', [\App\Http\Controllers\HR\SupervisorIncentiveController::class, 'index'])->name('supervisor-incentives.index');
+		Route::post('/supervisor-incentives/profiles', [\App\Http\Controllers\HR\SupervisorIncentiveController::class, 'storeProfile'])->name('supervisor-incentives.profiles.store');
+		Route::put('/supervisor-incentives/profiles/{profile}', [\App\Http\Controllers\HR\SupervisorIncentiveController::class, 'updateProfile'])->name('supervisor-incentives.profiles.update');
+		Route::post('/supervisor-incentives/calculate', [\App\Http\Controllers\HR\SupervisorIncentiveController::class, 'calculateIncentives'])->name('supervisor-incentives.calculate');
+		Route::get('/supervisor-incentives/records', [\App\Http\Controllers\HR\SupervisorIncentiveController::class, 'getRecords'])->name('supervisor-incentives.records');
+		Route::post('/supervisor-incentives/records/{record}/approve', [\App\Http\Controllers\HR\SupervisorIncentiveController::class, 'approveRecord'])->name('supervisor-incentives.records.approve');
+		Route::post('/supervisor-incentives/records/{record}/pay', [\App\Http\Controllers\HR\SupervisorIncentiveController::class, 'markAsPaid'])->name('supervisor-incentives.records.pay');
+		Route::delete('/supervisor-incentives/records/{record}', [\App\Http\Controllers\HR\SupervisorIncentiveController::class, 'deleteRecord'])->name('supervisor-incentives.records.destroy');
+
+		// Legacy Guard-only Leave & Roster management (kept for backwards compatibility)
 		Route::post('/leaves/holidays', [\App\Http\Controllers\HR\LeaveController::class, 'storeHoliday'])->name('leaves.holidays.store');
 		Route::put('/leaves/holidays/{holiday}', [\App\Http\Controllers\HR\LeaveController::class, 'updateHoliday'])->name('leaves.holidays.update');
 		Route::delete('/leaves/holidays/{holiday}', [\App\Http\Controllers\HR\LeaveController::class, 'destroyHoliday'])->name('leaves.holidays.destroy');

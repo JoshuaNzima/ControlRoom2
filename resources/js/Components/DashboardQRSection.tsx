@@ -3,7 +3,6 @@ import React from 'react';
 import { Card } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import { ScrollArea } from '@/Components/ui/scroll-area';
-import QRCodeGenerator from '@/Components/QRCodeGenerator';
 
 interface Props {
 	zones?: any[];
@@ -11,7 +10,7 @@ interface Props {
 	assets?: any[];
 }
 
-const DashboardQRSection: React.FC<Props> = ({ zones = [], checkpoints = [], assets = [] }) => {
+const DashboardQRSection: React.FC<Props> = ({ zones = [], checkpoints = [] }) => {
 	return (
 		<Card className="col-span-full xl:col-span-2">
 			<div className="p-6">
@@ -21,7 +20,7 @@ const DashboardQRSection: React.FC<Props> = ({ zones = [], checkpoints = [], ass
 					</h2>
 					<Button
 						variant="outline"
-						onClick={() => window.location.href = route('admin.qr-codes')}
+						onClick={() => window.location.href = route('control-room.qr-codes.index')}
 					>
 						View All QR Codes
 					</Button>
@@ -29,7 +28,13 @@ const DashboardQRSection: React.FC<Props> = ({ zones = [], checkpoints = [], ass
 
 				<ScrollArea className="h-[600px] pr-4">
 					<div className="space-y-6">
-						<QRCodeGenerator />
+						{/* Site QR Info */}
+						<div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+							<h3 className="text-sm font-medium mb-2">Site QR Codes</h3>
+							<p className="text-sm text-gray-600 dark:text-gray-400">
+								Each client site has a unique QR code (SITE-XXXXXXXX format) that can be scanned for attendance and verification.
+							</p>
+						</div>
                         
 						{/* Quick Access Section */}
 						<div className="mt-6">
@@ -42,10 +47,7 @@ const DashboardQRSection: React.FC<Props> = ({ zones = [], checkpoints = [], ass
 										{zones?.slice(0, 3).map((zone) => (
 											<div
 												key={zone.id}
-												className="text-sm p-2 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100"
-												onClick={() => {
-													// Pre-fill QR generator with zone data
-												}}
+												className="text-sm p-2 bg-gray-50 rounded-lg"
 											>
 												{zone.name}
 											</div>
@@ -60,10 +62,7 @@ const DashboardQRSection: React.FC<Props> = ({ zones = [], checkpoints = [], ass
 										{checkpoints?.slice(0, 3).map((checkpoint) => (
 											<div
 												key={checkpoint.id}
-												className="text-sm p-2 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100"
-												onClick={() => {
-													// Pre-fill QR generator with checkpoint data
-												}}
+												className="text-sm p-2 bg-gray-50 rounded-lg"
 											>
 												{checkpoint.name}
 											</div>

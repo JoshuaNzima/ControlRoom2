@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
+use App\Http\Controllers\SupervisorQRCodesController;
 
 Route::middleware(['auth'])->group(function () {
     // Allow specific roles or users with permission (include admin role)
@@ -24,11 +25,21 @@ Route::middleware(['auth'])->group(function () {
 		Route::get('/settings', [\App\Http\Controllers\ControlRoom\SettingsController::class, 'index'])->name('settings');
 		Route::post('/settings', [\App\Http\Controllers\ControlRoom\SettingsController::class, 'update'])->name('settings.update');
 		
+		// QR Code Management (Control Room - bulk generation)
+		Route::prefix('qr-codes')->name('qr-codes.')->middleware(['role_or_permission:control_room_operator|operations_officer|manager|super_admin'])->group(function () {
+			Route::get('/', [SupervisorQRCodesController::class, 'index'])->name('index');
+			Route::get('/download-bulk', [SupervisorQRCodesController::class, 'downloadBulk'])->name('download-bulk');
+			Route::get('/download-saved', [SupervisorQRCodesController::class, 'downloadSaved'])->name('download-saved');
+			Route::get('/list-saved', [SupervisorQRCodesController::class, 'listSaved'])->name('list-saved');
+		});
+		
 		// Clients Management (view-only, assignments)
 		Route::get('/clients', [\App\Http\Controllers\ControlRoom\ClientsController::class, 'index'])->name('clients');
 		Route::get('/clients/{client}', [\App\Http\Controllers\ControlRoom\ClientsController::class, 'show'])->name('clients.show');
 		Route::post('/clients/{client}/assign-guard', [\App\Http\Controllers\ControlRoom\ClientsController::class, 'assignGuard'])->name('clients.assign-guard');
 		Route::post('/clients/{client}/assign-supervisor', [\App\Http\Controllers\ControlRoom\ClientsController::class, 'assignSupervisor'])->name('clients.assign-supervisor');
+		Route::post('/clients/{client}/assign-sergeant', [\App\Http\Controllers\ControlRoom\ClientsController::class, 'assignSergeant'])->name('clients.assign-sergeant');
+		Route::post('/clients/{client}/unassign-sergeant', [\App\Http\Controllers\ControlRoom\ClientsController::class, 'unassignSergeant'])->name('clients.unassign-sergeant');
 		// Lightweight JSON for active client sites (for assignment pickers)
 		Route::get('/clients/sites/json', [\App\Http\Controllers\ControlRoom\ClientsController::class, 'sitesJson'])->name('clients.sites.json');
 		// Generate QR code for a specific client site (includes client name and GPS coords)
@@ -78,6 +89,12 @@ Route::middleware(['auth'])->group(function () {
 			Route::post('/relief/bulk', [\App\Http\Controllers\ControlRoom\RosterController::class, 'assignReliefBulk'])->name('relief.assign-bulk');
 			Route::post('/relief/delete', [\App\Http\Controllers\ControlRoom\RosterController::class, 'deleteRelief'])->name('relief.delete');
 			Route::post('/off-days/bulk', [\App\Http\Controllers\ControlRoom\RosterController::class, 'offDaysBulk'])->name('off-days.bulk');
+			Route::post('/manual-entry', [\App\Http\Controllers\ControlRoom\RosterController::class, 'manualEntry'])
+				->middleware(['role_or_permission:control_room_operator|operations_officer|manager|super_admin'])
+				->name('manual-entry');
+			Route::post('/manual-entry-bulk', [\App\Http\Controllers\ControlRoom\RosterController::class, 'manualEntryBulk'])
+				->middleware(['role_or_permission:control_room_operator|operations_officer|manager|super_admin'])
+				->name('manual-entry-bulk');
 
 			// Relief bundles (6 sites + 1 reliever)
 			Route::get('/bundles', [\App\Http\Controllers\ControlRoom\RosterController::class, 'bundles'])->name('bundles');
@@ -146,6 +163,20 @@ Route::middleware(['auth'])->group(function () {
 		Route::post('cameras/{camera}/test', [\App\Http\Controllers\ControlRoom\CameraController::class, 'testConnection'])->name('cameras.test');
 		Route::post('cameras/{camera}/restart', [\App\Http\Controllers\ControlRoom\CameraController::class, 'restart'])->name('cameras.restart');
 		
+		// NVR/DVR Device Management
+		Route::prefix('cameras/nvrs')->name('cameras.nvrs.')->group(function () {
+			Route::get('/', [\App\Http\Controllers\ControlRoom\NvrDeviceController::class, 'index'])->name('index');
+			Route::post('/', [\App\Http\Controllers\ControlRoom\NvrDeviceController::class, 'store'])->name('store');
+			Route::get('/{nvr}', [\App\Http\Controllers\ControlRoom\NvrDeviceController::class, 'show'])->name('show');
+			Route::put('/{nvr}', [\App\Http\Controllers\ControlRoom\NvrDeviceController::class, 'update'])->name('update');
+			Route::delete('/{nvr}', [\App\Http\Controllers\ControlRoom\NvrDeviceController::class, 'destroy'])->name('destroy');
+			Route::post('/{nvr}/test', [\App\Http\Controllers\ControlRoom\NvrDeviceController::class, 'testConnection'])->name('test');
+			Route::post('/{nvr}/import', [\App\Http\Controllers\ControlRoom\NvrDeviceController::class, 'importCameras'])->name('import');
+			Route::post('/{nvr}/sync', [\App\Http\Controllers\ControlRoom\NvrDeviceController::class, 'syncAllChannels'])->name('sync');
+			Route::get('/{nvr}/channels', [\App\Http\Controllers\ControlRoom\NvrDeviceController::class, 'getAvailableChannels'])->name('channels');
+			Route::post('/{nvr}/quick-import', [\App\Http\Controllers\ControlRoom\NvrDeviceController::class, 'quickImport'])->name('quick-import');
+		});
+		
 		// Flags Management
 		Route::resource('flags', \App\Http\Controllers\ControlRoom\FlagController::class);
 		Route::post('flags/{flag}/acknowledge', [\App\Http\Controllers\ControlRoom\FlagController::class, 'acknowledge'])->name('flags.acknowledge');
@@ -185,6 +216,9 @@ Route::middleware(['auth'])->group(function () {
 		Route::get('/live/alerts', [\App\Http\Controllers\ControlRoom\LiveMonitoringController::class, 'getAttendanceAlerts'])->name('live.alerts');
 
 		Route::prefix('attendance')->name('attendance.')->middleware(['role_or_permission:control_room_operator|operations_officer|manager|super_admin'])->group(function () {
+			Route::get('/', [\App\Http\Controllers\ControlRoom\AttendanceController::class, 'index'])->name('index');
+			Route::get('/{attendance}/edit', [\App\Http\Controllers\ControlRoom\AttendanceController::class, 'edit'])->name('edit');
+			Route::put('/{attendance}', [\App\Http\Controllers\ControlRoom\AttendanceController::class, 'update'])->name('update');
 			Route::post('/mark-present', [\App\Http\Controllers\ControlRoom\AttendanceController::class, 'markPresent'])->name('mark-present');
 			Route::post('/mark-absent', [\App\Http\Controllers\ControlRoom\AttendanceController::class, 'markAbsent'])->name('mark-absent');
 			Route::post('/mark-covered', [\App\Http\Controllers\ControlRoom\AttendanceController::class, 'markCovered'])->name('mark-covered');

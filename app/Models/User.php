@@ -148,7 +148,23 @@ class User extends Authenticatable
      */
     public function isSupervisor(): bool
     {
-        return $this->hasRole('supervisor', 'admin');
+        return $this->hasRole('supervisor');
+    }
+
+    /**
+     * Check if user is a sergeant (roaming guard supervisor).
+     */
+    public function isSergeant(): bool
+    {
+        return $this->hasRole('sergeant');
+    }
+
+    /**
+     * Check if user is a supervisor or sergeant (both manage guards).
+     */
+    public function isGuardManager(): bool
+    {
+        return $this->hasRole('supervisor') || $this->hasRole('sergeant');
     }
 
     /**

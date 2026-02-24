@@ -1,15 +1,42 @@
 import React, { useState } from 'react';
-import { Head, router, usePage } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import HRLayout from '@/Layouts/HRLayout';
 import PromoteGuardModal from '@/Components/HR/PromoteGuardModal';
 import ConfirmModal from '@/Components/ConfirmModal';
 import ReasonModal from '@/Components/ReasonModal';
 
+interface Guard {
+  id: number;
+  name: string;
+  email?: string;
+  phone?: string;
+  employee_role?: string;
+  status: string;
+}
+
+interface PageProps {
+  guards?: {
+    data: Guard[];
+    meta?: any;
+    links?: Array<{ url: string | null; label: string; active: boolean }>;
+  };
+  filters?: {
+    search?: string;
+    status?: string;
+    employee_role?: string;
+    per_page?: number | string;
+  };
+  zones?: any[];
+  auth?: { user?: any };
+}
+
 export default function HREmployees() {
-  const { guards, filters, zones, auth }: any = usePage().props;
+  const { guards, filters, zones, auth }: PageProps = usePage().props as any;
   const [search, setSearch] = useState(filters?.search || '');
   const [status, setStatus] = useState(filters?.status || '');
   const [employeeRole, setEmployeeRole] = useState(filters?.employee_role || '');
+  const initialPerPage = Number(filters?.per_page ?? guards?.meta?.per_page ?? 20);
+  const [perPage, setPerPage] = useState<number>(initialPerPage);
   const [promoteOpen, setPromoteOpen] = useState(false);
   const [currentGuard, setCurrentGuard] = useState<any | null>(null);
 
@@ -31,7 +58,7 @@ export default function HREmployees() {
   };
 
   const onFilter = () => {
-    router.get(route('hr.employees.index'), { search, status, employee_role: employeeRole }, { preserveState: true, replace: true });
+    router.get(route('hr.employees.index'), { search, status, employee_role: employeeRole, per_page: perPage }, { preserveState: true, replace: true });
   };
 
   const openPromote = (guard: any) => {
@@ -74,7 +101,7 @@ export default function HREmployees() {
           </div>
 
           <div className="rounded-2xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-4 md:p-6 mb-4">
-            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 mb-4">
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -110,6 +137,28 @@ export default function HREmployees() {
                   Reset
                 </button>
               </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <label className="text-sm text-gray-600 dark:text-slate-400">Per Page:</label>
+              <select
+                value={String(perPage)}
+                onChange={(e) => {
+                  const v = Number(e.target.value);
+                  setPerPage(v);
+                  router.get(route('hr.employees.index'), { search, status, employee_role: employeeRole, per_page: v, page: 1 }, { preserveState: true });
+                }}
+                className="px-3 py-1.5 border border-gray-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-gray-900 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              >
+                <option value={10}>10</option>
+                <option value={20}>20</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+              </select>
+              {guards?.meta && (
+                <span className="text-sm text-gray-500 dark:text-slate-400">
+                  Showing {guards.meta.from || 0} to {guards.meta.to || 0} of {guards.meta.total || 0}
+                </span>
+              )}
             </div>
           </div>
 
@@ -197,6 +246,25 @@ export default function HREmployees() {
               </tbody>
             </table>
           </div>
+          {/* Pagination */}
+          {guards?.meta && guards.meta.last_page > 1 && (
+            <div className="mt-4 flex flex-wrap justify-center gap-2">
+              {guards.links && guards.links.map((link: any, index: number) => (
+                <Link
+                  key={index}
+                  href={link.url || '#'}
+                  className={`px-3 py-2 rounded ${
+                    link.active
+                      ? 'bg-indigo-600 text-white'
+                      : link.url
+                      ? 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 dark:bg-slate-900 dark:text-slate-200 dark:border-slate-700 dark:hover:bg-slate-800'
+                      : 'bg-transparent text-gray-400 cursor-default'
+                  }`}
+                  dangerouslySetInnerHTML={{ __html: link.label }}
+                />
+              ))}
+            </div>
+          )}
         </div>
       </div>
       <PromoteGuardModal

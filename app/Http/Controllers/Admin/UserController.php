@@ -18,20 +18,22 @@ class UserController extends Controller
 {
     public function index()
     {
+        $perPage = request('per_page', 20);
         $users = User::with('roles')
             ->when(request('search'), function($q, $search) {
                 $q->where('name', 'like', "%{$search}%")
                   ->orWhere('email', 'like', "%{$search}%");
             })
             ->orderBy('name')
-            ->paginate(20);
+            ->paginate($perPage)
+            ->withQueryString();
 
         $roles = Role::all();
         $zones = Zone::orderBy('name')->get(['id','name']);
 
         return Inertia::render('Admin/Users/Index', [
             'users' => $users,
-            'filters' => request()->only('search'),
+            'filters' => request()->only('search', 'per_page'),
             'roles' => $roles,
             'zones' => $zones,
         ]);

@@ -21,7 +21,30 @@ interface ModuleNavItem {
     icon: React.ReactNode;
     current: boolean;
     badge?: string;
+    description?: string;
 }
+
+// Quick Stats Component for Header
+const QuickStats: React.FC = () => {
+    const { counters } = useCounters();
+    const stats = [
+        { label: 'Approvals', value: (Number(counters?.requisitions_pending_admin || 0) + Number(counters?.finance_approvals_pending || 0)), color: 'bg-amber-500' },
+        { label: 'Open Downs', value: counters?.control_downs_active || 0, color: 'bg-red-500' },
+        { label: 'Messages', value: counters?.notifications_unread || 0, color: 'bg-blue-500' },
+    ].filter(s => s.value > 0);
+
+    if (stats.length === 0) return null;
+
+    return (
+        <div className="hidden lg:flex items-center gap-2 mr-4">
+            {stats.map((stat) => (
+                <div key={stat.label} className={`${stat.color} text-white px-3 py-1 rounded-full text-xs font-medium`}>
+                    {stat.value} {stat.label}
+                </div>
+            ))}
+        </div>
+    );
+};
 
 export default function SuperAdminLayout({ title, children, user }: Props) {
     const [sidebarOpen, setSidebarOpen] = React.useState(false);
@@ -102,6 +125,12 @@ export default function SuperAdminLayout({ title, children, user }: Props) {
             href: route('superadmin.drivers'),
             icon: <IconMapper name="Truck" size={24} />,
             current: window.location.pathname === pathOf('superadmin.drivers')
+        },
+        {
+            name: 'QR Codes',
+            href: route('superadmin.qr-codes'),
+            icon: <IconMapper name="QrCode" size={24} />,
+            current: window.location.pathname === pathOf('superadmin.qr-codes')
         },
         { 
             name: 'Settings', 
@@ -265,6 +294,7 @@ export default function SuperAdminLayout({ title, children, user }: Props) {
                                 <h1 className="text-xl font-semibold text-red-900 dark:text-gray-100 truncate">{title}</h1>
                             </div>
                             <div className="flex items-center justify-end gap-2 sm:gap-4">
+                                <QuickStats />
                                 <NotificationBell />
                                 <div className="hidden sm:flex items-center gap-4">
                                     <QuickBudgetButton label="Budget" />

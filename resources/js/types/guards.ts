@@ -34,4 +34,5 @@ export interface GuardFormData {
     status: 'active' | 'inactive' | 'suspended' | 'dismissed' | 'absconded';
     employee_role?: 'guard' | 'driver';
     client_id?: string;
+    default_off_day?: number | null;
 }

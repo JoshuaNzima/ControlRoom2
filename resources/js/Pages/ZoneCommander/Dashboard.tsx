@@ -4,6 +4,7 @@ import ZoneCommanderLayout from '@/Layouts/ZoneCommanderLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import IconMapper from '@/Components/IconMapper';
+import ScannerModal from '@/Components/Scanner/ScannerModal';
 import { format } from 'date-fns';
 import { Line, Doughnut } from 'react-chartjs-2';
 import {
@@ -101,6 +102,7 @@ export default function ZoneDashboard({ zone, sites, at_risk_guards, recent_aler
   const [currentTime, setCurrentTime] = useState(new Date());
   const [isOnline, setIsOnline] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
+  const [scannerOpen, setScannerOpen] = useState(false);
   const [hasError, setHasError] = useState(false);
 
   useEffect(() => {
@@ -226,7 +228,37 @@ export default function ZoneDashboard({ zone, sites, at_risk_guards, recent_aler
     <ZoneCommanderLayout title="Zone Dashboard">
       <Head title={`${zone.name} Zone Dashboard`} />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+      <ScannerModal open={scannerOpen} onClose={() => setScannerOpen(false)} />
+
+      <div className="w-full min-h-screen p-3 sm:p-4 lg:p-6 space-y-4 sm:space-y-6">
+        {/* Header */}
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{zone.name}</h1>
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              Zone Commander Dashboard
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            <Button
+              variant="outline"
+              onClick={() => setScannerOpen(true)}
+              className="gap-2"
+            >
+              <IconMapper name="ScanLine" size={18} />
+              Scan QR
+            </Button>
+            <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm ${
+              isOnline
+                ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200'
+                : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200'
+            }`}>
+              <span className={`w-2 h-2 rounded-full ${isOnline ? 'bg-green-500' : 'bg-red-500'}`} />
+              {isOnline ? 'Online' : 'Offline'}
+            </div>
+          </div>
+        </div>
+
         {/* Zone Overview with Real-time Status */}
         <div className="bg-gradient-to-r from-red-600 via-rose-600 to-pink-600 rounded-2xl shadow-xl p-8 text-white relative overflow-hidden">
           <div className="absolute inset-0 bg-black/10"></div>
@@ -389,14 +421,16 @@ export default function ZoneDashboard({ zone, sites, at_risk_guards, recent_aler
                   <IconMapper name="Building" className="w-5 h-5 text-blue-600 dark:text-blue-200" />
                   Sites Overview
                 </span>
-                <Button variant="outline" size="sm" className="hover:bg-blue-50 dark:hover:bg-blue-900/20 dark:border-gray-700 dark:text-gray-100">View All Sites</Button>
+                <Button variant="outline" size="sm" className="hover:bg-blue-50 dark:hover:bg-blue-900/20 dark:border-gray-700 dark:text-gray-100">
+                  View All Sites
+                </Button>
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
                 {sites.map((site, index) => (
-                  <div 
-                    key={site.id} 
+                  <div
+                    key={site.id}
                     className="p-4 rounded-lg border hover:border-blue-200 hover:bg-blue-50/50 transition-all duration-300 group dark:border-gray-800 dark:hover:border-blue-700/40 dark:hover:bg-blue-900/10"
                     style={{ animationDelay: `${index * 100}ms` }}
                   >
@@ -423,7 +457,6 @@ export default function ZoneDashboard({ zone, sites, at_risk_guards, recent_aler
             </CardContent>
           </Card>
 
-          {/* At-Risk Guards */}
           <Card className="hover:shadow-lg transition-shadow duration-300 dark:bg-gray-900 dark:border-gray-800">
             <CardHeader>
               <CardTitle className="flex justify-between items-center">
@@ -431,14 +464,16 @@ export default function ZoneDashboard({ zone, sites, at_risk_guards, recent_aler
                   <IconMapper name="AlertTriangle" className="w-5 h-5 text-red-600 dark:text-red-300" />
                   At-Risk Guards
                 </span>
-                <Button variant="outline" size="sm" className="hover:bg-red-50 dark:hover:bg-red-900/20 dark:border-gray-700 dark:text-gray-100">View All Guards</Button>
+                <Button asChild variant="outline" size="sm" className="hover:bg-red-50 dark:hover:bg-red-900/20 dark:border-gray-700 dark:text-gray-100">
+                  <a href={route('zone.guards.index')}>View All Guards</a>
+                </Button>
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
                 {at_risk_guards.map((guard, index) => (
-                  <div 
-                    key={guard.id} 
+                  <div
+                    key={guard.id}
                     className="p-4 rounded-lg border hover:border-red-200 hover:bg-red-50/50 transition-all duration-300 group dark:border-gray-800 dark:hover:border-red-700/40 dark:hover:bg-red-900/10"
                     style={{ animationDelay: `${index * 100}ms` }}
                   >
@@ -446,9 +481,7 @@ export default function ZoneDashboard({ zone, sites, at_risk_guards, recent_aler
                       <div className="flex-1">
                         <h4 className="font-medium group-hover:text-red-900 transition-colors dark:text-gray-100 dark:group-hover:text-red-200">{guard.name}</h4>
                         <p className="text-sm text-gray-500 dark:text-gray-300">
-                          {guard.current_site 
-                            ? `${guard.current_site.client_name} - ${guard.current_site.name}`
-                            : 'Unassigned'}
+                          {guard.current_site ? `${guard.current_site.client_name} - ${guard.current_site.name}` : 'Unassigned'}
                         </p>
                         <div className="flex items-center gap-2 mt-2">
                           <IconMapper name="Clock" className="w-3 h-3 text-gray-400" />
@@ -459,9 +492,7 @@ export default function ZoneDashboard({ zone, sites, at_risk_guards, recent_aler
                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${getRiskLevelColor(guard.risk_level)}`}>
                           {guard.risk_level.toUpperCase()}
                         </span>
-                        <span className="text-sm text-gray-500 dark:text-gray-300 text-center">
-                          {guard.infraction_count} infractions
-                        </span>
+                        <span className="text-sm text-gray-500 dark:text-gray-300 text-center">{guard.infraction_count} infractions</span>
                       </div>
                     </div>
                   </div>

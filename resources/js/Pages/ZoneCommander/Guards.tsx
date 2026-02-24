@@ -94,7 +94,7 @@ export default function Guards({ guards = [] }: GuardsProps) {
 		<ZoneCommanderLayout title="Guards">
       <Head title="Guards Management" />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+      <div className="w-full min-h-screen p-3 sm:p-4 lg:p-6 space-y-4 sm:space-y-6">
         {/* Overview Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <Card className="hover:shadow-lg transition-shadow duration-300">
@@ -163,7 +163,7 @@ export default function Guards({ guards = [] }: GuardsProps) {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-col lg:flex-row gap-4 mb-6">
+            <div className="flex flex-col gap-4 mb-6">
               <div className="flex-1">
                 <Input
                   placeholder="Search guards by name, ID, email, or site..."
@@ -172,7 +172,7 @@ export default function Guards({ guards = [] }: GuardsProps) {
                   className="w-full"
                 />
               </div>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <Button
                   variant={statusFilter === 'all' ? 'default' : 'outline'}
                   onClick={() => setStatusFilter('all')}
@@ -216,7 +216,7 @@ export default function Guards({ guards = [] }: GuardsProps) {
                   Absconded
                 </Button>
               </div>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <Button
                   variant={riskFilter === 'all' ? 'default' : 'outline'}
                   onClick={() => setRiskFilter('all')}
@@ -253,8 +253,8 @@ export default function Guards({ guards = [] }: GuardsProps) {
               {filteredGuards.map((guard) => (
                 <Card key={guard.id} className="hover:shadow-lg transition-shadow duration-300">
                   <CardContent className="p-6">
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
+                    <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
+                      <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-3 mb-2">
                           <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{guard.name}</h3>
                           <Badge className={getStatusColor(guard.status)}>
@@ -333,11 +333,11 @@ export default function Guards({ guards = [] }: GuardsProps) {
                         </div>
                       </div>
 
-                      <div className="flex flex-col gap-2 ml-4">
+                      <div className="flex flex-col gap-2 sm:ml-4 w-full sm:w-auto">
                         <Button
                           variant="outline"
                           size="sm"
-                          className="hover:bg-gray-50 dark:hover:bg-gray-900"
+                          className="hover:bg-gray-50 dark:hover:bg-gray-900 w-full sm:w-auto"
                           onClick={() => {
                             setDeployGuard(guard);
                             setDeployOpen(true);

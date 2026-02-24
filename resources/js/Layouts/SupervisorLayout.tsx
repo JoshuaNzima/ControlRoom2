@@ -8,15 +8,14 @@ import { useTheme } from '@/Providers/ThemeProvider';
 import useNotifications from '@/Hooks/useNotifications';
 import { Toaster } from 'react-hot-toast';
 import NotificationBell from '@/Components/Common/NotificationBell';
-import QuickRequisitionButton from '@/Components/Requisitions/QuickRequisitionButton';
 import QuickBudgetButton from '@/Components/Budgets/QuickBudgetButton';
 
 const navLinks = [
-  { href: "/supervisor/dashboard", label: "Dashboard", icon: <IconMapper name="Grid" size={22} /> },
-  { href: "/supervisor/attendance", label: "Attendance", icon: <IconMapper name="Clipboard" size={22} /> },
-  { href: "/supervisor/guards", label: "Guards", icon: <IconMapper name="Users2" size={22} /> },
-  { href: "/supervisor/assignments", label: "Assignments", icon: <IconMapper name="Clipboard" size={22} /> },
-  { href: "/requisitions", label: "My Requisitions", icon: <IconMapper name="ClipboardList" size={22} /> },
+  { href: "/supervisor/overview", label: "Overview", icon: <IconMapper name="LayoutDashboard" size={22} /> },
+  { href: "/supervisor/guards", label: "Guards", icon: <IconMapper name="Users" size={22} /> },
+  { href: "/supervisor/analytics", label: "Analytics", icon: <IconMapper name="BarChart3" size={22} /> },
+  { href: "/supervisor/attendance", label: "Attendance", icon: <IconMapper name="ClipboardList" size={22} /> },
+  { href: "/supervisor/assignments", label: "Assignments", icon: <IconMapper name="MapPin" size={22} /> },
 ];
 
 interface SupervisorLayoutProps {
@@ -34,12 +33,17 @@ interface Notification {
 }
 
 export default function SupervisorLayout({ children, title }: SupervisorLayoutProps) {
-  const { auth, notifications: serverNotifications } = usePage<PageProps<{ auth: { user: any }, notifications?: Notification[] }>>().props;
+  const { auth, roleType, isSergeant: pageIsSergeant, notifications: serverNotifications } = usePage<PageProps<{ auth: { user: any }, roleType?: string, isSergeant?: boolean, notifications?: Notification[] }>>().props;
   const { url } = usePage();
   const { theme, toggle } = useTheme();
   const isSuperAdmin = Array.isArray((auth?.user as any)?.roles)
     ? (auth?.user as any).roles.includes('super_admin')
     : (auth?.user as any)?.roles === 'super_admin';
+  
+  // Detect if user is a sergeant (from page props or user roles)
+  const isSergeant = pageIsSergeant || (auth?.user as any)?.roles?.includes('sergeant') || roleType === 'sergeant';
+  const roleLabel = isSergeant ? 'Sergeant' : 'Supervisor';
+  const displayTitle = title ? `${roleLabel} - ${title}` : `${roleLabel} Dashboard`;
   
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
@@ -79,7 +83,12 @@ export default function SupervisorLayout({ children, title }: SupervisorLayoutPr
   const markAllAsRead = () => setNotifications(notifications.map(n => ({ ...n, read: true })));
 
   const getNotificationIcon = (type: string) => {
-    switch (type) { case 'warning': return '⚠️'; case 'success': return '✅'; case 'error': return '❌'; default: return '📢'; }
+    switch (type) { 
+      case 'warning': return <IconMapper name="AlertTriangle" size={20} className="text-yellow-500" />; 
+      case 'success': return <IconMapper name="CheckCircle" size={20} className="text-green-500" />; 
+      case 'error': return <IconMapper name="XCircle" size={20} className="text-red-500" />; 
+      default: return <IconMapper name="Bell" size={20} className="text-blue-500" />; 
+    }
   };
 
   return (
@@ -94,13 +103,11 @@ export default function SupervisorLayout({ children, title }: SupervisorLayoutPr
           <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-3 rounded-lg hover:bg-gray-100">
           {sidebarOpen ? <IconMapper name="X" size={24} /> : <IconMapper name="Menu" size={24} />}
         </button>
-        <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-100 truncate">{title || "CoinSec"}</h1>
+        <div className="flex flex-col items-center">
+          <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-100 truncate">{displayTitle || "CoinSec"}</h1>
+        </div>
         <div className="flex items-center justify-end gap-2 shrink-0">
           <NotificationBell />
-          <div className="hidden sm:flex items-center gap-2">
-            <QuickBudgetButton />
-            <QuickRequisitionButton />
-          </div>
           {isSuperAdmin && (
             <Link href={route('superadmin.dashboard')} className="inline-flex items-center gap-2 rounded-md bg-red-700 px-2 py-2 sm:px-3 sm:py-1.5 text-xs font-medium text-white">
               <IconMapper name="Shield" size={14} />
@@ -134,7 +141,7 @@ export default function SupervisorLayout({ children, title }: SupervisorLayoutPr
             <div className="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center text-white font-bold">{auth.user.name.charAt(0)}</div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-white truncate">{auth.user.name}</p>
-              <p className="text-xs text-red-200 dark:text-gray-400 truncate">{auth.user.email}</p>
+              <p className="text-xs text-red-200 dark:text-gray-400 truncate">{roleLabel}</p>
             </div>
           </div>
         </div>
@@ -166,10 +173,11 @@ export default function SupervisorLayout({ children, title }: SupervisorLayoutPr
       <div className="flex-1 flex flex-col min-h-0">
         {/* Desktop Header */}
         <header className="hidden md:flex h-16 bg-red-50 dark:bg-gray-900 border-b border-red-100 dark:border-gray-800 px-6 items-center justify-between shadow-sm">
-          <h1 className="text-xl font-bold text-red-900 dark:text-gray-100">{title || "Dashboard"}</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-xl font-bold text-red-900 dark:text-gray-100">{displayTitle || "Dashboard"}</h1>
+          </div>
           <div className="flex items-center gap-3">
             <QuickBudgetButton />
-            <QuickRequisitionButton />
             <NotificationBell />
             <Link href={route('profile.dashboard')} className="inline-flex items-center px-3 py-1.5 rounded-md bg-gray-800 text-white hover:bg-gray-700 text-sm">
               My Profile

@@ -33,8 +33,15 @@ class ClientsController extends Controller
 	public function show(Client $client)
 	{
 		$client->load(['sites' => function($q){ $q->select(['id','client_id','name','status']); }]);
-		$guards = Guard::select(['id','name','status'])->where('status','active')->orderBy('name')->get();
+		$guards = Guard::select(['id','name','status','position','is_leader'])->where('status','active')->orderBy('name')->get();
 		$supervisors = User::role('supervisor')->select(['id','name'])->orderBy('name')->get();
+		$sergeants = Guard::select(['id','name','position','is_leader'])
+			->where('status','active')
+			->where(function($q) {
+				$q->where('position', 'sergeant')->orWhere('is_leader', true);
+			})
+			->orderBy('name')
+			->get();
 
 		$assignmentsBySite = \App\Models\Guards\GuardAssignment::with(['assignedGuard:id,name','clientSite:id,name'])
 			->whereIn('client_site_id', $client->sites->pluck('id'))
@@ -55,6 +62,7 @@ class ClientsController extends Controller
 			'client' => $client,
 			'guards' => $guards,
 			'supervisors' => $supervisors,
+			'sergeants' => $sergeants,
 			'assignmentsBySite' => $assignmentsBySite,
 		]);
 	}
@@ -90,6 +98,40 @@ class ClientsController extends Controller
 		$client->save();
 
 		return back()->with('success', 'Supervisor assigned to client');
+	}
+
+	public function assignSergeant(Request $request, Client $client)
+	{
+		$data = $request->validate([
+			'sergeant_id' => ['required', 'exists:guards,id'],
+		]);
+
+		// Validate the guard is actually a sergeant
+		$sergeant = Guard::findOrFail($data['sergeant_id']);
+		if (!$sergeant->isLeader() && $sergeant->position !== 'sergeant') {
+			return response()->json(['success' => false, 'message' => 'Selected guard is not a sergeant.'], 422);
+		}
+
+		$client->sergeant_id = $data['sergeant_id'];
+		$client->save();
+
+		if ($request->wantsJson() || $request->ajax()) {
+			return response()->json(['success' => true, 'message' => 'Sergeant assigned successfully.']);
+		}
+
+		return back()->with('success', 'Sergeant assigned to client');
+	}
+
+	public function unassignSergeant(Request $request, Client $client)
+	{
+		$client->sergeant_id = null;
+		$client->save();
+
+		if ($request->wantsJson() || $request->ajax()) {
+			return response()->json(['success' => true, 'message' => 'Sergeant unassigned successfully.']);
+		}
+
+		return back()->with('success', 'Sergeant unassigned from client');
 	}
 
 	public function sitesJson(Request $request)
@@ -129,10 +171,18 @@ class ClientsController extends Controller
 	public function siteQr(ClientSite $site)
 	{
 		$site->load(['client:id,name']);
+
+		// Ensure site has a QR code (generate if missing)
+		if (!$site->qr_code) {
+			$site->qr_code = ClientSite::generateUniqueQrCode();
+			\DB::table('client_sites')->where('id', $site->id)->update(['qr_code' => $site->qr_code]);
+		}
+
 		$payload = [
 			'issuer' => 'CoinSecurity',
 			'type' => 'site',
 			'site_id' => $site->id,
+			'code' => $site->qr_code,
 			'site_name' => $site->name,
 			'client' => optional($site->client)->name,
 			'lat' => $site->latitude !== null ? (float) $site->latitude : null,

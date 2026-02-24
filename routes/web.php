@@ -74,6 +74,12 @@ Route::middleware(['auth', 'role:super_admin'])->prefix('superadmin')->name('sup
     Route::post('/maintenance/disable', [\App\Http\Controllers\SuperAdmin\DashboardController::class, 'disableMaintenance'])->name('maintenance.disable');
 	Route::post('/settings/attendance/methods', [\App\Http\Controllers\SuperAdmin\AttendanceSettingsController::class, 'update'])->name('attendance.methods.update');
     
+    // QR Code Generation (SuperAdmin)
+    Route::get('/qr-codes', [\App\Http\Controllers\SupervisorQRCodesController::class, 'index'])->name('qr-codes');
+    Route::get('/qr-codes/download-bulk', [\App\Http\Controllers\SupervisorQRCodesController::class, 'downloadBulk'])->name('qr-codes.download-bulk');
+    Route::get('/qr-codes/download-saved', [\App\Http\Controllers\SupervisorQRCodesController::class, 'downloadSaved'])->name('qr-codes.download-saved');
+    Route::get('/qr-codes/list-saved', [\App\Http\Controllers\SupervisorQRCodesController::class, 'listSaved'])->name('qr-codes.list-saved');
+    
     // Module Management
     Route::get('/modules', fn() => Inertia::render('SuperAdmin/Modules'))->name('modules');
     Route::get('/modules/{category}', fn($category) => Inertia::render('SuperAdmin/Modules', ['category' => $category]))->name('modules.category');
@@ -245,6 +251,13 @@ Route::middleware(['auth', 'role:super_admin'])->prefix('superadmin')->name('sup
     Route::post('/backup/run', [SystemController::class, 'backupRun'])->name('backup.run');
     Route::get('/backups', [SystemController::class, 'backupsList'])->name('backups.list');
     Route::get('/backups/{file}/download', [SystemController::class, 'backupDownload'])->name('backups.download');
+
+    // Security Center
+    Route::get('/security/overview', [SystemController::class, 'securityOverview'])->name('security.overview');
+    Route::post('/security/force-logout', [SystemController::class, 'securityForceLogout'])->name('security.force-logout');
+    Route::post('/security/invalidate-remember-tokens', [SystemController::class, 'securityInvalidateRememberTokens'])->name('security.invalidate-remember-tokens');
+    Route::post('/security/clear-password-reset-tokens', [SystemController::class, 'securityClearPasswordResetTokens'])->name('security.clear-password-reset-tokens');
+    Route::post('/security/revoke-api-tokens', [SystemController::class, 'securityRevokeApiTokens'])->name('security.revoke-api-tokens');
 });
 
 // Include all module routes
@@ -289,6 +302,9 @@ Route::middleware(['auth'])->group(function () {
         }
         if ($user->hasAnyRole(['hr','human_resources'])) {
             return redirect()->route('hr.dashboard');
+        }
+        if ($user->hasRole('trainer')) {
+            return redirect()->route('training.dashboard');
         }
         if ($user->hasRole('client')) {
             return redirect()->route('client.dashboard');
@@ -345,13 +361,13 @@ Route::middleware(['auth'])->group(function () {
 
         // Guards & Supervisors
         Route::get('/guards', [\App\Http\Controllers\ZoneCommander\GuardController::class, 'index'])
-            ->middleware('permission:zone.view.guards')
+            ->middleware('permission:zone.view.guards|guards.view')
             ->name('guards.index');
         Route::post('/guards/assign-site', [\App\Http\Controllers\ZoneCommander\GuardController::class, 'assignToSite'])
-            ->middleware('permission:zone.view.guards')
+            ->middleware('permission:zone.view.guards|guards.view')
             ->name('guards.assign-site');
         Route::post('/guards/unassign-site', [\App\Http\Controllers\ZoneCommander\GuardController::class, 'unassignFromSite'])
-            ->middleware('permission:zone.view.guards')
+            ->middleware('permission:zone.view.guards|guards.view')
             ->name('guards.unassign-site');
         Route::get('/supervisors', [\App\Http\Controllers\ZoneCommander\SupervisorController::class, 'index'])
             ->middleware('permission:zone.view.supervisors')

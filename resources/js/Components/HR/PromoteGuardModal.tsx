@@ -84,9 +84,9 @@ export default function PromoteGuardModal({
             </div>
           )}
 
-          {!guard?.email && (
-            <div className="rounded-md bg-amber-50 dark:bg-amber-900/30 p-3 text-sm text-amber-800 dark:text-amber-200">
-              This guard has no email on file. A login cannot be created until an email is provided.
+          {guard?.email === null && (
+            <div className="rounded-md bg-blue-50 dark:bg-blue-900/30 p-3 text-sm text-blue-800 dark:text-blue-200">
+              No email on file. A default email will be generated for login creation.
             </div>
           )}
         </div>
@@ -101,7 +101,7 @@ export default function PromoteGuardModal({
           </button>
           <button
             type="submit"
-            disabled={processing || !guard?.email}
+            disabled={processing}
             className="inline-flex items-center px-4 py-2 rounded-md text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60"
           >
             {processing ? 'Promoting...' : 'Promote'}
