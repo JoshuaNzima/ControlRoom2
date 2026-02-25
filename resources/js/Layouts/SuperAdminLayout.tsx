@@ -1,13 +1,12 @@
 import React from 'react';
-import { Link } from '@inertiajs/react';
+import { Link, Head } from '@inertiajs/react';
 import IconMapper from '@/Components/IconMapper';
 import { User } from '@/types';
 import NotificationBell from '@/Components/Common/NotificationBell';
 import BaseShell from './BaseShell';
-import QuickRequisitionButton from '@/Components/Requisitions/QuickRequisitionButton';
-import QuickBudgetButton from '@/Components/Budgets/QuickBudgetButton';
 import useCounters from '@/Hooks/useCounters';
 import { useTheme } from '@/Providers/ThemeProvider';
+import useGpsAlerts from '@/Hooks/useGpsAlerts';
 
 interface Props {
     title: string;
@@ -15,13 +14,11 @@ interface Props {
     user?: User;
 }
 
-interface ModuleNavItem {
+interface NavItem {
     name: string;
     href: string;
     icon: React.ReactNode;
-    current: boolean;
-    badge?: string;
-    description?: string;
+    badge?: string | number;
 }
 
 // Quick Stats Component for Header
@@ -51,13 +48,17 @@ export default function SuperAdminLayout({ title, children, user }: Props) {
     const [logoOk, setLogoOk] = React.useState<boolean>(true);
     const { counters } = useCounters();
     const { theme, toggle } = useTheme();
-    const pathOf = (name: string) => {
+    useGpsAlerts();
+
+    const isCurrent = (href: string) => {
         try {
-            return new URL((window as any).route(name), window.location.origin).pathname;
+            const hrefPath = new URL(href, window.location.origin).pathname;
+            return window.location.pathname === hrefPath;
         } catch {
-            try { return new URL((route as any)(name), window.location.origin).pathname; } catch { return ''; }
+            return window.location.pathname === href;
         }
     };
+
     const roleDisplay = (() => {
         const r: any = (user as any)?.roles;
         if (Array.isArray(r) && r.length) return String(r[0]).replaceAll('_', ' ');
@@ -65,227 +66,208 @@ export default function SuperAdminLayout({ title, children, user }: Props) {
         return 'Super Admin';
     })();
 
-    const modules: ModuleNavItem[] = [
-        { name: 'Dashboard', href: route('superadmin.dashboard'), icon: <IconMapper name="Home" size={24} />, current: window.location.pathname === pathOf('superadmin.dashboard') },
-        { name: 'HR', href: route('superadmin.hr.index'), icon: <IconMapper name="Users2" size={24} />, current: window.location.pathname === pathOf('superadmin.hr.index') },
-        { name: 'Finance', href: route('superadmin.finance.index'), icon: <IconMapper name="DollarSign" size={24} />, current: window.location.pathname === pathOf('superadmin.finance.index') },
-        { name: 'Clients', href: route('superadmin.clients.index'), icon: <IconMapper name="Building2" size={24} />, current: window.location.pathname === pathOf('superadmin.clients.index') },
-        { name: 'Control Room', href: route('superadmin.control-room.index'), icon: <IconMapper name="Monitor" size={24} />, current: window.location.pathname === pathOf('superadmin.control-room.index') },
-        { name: 'Assets', href: route('superadmin.assets.index'), icon: <IconMapper name="Package" size={24} />, current: window.location.pathname === pathOf('superadmin.assets.index') },
-        { name: 'Reports', href: route('superadmin.reports.index'), icon: <IconMapper name="BarChart2" size={24} />, current: window.location.pathname === pathOf('superadmin.reports.index') },
-        { name: 'Modules', href: route('superadmin.modules'), icon: <IconMapper name="Puzzle" size={24} />, current: window.location.pathname === pathOf('superadmin.modules') },
+    // Main navigation - organized by category
+    const mainNav: NavItem[] = [
+        { 
+            name: 'Dashboard', 
+            href: route('superadmin.dashboard'), 
+            icon: <IconMapper name="LayoutDashboard" size={20} />,
+        },
     ];
 
-    const systemNav: ModuleNavItem[] = [
+    const moduleNav: NavItem[] = [
         { 
-            name: 'System Health', 
-            href: route('superadmin.maintenance'), 
-            icon: <IconMapper name="Server" size={24} />, 
-            current: window.location.pathname === pathOf('superadmin.maintenance') 
+            name: 'HR', 
+            href: route('superadmin.hr.index'), 
+            icon: <IconMapper name="Users2" size={20} />,
+        },
+        { 
+            name: 'Finance', 
+            href: route('superadmin.finance.index'), 
+            icon: <IconMapper name="Wallet" size={20} />,
+        },
+        { 
+            name: 'Clients', 
+            href: route('superadmin.clients.index'), 
+            icon: <IconMapper name="Building2" size={20} />,
+        },
+        { 
+            name: 'Control Room', 
+            href: route('superadmin.control-room.index'), 
+            icon: <IconMapper name="Monitor" size={20} />,
+            badge: counters?.control_downs_active,
+        },
+        { 
+            name: 'Assets', 
+            href: route('superadmin.assets.index'), 
+            icon: <IconMapper name="Boxes" size={20} />,
+        },
+        { 
+            name: 'Reports', 
+            href: route('superadmin.reports.index'), 
+            icon: <IconMapper name="BarChart3" size={20} />,
+        },
+        { 
+            name: 'Modules', 
+            href: route('superadmin.modules'), 
+            icon: <IconMapper name="Puzzle" size={20} />,
+        },
+    ];
+
+    const managementNav: NavItem[] = [
+        { 
+            name: 'Users', 
+            href: route('superadmin.users'), 
+            icon: <IconMapper name="Users" size={20} />,
         },
         { 
             name: 'Security', 
             href: route('superadmin.security'), 
-            icon: <IconMapper name="Shield" size={24} />, 
-            current: window.location.pathname === pathOf('superadmin.security') 
-        },
-        {
-            name: 'My Requisitions',
-            href: route('requisitions.index'),
-            icon: <IconMapper name="ClipboardList" size={24} />,
-            current: window.location.pathname === pathOf('requisitions.index'),
-            badge: (() => { const n = Number(counters?.requisitions_my_open || 0); return n > 0 ? String(n) : undefined; })()
-        },
-        {
-            name: 'Budgets',
-            href: route('budgets.index'),
-            icon: <IconMapper name="PieChart" size={24} />,
-            current: window.location.pathname === pathOf('budgets.index')
-        },
-        {
-            name: 'Roles & Permissions',
-            href: route('superadmin.roles.index'),
-            icon: <IconMapper name="Users2" size={24} />,
-            current: window.location.pathname === pathOf('superadmin.roles.index')
-        },
-        {
-            name: 'Users',
-            href: route('superadmin.users'),
-            icon: <IconMapper name="Users2" size={24} />,
-            current: window.location.pathname === pathOf('superadmin.users')
-        },
-        {
-            name: 'Guards',
-            href: route('superadmin.guards'),
-            icon: <IconMapper name="ShieldCheck" size={24} />,
-            current: window.location.pathname === pathOf('superadmin.guards')
-        },
-        {
-            name: 'Drivers',
-            href: route('superadmin.drivers'),
-            icon: <IconMapper name="Truck" size={24} />,
-            current: window.location.pathname === pathOf('superadmin.drivers')
-        },
-        {
-            name: 'QR Codes',
-            href: route('superadmin.qr-codes'),
-            icon: <IconMapper name="QrCode" size={24} />,
-            current: window.location.pathname === pathOf('superadmin.qr-codes')
+            icon: <IconMapper name="Shield" size={20} />,
         },
         { 
             name: 'Settings', 
             href: route('superadmin.settings'), 
-            icon: <IconMapper name="Settings" size={24} />, 
-            current: window.location.pathname === pathOf('superadmin.settings') 
+            icon: <IconMapper name="Settings" size={20} />,
         },
-        {
-            name: 'Logs',
-            href: route('superadmin.logs'),
-            icon: <IconMapper name="ClipboardList" size={24} />,
-            current: window.location.pathname === pathOf('superadmin.logs')
-        },
-        {
-            name: 'Audit Trail',
-            href: route('superadmin.audit'),
-            icon: <IconMapper name="Search" size={24} />,
-            current: window.location.pathname === pathOf('superadmin.audit')
-        },
-        {
-            name: 'Cache',
-            href: route('superadmin.cache'),
-            icon: <IconMapper name="Trash2" size={24} />,
-            current: window.location.pathname === pathOf('superadmin.cache')
-        },
-        {
-            name: 'Backup',
-            href: route('superadmin.backup'),
-            icon: <IconMapper name="HardDrive" size={24} />,
-            current: window.location.pathname === pathOf('superadmin.backup')
+        { 
+            name: 'Backup', 
+            href: route('superadmin.backup'), 
+            icon: <IconMapper name="HardDrive" size={20} />,
         },
     ];
 
-    return (
-        <div className="min-h-screen overflow-x-hidden bg-red-50 dark:bg-gray-900">
+    const toolsNav: NavItem[] = [
+        { 
+            name: 'System Health', 
+            href: route('superadmin.maintenance'), 
+            icon: <IconMapper name="Server" size={20} />,
+        },
+        { 
+            name: 'Logs', 
+            href: route('superadmin.logs'), 
+            icon: <IconMapper name="FileText" size={20} />,
+        },
+        { 
+            name: 'Audit Trail', 
+            href: route('superadmin.audit'), 
+            icon: <IconMapper name="Search" size={20} />,
+        },
+        { 
+            name: 'Cache', 
+            href: route('superadmin.cache'), 
+            icon: <IconMapper name="Trash2" size={20} />,
+        },
+    ];
 
-            {/* Mobile sidebar */}
-            <div
-                className={`fixed inset-0 bg-red-800 bg-opacity-50 dark:bg-gray-900 dark:bg-opacity-70 z-40 md:hidden ${
-                    sidebarOpen ? 'block' : 'hidden'
-                }`}
+    const NavSection: React.FC<{ title: string; items: NavItem[] }> = ({ title, items }) => (
+        <div className="space-y-1">
+            <h3 className="px-3 text-xs font-semibold text-red-200 dark:text-gray-400 uppercase tracking-wider">
+                {title}
+            </h3>
+            {items.map((item) => (
+                <Link
+                    key={item.name}
+                    href={item.href}
+                    className={`group flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                        isCurrent(item.href)
+                            ? 'bg-red-800 text-white dark:bg-gray-800'
+                            : 'text-red-100 hover:bg-red-800 hover:text-white dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white'
+                    }`}
+                >
+                    <span className="flex-shrink-0">{item.icon}</span>
+                    <span className="ml-3 flex-1 truncate">{item.name}</span>
+                    {item.badge ? (
+                        <span className="ml-2 inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full bg-red-600 text-white">
+                            {item.badge}
+                        </span>
+                    ) : null}
+                </Link>
+            ))}
+        </div>
+    );
+
+    return (
+        <div className="min-h-screen bg-red-50 dark:bg-gray-900 overflow-x-hidden">
+            <Head title={title} />
+
+            {/* Mobile overlay */}
+            <div 
+                className={`fixed inset-0 bg-red-900/50 dark:bg-gray-900/70 z-40 md:hidden ${sidebarOpen ? 'block' : 'hidden'}`}
                 onClick={() => setSidebarOpen(false)}
             />
 
             {/* Sidebar */}
-            <div
-                className={`fixed top-0 left-0 bottom-0 flex flex-col w-72 bg-red-900 dark:bg-gray-950 text-white transform ${
+            <div 
+                className={`fixed top-0 left-0 bottom-0 flex flex-col w-64 bg-red-900 dark:bg-gray-950 text-white transform ${
                     sidebarOpen ? 'translate-x-0' : '-translate-x-full'
                 } md:translate-x-0 transition-transform duration-300 ease-in-out z-50`}
             >
-                <div className="flex-1 flex flex-col pt-5 pb-4 overflow-y-auto">
-                    <div className="flex items-center flex-shrink-0 px-4">
-                        <img
-                    src="/images/Coin-logo.png"
-                            alt="Coin Security"
-                            className="h-10 w-auto"
-                            style={{ display: logoOk ? 'block' : 'none' }}
-                            onLoad={() => setLogoOk(true)}
-                            onError={() => setLogoOk(false)}
-                        />
-                        {!logoOk && (
-                            <span className="ml-2 text-2xl font-bold text-white">ControlRoom</span>
-                        )}
-                    </div>
-                    <nav className="mt-8 flex-1 px-2 space-y-8">
-                        {/* Modules Navigation */}
-                        <div className="space-y-1">
-                            <h3 className="px-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">
-                                Modules
-                            </h3>
-                            {modules.map((item) => (
-                                <Link
-                                    key={item.name}
-                                    href={item.href}
-                                    className={`group flex items-center px-3 py-2.5 text-sm font-medium rounded-md ${
-                                        item.current
-                                            ? 'bg-red-800 text-white dark:bg-gray-800'
-                                            : 'text-red-100 hover:bg-red-800 hover:text-white dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white'
-                                    }`}
-                                >
-                                    {item.icon}
-                                    <span className="ml-3">{item.name}</span>
-                                    {item.badge && (
-                                        <span className="ml-auto inline-block py-0.5 px-2 text-xs font-medium rounded-full bg-white/10 text-white">
-                                            {item.badge}
-                                        </span>
-                                    )}
-                                </Link>
-                            ))}
-                        </div>
-
-                        {/* System Navigation */}
-                        <div className="space-y-1">
-                            <h3 className="px-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">
-                                System
-                            </h3>
-                            {systemNav.map((item) => (
-                                <Link
-                                    key={item.name}
-                                    href={item.href}
-                                    className={`group flex items-center px-3 py-2.5 text-sm font-medium rounded-md ${
-                                        item.current
-                                            ? 'bg-red-800 text-white dark:bg-gray-800'
-                                            : 'text-red-100 hover:bg-red-800 hover:text-white dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white'
-                                    }`}
-                                >
-                                    {item.icon}
-                                    <span className="ml-3">{item.name}</span>
-                                    {item.badge && (
-                                        <span className="ml-auto inline-block py-0.5 px-2 text-xs font-medium rounded-full bg-white/10 text-white">
-                                            {item.badge}
-                                        </span>
-                                    )}
-                                </Link>
-                            ))}
-                        </div>
-                    </nav>
+                {/* Logo */}
+                <div className="flex items-center flex-shrink-0 px-4 py-5">
+                    <img
+                        src="/images/Coin-logo.png"
+                        alt="Coin Security"
+                        className="h-8 w-auto"
+                        style={{ display: logoOk ? 'block' : 'none' }}
+                        onLoad={() => setLogoOk(true)}
+                        onError={() => setLogoOk(false)}
+                    />
+                    {!logoOk && (
+                        <span className="ml-2 text-xl font-bold text-white">CoinSec</span>
+                    )}
                 </div>
 
+                {/* Navigation */}
+                <nav className="flex-1 px-3 py-2 space-y-6 overflow-y-auto">
+                    <NavSection title="Main" items={mainNav} />
+                    <NavSection title="Modules" items={moduleNav} />
+                    <NavSection title="Management" items={managementNav} />
+                    <NavSection title="Tools" items={toolsNav} />
+                </nav>
+
                 {/* User Menu */}
-                <div className="flex-shrink-0 flex items-center justify-between border-t border-red-800 dark:border-gray-800 p-4">
-                    <div>
-                        <div className="text-base font-medium text-white">{user?.name}</div>
-                        <div className="text-sm font-medium text-gray-400">{roleDisplay}</div>
+                <div className="flex-shrink-0 border-t border-red-800 dark:border-gray-800 p-4">
+                    <div className="flex items-center gap-3 mb-3">
+                        <div className="w-9 h-9 rounded-full bg-red-800 dark:bg-gray-800 flex items-center justify-center text-white font-semibold text-sm">
+                            {user?.name?.charAt(0) || 'S'}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-white truncate">{user?.name}</p>
+                            <p className="text-xs text-red-200 dark:text-gray-400 truncate">{roleDisplay}</p>
+                        </div>
                     </div>
                     <div className="flex items-center gap-2">
                         <Link
                             href={route('profile.dashboard')}
-                            className="inline-flex items-center gap-2 rounded-md bg-gray-800 px-3 py-2 text-sm font-medium text-white hover:bg-gray-700"
+                            className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-md bg-gray-800 px-3 py-2 text-xs font-medium text-white hover:bg-gray-700 transition-colors"
                         >
-                            <IconMapper name="User" size={16} />
-                            My Profile
+                            <IconMapper name="User" size={14} />
+                            Profile
                         </Link>
-                    <Link
-                        href={route('logout')}
-                        method="post"
-                        as="button"
-                        className="inline-flex items-center gap-2 rounded-md bg-red-700 px-3 py-2 text-sm font-medium text-white hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-                    >
-                        <IconMapper name="LogOut" size={16} />
-                        Logout
-                    </Link>
+                        <Link
+                            href={route('logout')}
+                            method="post"
+                            as="button"
+                            className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-md bg-red-700 px-3 py-2 text-xs font-medium text-white hover:bg-red-600 transition-colors"
+                        >
+                            <IconMapper name="LogOut" size={14} />
+                            Logout
+                        </Link>
                     </div>
                 </div>
             </div>
 
             {/* Main Content */}
-            <div className="md:pl-72">
+            <div className="md:pl-64">
+                {/* Header */}
                 <div className="sticky top-0 z-30 border-b border-red-100 bg-white/95 backdrop-blur-sm dark:border-gray-800 dark:bg-gray-950/80">
                     <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-3">
                         <div className="flex items-center justify-between gap-3">
                             <div className="flex items-center gap-3 min-w-0">
                                 <button
                                     type="button"
-                                    className="h-10 w-10 inline-flex items-center justify-center rounded-md text-red-700 hover:bg-red-100 hover:text-red-900 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-coin-600 md:hidden"
+                                    className="h-10 w-10 inline-flex items-center justify-center rounded-md text-red-700 hover:bg-red-100 hover:text-red-900 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-red-600 md:hidden"
                                     onClick={() => setSidebarOpen(true)}
                                 >
                                     <span className="sr-only">Open sidebar</span>
@@ -293,23 +275,35 @@ export default function SuperAdminLayout({ title, children, user }: Props) {
                                 </button>
                                 <h1 className="text-xl font-semibold text-red-900 dark:text-gray-100 truncate">{title}</h1>
                             </div>
-                            <div className="flex items-center justify-end gap-2 sm:gap-4">
+                            <div className="flex items-center justify-end gap-2 sm:gap-3">
                                 <QuickStats />
                                 <NotificationBell />
-                                <div className="hidden sm:flex items-center gap-4">
-                                    <QuickBudgetButton label="Budget" />
-                                    <QuickRequisitionButton label="Requisition" />
-                                </div>
-                                <button onClick={toggle} className="text-sm px-3 py-1 rounded-md bg-red-100 text-red-800 hover:bg-red-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700">
+                                <button 
+                                    onClick={toggle} 
+                                    className="text-sm px-3 py-1.5 rounded-md bg-red-100 text-red-800 hover:bg-red-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700 transition-colors"
+                                >
                                     <span className="hidden sm:inline">{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>
                                     <span className="sm:hidden">{theme === 'dark' ? 'Light' : 'Dark'}</span>
                                 </button>
+                                <div className="hidden sm:block text-sm text-red-700 dark:text-gray-300 max-w-[10rem] truncate">
+                                    {user?.name}
+                                </div>
+                                <Link
+                                    href={route('logout')}
+                                    method="post"
+                                    as="button"
+                                    className="inline-flex items-center justify-center rounded-md bg-white text-red-700 hover:bg-red-50 border border-red-200 px-2 py-2 sm:px-3 sm:py-1.5 text-sm dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700 transition-colors"
+                                >
+                                    <IconMapper name="LogOut" size={18} className="sm:hidden" />
+                                    <span className="hidden sm:inline">Logout</span>
+                                </Link>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <BaseShell noHeader fullScreen={false} containerClassName="space-y-6">
+                {/* Page Content */}
+                <BaseShell noHeader fullScreen={false}>
                     <div className="animate-slideUp transition-all-smooth">
                         {children}
                     </div>

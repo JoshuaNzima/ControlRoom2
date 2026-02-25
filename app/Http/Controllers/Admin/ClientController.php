@@ -86,11 +86,9 @@ class ClientController extends Controller
 
         // Get supervisors and sergeants for assignment
         $supervisors = \App\Models\User::role('supervisor')->select(['id','name'])->orderBy('name')->get();
-        $sergeants = \App\Models\Guards\Guard::select(['id','name','position','is_leader'])
+        $sergeants = \App\Models\Guards\Guard::select(['id','name','position'])
             ->where('status','active')
-            ->where(function($q) {
-                $q->where('position','sergeant')->orWhere('is_leader', true);
-            })
+            ->where('position', 'sergeant')
             ->orderBy('name')
             ->get();
 

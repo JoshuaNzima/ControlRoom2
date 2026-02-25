@@ -46,6 +46,10 @@ Route::middleware(['auth'])->group(function () {
 		Route::get('/clients/sites/{site}/qr-code', [\App\Http\Controllers\ControlRoom\ClientsController::class, 'siteQr'])
 			->middleware(['role_or_permission:control_room_operator|operations_officer|manager|super_admin'])
 			->name('clients.sites.qr');
+		// Printable QR page with branding
+		Route::get('/clients/sites/{site}/qr-print', [\App\Http\Controllers\ControlRoom\ClientsController::class, 'siteQrPrint'])
+			->middleware(['role_or_permission:control_room_operator|operations_officer|manager|super_admin'])
+			->name('clients.sites.qr-print');
 
 		// Incidents Management
 		Route::get('incidents/{incident}/pdf', [\App\Http\Controllers\ControlRoom\IncidentController::class, 'pdf'])->name('incidents.pdf');
@@ -214,6 +218,10 @@ Route::middleware(['auth'])->group(function () {
 		Route::get('/live/stats', [\App\Http\Controllers\ControlRoom\LiveMonitoringController::class, 'getLiveStats'])->name('live.stats');
 		Route::get('/live/locations', [\App\Http\Controllers\ControlRoom\LiveMonitoringController::class, 'getGuardLocations'])->name('live.locations');
 		Route::get('/live/alerts', [\App\Http\Controllers\ControlRoom\LiveMonitoringController::class, 'getAttendanceAlerts'])->name('live.alerts');
+
+		// GPS mismatch incidents log
+		Route::get('/gps-mismatch-incidents', [\App\Http\Controllers\ControlRoom\GPSMismatchIncidentController::class, 'index'])
+			->name('gps-mismatch-incidents.index');
 
 		Route::prefix('attendance')->name('attendance.')->middleware(['role_or_permission:control_room_operator|operations_officer|manager|super_admin'])->group(function () {
 			Route::get('/', [\App\Http\Controllers\ControlRoom\AttendanceController::class, 'index'])->name('index');

@@ -1,45 +1,43 @@
 import React from 'react';
-import AdminLayout from '@/Layouts/AdminLayout';
 import { Head, usePage, router } from '@inertiajs/react';
+import AdminLayout from '@/Layouts/AdminLayout';
 import Modal from '@/Components/Modal';
 import { useTheme } from '@/Providers/ThemeProvider';
+import IconMapper from '@/Components/IconMapper';
+import { Card } from '@/Components/ui/card';
+import { Button } from '@/Components/ui/button';
+import { formatCurrencyMWK } from '@/Components/format';
 
-const settingsCardClassName =
-  'bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm shadow-black/5 dark:shadow-none p-4 sm:p-6';
+// Settings card style
+const SectionCard: React.FC<{ title: string; children: React.ReactNode; action?: React.ReactNode }> = ({ title, children, action }) => (
+  <Card className="p-6">
+    <div className="flex items-center justify-between mb-4">
+      <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{title}</h2>
+      {action}
+    </div>
+    {children}
+  </Card>
+);
 
-const settingsFieldClassName =
-  'mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950';
+// Form field styles
+const inputClassName =
+  'mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950';
 
-const settingsInlineFieldClassName =
-  'rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950';
+type GuardGrade = {
+  id: number;
+  code: string;
+  name: string;
+  description?: string | null;
+  base_salary?: number | string;
+  overtime_multiplier?: number | string | null;
+  allowances?: any;
+  absence_deduction_per_day?: number | string | null;
+};
 
-const settingsPrimaryButtonClassName =
-  'px-4 py-2 rounded-lg bg-coin-700 text-white hover:bg-coin-600 focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950 disabled:opacity-60 disabled:pointer-events-none';
-
-const settingsSecondaryButtonClassName =
-  'px-4 py-2 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950 disabled:opacity-60 disabled:pointer-events-none';
-
-const settingsDangerButtonClassName =
-  'px-3 py-2 rounded-lg bg-red-700 text-white hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950 disabled:opacity-60 disabled:pointer-events-none';
-
-const settingsSuccessButtonClassName =
-  'px-3 py-2 rounded-lg bg-emerald-700 text-white hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950 disabled:opacity-60 disabled:pointer-events-none';
-
-type FinanceDefaults = {
+type PayrollDefaults = {
   guard_absence_deduction_per_day: number;
   staff_absence_deduction_per_day: number;
   overtime_multiplier_default: number;
-};
-
-type PayProfile = {
-  id: number;
-  payee_type: 'guard' | 'user';
-  payee_id: number;
-  monthly_salary: string | number;
-  overtime_multiplier?: string | number | null;
-  advance_amount?: string | number | null;
-  allowances?: any;
-  absence_deduction_per_day?: string | number | null;
 };
 
 type PageProps = {
@@ -59,51 +57,27 @@ type PageProps = {
     memory_usage: string;
     uptime: string;
   };
-  finance?: {
-    payrollDefaults: FinanceDefaults;
-    payProfiles: PayProfile[];
-    payeeOptions?: {
-      guards: { id: number; label: string }[];
-      users: { id: number; label: string }[];
-    };
-  };
-  hr?: {
-    guardGrades: Array<{
-      id: number;
-      code: string;
-      name: string;
-      description?: string | null;
-      base_salary?: number | string;
-      overtime_multiplier?: number | string | null;
-      allowances?: any;
-      absence_deduction_per_day?: number | string | null;
-    }>;
-  };
+  payrollDefaults: PayrollDefaults;
+  guardGrades: GuardGrade[];
 };
 
-export default function SettingIndex() {
-  const { auth, system, finance, hr } = usePage<PageProps>().props as any;
+export default function SettingsIndex() {
+  const { auth, system, payrollDefaults, guardGrades } = usePage<PageProps>().props as any;
   const { theme, toggle } = useTheme();
-  const [tab, setTab] = React.useState<'user' | 'finance' | 'hr' | 'system'>('finance');
+  const [activeTab, setActiveTab] = React.useState<'general' | 'hr' | 'payroll'>('general');
 
   // Payroll Defaults state
-  const [defaults, setDefaults] = React.useState<FinanceDefaults>(() => ({
-    guard_absence_deduction_per_day: Number(finance?.payrollDefaults?.guard_absence_deduction_per_day ?? 0),
-    staff_absence_deduction_per_day: Number(finance?.payrollDefaults?.staff_absence_deduction_per_day ?? 0),
-    overtime_multiplier_default: Number(finance?.payrollDefaults?.overtime_multiplier_default ?? 1.5),
+  const [defaults, setDefaults] = React.useState<PayrollDefaults>(() => ({
+    guard_absence_deduction_per_day: Number(payrollDefaults?.guard_absence_deduction_per_day ?? 0),
+    staff_absence_deduction_per_day: Number(payrollDefaults?.staff_absence_deduction_per_day ?? 0),
+    overtime_multiplier_default: Number(payrollDefaults?.overtime_multiplier_default ?? 1.5),
   }));
 
-  // Pay Profiles state
-  const [profiles, setProfiles] = React.useState<PayProfile[]>(() => (finance?.payProfiles ?? []));
-  const [newProfile, setNewProfile] = React.useState<PayProfile>({
-    id: 0,
-    payee_type: 'guard',
-    payee_id: 0,
-    monthly_salary: 0,
-    overtime_multiplier: 1.5,
-    advance_amount: 0,
-    allowances: [],
-    absence_deduction_per_day: 0,
+  // Guard Grades state
+  const [showGradeModal, setShowGradeModal] = React.useState(false);
+  const [editingGrade, setEditingGrade] = React.useState<GuardGrade | null>(null);
+  const [gradeForm, setGradeForm] = React.useState<Partial<GuardGrade>>({
+    code: '', name: '', description: '', base_salary: 0, overtime_multiplier: 1.5, allowances: [], absence_deduction_per_day: 0,
   });
 
   const submitDefaults = (e: React.FormEvent) => {
@@ -111,54 +85,18 @@ export default function SettingIndex() {
     router.post(route('admin.settings.finance.payroll-defaults'), defaults, { preserveScroll: true });
   };
 
-  const submitNewProfile = (e: React.FormEvent) => {
-    e.preventDefault();
-    const payload: any = {
-      ...newProfile,
-      allowances: typeof newProfile.allowances === 'string' ? newProfile.allowances : JSON.stringify(newProfile.allowances ?? []),
-    };
-    router.post(route('admin.settings.finance.pay-profiles.store'), payload, {
-      preserveScroll: true,
-      onSuccess: () => {
-        setNewProfile({ id: 0, payee_type: 'guard', payee_id: 0, monthly_salary: 0, overtime_multiplier: 1.5, advance_amount: 0, allowances: [], absence_deduction_per_day: 0 });
-      },
-    });
-  };
-
-  const updateProfile = (p: PayProfile) => {
-    const payload: any = {
-      monthly_salary: p.monthly_salary,
-      overtime_multiplier: p.overtime_multiplier,
-      advance_amount: p.advance_amount,
-      allowances: typeof p.allowances === 'string' ? p.allowances : JSON.stringify(p.allowances ?? []),
-      absence_deduction_per_day: p.absence_deduction_per_day,
-    };
-    router.put(route('admin.settings.finance.pay-profiles.update', p.id), payload, { preserveScroll: true });
-  };
-
-  const deleteProfile = (id: number) => {
-    if (!confirm('Remove this pay profile?')) return;
-    router.delete(route('admin.settings.finance.pay-profiles.destroy', id), { preserveScroll: true });
-  };
-
-  // HR: Guard Grades state & handlers
-  type GuardGrade = Required<PageProps>['hr']['guardGrades'][number];
-  const [showGradeModal, setShowGradeModal] = React.useState(false);
-  const [editingGrade, setEditingGrade] = React.useState<GuardGrade | null>(null);
-  const [gradeForm, setGradeForm] = React.useState<Partial<GuardGrade>>({
-    code: '', name: '', description: '', base_salary: 0, overtime_multiplier: 1.5, allowances: [], absence_deduction_per_day: 0,
-  });
-
   const openNewGrade = () => {
     setEditingGrade(null);
     setGradeForm({ code: '', name: '', description: '', base_salary: 0, overtime_multiplier: 1.5, allowances: [], absence_deduction_per_day: 0 });
     setShowGradeModal(true);
   };
+
   const openEditGrade = (g: GuardGrade) => {
     setEditingGrade(g);
     setGradeForm({ ...g, allowances: g.allowances ?? [] });
     setShowGradeModal(true);
   };
+
   const submitGrade = (e: React.FormEvent) => {
     e.preventDefault();
     const payload: any = {
@@ -177,126 +115,180 @@ export default function SettingIndex() {
       });
     }
   };
+
   const deleteGrade = (g: GuardGrade) => {
     if (!confirm(`Delete grade ${g.code}?`)) return;
     router.delete(route('admin.settings.hr.guard-grades.destroy', g.id), { preserveScroll: true });
   };
 
+  const tabs = [
+    { id: 'general', label: 'General', icon: 'Settings' },
+    { id: 'hr', label: 'HR & Grades', icon: 'Users' },
+    { id: 'payroll', label: 'Payroll Defaults', icon: 'Wallet' },
+  ];
+
   return (
     <AdminLayout title="Settings" user={auth?.user as any}>
       <Head title="Settings" />
-      <div className="space-y-4">
-        {/* Tabs */}
-        <div className="mb-4 rounded-xl bg-coin-100/80 p-1 dark:bg-gray-800">
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-1">
-            <button
-              type="button"
-              onClick={() => setTab('user')}
-              className={`px-4 py-2 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950 ${tab==='user' ? 'bg-coin-700 text-white' : 'text-coin-800 hover:bg-coin-200 dark:text-gray-200 dark:hover:bg-gray-700'}`}
-            >
-              User
-            </button>
-            <button
-              type="button"
-              onClick={() => setTab('finance')}
-              className={`px-4 py-2 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950 ${tab==='finance' ? 'bg-coin-700 text-white' : 'text-coin-800 hover:bg-coin-200 dark:text-gray-200 dark:hover:bg-gray-700'}`}
-            >
-              Finance
-            </button>
-            <button
-              type="button"
-              onClick={() => setTab('hr')}
-              className={`px-4 py-2 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950 ${tab==='hr' ? 'bg-coin-700 text-white' : 'text-coin-800 hover:bg-coin-200 dark:text-gray-200 dark:hover:bg-gray-700'}`}
-            >
-              HR
-            </button>
-            <button
-              type="button"
-              onClick={() => setTab('system')}
-              className={`px-4 py-2 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950 ${tab==='system' ? 'bg-coin-700 text-white' : 'text-coin-800 hover:bg-coin-200 dark:text-gray-200 dark:hover:bg-gray-700'}`}
-            >
-              System
-            </button>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+        
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">System Settings</h1>
+            <p className="text-gray-600 dark:text-gray-400">Configure system preferences and defaults</p>
           </div>
         </div>
 
-        {/* Content */}
-        {tab === 'user' && (
-          <section className={settingsCardClassName}>
-            <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">User Preferences</h2>
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Name</label>
-                  <input className={`${settingsFieldClassName} opacity-80 cursor-not-allowed`} defaultValue={auth.user.name} disabled />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Email</label>
-                  <input className={`${settingsFieldClassName} opacity-80 cursor-not-allowed`} defaultValue={auth.user.email} disabled />
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Role(s)</label>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {auth.user.roles?.map((r: string) => (
-                    <span key={r} className="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-medium bg-coin-100 text-coin-800 dark:bg-gray-800 dark:text-coin-200 border border-coin-200 dark:border-gray-700">{r}</span>
-                  ))}
-                </div>
-              </div>
-              <div className="pt-4 border-t dark:border-gray-700">
-                <h3 className="text-sm font-medium text-gray-800 dark:text-gray-200 mb-2">Preferences</h3>
+        {/* Tab Navigation */}
+        <div className="flex gap-2 p-1 bg-gray-100 dark:bg-gray-800 rounded-xl w-fit flex-wrap">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id as typeof activeTab)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
+                activeTab === tab.id
+                  ? 'bg-white dark:bg-gray-700 text-red-600 dark:text-red-400 shadow-sm'
+                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+              }`}
+            >
+              <IconMapper name={tab.icon as any} size={16} />
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {/* General Tab */}
+        {activeTab === 'general' && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-in fade-in duration-300">
+            {/* User Profile */}
+            <SectionCard title="User Profile">
+              <div className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <label className="inline-flex items-center">
-                    <input type="checkbox" className="rounded border-gray-300 dark:border-gray-700 text-coin-600 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950" defaultChecked />
-                    <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">Enable desktop notifications</span>
-                  </label>
-                  <label className="inline-flex items-center">
-                    <input
-                      type="checkbox"
-                      className="rounded border-gray-300 dark:border-gray-700 text-coin-600 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950"
-                      checked={theme === 'dark'}
-                      onChange={() => toggle()}
-                    />
-                    <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">Dark mode</span>
-                  </label>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Name</label>
+                    <input className={`${inputClassName} opacity-80 cursor-not-allowed`} defaultValue={auth.user.name} disabled />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Email</label>
+                    <input className={`${inputClassName} opacity-80 cursor-not-allowed`} defaultValue={auth.user.email} disabled />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Role(s)</label>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {auth.user.roles?.map((r: string) => (
+                      <span key={r} className="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800 dark:bg-gray-800 dark:text-red-200 border border-red-200 dark:border-gray-700">
+                        {r}
+                      </span>
+                    ))}
+                  </div>
                 </div>
               </div>
-            </div>
-          </section>
+            </SectionCard>
+
+            {/* Appearance */}
+            <SectionCard title="Appearance">
+              <div className="space-y-4">
+                <label className="flex items-center justify-between p-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 cursor-pointer">
+                  <div className="flex items-center gap-3">
+                    <IconMapper name={theme === 'dark' ? 'Moon' : 'Sun'} size={20} className="text-gray-600 dark:text-gray-400" />
+                    <div>
+                      <span className="text-sm font-medium text-gray-900 dark:text-gray-100">Dark Mode</span>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Toggle between light and dark themes</p>
+                    </div>
+                  </div>
+                  <input
+                    type="checkbox"
+                    className="rounded border-gray-300 dark:border-gray-700 text-red-600 focus:ring-red-500"
+                    checked={theme === 'dark'}
+                    onChange={() => toggle()}
+                  />
+                </label>
+                
+                <label className="flex items-center justify-between p-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 cursor-pointer">
+                  <div className="flex items-center gap-3">
+                    <IconMapper name="Bell" size={20} className="text-gray-600 dark:text-gray-400" />
+                    <div>
+                      <span className="text-sm font-medium text-gray-900 dark:text-gray-100">Desktop Notifications</span>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Receive notifications on your desktop</p>
+                    </div>
+                  </div>
+                  <input
+                    type="checkbox"
+                    className="rounded border-gray-300 dark:border-gray-700 text-red-600 focus:ring-red-500"
+                    defaultChecked
+                  />
+                </label>
+              </div>
+            </SectionCard>
+
+            {/* System Status */}
+            <SectionCard title="System Status" action={<span className="text-xs text-emerald-600 dark:text-emerald-400 flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-500"></span>Operational</span>}>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="p-3 rounded-lg bg-gray-50 dark:bg-gray-900/50">
+                  <div className="text-xs text-gray-500 dark:text-gray-400">Database</div>
+                  <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{system.database_status}</div>
+                </div>
+                <div className="p-3 rounded-lg bg-gray-50 dark:bg-gray-900/50">
+                  <div className="text-xs text-gray-500 dark:text-gray-400">DB Size</div>
+                  <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{system.database_size}</div>
+                </div>
+                <div className="p-3 rounded-lg bg-gray-50 dark:bg-gray-900/50">
+                  <div className="text-xs text-gray-500 dark:text-gray-400">Cache</div>
+                  <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{system.cache_size}</div>
+                </div>
+                <div className="p-3 rounded-lg bg-gray-50 dark:bg-gray-900/50">
+                  <div className="text-xs text-gray-500 dark:text-gray-400">Storage Free</div>
+                  <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{system.storage_free}</div>
+                </div>
+              </div>
+            </SectionCard>
+          </div>
         )}
 
-        {tab === 'hr' && (
-          <section className="space-y-6">
-            {/* Guard Grades */}
-            <div className={settingsCardClassName}>
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Guard Grades</h2>
-                <button type="button" onClick={openNewGrade} className={`w-full sm:w-auto ${settingsPrimaryButtonClassName}`}>Add Grade</button>
-              </div>
+        {/* HR & Grades Tab */}
+        {activeTab === 'hr' && (
+          <div className="space-y-6 animate-in fade-in duration-300">
+            <SectionCard 
+              title="Guard Grades" 
+              action={<Button onClick={openNewGrade}><IconMapper name="Plus" size={16} className="mr-2" />Add Grade</Button>}
+            >
               <div className="overflow-x-auto">
-                <table className="min-w-[720px] w-full text-sm">
+                <table className="min-w-full text-sm">
                   <thead className="bg-gray-50 dark:bg-gray-950/40">
                     <tr className="text-left text-gray-600 dark:text-gray-300 border-b border-gray-200 dark:border-gray-800">
-                      <th className="px-2 py-2">Code</th>
-                      <th className="px-2 py-2">Name</th>
-                      <th className="px-2 py-2">Base Salary</th>
-                      <th className="px-2 py-2">OT</th>
-                      <th className="px-2 py-2">Absence</th>
-                      <th className="px-2 py-2">Actions</th>
+                      <th className="px-4 py-3 font-medium">Code</th>
+                      <th className="px-4 py-3 font-medium">Name</th>
+                      <th className="px-4 py-3 font-medium">Base Salary</th>
+                      <th className="px-4 py-3 font-medium">OT Multiplier</th>
+                      <th className="px-4 py-3 font-medium">Absence/Day</th>
+                      <th className="px-4 py-3 font-medium">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                    {(hr?.guardGrades ?? []).map((g: any) => (
-                      <tr key={g.id} className="text-gray-900 dark:text-gray-100">
-                        <td className="px-2 py-2">{g.code}</td>
-                        <td className="px-2 py-2">{g.name}</td>
-                        <td className="px-2 py-2">{Number(g.base_salary ?? 0).toFixed(2)}</td>
-                        <td className="px-2 py-2">{Number(g.overtime_multiplier ?? 1.5).toFixed(2)}</td>
-                        <td className="px-2 py-2">{Number(g.absence_deduction_per_day ?? 0).toFixed(2)}</td>
-                        <td className="px-2 py-2">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <button type="button" onClick={() => openEditGrade(g)} className={settingsSuccessButtonClassName}>Edit</button>
-                            <button type="button" onClick={() => deleteGrade(g)} className={settingsDangerButtonClassName}>Delete</button>
+                    {(guardGrades ?? []).length === 0 && (
+                      <tr>
+                        <td colSpan={6} className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+                          No guard grades defined yet
+                        </td>
+                      </tr>
+                    )}
+                    {(guardGrades ?? []).map((g: any) => (
+                      <tr key={g.id} className="text-gray-900 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                        <td className="px-4 py-3 font-medium">{g.code}</td>
+                        <td className="px-4 py-3">{g.name}</td>
+                        <td className="px-4 py-3">{formatCurrencyMWK(Number(g.base_salary ?? 0))}</td>
+                        <td className="px-4 py-3">{Number(g.overtime_multiplier ?? 1.5).toFixed(2)}x</td>
+                        <td className="px-4 py-3">{formatCurrencyMWK(Number(g.absence_deduction_per_day ?? 0))}</td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2">
+                            <button onClick={() => openEditGrade(g)} className="p-2 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-lg transition">
+                              <IconMapper name="Pencil" size={16} />
+                            </button>
+                            <button onClick={() => deleteGrade(g)} className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition">
+                              <IconMapper name="Trash2" size={16} />
+                            </button>
                           </div>
                         </td>
                       </tr>
@@ -304,264 +296,101 @@ export default function SettingIndex() {
                   </tbody>
                 </table>
               </div>
-            </div>
+            </SectionCard>
 
             {/* Grade Modal */}
             <Modal show={showGradeModal} onClose={() => setShowGradeModal(false)} maxWidth="lg">
-              <form onSubmit={submitGrade} className="p-4 sm:p-6 space-y-4">
+              <form onSubmit={submitGrade} className="p-6 space-y-4">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{editingGrade ? 'Edit Grade' : 'Add Grade'}</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Code</label>
-                    <input className={settingsFieldClassName} value={gradeForm.code as any}
-                      onChange={(e)=>setGradeForm(f=>({ ...f, code: e.target.value }))} required />
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Code</label>
+                    <input className={inputClassName} value={gradeForm.code as any} onChange={(e) => setGradeForm(f => ({ ...f, code: e.target.value }))} required />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Name</label>
-                    <input className={settingsFieldClassName} value={gradeForm.name as any}
-                      onChange={(e)=>setGradeForm(f=>({ ...f, name: e.target.value }))} required />
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Name</label>
+                    <input className={inputClassName} value={gradeForm.name as any} onChange={(e) => setGradeForm(f => ({ ...f, name: e.target.value }))} required />
                   </div>
                   <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Description</label>
-                    <textarea className={settingsFieldClassName} rows={2} value={(gradeForm.description as any) ?? ''}
-                      onChange={(e)=>setGradeForm(f=>({ ...f, description: e.target.value }))} />
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Description</label>
+                    <textarea className={inputClassName} rows={2} value={(gradeForm.description as any) ?? ''} onChange={(e) => setGradeForm(f => ({ ...f, description: e.target.value }))} />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Base Salary</label>
-                    <input type="number" step="0.01" className={settingsFieldClassName}
-                      value={Number(gradeForm.base_salary ?? 0)} onChange={(e)=>setGradeForm(f=>({ ...f, base_salary: Number(e.target.value) }))} required />
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Base Salary (MWK)</label>
+                    <input type="number" step="0.01" className={inputClassName} value={Number(gradeForm.base_salary ?? 0)} onChange={(e) => setGradeForm(f => ({ ...f, base_salary: Number(e.target.value) }))} required />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">OT Multiplier</label>
-                    <input type="number" step="0.01" className={settingsFieldClassName}
-                      value={Number(gradeForm.overtime_multiplier ?? 1.5)} onChange={(e)=>setGradeForm(f=>({ ...f, overtime_multiplier: Number(e.target.value) }))} />
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">OT Multiplier</label>
+                    <input type="number" step="0.01" className={inputClassName} value={Number(gradeForm.overtime_multiplier ?? 1.5)} onChange={(e) => setGradeForm(f => ({ ...f, overtime_multiplier: Number(e.target.value) }))} />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Absence Deduction/Day</label>
-                    <input type="number" step="0.01" className={settingsFieldClassName}
-                      value={Number(gradeForm.absence_deduction_per_day ?? 0)} onChange={(e)=>setGradeForm(f=>({ ...f, absence_deduction_per_day: Number(e.target.value) }))} />
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Absence Deduction/Day (MWK)</label>
+                    <input type="number" step="0.01" className={inputClassName} value={Number(gradeForm.absence_deduction_per_day ?? 0)} onChange={(e) => setGradeForm(f => ({ ...f, absence_deduction_per_day: Number(e.target.value) }))} />
                   </div>
                   <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Allowances (JSON)</label>
-                    <textarea className={settingsFieldClassName} rows={2}
-                      value={typeof gradeForm.allowances === 'string' ? (gradeForm.allowances as any) : JSON.stringify(gradeForm.allowances ?? [])}
-                      onChange={(e)=>setGradeForm(f=>({ ...f, allowances: e.target.value }))} />
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Allowances (JSON)</label>
+                    <textarea className={inputClassName} rows={2} value={typeof gradeForm.allowances === 'string' ? (gradeForm.allowances as any) : JSON.stringify(gradeForm.allowances ?? [])} onChange={(e) => setGradeForm(f => ({ ...f, allowances: e.target.value }))} />
                   </div>
                 </div>
                 <div className="mt-4 flex items-center justify-end gap-3">
-                  <button type="button" onClick={() => setShowGradeModal(false)} className={settingsSecondaryButtonClassName}>Cancel</button>
-                  <button type="submit" className={settingsPrimaryButtonClassName}>{editingGrade ? 'Save' : 'Create'}</button>
+                  <Button type="button" variant="outline" onClick={() => setShowGradeModal(false)}>Cancel</Button>
+                  <Button type="submit">{editingGrade ? 'Save Changes' : 'Create Grade'}</Button>
                 </div>
               </form>
             </Modal>
-          </section>
+          </div>
         )}
 
-        {tab === 'finance' && (
-          <section className="space-y-6">
-            {/* Payroll Defaults */}
-            <div className={settingsCardClassName}>
-              <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">Payroll Defaults</h2>
-              <form onSubmit={submitDefaults} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {/* Payroll Defaults Tab */}
+        {activeTab === 'payroll' && (
+          <div className="animate-in fade-in duration-300">
+            <SectionCard 
+              title="Payroll Defaults" 
+              action={<Button onClick={submitDefaults}><IconMapper name="Save" size={16} className="mr-2" />Save Defaults</Button>}
+            >
+              <form onSubmit={submitDefaults} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Guard Absence Deduction/Day (MWK)</label>
-                  <input type="number" step="0.01" value={defaults.guard_absence_deduction_per_day}
-                    onChange={(e)=>setDefaults(d=>({...d, guard_absence_deduction_per_day: Number(e.target.value)}))}
-                    className={settingsFieldClassName} />
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Guard Absence Deduction/Day</label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-2.5 text-gray-500 text-sm">MWK</span>
+                    <input 
+                      type="number" 
+                      step="0.01" 
+                      value={defaults.guard_absence_deduction_per_day}
+                      onChange={(e) => setDefaults(d => ({ ...d, guard_absence_deduction_per_day: Number(e.target.value) }))}
+                      className={`${inputClassName} pl-14`} 
+                    />
+                  </div>
+                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Amount deducted per day of absence for guards</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Staff Absence Deduction/Day (MWK)</label>
-                  <input type="number" step="0.01" value={defaults.staff_absence_deduction_per_day}
-                    onChange={(e)=>setDefaults(d=>({...d, staff_absence_deduction_per_day: Number(e.target.value)}))}
-                    className={settingsFieldClassName} />
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Staff Absence Deduction/Day</label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-2.5 text-gray-500 text-sm">MWK</span>
+                    <input 
+                      type="number" 
+                      step="0.01" 
+                      value={defaults.staff_absence_deduction_per_day}
+                      onChange={(e) => setDefaults(d => ({ ...d, staff_absence_deduction_per_day: Number(e.target.value) }))}
+                      className={`${inputClassName} pl-14`} 
+                    />
+                  </div>
+                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Amount deducted per day of absence for staff</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Default OT Multiplier</label>
-                  <input type="number" step="0.01" value={defaults.overtime_multiplier_default}
-                    onChange={(e)=>setDefaults(d=>({...d, overtime_multiplier_default: Number(e.target.value)}))}
-                    className={settingsFieldClassName} />
-                </div>
-                <div className="sm:col-span-2 lg:col-span-3 pt-2">
-                  <button type="submit" className={`w-full sm:w-auto ${settingsPrimaryButtonClassName}`}>Save Defaults</button>
-                </div>
-              </form>
-            </div>
-
-            {/* Pay Profiles */}
-            <div className={settingsCardClassName}>
-              <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">Pay Profiles</h2>
-              <form onSubmit={submitNewProfile} className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-6 gap-3 mb-4">
-                <div className="md:col-span-1">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Type</label>
-                  <select value={newProfile.payee_type} onChange={(e)=>setNewProfile(p=>({...p, payee_type: e.target.value as any}))}
-                    className={settingsFieldClassName}>
-                    <option value="guard">Guard</option>
-                    <option value="user">Staff</option>
-                  </select>
-                </div>
-                <div className="sm:col-span-2 md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Payee</label>
-                  <input
-                    list={newProfile.payee_type === 'guard' ? 'guards-list' : 'users-list'}
-                    placeholder={newProfile.payee_type === 'guard' ? 'Search guard by name or ID' : 'Search staff by name or ID'}
-                    onChange={(e)=>setNewProfile(p=>({...p, payee_id: Number(e.target.value || 0)}))}
-                    className={settingsFieldClassName}
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Default OT Multiplier</label>
+                  <input 
+                    type="number" 
+                    step="0.01" 
+                    value={defaults.overtime_multiplier_default}
+                    onChange={(e) => setDefaults(d => ({ ...d, overtime_multiplier_default: Number(e.target.value) }))}
+                    className={inputClassName} 
                   />
-                  <datalist id="guards-list">
-                    {(finance?.payeeOptions?.guards ?? []).map((g: { id: number; label: string }) => (
-                      <option key={g.id} value={g.id} label={g.label} />
-                    ))}
-                  </datalist>
-                  <datalist id="users-list">
-                    {(finance?.payeeOptions?.users ?? []).map((u: { id: number; label: string }) => (
-                      <option key={u.id} value={u.id} label={u.label} />
-                    ))}
-                  </datalist>
-                </div>
-                <div className="md:col-span-1">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Monthly Salary</label>
-                  <input type="number" step="0.01" value={newProfile.monthly_salary as number}
-                    onChange={(e)=>setNewProfile(p=>({...p, monthly_salary: Number(e.target.value)}))}
-                    className={settingsFieldClassName} />
-                </div>
-                <div className="md:col-span-1">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">OT Multiplier</label>
-                  <input type="number" step="0.01" value={Number(newProfile.overtime_multiplier ?? 1.5)}
-                    onChange={(e)=>setNewProfile(p=>({...p, overtime_multiplier: Number(e.target.value)}))}
-                    className={settingsFieldClassName} />
-                </div>
-                <div className="md:col-span-1">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Advance</label>
-                  <input type="number" step="0.01" value={Number(newProfile.advance_amount ?? 0)}
-                    onChange={(e)=>setNewProfile(p=>({...p, advance_amount: Number(e.target.value)}))}
-                    className={settingsFieldClassName} />
-                </div>
-                <div className="md:col-span-1">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Absence Deduction/Day</label>
-                  <input type="number" step="0.01" value={Number(newProfile.absence_deduction_per_day ?? 0)}
-                    onChange={(e)=>setNewProfile(p=>({...p, absence_deduction_per_day: Number(e.target.value)}))}
-                    className={settingsFieldClassName} />
-                </div>
-                <div className="sm:col-span-2 md:col-span-6">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Allowances (JSON)</label>
-                  <textarea value={typeof newProfile.allowances === 'string' ? newProfile.allowances : JSON.stringify(newProfile.allowances ?? [])}
-                    onChange={(e)=>setNewProfile(p=>({...p, allowances: e.target.value}))}
-                    className={settingsFieldClassName} rows={2} />
-                </div>
-                <div className="sm:col-span-2 md:col-span-6 pt-2">
-                  <button type="submit" className={`w-full sm:w-auto ${settingsPrimaryButtonClassName}`}>Add Profile</button>
+                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Default multiplier for overtime calculations (e.g., 1.5x)</p>
                 </div>
               </form>
-
-              <div className="overflow-x-auto">
-                <table className="min-w-[980px] w-full text-sm">
-                  <thead className="bg-gray-50 dark:bg-gray-950/40">
-                    <tr className="text-left text-gray-600 dark:text-gray-300 border-b border-gray-200 dark:border-gray-800">
-                      <th className="px-2 py-2">ID</th>
-                      <th className="px-2 py-2">Type</th>
-                      <th className="px-2 py-2">Payee</th>
-                      <th className="px-2 py-2">Salary</th>
-                      <th className="px-2 py-2">OT</th>
-                      <th className="px-2 py-2">Advance</th>
-                      <th className="px-2 py-2">Absence</th>
-                      <th className="px-2 py-2">Allowances (JSON)</th>
-                      <th className="px-2 py-2">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                    {profiles.map((p) => (
-                      <tr key={p.id} className="text-gray-900 dark:text-gray-100">
-                        <td className="px-2 py-2">{p.id}</td>
-                        <td className="px-2 py-2 capitalize">{p.payee_type}</td>
-                        <td className="px-2 py-2">#{p.payee_id}</td>
-                        <td className="px-2 py-2">
-                          <input
-                            type="number"
-                            step="0.01"
-                            value={Number(p.monthly_salary)}
-                            onChange={(e)=>setProfiles(prev=>prev.map(x=>x.id===p.id?{...x, monthly_salary: Number(e.target.value)}:x))}
-                            className={`w-32 ${settingsInlineFieldClassName}`}
-                          />
-                        </td>
-                        <td className="px-2 py-2">
-                          <input
-                            type="number"
-                            step="0.01"
-                            value={Number(p.overtime_multiplier ?? 1.5)}
-                            onChange={(e)=>setProfiles(prev=>prev.map(x=>x.id===p.id?{...x, overtime_multiplier: Number(e.target.value)}:x))}
-                            className={`w-24 ${settingsInlineFieldClassName}`}
-                          />
-                        </td>
-                        <td className="px-2 py-2">
-                          <input
-                            type="number"
-                            step="0.01"
-                            value={Number(p.advance_amount ?? 0)}
-                            onChange={(e)=>setProfiles(prev=>prev.map(x=>x.id===p.id?{...x, advance_amount: Number(e.target.value)}:x))}
-                            className={`w-28 ${settingsInlineFieldClassName}`}
-                          />
-                        </td>
-                        <td className="px-2 py-2">
-                          <input
-                            type="number"
-                            step="0.01"
-                            value={Number(p.absence_deduction_per_day ?? 0)}
-                            onChange={(e)=>setProfiles(prev=>prev.map(x=>x.id===p.id?{...x, absence_deduction_per_day: Number(e.target.value)}:x))}
-                            className={`w-28 ${settingsInlineFieldClassName}`}
-                          />
-                        </td>
-                        <td className="px-2 py-2">
-                          <textarea
-                            value={typeof p.allowances === 'string' ? p.allowances : JSON.stringify(p.allowances ?? [])}
-                            onChange={(e)=>setProfiles(prev=>prev.map(x=>x.id===p.id?{...x, allowances: e.target.value}:x))}
-                            className={`w-80 h-16 ${settingsInlineFieldClassName}`}
-                          />
-                        </td>
-                        <td className="px-2 py-2">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <button type="button" onClick={()=>updateProfile(p)} className={settingsSuccessButtonClassName}>Save</button>
-                            <button type="button" onClick={()=>deleteProfile(p.id)} className={settingsDangerButtonClassName}>Delete</button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </section>
-        )}
-
-        {tab === 'system' && (
-          <section className={settingsCardClassName}>
-            <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">System Status</h2>
-            <dl className="space-y-3">
-              <div className="flex items-center justify-between">
-                <dt className="text-sm text-gray-600 dark:text-gray-300">Database</dt>
-                <dd className="text-sm font-medium text-gray-900 dark:text-gray-100">{system.database_status}</dd>
-              </div>
-              <div className="flex items-center justify-between">
-                <dt className="text-sm text-gray-600 dark:text-gray-300">DB Size</dt>
-                <dd className="text-sm font-medium text-gray-900 dark:text-gray-100">{system.database_size}</dd>
-              </div>
-              <div className="flex items-center justify-between">
-                <dt className="text-sm text-gray-600 dark:text-gray-300">Cache Size</dt>
-                <dd className="text-sm font-medium text-gray-900 dark:text-gray-100">{system.cache_size}</dd>
-              </div>
-              <div className="flex items-center justify-between">
-                <dt className="text-sm text-gray-600 dark:text-gray-300">Storage Free</dt>
-                <dd className="text-sm font-medium text-gray-900 dark:text-gray-100">{system.storage_free}</dd>
-              </div>
-              <div className="flex items-center justify-between">
-                <dt className="text-sm text-gray-600 dark:text-gray-300">Memory Usage</dt>
-                <dd className="text-sm font-medium text-gray-900 dark:text-gray-100">{system.memory_usage}</dd>
-              </div>
-              <div className="flex items-center justify-between">
-                <dt className="text-sm text-gray-600 dark:text-gray-300">Uptime (1m load)</dt>
-                <dd className="text-sm font-medium text-gray-900 dark:text-gray-100">{system.uptime}</dd>
-              </div>
-            </dl>
-          </section>
+            </SectionCard>
+          </div>
         )}
       </div>
     </AdminLayout>

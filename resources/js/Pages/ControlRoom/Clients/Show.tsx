@@ -35,6 +35,11 @@ export default function ClientShow() {
     document.body.removeChild(link);
   };
 
+  const printQr = (site: any) => {
+    const url = route('control-room.clients.sites.qr-print', site.id);
+    window.open(url, '_blank', 'width=600,height=800');
+  };
+
   return (
     <ControlRoomLayout title={`Client • ${client.name}`}>
       <Head title={`Client • ${client.name}`} />
@@ -172,6 +177,15 @@ export default function ClientShow() {
                         >
                           <IconMapper name="Download" size={14} />
                           Download
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => printQr(site)}
+                          className="gap-1"
+                        >
+                          <IconMapper name="Printer" size={14} />
+                          Print
                         </Button>
                       </div>
                     </div>
@@ -365,7 +379,7 @@ export default function ClientShow() {
                       required
                     >
                       <option value="">Choose a sergeant...</option>
-                      {(sergeants || []).filter((g: any) => g.position === 'sergeant' || g.is_leader).map((s: any) => (
+                      {(sergeants || []).filter((g: any) => g.position === 'sergeant').map((s: any) => (
                         <option key={s.id} value={s.id}>{s.name}</option>
                       ))}
                     </select>

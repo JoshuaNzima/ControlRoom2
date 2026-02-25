@@ -21,3 +21,28 @@ Broadcast::channel('conversation.{conversationId}', function ($user, $conversati
 Broadcast::channel('emergencies', function ($user) {
     return (bool) $user?->id;
 });
+
+Broadcast::channel('control-room', function ($user) {
+    if (!$user) return false;
+    return method_exists($user, 'hasAnyRole')
+        ? $user->hasAnyRole(['super_admin', 'admin', 'control_room_operator', 'operations_officer', 'manager'])
+        : true;
+});
+
+Broadcast::channel('admins', function ($user) {
+    if (!$user) return false;
+    return method_exists($user, 'hasAnyRole')
+        ? $user->hasAnyRole(['super_admin', 'admin', 'manager'])
+        : true;
+});
+
+Broadcast::channel('user.{id}', function ($user, $id) {
+    return $user && (int) $user->id === (int) $id;
+});
+
+Broadcast::channel('gps-alerts', function ($user) {
+    if (!$user) return false;
+    return method_exists($user, 'hasAnyRole')
+        ? $user->hasAnyRole(['super_admin', 'admin', 'control_room_operator', 'operations_officer', 'manager'])
+        : true;
+});

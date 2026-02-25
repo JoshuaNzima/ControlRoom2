@@ -25,6 +25,7 @@ interface NavItem {
 
 export default function TrainingLayout({ title, children, user }: Props) {
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
+  const [logoOk, setLogoOk] = React.useState<boolean>(true);
   const isCurrent = (href: string) => typeof window !== 'undefined' && window.location.pathname === href;
   const { theme, toggle } = useTheme();
   const { counters } = useCounters();
@@ -32,15 +33,25 @@ export default function TrainingLayout({ title, children, user }: Props) {
   const roles = ((user as any)?.roles ?? (page?.props as any)?.auth?.user?.roles ?? []) as any;
   const isSuperAdmin = Array.isArray(roles) ? roles.includes('super_admin') : roles === 'super_admin';
 
-  const nav: NavItem[] = [
+  // Main Training Navigation
+  const mainLinks: NavItem[] = [
     { name: 'Dashboard', href: route('training.dashboard'), icon: <IconMapper name="LayoutDashboard" className="h-6 w-6" />, current: isCurrent(route('training.dashboard')) },
     { name: 'Trainees', href: route('training.trainees.index'), icon: <IconMapper name="GraduationCap" className="h-6 w-6" />, current: isCurrent(route('training.trainees.index')) },
     { name: 'Attendance', href: route('training.attendance.index'), icon: <IconMapper name="CalendarCheck" className="h-6 w-6" />, current: isCurrent(route('training.attendance.index')) },
+  ];
+
+  // Training Programs
+  const programLinks: NavItem[] = [
     { name: 'Crash Courses', href: route('training.crash-courses.index'), icon: <IconMapper name="Zap" className="h-6 w-6" />, current: isCurrent(route('training.crash-courses.index')) },
     { name: 'Refreshers', href: route('training.refreshers.index'), icon: <IconMapper name="RefreshCw" className="h-6 w-6" />, current: isCurrent(route('training.refreshers.index')) },
     { name: 'Regimens', href: route('training.regimens.index'), icon: <IconMapper name="ClipboardList" className="h-6 w-6" />, current: isCurrent(route('training.regimens.index')) },
     { name: 'Trainer Guards', href: route('training.trainer-guards.index'), icon: <IconMapper name="UserCheck" className="h-6 w-6" />, current: isCurrent(route('training.trainer-guards.index')) },
+  ];
+
+  // Tools
+  const toolsLinks: NavItem[] = [
     { name: 'Requisitions', href: route('requisitions.index'), icon: <IconMapper name="ClipboardList" className="h-6 w-6" />, current: isCurrent(route('requisitions.index')), badge: (() => { const n = Number(counters?.requisitions_my_open || 0); return n > 0 ? String(n) : undefined; })() },
+    { name: 'Budgets', href: route('budgets.index'), icon: <IconMapper name="PieChart" className="h-6 w-6" />, current: isCurrent(route('budgets.index')) },
   ];
 
   return (
@@ -52,18 +63,57 @@ export default function TrainingLayout({ title, children, user }: Props) {
       <div className={`fixed top-0 left-0 bottom-0 flex flex-col w-64 bg-red-900 dark:bg-gray-950 text-white transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 transition-transform duration-300 ease-in-out z-50`}>
         <div className="flex-1 flex flex-col pt-5 pb-4 overflow-y-auto">
           <div className="flex items-center flex-shrink-0 px-4">
-            <span className="ml-2 text-2xl font-bold text-white">Training</span>
+            <img
+              src="/images/Coin-logo.png"
+              alt="Coin Security"
+              className="h-10 w-auto"
+              style={{ display: logoOk ? 'block' : 'none' }}
+              onLoad={() => setLogoOk(true)}
+              onError={() => setLogoOk(false)}
+            />
+            {!logoOk && (
+              <span className="ml-2 text-2xl font-bold text-white">Training</span>
+            )}
           </div>
-          <nav className="mt-8 flex-1 px-2 space-y-1">
-            {nav.map((item) => (
-              <Link key={item.name} href={item.href} className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md ${item.current ? 'bg-red-800 text-white dark:bg-gray-800' : 'text-red-100 hover:bg-red-800 hover:text-white dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white'}`}>
-                {item.icon}
-                <span className="ml-3">{item.name}</span>
-                {item.badge && (
-                  <span className="ml-auto inline-block py-0.5 px-2 text-xs font-medium rounded-full bg-white/10 text-white">{item.badge}</span>
-                )}
-              </Link>
-            ))}
+          <nav className="mt-8 flex-1 px-2 space-y-8">
+            <div className="space-y-1">
+              <h3 className="px-3 text-xs font-semibold text-red-200 dark:text-gray-400 uppercase tracking-wider">Training</h3>
+              {mainLinks.map((item) => (
+                <Link key={item.name} href={item.href} className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md ${item.current ? 'bg-red-800 text-white dark:bg-gray-800' : 'text-red-100 hover:bg-red-800 hover:text-white dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white'}`}>
+                  {item.icon}
+                  <span className="ml-3">{item.name}</span>
+                  {item.badge && (
+                    <span className="ml-auto inline-block py-0.5 px-2 text-xs font-medium rounded-full bg-white/10 text-white">{item.badge}</span>
+                  )}
+                </Link>
+              ))}
+            </div>
+
+            <div className="space-y-1">
+              <h3 className="px-3 text-xs font-semibold text-red-200 dark:text-gray-400 uppercase tracking-wider">Programs</h3>
+              {programLinks.map((item) => (
+                <Link key={item.name} href={item.href} className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md ${item.current ? 'bg-red-800 text-white dark:bg-gray-800' : 'text-red-100 hover:bg-red-800 hover:text-white dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white'}`}>
+                  {item.icon}
+                  <span className="ml-3">{item.name}</span>
+                  {item.badge && (
+                    <span className="ml-auto inline-block py-0.5 px-2 text-xs font-medium rounded-full bg-white/10 text-white">{item.badge}</span>
+                  )}
+                </Link>
+              ))}
+            </div>
+
+            <div className="space-y-1">
+              <h3 className="px-3 text-xs font-semibold text-red-200 dark:text-gray-400 uppercase tracking-wider">Tools</h3>
+              {toolsLinks.map((item) => (
+                <Link key={item.name} href={item.href} className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md ${item.current ? 'bg-red-800 text-white dark:bg-gray-800' : 'text-red-100 hover:bg-red-800 hover:text-white dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white'}`}>
+                  {item.icon}
+                  <span className="ml-3">{item.name}</span>
+                  {item.badge && (
+                    <span className="ml-auto inline-block py-0.5 px-2 text-xs font-medium rounded-full bg-white/10 text-white">{item.badge}</span>
+                  )}
+                </Link>
+              ))}
+            </div>
           </nav>
         </div>
         <div className="flex-shrink-0 flex border-t border-red-800 dark:border-gray-800 p-4">

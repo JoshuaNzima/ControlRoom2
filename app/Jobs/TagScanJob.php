@@ -38,9 +38,6 @@ class TagScanJob implements ShouldQueue
     public function handle(ScanTagger $tagger): void
     {
         $scan = CheckpointScan::with('checkpoint.clientSite.client')->find($this->scanId);
-            
-            // Broadcast ScanTagged event so control-room receives full tag immediately
-            event(new \App\Events\ScanTagged(ScanTag::latest()->first()->id ?? 0, $tags));
 
         if (!$scan) {
             Log::warning('TagScanJob: checkpoint scan not found: ' . $this->scanId);

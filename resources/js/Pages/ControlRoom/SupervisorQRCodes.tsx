@@ -30,6 +30,11 @@ export default function SupervisorQRCodes({ zones }: { zones: ZoneItem[] }) {
     window.location.href = route('control-room.qr-codes.download-saved');
   };
 
+  const printQr = (siteId: number) => {
+    const url = route('control-room.clients.sites.qr-print', siteId);
+    window.open(url, '_blank', 'width=600,height=800');
+  };
+
   // Flatten all sites from all zones
   const allSites = zones?.flatMap(z => z.sites || []) || [];
   const sitesWithQr = allSites.filter(s => s.qr_code);
@@ -108,14 +113,22 @@ export default function SupervisorQRCodes({ zones }: { zones: ZoneItem[] }) {
                           {site.status}
                         </span>
                       </div>
-                      <a
-                        href={route('control-room.clients.sites.qr', site.id)}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-sm px-3 py-1.5 rounded-md border dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 whitespace-nowrap"
-                      >
-                        View QR
-                      </a>
+                      <div className="flex items-center gap-2">
+                        <a
+                          href={route('control-room.clients.sites.qr', site.id)}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-sm px-3 py-1.5 rounded-md border dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 whitespace-nowrap"
+                        >
+                          View QR
+                        </a>
+                        <button
+                          onClick={() => printQr(site.id)}
+                          className="text-sm px-3 py-1.5 rounded-md border dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 whitespace-nowrap"
+                        >
+                          Print
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))}

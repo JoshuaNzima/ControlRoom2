@@ -15,7 +15,7 @@ interface Props {
   user?: User;
 }
 
-interface ModuleNavItem {
+interface NavItem {
   name: string;
   href: string;
   icon: React.ReactNode;
@@ -45,18 +45,30 @@ export default function FinanceLayout({ title, children, user }: Props) {
   const normalizePath = (href: string) => {
     try { return new URL(href, window.location.origin).pathname; } catch { return href; }
   };
-  const isCurrent = (href: string) => window.location.pathname === normalizePath(href);
+  const isCurrent = (href: string) => {
+    try {
+      const hrefPath = new URL(href, window.location.origin).pathname;
+      return window.location.pathname === hrefPath;
+    } catch {
+      return window.location.pathname === href;
+    }
+  };
 
-  const financeLinks: ModuleNavItem[] = [
+  // Main Finance Navigation
+  const financeLinks: NavItem[] = [
     { name: 'Dashboard', href: safeRoute('finance.dashboard', '/finance'), icon: <IconMapper name="home" className="h-6 w-6" />, current: isCurrent(safeRoute('finance.dashboard', '/finance')) },
     { name: 'Invoices', href: safeRoute('finance.invoices.index', '/finance/invoices'), icon: <IconMapper name="file-text" className="h-6 w-6" />, current: isCurrent(safeRoute('finance.invoices.index', '/finance/invoices')) },
-    { name: 'Requisitions', href: safeRoute('finance.expenses.index', '/finance/expenses'), icon: <IconMapper name="trending-down" className="h-6 w-6" />, current: isCurrent(safeRoute('finance.expenses.index', '/finance/expenses')), badge: (()=>{ const n = Number(counters?.finance_approvals_pending || counters?.finance_expenses_pending_mine || 0); return n>0? String(n): undefined; })() },
-    { name: 'Budgets', href: safeRoute('finance.budgets.index', '/finance/budgets'), icon: <IconMapper name="pie-chart" className="h-6 w-6" />, current: isCurrent(safeRoute('finance.budgets.index', '/finance/budgets')) },
     { name: 'Payments', href: safeRoute('finance.payments.index', '/finance/payments'), icon: <IconMapper name="check-square" className="h-6 w-6" />, current: isCurrent(safeRoute('finance.payments.index', '/finance/payments')) },
     { name: 'Payroll', href: safeRoute('finance.payroll.index', '/finance/payroll'), icon: <IconMapper name="users" className="h-6 w-6" />, current: isCurrent(safeRoute('finance.payroll.index', '/finance/payroll')) },
-    { name: 'Req Summary', href: route('requisitions.index') as unknown as string, icon: <IconMapper name="clipboard-list" className="h-6 w-6" />, current: isCurrent(route('requisitions.index') as unknown as string), badge: (()=>{ const n = Number(counters?.requisitions_my_open||0); return n>0? String(n): undefined; })() },
   ];
-  const linksToRender = financeLinks;
+
+  // Budget & Requisitions
+  const managementLinks: NavItem[] = [
+    { name: 'Requisitions', href: safeRoute('finance.expenses.index', '/finance/expenses'), icon: <IconMapper name="trending-down" className="h-6 w-6" />, current: isCurrent(safeRoute('finance.expenses.index', '/finance/expenses')), badge: (()=>{ const n = Number(counters?.finance_approvals_pending || counters?.finance_expenses_pending_mine || 0); return n>0? String(n): undefined; })() },
+    { name: 'Budgets', href: safeRoute('finance.budgets.index', '/finance/budgets'), icon: <IconMapper name="pie-chart" className="h-6 w-6" />, current: isCurrent(safeRoute('finance.budgets.index', '/finance/budgets')) },
+    { name: 'Req Summary', href: route('requisitions.index') as unknown as string, icon: <IconMapper name="clipboard-list" className="h-6 w-6" />, current: isCurrent(route('requisitions.index') as unknown as string), badge: (()=>{ const n = Number(counters?.requisitions_my_open||0); return n>0? String(n): undefined; })() },
+    { name: 'My Budgets', href: route('budgets.index'), icon: <IconMapper name="pie-chart" className="h-6 w-6" />, current: isCurrent(route('budgets.index')) },
+  ];
 
   const handleLogout = (e: React.FormEvent) => {
     e.preventDefault();
@@ -94,24 +106,40 @@ export default function FinanceLayout({ title, children, user }: Props) {
             )}
           </div>
 
-          <nav className="mt-5 flex-1 px-2 space-y-1">
-            {linksToRender.map((item, idx) => (
-              <Link
-                key={idx}
-                href={item.href}
-                className={`group flex items-center px-2 py-3 text-sm font-medium rounded-md transition-colors ${
-                  item.current
-                    ? 'bg-red-800 text-white'
-                    : 'text-red-100 hover:bg-red-800 hover:text-white'
-                }`}
-              >
-                {item.icon}
-                <span className="ml-3">{item.name}</span>
-                {item.badge && (
-                  <span className="ml-auto inline-block py-0.5 px-2 text-xs font-medium rounded-full bg-white/10 text-white">{item.badge}</span>
-                )}
-              </Link>
-            ))}
+          <nav className="mt-8 flex-1 px-2 space-y-8">
+            <div className="space-y-1">
+              <h3 className="px-3 text-xs font-semibold text-red-200 dark:text-gray-400 uppercase tracking-wider">Finance</h3>
+              {financeLinks.map((item) => (
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md ${item.current ? 'bg-red-800 text-white dark:bg-gray-800' : 'text-red-100 hover:bg-red-800 hover:text-white dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white'}`}
+                >
+                  {item.icon}
+                  <span className="ml-3">{item.name}</span>
+                  {item.badge && (
+                    <span className="ml-auto inline-block py-0.5 px-2 text-xs font-medium rounded-full bg-white/10 text-white">{item.badge}</span>
+                  )}
+                </Link>
+              ))}
+            </div>
+
+            <div className="space-y-1">
+              <h3 className="px-3 text-xs font-semibold text-red-200 dark:text-gray-400 uppercase tracking-wider">Management</h3>
+              {managementLinks.map((item) => (
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md ${item.current ? 'bg-red-800 text-white dark:bg-gray-800' : 'text-red-100 hover:bg-red-800 hover:text-white dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white'}`}
+                >
+                  {item.icon}
+                  <span className="ml-3">{item.name}</span>
+                  {item.badge && (
+                    <span className="ml-auto inline-block py-0.5 px-2 text-xs font-medium rounded-full bg-white/10 text-white">{item.badge}</span>
+                  )}
+                </Link>
+              ))}
+            </div>
           </nav>
         </div>
 

@@ -33,13 +33,11 @@ class ClientsController extends Controller
 	public function show(Client $client)
 	{
 		$client->load(['sites' => function($q){ $q->select(['id','client_id','name','status']); }]);
-		$guards = Guard::select(['id','name','status','position','is_leader'])->where('status','active')->orderBy('name')->get();
+		$guards = Guard::select(['id','name','status','position'])->where('status','active')->orderBy('name')->get();
 		$supervisors = User::role('supervisor')->select(['id','name'])->orderBy('name')->get();
-		$sergeants = Guard::select(['id','name','position','is_leader'])
+		$sergeants = Guard::select(['id','name','position'])
 			->where('status','active')
-			->where(function($q) {
-				$q->where('position', 'sergeant')->orWhere('is_leader', true);
-			})
+			->where('position', 'sergeant')
 			->orderBy('name')
 			->get();
 
@@ -197,5 +195,201 @@ class ClientsController extends Controller
 		}
 
 		return response($png, 200, ['Content-Type' => 'image/png']);
+	}
+
+	public function siteQrPrint(ClientSite $site)
+	{
+		$site->load(['client:id,name']);
+
+		// Ensure site has a QR code (generate if missing)
+		if (!$site->qr_code) {
+			$site->qr_code = ClientSite::generateUniqueQrCode();
+			\DB::table('client_sites')->where('id', $site->id)->update(['qr_code' => $site->qr_code]);
+		}
+
+		$payload = [
+			'issuer' => 'CoinSecurity',
+			'type' => 'site',
+			'site_id' => $site->id,
+			'code' => $site->qr_code,
+			'site_name' => $site->name,
+			'client' => optional($site->client)->name,
+			'lat' => $site->latitude !== null ? (float) $site->latitude : null,
+			'lng' => $site->longitude !== null ? (float) $site->longitude : null,
+			'ver' => 'v2',
+		];
+
+		$qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=' . urlencode(json_encode($payload));
+		$logoUrl = asset('images/Coin-logo.png');
+		$emergencyHotline = config('app.emergency_hotline', '+265 999 611 711');
+		$clientName = optional($site->client)->name ?? 'Unknown Client';
+
+		$html = <<<HTML
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>{$site->name} - QR Code</title>
+	<style>
+		* { margin: 0; padding: 0; box-sizing: border-box; }
+		body {
+			font-family: Arial, sans-serif;
+			background: #f5f5f5;
+			display: flex;
+			justify-content: center;
+			align-items: center;
+			min-height: 100vh;
+			padding: 20px;
+		}
+		.print-container {
+			background: white;
+			border-radius: 16px;
+			box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+			padding: 40px;
+			text-align: center;
+			max-width: 500px;
+			width: 100%;
+		}
+		.logo {
+			width: 180px;
+			height: auto;
+			margin-bottom: 30px;
+		}
+		.qr-wrapper {
+			position: relative;
+			display: inline-block;
+			margin: 20px 0;
+		}
+		.qr-code {
+			width: 350px;
+			height: 350px;
+			border-radius: 12px;
+			box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+		}
+		.qr-overlay {
+			position: absolute;
+			top: 50%;
+			left: 50%;
+			transform: translate(-50%, -50%);
+			width: 80px;
+			height: 80px;
+			background: white;
+			border-radius: 50%;
+			padding: 8px;
+			box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+		}
+		.qr-overlay img {
+			width: 100%;
+			height: 100%;
+			object-fit: contain;
+			border-radius: 50%;
+		}
+		.site-name {
+			font-size: 28px;
+			font-weight: bold;
+			color: #1a1a1a;
+			margin: 25px 0 10px;
+		}
+		.client-name {
+			font-size: 18px;
+			color: #666;
+			margin-bottom: 25px;
+		}
+		.divider {
+			width: 60%;
+			height: 2px;
+			background: linear-gradient(to right, transparent, #c41e3a, transparent);
+			margin: 25px auto;
+		}
+		.emergency {
+			background: #c41e3a;
+			color: white;
+			padding: 20px;
+			border-radius: 12px;
+			margin-top: 20px;
+		}
+		.emergency-label {
+			font-size: 14px;
+			text-transform: uppercase;
+			letter-spacing: 1px;
+			margin-bottom: 8px;
+			opacity: 0.9;
+		}
+		.emergency-number {
+			font-size: 32px;
+			font-weight: bold;
+		}
+		.instructions {
+			margin-top: 20px;
+			padding: 15px;
+			background: #f9f9f9;
+			border-radius: 8px;
+			font-size: 14px;
+			color: #555;
+			line-height: 1.5;
+		}
+		.qr-id {
+			font-family: monospace;
+			font-size: 12px;
+			color: #999;
+			margin-top: 15px;
+			word-break: break-all;
+		}
+		@media print {
+			body { background: white; }
+			.print-container { box-shadow: none; }
+			.no-print { display: none; }
+		}
+		.print-btn {
+			background: #c41e3a;
+			color: white;
+			border: none;
+			padding: 12px 30px;
+			font-size: 16px;
+			border-radius: 8px;
+			cursor: pointer;
+			margin-top: 20px;
+			transition: background 0.2s;
+		}
+		.print-btn:hover { background: #a01830; }
+	</style>
+</head>
+<body>
+	<div class="print-container">
+		<img src="{$logoUrl}" alt="Coin Security Logo" class="logo">
+		
+		<div class="qr-wrapper">
+			<img src="{$qrUrl}" alt="QR Code" class="qr-code">
+			<div class="qr-overlay">
+				<img src="{$logoUrl}" alt="Coin">
+			</div>
+		</div>
+		
+		<h1 class="site-name">{$site->name}</h1>
+		<p class="client-name">{$clientName}</p>
+		
+		<div class="divider"></div>
+		
+		<div class="emergency">
+			<div class="emergency-label">Emergency Hotline</div>
+			<div class="emergency-number">{$emergencyHotline}</div>
+		</div>
+		
+		<div class="instructions">
+			<strong>Scan to Check In</strong><br>
+			Please scan this QR code when you arrive at the site. 
+			GPS verification required.
+		</div>
+		
+		<div class="qr-id">QR ID: {$site->qr_code}</div>
+		
+		<button class="print-btn no-print" onclick="window.print()">Print QR Code</button>
+	</div>
+</body>
+</html>
+HTML;
+
+		return response($html, 200, ['Content-Type' => 'text/html']);
 	}
 }

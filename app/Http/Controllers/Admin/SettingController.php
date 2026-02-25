@@ -35,40 +35,12 @@ class SettingController extends Controller
             }
         } catch (\Throwable $e) {}
 
-        $payProfiles = [];
-        try {
-            $payProfiles = \App\Models\PayProfile::orderBy('payee_type')->orderBy('payee_id')->get();
-        } catch (\Throwable $e) {
-            $payProfiles = [];
-        }
-
-        // HR: Guard Grades
         $guardGrades = [];
         try {
             $guardGrades = \App\Models\Guards\GuardGrade::orderBy('name')->get();
         } catch (\Throwable $e) {
             $guardGrades = [];
         }
-
-        // Payee options for searchable selectors
-        $guardOptions = [];
-        $userOptions = [];
-        try {
-            $guardOptions = \App\Models\Guards\Guard::orderBy('name')
-                ->get(['id', 'name', 'employee_id'])
-                ->map(fn($g) => [
-                    'id' => $g->id,
-                    'label' => trim(($g->employee_id ? ($g->employee_id.' - ') : '') . $g->name),
-                ]);
-        } catch (\Throwable $e) {}
-        try {
-            $userOptions = \App\Models\User::orderBy('name')
-                ->get(['id', 'name', 'employee_id', 'email'])
-                ->map(fn($u) => [
-                    'id' => $u->id,
-                    'label' => trim(($u->employee_id ? ($u->employee_id.' - ') : '') . $u->name),
-                ]);
-        } catch (\Throwable $e) {}
 
         return Inertia::render('Admin/Settings/Index', [
             'auth' => [
@@ -80,17 +52,8 @@ class SettingController extends Controller
                 ],
             ],
             'system' => $system,
-            'finance' => [
-                'payrollDefaults' => $payrollDefaults,
-                'payProfiles' => $payProfiles,
-                'payeeOptions' => [
-                    'guards' => $guardOptions,
-                    'users' => $userOptions,
-                ],
-            ],
-            'hr' => [
-                'guardGrades' => $guardGrades,
-            ],
+            'payrollDefaults' => $payrollDefaults,
+            'guardGrades' => $guardGrades,
         ]);
     }
 

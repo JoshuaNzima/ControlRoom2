@@ -7,6 +7,7 @@ import { useTheme } from '@/Providers/ThemeProvider';
 import QuickRequisitionButton from '@/Components/Requisitions/QuickRequisitionButton';
 import QuickBudgetButton from '@/Components/Budgets/QuickBudgetButton';
 import useCounters from '@/Hooks/useCounters';
+import useGpsAlerts from '@/Hooks/useGpsAlerts';
 
 interface Props {
   title: string;
@@ -28,6 +29,7 @@ export default function ControlRoomLayout({ title, children, user }: Props) {
   const { theme, toggle } = useTheme();
   const { counters } = useCounters();
   const page = usePage<any>();
+  useGpsAlerts();
   const roles = ((user as any)?.roles ?? (page?.props as any)?.auth?.user?.roles ?? []) as any;
   const isSuperAdmin = Array.isArray(roles) ? roles.includes('super_admin') : roles === 'super_admin';
   const roleDisplay = (() => {
@@ -42,6 +44,7 @@ export default function ControlRoomLayout({ title, children, user }: Props) {
   const controlRoomLinks: ModuleNavItem[] = [
   { name: 'Control Room Dashboard', href: route('control-room.dashboard'), icon: <IconMapper name="home" className="h-6 w-6" />, current: isCurrent(route('control-room.dashboard')) },
   { name: 'Live Monitoring', href: route('control-room.monitoring'), icon: <IconMapper name="activity" className="h-6 w-6" />, current: false },
+  { name: 'GPS Mismatch Incidents', href: route('control-room.gps-mismatch-incidents.index'), icon: <IconMapper name="map-pin" className="h-6 w-6" />, current: isCurrent(route('control-room.gps-mismatch-incidents.index')) },
   { name: 'Incident Management', href: route('control-room.incidents.index'), icon: <IconMapper name="alert-triangle" className="h-6 w-6" />, current: false, badge: (()=>{ const n = Number(counters?.control_incidents_open||0); return n>0? String(n): undefined; })() },
   { name: 'Camera Systems', href: route('control-room.cameras.index'), icon: <IconMapper name="camera" className="h-6 w-6" />, current: false },
   { name: 'Zone Management', href: route('control-room.zones.index'), icon: <IconMapper name="map-pin" className="h-6 w-6" />, current: false },

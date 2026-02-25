@@ -16,8 +16,9 @@ class LiveMonitoringController extends Controller
      */
     public function getRecentScans(Request $request): JsonResponse
     {
+        $hours = (int) config('scanner.recent_scans_hours', 24);
         $scans = CheckpointScan::with(['checkpoint.clientSite.client', 'supervisor'])
-            ->where('scanned_at', '>=', Carbon::now()->subHours(2))
+            ->where('scanned_at', '>=', Carbon::now()->subHours($hours))
             ->orderBy('scanned_at', 'desc')
             ->limit(20)
             ->get()
@@ -92,6 +93,7 @@ class LiveMonitoringController extends Controller
     public function getLiveStats(Request $request): JsonResponse
     {
         $oneHourAgo = Carbon::now()->subHour();
+        $hours = (int) config('scanner.recent_scans_hours', 24);
 
         $stats = [
             'qr_scans_last_hour' => CheckpointScan::where('scanned_at', '>=', $oneHourAgo)->count(),
@@ -116,8 +118,9 @@ class LiveMonitoringController extends Controller
      */
     public function getGuardLocations(Request $request): JsonResponse
     {
+        $hours = (int) config('scanner.recent_scans_hours', 24);
         $locations = CheckpointScan::with(['checkpoint.clientSite.client', 'supervisor'])
-            ->where('scanned_at', '>=', Carbon::now()->subHours(4))
+            ->where('scanned_at', '>=', Carbon::now()->subHours($hours))
             ->whereNotNull('latitude')
             ->whereNotNull('longitude')
             ->orderBy('scanned_at', 'desc')

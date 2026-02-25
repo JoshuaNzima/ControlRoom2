@@ -29,7 +29,7 @@ interface PageProps extends Record<string, any> {
   };
   filters: { search?: string; per_page?: number };
   supervisors: { id: number; name: string }[];
-  sergeants: { id: number; name: string; position: string; is_leader: boolean }[];
+  sergeants: { id: number; name: string; position: string }[];
 }
 
 export default function ClientsPage() {
@@ -292,7 +292,7 @@ export default function ClientsPage() {
                 >
                   <option value="">Select sergeant...</option>
                   {(sergeants || [])
-                    .filter((g) => g.position === 'sergeant' || g.is_leader)
+                    .filter((g) => g.position === 'sergeant')
                     .map((s) => (
                       <option key={s.id} value={s.id}>{s.name}</option>
                     ))}

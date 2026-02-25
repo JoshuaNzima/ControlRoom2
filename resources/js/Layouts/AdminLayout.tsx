@@ -6,6 +6,7 @@ import { User } from '@/types';
 import NotificationBell from '@/Components/Common/NotificationBell';
 import { useTheme } from '@/Providers/ThemeProvider';
 import useCounters from '@/Hooks/useCounters';
+import useGpsAlerts from '@/Hooks/useGpsAlerts';
 
 interface Props {
   title: string;
@@ -50,6 +51,7 @@ export default function AdminLayout({ title, children, user }: Props) {
   const { theme, toggle } = useTheme();
   const { props } = usePage<any>();
   const { counters } = useCounters();
+  useGpsAlerts();
   const effectiveUser: User | undefined = (user as any) ?? (props?.auth?.user as any) ?? undefined;
   const roleDisplay = (() => {
     const r: any = (effectiveUser as any)?.roles;

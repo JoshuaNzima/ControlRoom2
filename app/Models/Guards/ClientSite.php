@@ -254,6 +254,8 @@ class ClientSite extends Model
             'code' => $this->qr_code,
             'site_name' => $this->name,
             'client' => optional($this->client)->name,
+            'lat' => $this->latitude !== null ? (float) $this->latitude : null,
+            'lng' => $this->longitude !== null ? (float) $this->longitude : null,
             'ver' => 'v2'
         ];
     }

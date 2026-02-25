@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { router } from '@inertiajs/react';
 import { Html5QrcodeScanner, Html5QrcodeScanType } from 'html5-qrcode';
 import CameraCapture from '@/Components/CameraCapture';
 import toast, { Toaster } from 'react-hot-toast';
+import IconMapper from '@/Components/IconMapper';
 
 interface ScanResponse {
   success: boolean;
@@ -16,6 +17,20 @@ interface ScanResponse {
     scanned_at: string;
     expires_at: string;
   };
+  checkpoint?: {
+    id: number;
+    name: string;
+  };
+  location_verified?: boolean;
+  distance_meters?: number;
+}
+
+interface ScanResult {
+  type: 'site' | 'checkpoint';
+  name: string;
+  clientName?: string;
+  locationVerified: boolean;
+  timestamp: string;
 }
 
 interface Props {
@@ -40,6 +55,73 @@ export default function ScannerModal({ open, onClose, activeScan }: Props) {
   const [downOpen, setDownOpen] = useState(false);
   const [downReason, setDownReason] = useState('');
   const [downPhoto, setDownPhoto] = useState<File | null>(null);
+  const [scanResult, setScanResult] = useState<ScanResult | null>(null);
+  const [scanError, setScanError] = useState<string | null>(null);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const audioContextRef = useRef<AudioContext | null>(null);
+
+  // Initialize audio context for feedback sounds
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'AudioContext' in window) {
+      audioContextRef.current = new AudioContext();
+    }
+  }, []);
+
+  const playSuccessSound = useCallback(() => {
+    if (!audioContextRef.current) return;
+    
+    const ctx = audioContextRef.current;
+    const oscillator = ctx.createOscillator();
+    const gainNode = ctx.createGain();
+    
+    oscillator.connect(gainNode);
+    gainNode.connect(ctx.destination);
+    
+    oscillator.frequency.setValueAtTime(880, ctx.currentTime); // A5
+    oscillator.frequency.setValueAtTime(1100, ctx.currentTime + 0.1); // C#6
+    
+    gainNode.gain.setValueAtTime(0.3, ctx.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+    
+    oscillator.start(ctx.currentTime);
+    oscillator.stop(ctx.currentTime + 0.3);
+  }, []);
+
+  const playErrorSound = useCallback(() => {
+    if (!audioContextRef.current) return;
+    
+    const ctx = audioContextRef.current;
+    const oscillator = ctx.createOscillator();
+    const gainNode = ctx.createGain();
+    
+    oscillator.connect(gainNode);
+    gainNode.connect(ctx.destination);
+    
+    oscillator.frequency.setValueAtTime(200, ctx.currentTime);
+    oscillator.frequency.linearRampToValueAtTime(150, ctx.currentTime + 0.3);
+    
+    gainNode.gain.setValueAtTime(0.3, ctx.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+    
+    oscillator.start(ctx.currentTime);
+    oscillator.stop(ctx.currentTime + 0.3);
+  }, []);
+
+  const triggerHaptic = useCallback((type: 'success' | 'error' | 'light') => {
+    if ('vibrate' in navigator) {
+      switch (type) {
+        case 'success':
+          navigator.vibrate([50, 100, 50]);
+          break;
+        case 'error':
+          navigator.vibrate([200, 100, 200]);
+          break;
+        case 'light':
+          navigator.vibrate(50);
+          break;
+      }
+    }
+  }, []);
 
   useEffect(() => {
     if (navigator.geolocation) {
@@ -139,17 +221,43 @@ export default function ScannerModal({ open, onClose, activeScan }: Props) {
       longitude: location?.lon,
     }, {
       preserveState: true,
-      onSuccess: () => {
+      onSuccess: (page) => {
         toast.dismiss(loadingToast);
-        toast.success('Scan successful!');
-        onClose();
-        // Navigate to dashboard (site lock is shown and quick actions available)
-        router.visit(route('scan'));
+        
+        // Play success sound and haptic feedback
+        playSuccessSound();
+        triggerHaptic('success');
+        
+        // Show success screen with scan details
+        const flash = (page.props as any).flash;
+        const isLocationVerified = flash?.location_verified ?? true;
+        
+        setScanResult({
+          type: 'checkpoint',
+          name: code.substring(0, 20),
+          locationVerified: isLocationVerified,
+          timestamp: new Date().toISOString(),
+        });
+        setShowSuccess(true);
+        
+        // Auto-close after showing success for 2 seconds
+        setTimeout(() => {
+          onClose();
+          router.visit(route('scan'));
+        }, 2000);
       },
       onError: (errors) => {
         toast.dismiss(loadingToast);
+        
+        // Play error sound and haptic feedback
+        playErrorSound();
+        triggerHaptic('error');
+        
         const message = Object.values(errors)[0] as string;
-        toast.error(message || 'Failed to process scan. Please try again.');
+        const errorMsg = message || 'Failed to process scan. Please try again.';
+        
+        setScanError(errorMsg);
+        toast.error(errorMsg, { duration: 5000 });
       }
     });
   };
@@ -268,6 +376,97 @@ export default function ScannerModal({ open, onClose, activeScan }: Props) {
     : 0;
 
   if (!open) return null;
+
+  // Success Screen Overlay
+  if (showSuccess && scanResult) {
+    return (
+      <>
+        <Toaster position="top-right" />
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-900 dark:text-gray-100 rounded-xl w-11/12 max-w-md p-8 text-center">
+            <div className="mb-6">
+              <div className="w-24 h-24 mx-auto bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center animate-bounce">
+                <IconMapper name="CheckCircle" size={48} className="text-green-600 dark:text-green-400" />
+              </div>
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
+              Scan Successful!
+            </h2>
+            <p className="text-gray-600 dark:text-gray-400 mb-6">
+              {scanResult.type === 'site' ? 'Site' : 'Checkpoint'} verified and locked
+            </p>
+            <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 mb-6 text-left">
+              <div className="flex items-center gap-2 mb-2">
+                <IconMapper name="MapPin" size={16} className="text-coin-600" />
+                <span className="font-medium text-gray-900 dark:text-gray-100">{scanResult.name}</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm">
+                <span className={scanResult.locationVerified ? 'text-green-600' : 'text-yellow-600'}>
+                  {scanResult.locationVerified ? '✓ Location verified' : '⚠ Location not verified'}
+                </span>
+              </div>
+              <div className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                {new Date(scanResult.timestamp).toLocaleTimeString()}
+              </div>
+            </div>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              Redirecting to dashboard...
+            </p>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  // Error Retry Screen
+  if (scanError) {
+    return (
+      <>
+        <Toaster position="top-right" />
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-900 dark:text-gray-100 rounded-xl w-11/12 max-w-md p-8 text-center">
+            <div className="mb-6">
+              <div className="w-24 h-24 mx-auto bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center">
+                <IconMapper name="XCircle" size={48} className="text-red-600 dark:text-red-400" />
+              </div>
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
+              Scan Failed
+            </h2>
+            <p className="text-red-600 dark:text-red-400 mb-6">
+              {scanError}
+            </p>
+            <div className="space-y-3">
+              <button
+                onClick={() => {
+                  setScanError(null);
+                  setScanning(true);
+                }}
+                className="w-full py-3 bg-coin-600 hover:bg-coin-700 text-white rounded-lg font-medium transition"
+              >
+                Try Again
+              </button>
+              <button
+                onClick={() => {
+                  setScanError(null);
+                  setScanning(false);
+                }}
+                className="w-full py-3 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg font-medium transition"
+              >
+                Use Manual Entry
+              </button>
+              <button
+                onClick={onClose}
+                className="w-full py-3 border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 rounded-lg font-medium transition"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      </>
+    );
+  }
 
   return (
     <>

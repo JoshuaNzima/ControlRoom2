@@ -4,6 +4,7 @@ namespace App\Models\Guards;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Client extends Model
@@ -41,6 +42,16 @@ class Client extends Model
     public function sites(): HasMany
     {
         return $this->hasMany(ClientSite::class);
+    }
+
+    public function supervisor(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\User::class, 'supervisor_id');
+    }
+
+    public function sergeant(): BelongsTo
+    {
+        return $this->belongsTo(Guard::class, 'sergeant_id');
     }
 
     public function payments(): HasMany

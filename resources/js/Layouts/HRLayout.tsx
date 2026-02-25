@@ -25,6 +25,7 @@ interface NavItem {
 
 export default function HRLayout({ title, children, user }: Props) {
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
+  const [logoOk, setLogoOk] = React.useState<boolean>(true);
   const isCurrent = (href: string) => typeof window !== 'undefined' && window.location.pathname === href;
   const { theme, toggle } = useTheme();
   const { counters } = useCounters();
@@ -35,20 +36,33 @@ export default function HRLayout({ title, children, user }: Props) {
     return 'HR';
   })();
 
-  const nav: NavItem[] = [
-    { name: 'Overview', href: route('hr.dashboard'), icon: <IconMapper name="layout-dashboard" className="h-6 w-6" />, current: isCurrent(route('hr.dashboard')) },
+  // Main HR Navigation
+  const hrLinks: NavItem[] = [
+    { name: 'Dashboard', href: route('hr.dashboard'), icon: <IconMapper name="layout-dashboard" className="h-6 w-6" />, current: isCurrent(route('hr.dashboard')) },
     { name: 'Employees', href: route('hr.employees.index'), icon: <IconMapper name="users" className="h-6 w-6" />, current: isCurrent(route('hr.employees.index')) },
     { name: 'Roster', href: route('hr.leaves'), icon: <IconMapper name="calendar" className="h-6 w-6" />, current: isCurrent(route('hr.leaves')) },
-    { name: 'Training', href: route('hr.training'), icon: <IconMapper name="graduation-cap" className="h-6 w-6" />, current: isCurrent(route('hr.training')) },
     { name: 'Careers', href: route('hr.jobs.index'), icon: <IconMapper name="megaphone" className="h-6 w-6" />, current: isCurrent(route('hr.jobs.index')) },
+  ];
+
+  // Development & Benefits
+  const developmentLinks: NavItem[] = [
+    { name: 'Training', href: route('hr.training'), icon: <IconMapper name="graduation-cap" className="h-6 w-6" />, current: isCurrent(route('hr.training')) },
     { name: 'Benefits', href: route('hr.benefits.index'), icon: <IconMapper name="gift" className="h-6 w-6" />, current: isCurrent(route('hr.benefits.index')) },
     { name: 'Medical', href: route('hr.medical.index'), icon: <IconMapper name="stethoscope" className="h-6 w-6" />, current: isCurrent(route('hr.medical.index')) },
     { name: 'Pensions', href: route('hr.pensions.index'), icon: <IconMapper name="banknote" className="h-6 w-6" />, current: isCurrent(route('hr.pensions.index')) },
     { name: 'Compensation', href: route('hr.compensation.index'), icon: <IconMapper name="dollar-sign" className="h-6 w-6" />, current: isCurrent(route('hr.compensation.index')) },
+  ];
+
+  // Management & Compliance
+  const managementLinks: NavItem[] = [
     { name: 'Supervisor Incentives', href: route('hr.supervisor-incentives.index'), icon: <IconMapper name="award" className="h-6 w-6" />, current: isCurrent(route('hr.supervisor-incentives.index')) },
     { name: 'Safety', href: route('hr.safety.index'), icon: <IconMapper name="shield" className="h-6 w-6" />, current: isCurrent(route('hr.safety.index')) },
     { name: 'Policies', href: route('hr.policies.index'), icon: <IconMapper name="file-text" className="h-6 w-6" />, current: isCurrent(route('hr.policies.index')) },
     { name: 'Disciplinary', href: route('hr.disciplinary.index'), icon: <IconMapper name="alert-triangle" className="h-6 w-6" />, current: isCurrent(route('hr.disciplinary.index')) },
+  ];
+
+  // Tools
+  const toolsLinks: NavItem[] = [
     { name: 'Requisitions', href: route('requisitions.index'), icon: <IconMapper name="clipboard-list" className="h-6 w-6" />, current: isCurrent(route('requisitions.index')), badge: (()=>{ const n = Number(counters?.requisitions_my_open||0); return n>0? String(n): undefined; })() },
     { name: 'Budgets', href: route('budgets.index'), icon: <IconMapper name="pie-chart" className="h-6 w-6" />, current: isCurrent(route('budgets.index')) },
   ];
@@ -60,18 +74,70 @@ export default function HRLayout({ title, children, user }: Props) {
       <div className={`fixed top-0 left-0 bottom-0 flex flex-col w-64 bg-red-900 dark:bg-gray-950 text-white transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 transition-transform duration-300 ease-in-out z-50`}>
         <div className="flex-1 flex flex-col pt-5 pb-4 overflow-y-auto">
           <div className="flex items-center flex-shrink-0 px-4">
-            <span className="ml-2 text-2xl font-bold text-white">Human Resources</span>
+            <img
+              src="/images/Coin-logo.png"
+              alt="Coin Security"
+              className="h-10 w-auto"
+              style={{ display: logoOk ? 'block' : 'none' }}
+              onLoad={() => setLogoOk(true)}
+              onError={() => setLogoOk(false)}
+            />
+            {!logoOk && (
+              <span className="ml-2 text-2xl font-bold text-white">Human Resources</span>
+            )}
           </div>
-          <nav className="mt-8 flex-1 px-2 space-y-1">
-            {nav.map((item) => (
-              <Link key={item.name} href={item.href} className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md ${item.current ? 'bg-red-800 text-white dark:bg-gray-800' : 'text-red-100 hover:bg-red-800 hover:text-white dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white'}`}>
-                {item.icon}
-                <span className="ml-3">{item.name}</span>
-                {item.badge && (
-                  <span className="ml-auto inline-block py-0.5 px-2 text-xs font-medium rounded-full bg-white/10 text-white">{item.badge}</span>
-                )}
-              </Link>
-            ))}
+          <nav className="mt-8 flex-1 px-2 space-y-8">
+            <div className="space-y-1">
+              <h3 className="px-3 text-xs font-semibold text-red-200 dark:text-gray-400 uppercase tracking-wider">HR</h3>
+              {hrLinks.map((item) => (
+                <Link key={item.name} href={item.href} className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md ${item.current ? 'bg-red-800 text-white dark:bg-gray-800' : 'text-red-100 hover:bg-red-800 hover:text-white dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white'}`}>
+                  {item.icon}
+                  <span className="ml-3">{item.name}</span>
+                  {item.badge && (
+                    <span className="ml-auto inline-block py-0.5 px-2 text-xs font-medium rounded-full bg-white/10 text-white">{item.badge}</span>
+                  )}
+                </Link>
+              ))}
+            </div>
+
+            <div className="space-y-1">
+              <h3 className="px-3 text-xs font-semibold text-red-200 dark:text-gray-400 uppercase tracking-wider">Development & Benefits</h3>
+              {developmentLinks.map((item) => (
+                <Link key={item.name} href={item.href} className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md ${item.current ? 'bg-red-800 text-white dark:bg-gray-800' : 'text-red-100 hover:bg-red-800 hover:text-white dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white'}`}>
+                  {item.icon}
+                  <span className="ml-3">{item.name}</span>
+                  {item.badge && (
+                    <span className="ml-auto inline-block py-0.5 px-2 text-xs font-medium rounded-full bg-white/10 text-white">{item.badge}</span>
+                  )}
+                </Link>
+              ))}
+            </div>
+
+            <div className="space-y-1">
+              <h3 className="px-3 text-xs font-semibold text-red-200 dark:text-gray-400 uppercase tracking-wider">Management & Compliance</h3>
+              {managementLinks.map((item) => (
+                <Link key={item.name} href={item.href} className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md ${item.current ? 'bg-red-800 text-white dark:bg-gray-800' : 'text-red-100 hover:bg-red-800 hover:text-white dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white'}`}>
+                  {item.icon}
+                  <span className="ml-3">{item.name}</span>
+                  {item.badge && (
+                    <span className="ml-auto inline-block py-0.5 px-2 text-xs font-medium rounded-full bg-white/10 text-white">{item.badge}</span>
+                  )}
+                </Link>
+              ))}
+            </div>
+
+            <div className="space-y-1">
+              <h3 className="px-3 text-xs font-semibold text-red-200 dark:text-gray-400 uppercase tracking-wider">Tools</h3>
+              {toolsLinks.map((item) => (
+                <Link key={item.name} href={item.href} className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md ${item.current ? 'bg-red-800 text-white dark:bg-gray-800' : 'text-red-100 hover:bg-red-800 hover:text-white dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white'}`}>
+                  {item.icon}
+                  <span className="ml-3">{item.name}</span>
+                  {item.badge && (
+                    <span className="ml-auto inline-block py-0.5 px-2 text-xs font-medium rounded-full bg-white/10 text-white">{item.badge}</span>
+                  )}
+                </Link>
+              ))}
+            </div>
           </nav>
         </div>
         <div className="flex-shrink-0 flex items-center justify-between border-t border-red-800 dark:border-gray-800 p-4">

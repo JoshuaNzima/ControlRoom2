@@ -123,6 +123,8 @@ return [
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
 
+    'emergency_hotline' => env('APP_EMERGENCY_HOTLINE', '+265 999 123 456'),
+
     'providers' => [
         /*
          * Laravel Framework Service Providers...

@@ -78,7 +78,12 @@ class Checkpoint extends Model
             $longitude
         );
 
-        return $distance <= $this->scan_radius_meters;
+        $radiusMeters = (int) ($this->scan_radius_meters ?: 0);
+        if ($radiusMeters <= 0) {
+            $radiusMeters = (int) config('scanner.checkpoint_radius_meters', 10);
+        }
+
+        return $distance <= $radiusMeters;
     }
 
     private function calculateDistance($lat1, $lon1, $lat2, $lon2): float

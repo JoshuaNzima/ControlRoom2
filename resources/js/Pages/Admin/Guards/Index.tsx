@@ -10,6 +10,7 @@ import AssignSiteModal from '@/Components/Guards/AssignSiteModal';
 import PromoteGuardModal from '@/Components/HR/PromoteGuardModal';
 import ConfirmModal from '@/Components/ConfirmModal';
 import ReasonModal from '@/Components/ReasonModal';
+import PayProfileForm from '@/Components/Guards/PayProfileForm';
 
 interface Guard {
   id: number;
@@ -100,13 +101,43 @@ export default function GuardsIndex({ guards, filters, canAssignSupervisor, canV
     setSelectedGuard({ id: guardId });
     setShowAssign(true);
   };
-  const openPromote = async (guardId: number) => {
+  // Pay Profile Modal State
+  const [showPayProfile, setShowPayProfile] = React.useState(false);
+  const [payProfileData, setPayProfileData] = React.useState<any>(null);
+
+  const openPayProfile = async (guardId: number) => {
     try {
       const res = await fetch(route('admin.guards.json', guardId));
       const data = await res.json();
       setSelectedGuard(data);
-      setShowPromote(true);
+      // Fetch pay profile if exists
+      try {
+        const profileRes = await fetch(route('admin.guards.pay-profile', guardId));
+        const profileData = await profileRes.json();
+        setPayProfileData(profileData);
+      } catch {
+        setPayProfileData(null);
+      }
+      setShowPayProfile(true);
     } catch {}
+  };
+
+  const savePayProfile = async (profile: any) => {
+    try {
+      const res = await fetch(route('admin.guards.pay-profile.store', selectedGuard?.id), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': (window as any).csrfToken },
+        body: JSON.stringify(profile),
+      });
+      if (res.ok) {
+        showToast('Pay profile saved successfully');
+        setShowPayProfile(false);
+      } else {
+        showToast('Failed to save pay profile');
+      }
+    } catch {
+      showToast('Failed to save pay profile');
+    }
   };
 
   // Confirm & Reason Modals
@@ -339,10 +370,10 @@ export default function GuardsIndex({ guards, filters, canAssignSupervisor, canV
                 </button>
                 <button
                   type="button"
-                  onClick={() => openPromote(guard.id)}
-                  className="w-full px-3 py-2 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950"
+                  onClick={() => openPayProfile(guard.id)}
+                  className="w-full px-3 py-2 rounded-lg bg-blue-100 text-blue-800 hover:bg-blue-200 dark:bg-blue-900/30 dark:text-blue-200 dark:hover:bg-blue-900/40 focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950"
                 >
-                  Promote
+                  Pay Profile
                 </button>
                 <button
                   type="button"
@@ -513,11 +544,11 @@ export default function GuardsIndex({ guards, filters, canAssignSupervisor, canV
                         Assign
                       </button>
                       <button
-                        onClick={() => openPromote(guard.id)}
-                        className="p-2 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-lg transition"
-                        title="Promote"
+                        onClick={() => openPayProfile(guard.id)}
+                        className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition"
+                        title="Pay Profile"
                       >
-                        Promote
+                        Pay
                       </button>
                       <button
                         onClick={() => openConfirm('Delete guard', `Are you sure you want to delete ${guard.name}?`, () => router.delete(route('admin.guards.destroy', { guard: guard.id })))}
@@ -837,6 +868,21 @@ export default function GuardsIndex({ guards, filters, canAssignSupervisor, canV
           onClose={() => setShowPromote(false)}
           onSuccess={() => push('Guard promoted')}
         />
+
+        {/* Pay Profile Modal */}
+        <Modal show={showPayProfile} onClose={() => setShowPayProfile(false)} maxWidth="lg">
+          <div className="p-6 bg-white dark:bg-gray-800">
+            <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">
+              Pay Profile - {selectedGuard?.name}
+            </h2>
+            <PayProfileForm
+              guard={selectedGuard}
+              initialData={payProfileData}
+              onSubmit={savePayProfile}
+              onCancel={() => setShowPayProfile(false)}
+            />
+          </div>
+        </Modal>
 
         {/* Confirm & Reason Modals */}
         <ConfirmModal
