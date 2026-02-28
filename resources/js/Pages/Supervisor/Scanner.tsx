@@ -49,19 +49,36 @@ export default function Scanner({ activeScan }: Props) {
       const isSiteQR = payload && payload.type === 'site';
       const routeName = isSiteQR ? 'scan.site' : 'scan.checkpoint';
 
+      if (isSiteQR) {
+        const siteId = payload?.site_id ?? payload?.site ?? payload?.id;
+        router.visit(route(routeName, { site: siteId, latitude, longitude }), {
+          onSuccess: () => {
+            setSuccess('Site scanned successfully!');
+            setScanResult(decodedText);
+          },
+          onError: (errors) => {
+            const msg = (Object.values(errors || {})[0] as string) || 'Scan failed. Please try again.';
+            setError(msg);
+          },
+          onFinish: () => setScanning(false),
+        });
+        return;
+      }
+
       router.post(route(routeName), {
         code: decodedText,
         latitude,
-        longitude
+        longitude,
       }, {
         onSuccess: () => {
-          setSuccess(`${isSiteQR ? 'Site' : 'Checkpoint'} scanned successfully!`);
+          setSuccess('Checkpoint scanned successfully!');
           setScanResult(decodedText);
         },
         onError: (errors) => {
-          setError(errors.message || 'Scan failed. Please try again.');
+          const msg = (Object.values(errors || {})[0] as string) || 'Scan failed. Please try again.';
+          setError(msg);
         },
-        onFinish: () => setScanning(false)
+        onFinish: () => setScanning(false),
       });
     } catch (err) {
       setError('GPS location required. Please enable location services.');

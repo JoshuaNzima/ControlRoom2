@@ -38,6 +38,9 @@ Route::get('/policies/{slug}', [\App\Http\Controllers\Public\PolicyController::c
 
 // Guest routes
 Route::middleware('guest')->group(function () {
+    Route::get('register', [\App\Http\Controllers\Auth\RegisteredUserController::class, 'create'])->name('register');
+    Route::post('register', [\App\Http\Controllers\Auth\RegisteredUserController::class, 'store']);
+
     Route::get('login', [\App\Http\Controllers\Auth\AuthenticatedSessionController::class, 'create'])->name('login');
     Route::post('login', [\App\Http\Controllers\Auth\AuthenticatedSessionController::class, 'store']);
 
@@ -57,6 +60,24 @@ Route::post('/intake', [\App\Http\Controllers\PublicIntakeController::class, 'st
 Route::middleware('auth')->group(function () {
     Route::post('logout', [\App\Http\Controllers\Auth\AuthenticatedSessionController::class, 'destroy'])->name('logout');
 
+    Route::get('verify-email', \App\Http\Controllers\Auth\EmailVerificationPromptController::class)
+        ->name('verification.notice');
+
+    Route::get('verify-email/{id}/{hash}', \App\Http\Controllers\Auth\VerifyEmailController::class)
+        ->middleware(['signed', 'throttle:6,1'])
+        ->name('verification.verify');
+
+    Route::post('email/verification-notification', [\App\Http\Controllers\Auth\EmailVerificationNotificationController::class, 'store'])
+        ->middleware('throttle:6,1')
+        ->name('verification.send');
+
+    Route::get('confirm-password', [\App\Http\Controllers\Auth\ConfirmablePasswordController::class, 'show'])
+        ->name('password.confirm');
+
+    Route::post('confirm-password', [\App\Http\Controllers\Auth\ConfirmablePasswordController::class, 'store']);
+
+    Route::put('password', [\App\Http\Controllers\Auth\PasswordController::class, 'update'])->name('password.update');
+
     // Notifications API
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
     Route::get('/notifications/unread-count', [NotificationController::class, 'unreadCount'])->name('notifications.unread');
@@ -68,6 +89,7 @@ Route::middleware('auth')->group(function () {
 });
 Route::middleware(['auth', 'role:super_admin'])->prefix('superadmin')->name('superadmin.')->group(function () {
     Route::get('/dashboard', [\App\Http\Controllers\SuperAdmin\DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/me', [\App\Http\Controllers\Profile\ProfileDashboardController::class, 'index'])->name('profile');
     Route::post('/modules/{module}/toggle', [\App\Http\Controllers\SuperAdmin\DashboardController::class, 'toggleModule'])->name('modules.toggle');
     Route::post('/cache/clear', [\App\Http\Controllers\SuperAdmin\DashboardController::class, 'clearCache'])->name('cache.clear');
     Route::post('/maintenance/enable', [\App\Http\Controllers\SuperAdmin\DashboardController::class, 'enableMaintenance'])->name('maintenance.enable');
@@ -332,6 +354,8 @@ Route::middleware(['auth'])->group(function () {
             ->middleware('permission:zone.view.dashboard')
             ->name('dashboard');
 
+        Route::get('/me', [\App\Http\Controllers\Profile\ProfileDashboardController::class, 'index'])->name('profile');
+
         // Dashboard Data Routes
         Route::get('/data/weekly-attendance', [\App\Http\Controllers\ZoneCommander\AttendanceDataController::class, 'weeklyAttendance'])
             ->middleware('permission:zone.view.dashboard')
@@ -396,6 +420,9 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/attendance/check-out', [\App\Http\Controllers\ZoneCommander\AttendanceController::class, 'checkOut'])
             ->middleware('permission:zone.attendance.manage')
             ->name('attendance.check-out');
+        Route::post('/attendance/mark-present', [\App\Http\Controllers\ZoneCommander\AttendanceController::class, 'markPresent'])
+            ->middleware('permission:zone.attendance.manage')
+            ->name('attendance.mark-present');
 
         // Downs lifecycle
         Route::get('/downs', [\App\Http\Controllers\ZoneCommander\DownController::class, 'index'])
@@ -454,6 +481,7 @@ Route::middleware(['auth'])->group(function () {
     // Profile routes (edit/update/avatar)
     Route::get('/profile', [\App\Http\Controllers\ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [\App\Http\Controllers\ProfileController::class, 'update'])->name('profile.update');
+    Route::delete('/profile', [\App\Http\Controllers\ProfileController::class, 'destroy'])->name('profile.destroy');
     Route::post('/profile/avatar', [\App\Http\Controllers\ProfileController::class, 'updateAvatar'])->name('profile.avatar');
 
     // Profile dashboard (commissions, payroll summaries)

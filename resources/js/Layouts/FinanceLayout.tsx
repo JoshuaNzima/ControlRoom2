@@ -177,7 +177,7 @@ export default function FinanceLayout({ title, children, user }: Props) {
                   <QuickBudgetButton />
                   <QuickRequisitionButton />
                   <Link
-                    href={route('profile.dashboard') as unknown as string}
+                    href={route('finance.profile') as unknown as string}
                     className="inline-flex items-center px-3 py-1.5 rounded-md bg-gray-800 text-white hover:bg-gray-700 text-sm"
                   >
                     My Profile

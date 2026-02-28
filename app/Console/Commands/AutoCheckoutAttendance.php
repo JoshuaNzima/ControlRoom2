@@ -106,7 +106,8 @@ class AutoCheckoutAttendance extends Command
                     }
 
                     $attendance->check_out_time = $dueAt;
-                    $attendance->check_out_notes = trim(($attendance->check_out_notes ?: '') . ' Auto checkout ' . $reason);
+                    $attendance->check_out_notes = trim(($attendance->check_out_notes ?: '') . ' Auto checkout ' . $reason . ' (no supervisor available)');
+                    $attendance->source = 'auto_checkout_no_supervisor';
 
                     if (method_exists($attendance, 'calculateHours')) {
                         // calculateHours() will save the record
@@ -116,13 +117,14 @@ class AutoCheckoutAttendance extends Command
                     }
 
                     try {
-                        event(new \App\Events\AttendanceUpdated($attendance->id, 'Auto check-out after '.$hours.'h', [
+                        event(new \App\Events\AttendanceUpdated($attendance->id, 'Auto check-out after '.$hours.'h (supervisor unavailable)', [
                             'supervisor_id' => $attendance->supervisor_id,
                             'guard_id' => $attendance->guard_id,
                             'client_site_id' => $attendance->client_site_id,
                             'time' => $dueAt->toIso8601String(),
                             'status' => 'auto_checked_out',
-                            'reason' => $reason,
+                            'reason' => $reason . ' (no supervisor available)',
+                            'source' => 'auto_checkout_no_supervisor',
                         ]));
                     } catch (\Throwable $e) {
                         // no-op

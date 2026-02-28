@@ -16,6 +16,18 @@ use App\Mail\WelcomeEmail;
 
 class UserController extends Controller
 {
+    private function redirectAfterWrite(Request $request)
+    {
+        $referer = (string) $request->headers->get('referer', '');
+        $path = parse_url($referer, PHP_URL_PATH) ?: '';
+
+        if (str_starts_with($path, '/superadmin/users')) {
+            return redirect()->route('superadmin.users');
+        }
+
+        return redirect()->route('admin.users.index');
+    }
+
     public function index()
     {
         $perPage = request('per_page', 20);
@@ -96,7 +108,7 @@ class UserController extends Controller
             Mail::to($user->email)->send(new WelcomeEmail($user));
         } catch (\Throwable $e) {}
 
-        return redirect()->route('admin.users.index')
+        return $this->redirectAfterWrite($request)
             ->with('success', 'User created successfully.');
     }
 
@@ -147,7 +159,7 @@ class UserController extends Controller
             }
         }
 
-        return redirect()->route('admin.users.index')
+        return $this->redirectAfterWrite($request)
             ->with('success', 'User updated successfully.');
     }
 
@@ -155,7 +167,7 @@ class UserController extends Controller
     {
         $user->delete();
 
-        return redirect()->route('admin.users.index')
+        return $this->redirectAfterWrite(request())
             ->with('success', 'User deleted successfully.');
     }
 }

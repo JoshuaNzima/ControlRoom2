@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Models\Guards\Client;
+use App\Models\Client;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -23,11 +23,13 @@ class ClientsCrudTest extends TestCase
         $payload = [
             'name' => 'Test Client',
             'address' => '123 Test Lane',
+            'monthly_rate' => 0,
             'status' => 'active',
         ];
 
-        $response = $this->actingAs($this->user)->post(route('clients.store'), $payload);
+        $response = $this->actingAs($this->user)->post(route('admin.clients.store'), $payload);
         $response->assertStatus(302);
+        $response->assertSessionHasNoErrors();
 
         $this->assertDatabaseHas('clients', ['name' => 'Test Client']);
     }
@@ -35,7 +37,7 @@ class ClientsCrudTest extends TestCase
     public function test_super_admin_can_view_client()
     {
     $client = Client::create(['name' => 'Client One', 'address' => 'Address 1']);
-    $response = $this->actingAs($this->user)->get(route('clients.show', $client));
+    $response = $this->actingAs($this->user)->get(route('admin.clients.edit', $client));
         $response->assertStatus(200);
     }
 
@@ -43,23 +45,25 @@ class ClientsCrudTest extends TestCase
     {
     $client = Client::create(['name' => 'Old Name', 'address' => 'Some Address']);
 
-        $response = $this->actingAs($this->user)->get(route('clients.edit', $client));
+        $response = $this->actingAs($this->user)->get(route('admin.clients.edit', $client));
         $response->assertStatus(200);
 
-        $response2 = $this->actingAs($this->user)->put(route('clients.update', $client), [
+        $response2 = $this->actingAs($this->user)->put(route('admin.clients.update', $client), [
             'name' => 'New Name',
             'address' => $client->address,
+            'monthly_rate' => 0,
             'status' => 'active',
         ]);
 
         $response2->assertStatus(302);
+        $response2->assertSessionHasNoErrors();
         $this->assertDatabaseHas('clients', ['id' => $client->id, 'name' => 'New Name']);
     }
 
     public function test_super_admin_can_delete_client()
     {
     $client = Client::create(['name' => 'Delete Client', 'address' => 'Nowhere']);
-    $response = $this->actingAs($this->user)->delete(route('clients.destroy', $client));
+    $response = $this->actingAs($this->user)->delete(route('admin.clients.destroy', $client));
     $response->assertStatus(302);
     $this->assertSoftDeleted('clients', ['id' => $client->id]);
     }

@@ -46,53 +46,104 @@ class GuardController extends Controller
     public function index()
     {
         $perPage = request('per_page', 20);
-        $guards = Guard::with('supervisor')
+        
+        // Get guards with site assignment info
+        $guards = Guard::with(['supervisor', 'assignments.site'])
             ->where('employee_role', 'guard')
             ->when(request('search'), function($q, $search) {
-                $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('employee_id', 'like', "%{$search}%");
+                $q->where(function($sq) use ($search) {
+                    $sq->where('name', 'like', "%{$search}%")
+                       ->orWhere('employee_id', 'like', "%{$search}%")
+                       ->orWhere('phone', 'like', "%{$search}%");
+                });
             })
             ->when(request('status'), function($q, $status) {
                 $q->where('status', $status);
             })
-            ->profileStatus(request('profile_status'))
             ->orderBy('name')
             ->paginate($perPage)
             ->withQueryString();
 
-        $guards->getCollection()->transform(function ($g) {
+        // Transform guard data with performance metrics
+        $monthStart = now()->startOfMonth();
+        $monthEnd = now()->endOfMonth();
+        
+        $guards->getCollection()->transform(function ($g) use ($monthStart, $monthEnd) {
+            // Get current site assignment
+            $currentAssignment = $g->assignments->firstWhere('status', 'active');
+            
+            // Calculate attendance rate for this month
+            $totalDays = Attendance::where('guard_id', $g->id)
+                ->whereBetween('date', [$monthStart, $monthEnd])
+                ->count();
+            $presentDays = Attendance::where('guard_id', $g->id)
+                ->whereBetween('date', [$monthStart, $monthEnd])
+                ->where('status', 'present')
+                ->count();
+            $attendanceRate = $totalDays > 0 ? round(($presentDays / $totalDays) * 100) : null;
+            
+            // Calculate shifts this month
+            $shiftsThisMonth = Attendance::where('guard_id', $g->id)
+                ->whereBetween('date', [$monthStart, $monthEnd])
+                ->whereNotNull('check_in_time')
+                ->count();
+            
+            // Simple performance score based on attendance and profile completeness
+            $performanceScore = null;
+            if ($attendanceRate !== null) {
+                $profileWeight = $g->is_profile_complete ? 10 : 0;
+                $performanceScore = min(100, round($attendanceRate * 0.9) + $profileWeight);
+            }
+            
             return [
                 'id' => $g->id,
                 'name' => $g->name,
                 'employee_id' => $g->employee_id,
                 'phone' => $g->phone,
+                'email' => $g->email,
                 'status' => $g->status,
                 'supervisor' => $g->supervisor ? ['id' => $g->supervisor->id, 'name' => $g->supervisor->name] : null,
+                'site' => $currentAssignment && $currentAssignment->site ? ['id' => $currentAssignment->site->id, 'name' => $currentAssignment->site->name] : null,
                 'is_profile_complete' => (bool) $g->is_profile_complete,
+                'is_on_duty' => (bool) $currentAssignment,
+                'attendance_rate' => $attendanceRate,
+                'performance_score' => $performanceScore,
+                'shifts_this_month' => $shiftsThisMonth,
+                'joined_date' => $g->created_at?->format('Y-m-d'),
             ];
         });
 
-        $user = auth()->user();
-        $canAssignSupervisor = $user ? $user->can('assign_guard_supervisor') : false;
-        $canViewSupervisor = true; // allow view by default
-        $supervisors = [];
-        if ($canAssignSupervisor) {
-            $supervisors = User::role(['supervisor', 'manager'])
-                ->where('status', 'active')
-                ->orderBy('name')
-                ->get(['id','name']);
-        }
-        $grades = GuardGrade::orderBy('name')->get(['id','code','name']);
-        $zones = Zone::orderBy('name')->get(['id','name']);
+        // Calculate overall stats
+        $totalGuards = Guard::where('employee_role', 'guard')->count();
+        $activeGuards = Guard::where('employee_role', 'guard')->where('status', 'active')->count();
+        $onDutyToday = Attendance::whereDate('date', today())
+            ->whereNotNull('check_in_time')
+            ->distinct('guard_id')
+            ->count('guard_id');
+        
+        // Average attendance across all guards
+        $allAttendances = Attendance::whereBetween('date', [$monthStart, $monthEnd])
+            ->selectRaw('guard_id, COUNT(*) as total, SUM(CASE WHEN status = "present" THEN 1 ELSE 0 END) as present')
+            ->groupBy('guard_id')
+            ->get();
+        $avgAttendance = $allAttendances->count() > 0 
+            ? round($allAttendances->avg(fn($a) => $a->total > 0 ? ($a->present / $a->total) * 100 : 0))
+            : 0;
+        
+        // Average performance (simplified)
+        $avgPerformance = $avgAttendance > 0 ? min(100, round($avgAttendance * 0.9) + 5) : 0;
 
         return Inertia::render('Admin/Guards/Index', [
             'guards' => $guards,
-            'filters' => request()->only(['search', 'status', 'profile_status', 'per_page']),
-            'canAssignSupervisor' => $canAssignSupervisor,
-            'canViewSupervisor' => $canViewSupervisor,
-            'supervisors' => $supervisors,
-            'grades' => $grades,
-            'zones' => $zones,
+            'filters' => request()->only(['search', 'status', 'per_page']),
+            'stats' => [
+                'total_guards' => $totalGuards,
+                'active_guards' => $activeGuards,
+                'on_duty_today' => $onDutyToday,
+                'average_attendance' => $avgAttendance,
+                'average_performance' => $avgPerformance,
+                'total_incidents' => 0, // Placeholder - can be implemented with incident tracking
+            ],
         ]);
     }
 

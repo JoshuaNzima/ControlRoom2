@@ -192,7 +192,7 @@ export default function ZoneCommanderLayout({ title, children }: Props) {
 						<QuickBudgetButton />
 						<NotificationBell />
 						<Link
-							href={route('profile.dashboard')}
+							href={route('zone.profile')}
 							className="inline-flex items-center px-3 py-1.5 rounded-md bg-gray-800 text-white hover:bg-gray-700 text-sm"
 						>
 							My Profile
@@ -310,7 +310,7 @@ export default function ZoneCommanderLayout({ title, children }: Props) {
 							</button>
 						</div>
 						<div className="p-4 space-y-3">
-							<Link href={route('profile.dashboard')} onClick={() => setSettingsOpen(false)} className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+							<Link href={route('zone.profile')} onClick={() => setSettingsOpen(false)} className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
 								<IconMapper name="User" size={20} className="text-gray-600 dark:text-gray-400" />
 								<div>
 									<p className="font-medium text-gray-900 dark:text-gray-100 text-sm">Profile</p>

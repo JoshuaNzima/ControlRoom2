@@ -8,6 +8,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (!Schema::hasTable('guards')) {
+            return;
+        }
+
         Schema::table('guards', function (Blueprint $table) {
             $table->tinyInteger('default_off_day')->nullable()->after('position')->comment('0=Sun,1=Mon,2=Tue,3=Wed,4=Thu,5=Fri,6=Sat');
         });
@@ -15,6 +19,10 @@ return new class extends Migration
 
     public function down(): void
     {
+        if (!Schema::hasTable('guards')) {
+            return;
+        }
+
         Schema::table('guards', function (Blueprint $table) {
             $table->dropColumn('default_off_day');
         });

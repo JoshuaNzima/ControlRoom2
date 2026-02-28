@@ -57,4 +57,9 @@ class Requisition extends Model
     {
         return $this->hasMany(RequisitionAttachment::class);
     }
+
+    public function items(): HasMany
+    {
+        return $this->hasMany(RequisitionItem::class);
+    }
 }

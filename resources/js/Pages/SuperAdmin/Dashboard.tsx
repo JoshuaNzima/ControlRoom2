@@ -374,8 +374,9 @@ const Dashboard: React.FC<SuperAdminDashboardProps> = ({
   // Quick actions
   const quickActions = useMemo(() => [
     { title: 'User Management', description: 'Manage system users & roles', route: 'superadmin.users', icon: <IconMapper name="Users" size={20} />, color: 'bg-blue-600' },
+    { title: 'Guard Management', description: 'Manage security guards', route: 'superadmin.guards', icon: <IconMapper name="ShieldCheck" size={20} />, color: 'bg-red-600' },
     { title: 'System Settings', description: 'Configure core settings', route: 'superadmin.settings', icon: <IconMapper name="Settings" size={20} />, color: 'bg-gray-600' },
-    { title: 'Security Center', description: 'Auth, sessions & tokens', route: 'superadmin.security', icon: <IconMapper name="Shield" size={20} />, color: 'bg-red-600' },
+    { title: 'Security Center', description: 'Auth, sessions & tokens', route: 'superadmin.security', icon: <IconMapper name="Shield" size={20} />, color: 'bg-amber-600' },
     { title: 'Database Backup', description: 'Backup & restore data', route: 'superadmin.backup', icon: <IconMapper name="Database" size={20} />, color: 'bg-emerald-600' },
     { title: 'System Logs', description: 'View application logs', route: 'superadmin.logs', icon: <IconMapper name="FileText" size={20} />, color: 'bg-amber-600' },
     { title: 'Module Control', description: 'Enable/disable modules', route: 'superadmin.modules', icon: <IconMapper name="Puzzle" size={20} />, color: 'bg-purple-600' },

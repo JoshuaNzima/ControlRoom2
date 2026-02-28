@@ -146,6 +146,12 @@ export default function TrainingLayout({ title, children, user }: Props) {
                 <div className="hidden sm:flex items-center gap-4">
                   <QuickBudgetButton />
                   <QuickRequisitionButton />
+                  <Link
+                    href={route('training.profile')}
+                    className="inline-flex items-center px-3 py-1.5 rounded-md bg-gray-800 text-white hover:bg-gray-700 text-sm"
+                  >
+                    My Profile
+                  </Link>
                 </div>
                 {isSuperAdmin && (
                   <Link

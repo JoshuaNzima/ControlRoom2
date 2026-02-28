@@ -11,6 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (!Schema::hasTable('guards')) {
+            return;
+        }
+
         Schema::table('guards', function (Blueprint $table) {
             // Add position column: guard, supervisor, sergeant
             $table->enum('position', ['guard', 'supervisor', 'sergeant'])->default('guard')->after('status');
@@ -29,6 +33,10 @@ return new class extends Migration
      */
     public function down(): void
     {
+        if (!Schema::hasTable('guards')) {
+            return;
+        }
+
         Schema::table('guards', function (Blueprint $table) {
             $table->dropForeign(['reports_to_guard_id']);
             $table->dropIndex(['reports_to_guard_id']);

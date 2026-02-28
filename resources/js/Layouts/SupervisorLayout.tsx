@@ -179,7 +179,7 @@ export default function SupervisorLayout({ children, title }: SupervisorLayoutPr
           <div className="flex items-center gap-3">
             <QuickBudgetButton />
             <NotificationBell />
-            <Link href={route('profile.dashboard')} className="inline-flex items-center px-3 py-1.5 rounded-md bg-gray-800 text-white hover:bg-gray-700 text-sm">
+            <Link href={route('supervisor.profile')} className="inline-flex items-center px-3 py-1.5 rounded-md bg-gray-800 text-white hover:bg-gray-700 text-sm">
               My Profile
             </Link>
             {isSuperAdmin && (
@@ -261,7 +261,7 @@ export default function SupervisorLayout({ children, title }: SupervisorLayoutPr
               </button>
             </div>
             <div className="p-4 space-y-3">
-              <Link href={route('profile.dashboard')} onClick={() => setSettingsOpen(false)} className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 transition-colors">
+              <Link href={route('supervisor.profile')} onClick={() => setSettingsOpen(false)} className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 transition-colors">
                 <IconMapper name="User" size={20} className="text-gray-600" />
                 <div>
                   <p className="font-medium text-gray-900 text-sm">Profile</p>

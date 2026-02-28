@@ -102,7 +102,7 @@ export default function BusinessDevLayout({ title, children, user }: Props) {
                     <span className="sm:hidden">SA</span>
                   </Link>
                 )}
-                <Link href={route('profile.dashboard')} className="hidden sm:inline-flex items-center px-3 py-1.5 rounded-md bg-gray-800 text-white hover:bg-gray-700 text-sm">
+                <Link href={route('admin.business-dev.profile')} className="hidden sm:inline-flex items-center px-3 py-1.5 rounded-md bg-gray-800 text-white hover:bg-gray-700 text-sm">
                   My Profile
                 </Link>
                 <button onClick={toggle} className="text-sm px-3 py-1 rounded-md bg-red-100 text-red-800 hover:bg-red-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700">

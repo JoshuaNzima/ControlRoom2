@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Requisitions;
 use App\Http\Controllers\Controller;
 use App\Models\Requisition;
 use App\Models\RequisitionAttachment;
+use App\Models\RequisitionItem;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -46,6 +48,12 @@ class RequisitionController extends Controller
 
         $requisitions = $query->orderByDesc('created_at')->paginate(20)->withQueryString();
 
+        // Load items for requisitions
+        $requisitions->getCollection()->transform(function ($req) {
+            $req->load(['items', 'requestedBy', 'approvedBy', 'disbursedBy', 'batch']);
+            return $req;
+        });
+
         return Inertia::render('Requisitions/Index', [
             'requisitions' => $requisitions,
             'mode' => $request->query('mode', $user->hasAnyRole(['asset_manager','assets_manager']) ? 'disburse' : 'mine'),
@@ -66,10 +74,16 @@ class RequisitionController extends Controller
 
         $data = $request->validate([
             'title' => ['required', 'string', 'max:255'],
-            'category' => ['nullable', 'string', 'in:general,fuel,vehicle_hire,events,k9,utilities,office_supplies'],
+            'category' => ['nullable', 'string', 'in:general,fuel,vehicle_hire,events,k9,utilities,office_supplies,stationery,cleaning_supplies,security_equipment,uniforms,training_materials,vehicle_maintenance,communications,it_equipment,medical_supplies'],
             'description' => ['nullable', 'string'],
             'needed_by' => ['nullable', 'date'],
-            'amount' => ['required', 'numeric', 'min:0'],
+            'amount' => ['nullable', 'numeric', 'min:0'],
+            'items' => ['required', 'array', 'min:1'],
+            'items.*.description' => ['required', 'string', 'max:255'],
+            'items.*.category' => ['nullable', 'string', 'in:general,fuel,vehicle_hire,events,k9,utilities,office_supplies,stationery,cleaning_supplies,security_equipment,uniforms,training_materials,vehicle_maintenance,communications,it_equipment,medical_supplies'],
+            'items.*.quantity' => ['required', 'numeric', 'min:0.01'],
+            'items.*.unit_price' => ['nullable', 'numeric', 'min:0'],
+            'items.*.amount' => ['required', 'numeric', 'min:0'],
             'attachments' => ['sometimes', 'array', 'max:10'],
             'attachments.*' => ['file', 'max:10240', 'mimes:pdf,jpg,jpeg,png,doc,docx,xls,xlsx'],
         ]);
@@ -78,31 +92,53 @@ class RequisitionController extends Controller
         $data['status'] = 'pending_admin';
         $data['category'] = $data['category'] ?? 'general';
 
-        $requisition = Requisition::create($data);
+        // Calculate total from items if amount not provided
+        if (empty($data['amount'])) {
+            $data['amount'] = collect($data['items'])->sum('amount');
+        }
 
-        if ($request->hasFile('attachments')) {
-            foreach ($request->file('attachments') as $file) {
-                if (!$file) continue;
-                $disk = 'local';
-                $path = $file->store('requisitions/'.date('Y/m'), $disk);
-                RequisitionAttachment::create([
-                    'requisition_id' => $requisition->id,
-                    'uploaded_by' => $user->id,
-                    'disk' => $disk,
-                    'path' => $path,
-                    'original_name' => $file->getClientOriginalName(),
-                    'size' => $file->getSize() ?? 0,
-                    'mime_type' => $file->getClientMimeType(),
+        $requisition = DB::transaction(function () use ($data, $user, $request) {
+            $requisition = Requisition::create($data);
+
+            // Create items
+            foreach ($data['items'] as $itemData) {
+                $requisition->items()->create([
+                    'description' => $itemData['description'],
+                    'category' => $itemData['category'] ?? $requisition->category ?? 'general',
+                    'quantity' => $itemData['quantity'] ?? 1,
+                    'unit_price' => $itemData['unit_price'] ?? null,
+                    'amount' => $itemData['amount'],
+                    'status' => 'pending',
                 ]);
             }
-        }
+
+            // Handle attachments
+            if ($request->hasFile('attachments')) {
+                foreach ($request->file('attachments') as $file) {
+                    if (!$file) continue;
+                    $disk = 'local';
+                    $path = $file->store('requisitions/'.date('Y/m'), $disk);
+                    RequisitionAttachment::create([
+                        'requisition_id' => $requisition->id,
+                        'uploaded_by' => $user->id,
+                        'disk' => $disk,
+                        'path' => $path,
+                        'original_name' => $file->getClientOriginalName(),
+                        'size' => $file->getSize() ?? 0,
+                        'mime_type' => $file->getClientMimeType(),
+                    ]);
+                }
+            }
+
+            return $requisition;
+        });
 
         return redirect()->route('requisitions.index');
     }
 
     public function show(Requisition $requisition): Response|JsonResponse
     {
-        $requisition->load(['requestedBy', 'approvedBy', 'disbursedBy', 'batch', 'attachments.uploadedBy']);
+        $requisition->load(['requestedBy', 'approvedBy', 'disbursedBy', 'batch', 'attachments.uploadedBy', 'items.approvedBy', 'items.disbursedBy']);
 
         if (request()->wantsJson() || request()->ajax()) {
             return response()->json($requisition);
@@ -146,7 +182,7 @@ class RequisitionController extends Controller
 
         $data = $request->validate([
             'title' => ['required', 'string', 'max:255'],
-            'category' => ['nullable', 'string', 'in:general,fuel,vehicle_hire,events,k9,utilities,office_supplies'],
+            'category' => ['nullable', 'string', 'in:general,fuel,vehicle_hire,events,k9,utilities,office_supplies,stationery,cleaning_supplies,security_equipment,uniforms,training_materials,vehicle_maintenance,communications,it_equipment,medical_supplies'],
             'description' => ['nullable', 'string'],
             'needed_by' => ['nullable', 'date'],
             'amount' => ['required', 'numeric', 'min:0'],

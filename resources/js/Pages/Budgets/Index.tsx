@@ -1,10 +1,15 @@
-import React from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { Head, Link, router } from '@inertiajs/react';
-import { formatCurrencyMWK } from '@/Components/format';
+import { formatCurrencyMWK, formatDateMW, formatDistanceToNow } from '@/Components/format';
 import RequisitionsLayout from '@/Layouts/RequisitionsLayout';
 import type { PageProps } from '@/types';
 import QuickBudgetButton from '@/Components/Budgets/QuickBudgetButton';
 import BudgetViewModal from '@/Components/Budgets/BudgetViewModal';
+import { Card } from '@/Components/ui/card';
+import { Button } from '@/Components/ui/button';
+import { Badge } from '@/Components/ui/badge';
+import EmptyState from '@/Components/ui/empty-state';
+import IconMapper from '@/Components/IconMapper';
 
 interface BudgetUser {
   id: number;
@@ -15,7 +20,7 @@ export interface BudgetItem {
   id: number;
   title: string;
   description?: string | null;
-  category?: 'general' | 'fuel' | 'vehicle_hire' | string;
+  category?: 'general' | 'fuel' | 'vehicle_hire' | 'events' | 'k9' | 'utilities' | 'office_supplies' | 'stationery' | 'cleaning_supplies' | 'security_equipment' | 'uniforms' | 'training_materials' | 'vehicle_maintenance' | 'communications' | 'it_equipment' | 'medical_supplies' | string;
   status: 'pending_admin' | 'needs_revision' | 'pending_release' | 'released';
   needed_by?: string | null;
   amount?: number | string | null;
@@ -35,11 +40,11 @@ type BudgetsIndexProps = PageProps<{
   mode?: 'release' | 'mine' | string;
 }>;
 
-const statusColors: Record<string, string> = {
-  pending_admin: 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/40',
-  needs_revision: 'bg-red-500/10 text-red-300 border border-red-500/40',
-  pending_release: 'bg-indigo-500/20 text-indigo-200 border border-indigo-500/40',
-  released: 'bg-emerald-500/20 text-emerald-200 border border-emerald-500/40',
+const statusConfig: Record<string, { color: string; icon: string; label: string }> = {
+  pending_admin: { color: 'bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-500/20 dark:text-yellow-300 dark:border-yellow-500/40', icon: 'Clock', label: 'Pending Admin' },
+  needs_revision: { color: 'bg-red-100 text-red-800 border-red-200 dark:bg-red-500/20 dark:text-red-300 dark:border-red-500/40', icon: 'AlertCircle', label: 'Needs Revision' },
+  pending_release: { color: 'bg-indigo-100 text-indigo-800 border-indigo-200 dark:bg-indigo-500/20 dark:text-indigo-200 dark:border-indigo-500/40', icon: 'Wallet', label: 'Pending Release' },
+  released: { color: 'bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-500/20 dark:text-emerald-200 dark:border-emerald-500/40', icon: 'CheckCircle', label: 'Released' },
 };
 
 export default function BudgetsIndex({ budgets, auth, mode: initialMode }: BudgetsIndexProps) {
@@ -114,69 +119,105 @@ export default function BudgetsIndex({ budgets, auth, mode: initialMode }: Budge
               </span>
             </div>
 
-            <div className="divide-y divide-gray-800/80">
-              {budgets.data.length === 0 && (
-                <div className="p-4 text-center text-sm text-gray-500">No budgets found.</div>
-              )}
+            {budgets.data.length === 0 ? (
+              <EmptyState
+                title="No budgets found"
+                description="Budget requests will appear here when available."
+              />
+            ) : (
+              <div className="space-y-3 p-4">
+                {budgets.data.map((b) => {
+                  const status = statusConfig[b.status] || statusConfig.pending_admin;
+                  return (
+                    <Card
+                      key={b.id}
+                      className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer"
+                      onClick={() => { setSelectedId(b.id); setOpen(true); }}
+                    >
+                      <div className="flex flex-col sm:flex-row">
+                        {/* Left accent bar based on status */}
+                        <div className={`w-full sm:w-1.5 ${
+                          b.status === 'released' ? 'bg-emerald-500' :
+                          b.status === 'needs_revision' ? 'bg-red-500' :
+                          b.status === 'pending_release' ? 'bg-indigo-500' : 'bg-yellow-500'
+                        }`} />
 
-              {budgets.data.map((b) => (
-                <div key={b.id} className="">
-                  <button
-                    type="button"
-                    onClick={() => { setSelectedId(b.id); setOpen(true); }}
-                    className="w-full text-left px-3 sm:px-4 py-3 hover:bg-gray-800/80 transition-colors"
-                  >
-                    <div className="flex flex-col gap-2">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-100 truncate">{b.title}</p>
-                          {b.category && b.category !== 'general' && (
-                            <span className="mt-1 inline-flex items-center rounded-full bg-red-500/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-red-200">
-                              {String(b.category).replace('_', ' ')}
-                            </span>
-                          )}
-                          {b.description && (
-                            <p className="mt-0.5 text-xs text-gray-400 line-clamp-2">{b.description}</p>
-                          )}
+                        <div className="flex-1 p-4 sm:p-5">
+                          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                                  {b.title}
+                                </h3>
+                                <span className="text-xs text-gray-500 dark:text-gray-400">#{b.id}</span>
+                                <Badge className={`${status.color} text-xs`}>
+                                  <IconMapper name={status.icon} size={12} className="mr-1 inline" />
+                                  {status.label}
+                                </Badge>
+                                {b.category && b.category !== 'general' && (
+                                  <span className="inline-flex items-center rounded-full bg-red-100 text-red-800 dark:bg-red-500/10 dark:text-red-200 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide">
+                                    {b.category.replace('_', ' ')}
+                                  </span>
+                                )}
+                              </div>
+
+                              {b.description && (
+                                <p className="mt-1 text-sm text-gray-600 dark:text-gray-400 line-clamp-2">
+                                  {b.description}
+                                </p>
+                              )}
+
+                              {/* Info Row */}
+                              <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-600 dark:text-gray-400">
+                                {b.amount != null && (
+                                  <span className="flex items-center gap-1">
+                                    <IconMapper name="DollarSign" size={14} className="text-amber-500" />
+                                    <span className="font-medium text-gray-900 dark:text-gray-100">
+                                      {formatCurrencyMWK(b.amount)}
+                                    </span>
+                                  </span>
+                                )}
+                                <span className="flex items-center gap-1">
+                                  <IconMapper name="User" size={14} />
+                                  {getRequestedByLabel(b as any)}
+                                </span>
+                                {b.created_at && (
+                                  <span className="flex items-center gap-1">
+                                    <IconMapper name="Clock" size={14} />
+                                    {formatDistanceToNow(b.created_at)}
+                                  </span>
+                                )}
+                                {b.needed_by && (
+                                  <span className="flex items-center gap-1">
+                                    <IconMapper name="Calendar" size={14} className="text-blue-500" />
+                                    Needed by {formatDateMW(undefined, b.needed_by)}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Right side: Actions */}
+                            <div className="flex items-center gap-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedId(b.id);
+                                  setOpen(true);
+                                }}
+                              >
+                                <IconMapper name="Eye" size={16} />
+                              </Button>
+                            </div>
+                          </div>
                         </div>
-                        <span
-                          className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] uppercase tracking-wide ${
-                            statusColors[b.status] ?? 'bg-gray-700 text-gray-200 border border-gray-600'
-                          }`}
-                        >
-                          {String(b.status).replace('_', ' ')}
-                        </span>
                       </div>
-
-                      <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-gray-500">
-                        <span>
-                          Created {new Date(b.created_at).toLocaleDateString()} • Needed by{' '}
-                          {b.needed_by ? new Date(b.needed_by).toLocaleDateString() : 'Not set'}
-                        </span>
-                        <span className="flex flex-wrap items-center gap-2">
-                          {b.amount != null && (
-                            <span className="text-gray-300">{formatCurrencyMWK(b.amount)}</span>
-                          )}
-                          <span>Requested by {getRequestedByLabel(b as any)}</span>
-                          {(getRelationName(b as any, 'approvedBy', 'approved_by')) && (
-                            <>
-                              <span>•</span>
-                              <span>Approved by {getRelationName(b as any, 'approvedBy', 'approved_by')}</span>
-                            </>
-                          )}
-                          {(b.status === 'released' && getRelationName(b as any, 'releasedBy', 'released_by')) && (
-                            <>
-                              <span>•</span>
-                              <span>Released by {getRelationName(b as any, 'releasedBy', 'released_by')} on {new Date(b.updated_at).toLocaleString()}</span>
-                            </>
-                          )}
-                        </span>
-                      </div>
-                    </div>
-                  </button>
-                </div>
-              ))}
-            </div>
+                    </Card>
+                  );
+                })}
+              </div>
+            )}
 
             {budgets.meta && budgets.links && budgets.meta.last_page > 1 && (
               <div className="px-3 sm:px-4 py-3 flex flex-wrap items-center justify-center gap-1 border-t border-gray-800/80 bg-gray-950/60">

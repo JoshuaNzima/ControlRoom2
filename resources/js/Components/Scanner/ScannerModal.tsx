@@ -243,7 +243,7 @@ export default function ScannerModal({ open, onClose, activeScan }: Props) {
         // Auto-close after showing success for 2 seconds
         setTimeout(() => {
           onClose();
-          router.visit(route('scan'));
+          router.visit(route('scan.scanner'));
         }, 2000);
       },
       onError: (errors) => {

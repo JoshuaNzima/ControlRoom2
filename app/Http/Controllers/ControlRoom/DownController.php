@@ -10,6 +10,30 @@ use Inertia\Inertia;
 
 class DownController extends Controller
 {
+    private function indexComponent(Request $request): string
+    {
+        $name = (string) ($request->route()?->getName() ?? '');
+        if (str_starts_with($name, 'admin.')) {
+            return 'Admin/Downs/Index';
+        }
+        if (str_starts_with($name, 'hr.')) {
+            return 'HR/Downs/Index';
+        }
+        return 'ControlRoom/Downs/Index';
+    }
+
+    private function redirectToIndex(Request $request)
+    {
+        $name = (string) ($request->route()?->getName() ?? '');
+        if (str_starts_with($name, 'admin.')) {
+            return redirect()->route('admin.downs.index');
+        }
+        if (str_starts_with($name, 'hr.')) {
+            return redirect()->route('hr.downs.index');
+        }
+        return redirect()->route('control-room.downs.index');
+    }
+
     public function index(Request $request)
     {
         $downs = Down::with(['reporter', 'client', 'clientSite', 'guardRelation'])
@@ -17,7 +41,7 @@ class DownController extends Controller
             ->latest()
             ->paginate(10);
 
-        return Inertia::render('ControlRoom/Downs/Index', [
+        return Inertia::render($this->indexComponent($request), [
             'downs' => $downs,
         ]);
     }
@@ -122,14 +146,14 @@ class DownController extends Controller
 
         $down->update($validated);
 
-        return redirect()->route('control-room.downs.index')->withSuccess('Down updated successfully.');
+        return $this->redirectToIndex($request)->withSuccess('Down updated successfully.');
     }
 
     public function destroy(Down $down)
     {
         $down->delete();
 
-        return redirect()->route('control-room.downs.index')->withSuccess('Down deleted successfully.');
+        return $this->redirectToIndex(request())->withSuccess('Down deleted successfully.');
     }
 
     public function abscond(Down $down)

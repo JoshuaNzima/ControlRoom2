@@ -34,8 +34,13 @@ export default function QRCodes() {
   const sitesWithoutQr = allSites.filter(s => !s.qr_code);
 
   const printQr = (siteId: number) => {
-    const url = route('control-room.clients.sites.qr-print', siteId);
+    const url = route('admin.clients.sites.qr-print', siteId);
     window.open(url, '_blank', 'width=600,height=800');
+  };
+
+  const printLandscapeQr = (siteId: number) => {
+    const url = route('admin.clients.sites.qr-print', siteId) + '?layout=landscape';
+    window.open(url, '_blank', 'width=900,height=700');
   };
 
   return (
@@ -48,7 +53,7 @@ export default function QRCodes() {
             <p className="text-gray-600 dark:text-gray-300 text-sm">Generate and download QR codes for sites, zones, and checkpoints.</p>
           </div>
           <Button asChild variant="outline" className="w-full sm:w-auto gap-2">
-            <a href={route('control-room.qr-codes.download-bulk')}>
+            <a href={route('admin.qr-codes.download-bulk')}>
               <IconMapper name="Download" size={16} /> Download All QR Codes
             </a>
           </Button>
@@ -101,7 +106,7 @@ export default function QRCodes() {
                     </div>
                     <div className="flex items-center gap-2">
                       <a
-                        href={route('control-room.clients.sites.qr', site.id)}
+                        href={route('admin.clients.sites.qr', site.id)}
                         target="_blank"
                         rel="noreferrer"
                         className="text-sm px-3 py-1.5 rounded-md border dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 whitespace-nowrap"
@@ -113,6 +118,13 @@ export default function QRCodes() {
                         className="text-sm px-3 py-1.5 rounded-md border dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 whitespace-nowrap"
                       >
                         Print
+                      </button>
+                      <button
+                        onClick={() => printLandscapeQr(site.id)}
+                        title="Print in landscape format with prominent emergency hotline"
+                        className="text-sm px-3 py-1.5 rounded-md border dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 whitespace-nowrap"
+                      >
+                        Print Landscape
                       </button>
                     </div>
                   </div>
@@ -146,7 +158,7 @@ export default function QRCodes() {
                       </span>
                     </div>
                     <Link
-                      href={route('control-room.clients.sites.qr', site.id)}
+                      href={route('admin.clients.sites.qr', site.id)}
                       className="text-sm px-3 py-1.5 rounded-md bg-coin-600 text-white hover:bg-coin-700 whitespace-nowrap"
                     >
                       Generate
@@ -158,7 +170,7 @@ export default function QRCodes() {
             {sitesWithoutQr.length > 0 && (
               <div className="mt-4 pt-4 border-t dark:border-gray-700">
                 <a
-                  href={route('control-room.qr-codes.download-bulk')}
+                  href={route('admin.qr-codes.download-bulk')}
                   className="inline-flex items-center gap-2 text-sm text-coin-700 hover:text-coin-800 dark:text-coin-300 dark:hover:text-coin-200"
                 >
                   <IconMapper name="RefreshCw" size={14} />
@@ -176,14 +188,14 @@ export default function QRCodes() {
               <div className="p-3 rounded-lg border border-gray-200 dark:border-gray-800 bg-white/60 dark:bg-gray-950/20">
                 <div className="font-medium text-gray-900 dark:text-gray-100">Download All QR Codes</div>
                 <div className="text-xs text-gray-500 dark:text-gray-400">Download ZIP with all site, zone, and checkpoint QR codes</div>
-                <a href={route('control-room.qr-codes.download-bulk')} className="mt-2 inline-block text-sm text-coin-700 hover:text-coin-800 dark:text-coin-300 dark:hover:text-coin-200">
+                <a href={route('admin.qr-codes.download-bulk')} className="mt-2 inline-block text-sm text-coin-700 hover:text-coin-800 dark:text-coin-300 dark:hover:text-coin-200">
                   Download ZIP
                 </a>
               </div>
               <div className="p-3 rounded-lg border border-gray-200 dark:border-gray-800 bg-white/60 dark:bg-gray-950/20">
                 <div className="font-medium text-gray-900 dark:text-gray-100">Download Saved</div>
                 <div className="text-xs text-gray-500 dark:text-gray-400">Download previously generated QR codes</div>
-                <a href={route('control-room.qr-codes.download-saved')} className="mt-2 inline-block text-sm text-coin-700 hover:text-coin-800 dark:text-coin-300 dark:hover:text-coin-200">
+                <a href={route('admin.qr-codes.download-saved')} className="mt-2 inline-block text-sm text-coin-700 hover:text-coin-800 dark:text-coin-300 dark:hover:text-coin-200">
                   Download Saved
                 </a>
               </div>

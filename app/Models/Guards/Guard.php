@@ -61,6 +61,7 @@ class Guard extends Model
         'supervisor_id',
         'reports_to_guard_id',
         'position',
+        'is_leader',
         'default_off_day',
     ];
 
@@ -72,6 +73,7 @@ class Guard extends Model
         'dependents_count' => 'integer',
         'last_known_location' => 'array',
         'position' => 'string',
+        'is_leader' => 'boolean',
         'default_off_day' => 'integer',
     ];
 

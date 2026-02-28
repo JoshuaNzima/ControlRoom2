@@ -3,8 +3,11 @@ import ControlRoomLayout from '@/Layouts/ControlRoomLayout';
 import { Head, Link, router, usePage, useForm } from '@inertiajs/react';
 import Modal from '@/Components/Modal';
 import { Card } from '@/Components/ui/card';
-import PageHeader from '@/Components/ui/page-header';
+import { Button } from '@/Components/ui/button';
+import { Badge } from '@/Components/ui/badge';
+import IconMapper from '@/Components/IconMapper';
 import EmptyState from '@/Components/ui/empty-state';
+import { formatDistanceToNow } from '@/Components/format';
 
 type Down = {
   id: number;
@@ -17,11 +20,29 @@ type Down = {
   client?: { id: number; name: string };
   client_site?: { id: number; name: string };
   guard_relation?: { id: number; name: string; employee_id?: string; status?: string };
+  created_at: string;
 };
 
 type PageProps = {
   auth: { user?: { name?: string } };
-  downs: { data: Down[] };
+  downs: { 
+    data: Down[]; 
+    links?: Array<{ url: string | null; label: string; active: boolean }>;
+    meta?: { current_page: number; last_page: number; total?: number };
+  };
+};
+
+const statusConfig: Record<string, { color: string; icon: string; label: string }> = {
+  open: { color: 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-500/20 dark:text-blue-300 dark:border-blue-500/40', icon: 'AlertCircle', label: 'Open' },
+  escalated: { color: 'bg-rose-100 text-rose-800 border-rose-200 dark:bg-rose-500/20 dark:text-rose-300 dark:border-rose-500/40', icon: 'TrendingUp', label: 'Escalated' },
+  resolved: { color: 'bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-500/20 dark:text-emerald-300 dark:border-emerald-500/40', icon: 'CheckCircle', label: 'Resolved' },
+  absconding: { color: 'bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-500/20 dark:text-purple-300 dark:border-purple-500/40', icon: 'ShieldAlert', label: 'Absconding' },
+};
+
+const typeConfig: Record<string, { color: string; label: string }> = {
+  guard_absent: { color: 'bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-500/20 dark:text-orange-300 dark:border-orange-500/40', label: 'Guard Absent' },
+  site_unmanned: { color: 'bg-red-100 text-red-800 border-red-200 dark:bg-red-500/20 dark:text-red-300 dark:border-red-500/40', label: 'Site Unmanned' },
+  other: { color: 'bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-700/40 dark:text-gray-300 dark:border-gray-600', label: 'Other' },
 };
 
 export default function DownsIndex() {
@@ -119,14 +140,62 @@ export default function DownsIndex() {
     }
   }
 
+  // Stats
+  const stats = React.useMemo(() => [
+    { icon: 'AlertCircle', title: 'Open', value: downs.data.filter((d: Down) => d.status === 'open').length, color: 'bg-blue-500' },
+    { icon: 'TrendingUp', title: 'Escalated', value: downs.data.filter((d: Down) => d.status === 'escalated').length, color: 'bg-amber-500' },
+    { icon: 'CheckCircle', title: 'Resolved', value: downs.data.filter((d: Down) => d.status === 'resolved').length, color: 'bg-emerald-500' },
+    { icon: 'ShieldAlert', title: 'Absconding', value: downs.data.filter((d: Down) => d.status === 'absconding').length, color: 'bg-purple-500' },
+  ], [downs.data]);
+
   return (
     <ControlRoomLayout title="Downs Management" user={auth?.user as any}>
       <Head title="Downs Management" />
       <div className="space-y-6">
-        <PageHeader
-          title="Downs Management"
-          description="Report, track, and resolve coverage downs."
-        />
+        {/* Hero Header */}
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-red-700 via-red-600 to-rose-600 text-white shadow-2xl">
+          <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg%20width%3D%2260%22%20height%3D%2260%22%20viewBox%3D%220%200%2060%2060%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%3E%3Cg%20fill%3D%22none%22%20fill-rule%3D%22evenodd%22%3E%3Cg%20fill%3D%22%23ffffff%22%20fill-opacity%3D%220.05%22%3E%3Cpath%20d%3D%22M36%2034v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6%2034v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6%204V0H4v4H0v2h4v4h2V6h4V4H6z%22/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] opacity-20" />
+          <div className="relative p-6 sm:p-8">
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+              <div className="flex items-center gap-4">
+                <div className="p-4 bg-white/10 rounded-xl backdrop-blur-sm">
+                  <IconMapper name="AlertTriangle" size={32} />
+                </div>
+                <div>
+                  <h1 className="text-2xl sm:text-3xl font-bold">Downs Management</h1>
+                  <p className="text-red-100 mt-1">Report, track, and resolve coverage downs</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="px-4 py-2 bg-white/10 rounded-lg backdrop-blur-sm">
+                  <p className="text-xs text-red-200">Open Downs</p>
+                  <p className="text-lg font-semibold">{downs.data.length}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Stats */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {stats.map((stat, idx) => (
+            <div
+              key={idx}
+              className="relative overflow-hidden rounded-xl bg-gray-900 dark:bg-gray-800 p-4"
+            >
+              <div className={`absolute top-0 left-0 w-1 h-full ${stat.color}`} />
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-sm text-gray-400">{stat.title}</p>
+                  <p className="text-2xl font-bold text-white mt-1">{stat.value}</p>
+                </div>
+                <div className={`p-2 rounded-lg ${stat.color} bg-opacity-20`}>
+                  <IconMapper name={stat.icon} size={20} className="text-white" />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card className="lg:col-span-1 p-6">
@@ -281,52 +350,154 @@ export default function DownsIndex() {
 
         <Card className="lg:col-span-2 p-6">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Open Downs</h2>
-          <div className="divide-y dark:divide-gray-700">
-            {downs.data.map((d: any) => (
-              <div key={d.id} className="py-3 flex items-start justify-between gap-4">
-                <div className="min-w-0">
-                  <div className="font-medium text-gray-900 dark:text-gray-100">{d.title} <span className="ml-2 text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-800 dark:bg-gray-700 dark:text-gray-100">{d.type.replace('_', ' ')}</span></div>
-                  <div className="mt-1 text-sm text-gray-600 dark:text-gray-300 flex flex-wrap items-center gap-2">
-                    <span>Status: {d.status}{d.escalation_level ? ` • Escalation ${d.escalation_level}` : ''}</span>
-                    {d.guard_relation?.id && (
-                      <>
-                        <span>•</span>
-                        <button
-                          type="button"
-                          onClick={() => openGuardDetails(d.guard_relation.id)}
-                          className="text-xs px-2 py-0.5 rounded bg-gray-100 text-gray-800 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600"
-                        >
-                          View Guard {d.guard_relation.employee_id ? `(${d.guard_relation.employee_id})` : ''}
-                        </button>
-                      </>
-                    )}
+          <div className="space-y-3">
+            {downs.data.map((d: Down) => {
+              const status = statusConfig[d.status] || statusConfig.open;
+              const type = typeConfig[d.type] || typeConfig.other;
+
+              return (
+                <Card
+                  key={d.id}
+                  className="overflow-hidden hover:shadow-lg transition-shadow"
+                >
+                  <div className="flex flex-col sm:flex-row">
+                    {/* Left accent bar based on status */}
+                    <div className={`w-full sm:w-1.5 ${
+                      d.status === 'escalated' ? 'bg-rose-500' :
+                      d.status === 'absconding' ? 'bg-purple-500' :
+                      d.status === 'resolved' ? 'bg-emerald-500' : 'bg-blue-500'
+                    }`} />
+
+                    <div className="flex-1 p-4 sm:p-5">
+                      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <Badge className={`${status.color} text-xs`}>
+                              <IconMapper name={status.icon} size={12} className="mr-1 inline" />
+                              {status.label}
+                              {d.escalation_level > 0 && ` • L${d.escalation_level}`}
+                            </Badge>
+                            <Badge className={`${type.color} text-xs`}>
+                              {type.label}
+                            </Badge>
+                          </div>
+                          <h3 className="mt-2 text-lg font-semibold text-gray-900 dark:text-gray-100 line-clamp-1">
+                            {d.title}
+                          </h3>
+                          <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-600 dark:text-gray-400">
+                            {d.reporter && (
+                              <span className="flex items-center gap-1">
+                                <IconMapper name="User" size={14} />
+                                {d.reporter.name}
+                              </span>
+                            )}
+                            {d.client && (
+                              <span className="flex items-center gap-1">
+                                <IconMapper name="Building" size={14} />
+                                {d.client.name}
+                              </span>
+                            )}
+                            {d.client_site && (
+                              <span className="flex items-center gap-1">
+                                <IconMapper name="MapPin" size={14} />
+                                {d.client_site.name}
+                              </span>
+                            )}
+                            <span className="flex items-center gap-1">
+                              <IconMapper name="Clock" size={14} />
+                              {formatDistanceToNow(d.created_at)}
+                            </span>
+                          </div>
+                          {d.description && (
+                            <div className="mt-2 text-sm text-gray-600 dark:text-gray-400 line-clamp-2">
+                              {d.description}
+                            </div>
+                          )}
+                          {d.guard_relation?.id && (
+                            <div className="mt-2">
+                              <button
+                                type="button"
+                                onClick={() => openGuardDetails(d.guard_relation!.id)}
+                                className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded bg-gray-100 text-gray-800 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600"
+                              >
+                                <IconMapper name="Shield" size={12} />
+                                View Guard {d.guard_relation.employee_id ? `(${d.guard_relation.employee_id})` : ''}
+                              </button>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Actions */}
+                        <div className="flex flex-wrap items-center gap-2">
+                          {d.status !== 'resolved' && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => escalate(d.id)}
+                              className="border-yellow-500 text-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-500/10"
+                            >
+                              <IconMapper name="TrendingUp" size={14} className="mr-1" />
+                              Escalate
+                            </Button>
+                          )}
+                          {d.status !== 'resolved' && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => resolve(d.id)}
+                              className="border-emerald-500 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-500/10"
+                            >
+                              <IconMapper name="CheckCircle" size={14} className="mr-1" />
+                              Resolve
+                            </Button>
+                          )}
+                          {d.status !== 'resolved' && d.status !== 'absconding' && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => abscond(d.id)}
+                              className="border-purple-500 text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-500/10"
+                            >
+                              <IconMapper name="ShieldAlert" size={14} className="mr-1" />
+                              Abscond
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                  {d.description && (
-                    <div className="mt-1 text-sm text-gray-600 dark:text-gray-300 line-clamp-2">{d.description}</div>
-                  )}
-                </div>
-                <div className="flex gap-2 flex-shrink-0">
-                  {d.status !== 'resolved' && (
-                    <button onClick={() => escalate(d.id)} className="px-3 py-1 rounded-md bg-yellow-500 text-white hover:bg-yellow-600">Escalate</button>
-                  )}
-                  {d.status !== 'resolved' && (
-                    <button onClick={() => resolve(d.id)} className="px-3 py-1 rounded-md bg-green-600 text-white hover:bg-green-700">Resolve</button>
-                  )}
-                  {d.status !== 'resolved' && d.status !== 'absconding' && (
-                    <button onClick={() => abscond(d.id)} className="px-3 py-1 rounded-md bg-red-600 text-white hover:bg-red-700">Mark Absconding</button>
-                  )}
-                </div>
-              </div>
-            ))}
+                </Card>
+              );
+            })}
             {downs.data.length === 0 && (
               <EmptyState
                 title="No open downs"
-                description="You’re clear right now. New downs will appear here."
+                description="You're clear right now. New downs will appear here."
                 size="sm"
                 contentClassName="py-6"
               />
             )}
           </div>
+          {/* Pagination */}
+          {(downs as any)?.links && (downs as any).meta?.last_page > 1 && (
+            <div className="mt-4 flex flex-wrap gap-2 items-center justify-between">
+              <div className="text-sm text-gray-600 dark:text-gray-400">Page {downs?.meta?.current_page ?? ''} of {downs?.meta?.last_page ?? ''}</div>
+              <div className="flex flex-wrap gap-2">
+                {(downs as any).links?.filter((l: any) => l.url).map((l: any, idx: number) => (
+                  <button
+                    key={idx}
+                    className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                      l.active
+                        ? 'bg-red-600 text-white'
+                        : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700'
+                    }`}
+                    onClick={() => router.get(l.url, {}, { preserveScroll: true, preserveState: true })}
+                    dangerouslySetInnerHTML={{ __html: l.label }}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
         </Card>
       </div>
     {/* Guard Details Modal */}

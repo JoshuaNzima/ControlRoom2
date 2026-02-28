@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState, lazy, Suspense } from 'react';
-import { router, useForm } from '@inertiajs/react';
+import { router, useForm, Head } from '@inertiajs/react';
 import { X, Plus, Trash2, UserPlus, Shield, Search, ChevronLeft, ChevronRight, ChevronDown, ChevronUp } from 'lucide-react';
 import SuperAdminLayout from '@/Layouts/SuperAdminLayout';
+import IconMapper from '@/Components/IconMapper';
 
 const ConfirmModal = lazy(() => import('@/Components/ConfirmModal'));
 
@@ -166,14 +167,61 @@ export default function Roles({ roles, permissions, users, flash = {} }: Props) 
   const userOptions = useMemo(() => users?.data ?? [], [users]);
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Roles & Permissions</h1>
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Manage user roles and their permissions</p>
+    <SuperAdminLayout title="Roles & Permissions">
+      <Head title="Roles & Permissions" />
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+        {/* Hero Header */}
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-red-700 via-red-600 to-rose-600 text-white shadow-2xl">
+          <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg%20width%3D%2260%22%20height%3D%2260%22%20viewBox%3D%220%200%2060%2060%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%3E%3Cg%20fill%3D%22none%22%20fill-rule%3D%22evenodd%22%3E%3Cg%20fill%3D%22%23ffffff%22%20fill-opacity%3D%220.05%22%3E%3Cpath%20d%3D%22M36%2034v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6%2034v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6%204V0H4v4H0v2h4v4h2V6h4V4H6z%22/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] opacity-20" />
+          <div className="relative p-6 sm:p-8">
+            <div className="flex items-center gap-4">
+              <div className="p-4 bg-white/10 rounded-xl backdrop-blur-sm">
+                <IconMapper name="ShieldCheck" size={32} />
+              </div>
+              <div>
+                <h1 className="text-2xl sm:text-3xl font-bold">Roles & Permissions</h1>
+                <p className="text-red-100 mt-1">Manage user roles and their system permissions</p>
+              </div>
+            </div>
+          </div>
         </div>
-        <div className="flex items-center space-x-2"><div className="text-sm text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-3 py-1.5 rounded-full">Page {roles?.current_page ?? 1} of {roles?.last_page ?? 1}</div></div>
-      </div>
+
+        {/* Stats Row */}
+        <div className="grid grid-cols-3 gap-4">
+          <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-100 dark:bg-blue-900/20 rounded-lg text-blue-600">
+                <Shield className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{roles?.total ?? 0}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Total Roles</p>
+              </div>
+            </div>
+          </div>
+          <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-purple-100 dark:bg-purple-900/20 rounded-lg text-purple-600">
+                <IconMapper name="Key" size={20} />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{permissions?.data?.length ?? 0}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Permissions</p>
+              </div>
+            </div>
+          </div>
+          <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-green-100 dark:bg-green-900/20 rounded-lg text-green-600">
+                <UserPlus className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{(users as any)?.total ?? (users?.data?.length ?? 0)}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Total Users</p>
+              </div>
+            </div>
+          </div>
+        </div>
 
       {flash?.success && (<div className="mb-6 p-4 bg-green-50 border border-green-200 text-green-700 rounded-lg flex items-start"><div className="flex-shrink-0 h-5 w-5 text-green-400"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg></div><div className="ml-3"><p className="text-sm font-medium">{flash.success}</p></div></div>)}
 
@@ -279,9 +327,6 @@ export default function Roles({ roles, permissions, users, flash = {} }: Props) 
         <ConfirmModal open={confirmOpen} title={confirmTitle} message={confirmMessage} onConfirm={() => { setConfirmOpen(false); confirmAction(); }} onCancel={() => setConfirmOpen(false)} />
       </Suspense>
     </div>
+    </SuperAdminLayout>
   )
 }
-
-(Roles as any).layout = (page: any) => (
-  <SuperAdminLayout title="Roles & Permissions" user={page.props?.auth?.user}>{page}</SuperAdminLayout>
-)

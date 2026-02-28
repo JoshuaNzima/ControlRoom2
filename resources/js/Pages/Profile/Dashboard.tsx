@@ -1,6 +1,19 @@
 import React from 'react';
 import { Head, router, usePage } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import AdminLayout from '@/Layouts/AdminLayout';
+import SuperAdminLayout from '@/Layouts/SuperAdminLayout';
+import ControlRoomLayout from '@/Layouts/ControlRoomLayout';
+import FinanceLayout from '@/Layouts/FinanceLayout';
+import HRLayout from '@/Layouts/HRLayout';
+import AssetManagementLayout from '@/Layouts/AssetManagementLayout';
+import TrainingLayout from '@/Layouts/TrainingLayout';
+import FrontOfficeLayout from '@/Layouts/FrontOfficeLayout';
+import SupervisorLayout from '@/Layouts/SupervisorLayout';
+import ZoneCommanderLayout from '@/Layouts/ZoneCommanderLayout';
+import MarketingLayout from '@/Layouts/MarketingLayout';
+import BusinessDevLayout from '@/Layouts/BusinessDevLayout';
+import FrontDeskLayout from '@/Layouts/FrontDeskLayout';
 import QuickRequisitionModal from '@/Components/Requisitions/QuickRequisitionModal';
 import RequisitionSummary from '@/Components/Requisitions/RequisitionSummary';
 import EditProfileModal from '@/Components/Profile/EditProfileModal';
@@ -39,13 +52,68 @@ export default function ProfileDashboard() {
   const [showPassword, setShowPassword] = React.useState(false);
   const [showAvatar, setShowAvatar] = React.useState(false);
 
+  const currentRouteName = (() => {
+    try {
+      const name = (route() as any).current?.();
+      return typeof name === 'string' ? name : '';
+    } catch {
+      return '';
+    }
+  })();
+
+  const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+    const title = 'My Dashboard';
+
+    if (currentRouteName === 'admin.profile') {
+      return <AdminLayout title={title}>{children}</AdminLayout>;
+    }
+    if (currentRouteName === 'superadmin.profile') {
+      return <SuperAdminLayout title={title}>{children}</SuperAdminLayout>;
+    }
+    if (currentRouteName === 'control-room.profile') {
+      return <ControlRoomLayout title={title}>{children}</ControlRoomLayout>;
+    }
+    if (currentRouteName === 'finance.profile') {
+      return <FinanceLayout title={title}>{children}</FinanceLayout>;
+    }
+    if (currentRouteName === 'hr.profile') {
+      return <HRLayout title={title}>{children}</HRLayout>;
+    }
+    if (currentRouteName === 'assets.profile') {
+      return <AssetManagementLayout title={title}>{children}</AssetManagementLayout>;
+    }
+    if (currentRouteName === 'training.profile') {
+      return <TrainingLayout title={title}>{children}</TrainingLayout>;
+    }
+    if (currentRouteName === 'front-office.profile') {
+      return <FrontOfficeLayout title={title}>{children}</FrontOfficeLayout>;
+    }
+    if (currentRouteName === 'admin.marketing.profile') {
+      return <MarketingLayout title={title}>{children}</MarketingLayout>;
+    }
+    if (currentRouteName === 'admin.business-dev.profile') {
+      return <BusinessDevLayout title={title}>{children}</BusinessDevLayout>;
+    }
+    if (currentRouteName === 'admin.front-desk.profile') {
+      return <FrontDeskLayout title={title}>{children}</FrontDeskLayout>;
+    }
+    if (currentRouteName === 'supervisor.profile') {
+      return <SupervisorLayout title={title}>{children}</SupervisorLayout>;
+    }
+    if (currentRouteName === 'zone.profile') {
+      return <ZoneCommanderLayout title={title}>{children}</ZoneCommanderLayout>;
+    }
+
+    return <AuthenticatedLayout header={<h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">My Dashboard</h2>}>{children}</AuthenticatedLayout>;
+  };
+
   const claim = (id: number) => {
     if (!confirm('Claim this commission?')) return;
     router.post(route('profile.commissions.claim', { commission: id }), {}, { preserveScroll: true });
   };
 
   return (
-    <AuthenticatedLayout header={<h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">My Dashboard</h2>}>
+    <Layout>
       <Head title="My Dashboard" />
       <div className="py-6">
         <div className="mx-auto max-w-7xl sm:px-6 lg:px-8 space-y-4">
@@ -189,6 +257,6 @@ export default function ProfileDashboard() {
       <EditProfileModal show={showEdit} onClose={() => setShowEdit(false)} mustVerifyEmail={mustVerifyEmail} status={status} />
       <ChangePasswordModal show={showPassword} onClose={() => setShowPassword(false)} />
       <AvatarModal show={showAvatar} onClose={() => setShowAvatar(false)} />
-    </AuthenticatedLayout>
+    </Layout>
   );
 }

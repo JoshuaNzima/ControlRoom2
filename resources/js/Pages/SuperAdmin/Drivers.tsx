@@ -4,8 +4,7 @@ import SuperAdminLayout from '@/Layouts/SuperAdminLayout';
 import IconMapper from '@/Components/IconMapper';
 import useNotification from '@/Providers/useNotifications';
 import Modal from '@/Components/Modal';
-import GuardForm from '@/Components/Guards/GuardForm';
-import { GuardFormData } from '@/types/guards';
+import DriverForm from '@/Components/Guards/DriverForm';
 import AssignSiteModal from '@/Components/Guards/AssignSiteModal';
 import ConfirmModal from '@/Components/ConfirmModal';
 import ReasonModal from '@/Components/ReasonModal';
@@ -152,7 +151,7 @@ export default function SuperAdminDrivers({ guards, filters, supervisors = [], g
     } catch {}
   };
 
-  const submitCreate = async (form: GuardFormData) => {
+  const submitCreate = async (form: any) => {
     setSaving(true);
     const fd = new FormData();
     let appendedPhoto = false;
@@ -177,7 +176,7 @@ export default function SuperAdminDrivers({ guards, filters, supervisors = [], g
     });
   };
 
-  const submitUpdate = async (form: GuardFormData) => {
+  const submitUpdate = async (form: any) => {
     if (!selectedGuard) return;
     setSaving(true);
     const fd = new FormData();
@@ -513,10 +512,9 @@ export default function SuperAdminDrivers({ guards, filters, supervisors = [], g
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Photo</label>
               <input type="file" accept="image/*" onChange={(e) => setPhotoCreate(e.target.files?.[0] || null)} className="w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-red-50 file:text-red-700 hover:file:bg-red-100 dark:file:bg-gray-800 dark:file:text-gray-100" />
             </div>
-            <GuardForm
-              initialData={{ status: 'active', guard_type: 'permanent', employee_role: 'driver' } as any}
+            <DriverForm
+              initialData={{ status: 'active', employee_role: 'driver' }}
               supervisors={supervisors}
-              grades={grades}
               onSubmit={submitCreate}
               canAssignSupervisor={true}
               processing={saving}
@@ -536,10 +534,9 @@ export default function SuperAdminDrivers({ guards, filters, supervisors = [], g
               <input type="file" accept="image/*" onChange={(e) => setPhotoEdit(e.target.files?.[0] || null)} className="w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-red-50 file:text-red-700 hover:file:bg-red-100 dark:file:bg-gray-800 dark:file:text-gray-100" />
             </div>
             {selectedGuard && (
-              <GuardForm
+              <DriverForm
                 initialData={{ ...selectedGuard, employee_role: 'driver' }}
                 supervisors={supervisors}
-                grades={grades}
                 onSubmit={submitUpdate}
                 canAssignSupervisor={true}
                 processing={saving}

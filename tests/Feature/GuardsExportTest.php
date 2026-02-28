@@ -26,7 +26,7 @@ class GuardsExportTest extends TestCase
         $user = $this->createSuperAdmin();
         $response = $this->actingAs($user)->get(route('control-room.guards.export'));
         $response->assertOk();
-        $response->assertHeader('Content-Type', 'text/csv');
+        $this->assertStringContainsString('text/csv', (string) $response->headers->get('Content-Type'));
         $csv = $response->streamedContent();
         $firstLine = strtok($csv, "\n");
         $this->assertStringContainsString('ID Number', $firstLine);

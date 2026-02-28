@@ -239,7 +239,7 @@ export default function SuperAdminLayout({ title, children, user }: Props) {
                     </div>
                     <div className="flex items-center gap-2">
                         <Link
-                            href={route('profile.dashboard')}
+                            href={route('superadmin.profile')}
                             className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-md bg-gray-800 px-3 py-2 text-xs font-medium text-white hover:bg-gray-700 transition-colors"
                         >
                             <IconMapper name="User" size={14} />

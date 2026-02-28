@@ -17,7 +17,7 @@ export default function Login({
     const csrf = (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement | null)?.content ?? '';
     const { errors } = usePage().props as any;
 
-    const [email, setEmail] = useState('');
+    const [login, setLogin] = useState('');
     const [password, setPassword] = useState('');
     const [remember, setRemember] = useState(false);
     const [processing, setProcessing] = useState(false);
@@ -30,7 +30,7 @@ export default function Login({
         (router as any).post(
             route('login'),
             {
-                email,
+                login,
                 password,
                 remember,
                 _token: csrf,
@@ -67,18 +67,18 @@ export default function Login({
 
                                 <form onSubmit={submit} className="space-y-4">
                                     <div>
-                                        <InputLabel htmlFor="email-mobile" value="Email" />
+                                        <InputLabel htmlFor="login-mobile" value="Email or Phone" />
                                         <TextInput
-                                            id="email-mobile"
-                                            type="email"
-                                            name="email"
-                                            value={email}
+                                            id="login-mobile"
+                                            type="text"
+                                            name="login"
+                                            value={login}
                                             className="mt-1 block w-full px-3 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-coin-300"
                                             autoComplete="username"
                                             isFocused={true}
-                                            onChange={(e) => setEmail(e.target.value)}
+                                            onChange={(e) => setLogin(e.target.value)}
                                         />
-                                        <InputError message={errors.email} className="mt-2" />
+                                        <InputError message={errors.login} className="mt-2" />
                                     </div>
 
                                     <div>
@@ -139,18 +139,18 @@ export default function Login({
 
                                 <form onSubmit={submit} className="flex flex-col gap-4">
                                     <div>
-                                        <InputLabel htmlFor="email-desktop" value="Email" />
+                                        <InputLabel htmlFor="login-desktop" value="Email or Phone" />
                                         <TextInput
-                                            id="email-desktop"
-                                            type="email"
-                                            name="email"
-                                            value={email}
+                                            id="login-desktop"
+                                            type="text"
+                                            name="login"
+                                            value={login}
                                             className="w-full mt-1 px-3 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-coin-300"
                                             autoComplete="username"
                                             isFocused={true}
-                                            onChange={(e) => setEmail(e.target.value)}
+                                            onChange={(e) => setLogin(e.target.value)}
                                         />
-                                        <InputError message={errors.email} className="mt-2" />
+                                        <InputError message={errors.login} className="mt-2" />
                                     </div>
 
                                     <div>

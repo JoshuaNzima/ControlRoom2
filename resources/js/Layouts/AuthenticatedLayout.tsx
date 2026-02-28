@@ -16,6 +16,28 @@ export default function Authenticated({
 }: PropsWithChildren<{ user?: User; header?: ReactNode }>) {
     const pageUser = user || usePage<PageProps>().props.auth.user;
 
+    const profileHref = (() => {
+        try {
+            const p = window.location.pathname;
+            if (p.startsWith('/superadmin')) return route('superadmin.profile');
+            if (p.startsWith('/admin/front-desk')) return route('admin.front-desk.profile');
+            if (p.startsWith('/admin/marketing')) return route('admin.marketing.profile');
+            if (p.startsWith('/admin/business-dev')) return route('admin.business-dev.profile');
+            if (p.startsWith('/admin')) return route('admin.profile');
+            if (p.startsWith('/control-room')) return route('control-room.profile');
+            if (p.startsWith('/finance')) return route('finance.profile') as unknown as string;
+            if (p.startsWith('/hr')) return route('hr.profile');
+            if (p.startsWith('/assets')) return route('assets.profile');
+            if (p.startsWith('/training')) return route('training.profile');
+            if (p.startsWith('/front-office')) return route('front-office.profile');
+            if (p.startsWith('/zone')) return route('zone.profile');
+            if (p.startsWith('/supervisor')) return route('supervisor.profile');
+            return route('profile.dashboard');
+        } catch {
+            return '/me';
+        }
+    })();
+
     const [showingNavigationDropdown, setShowingNavigationDropdown] =
         useState(false);
 
@@ -91,7 +113,7 @@ export default function Authenticated({
 
                                     <Dropdown.Content>
                                         <Dropdown.Link
-                                            href={route('profile.dashboard')}
+                                            href={profileHref}
                                         >
                                             My Profile
                                         </Dropdown.Link>
@@ -195,7 +217,7 @@ export default function Authenticated({
                         </div>
 
                         <div className="mt-3 space-y-1">
-                            <ResponsiveNavLink href={route('profile.dashboard')}>
+                            <ResponsiveNavLink href={profileHref}>
                                 My Profile
                             </ResponsiveNavLink>
                             <ResponsiveNavLink

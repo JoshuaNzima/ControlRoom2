@@ -35,6 +35,11 @@ export default function SupervisorQRCodes({ zones }: { zones: ZoneItem[] }) {
     window.open(url, '_blank', 'width=600,height=800');
   };
 
+  const printLandscapeQr = (siteId: number) => {
+    const url = route('control-room.clients.sites.qr-print', siteId) + '?layout=landscape';
+    window.open(url, '_blank', 'width=900,height=700');
+  };
+
   // Flatten all sites from all zones
   const allSites = zones?.flatMap(z => z.sites || []) || [];
   const sitesWithQr = allSites.filter(s => s.qr_code);
@@ -127,6 +132,13 @@ export default function SupervisorQRCodes({ zones }: { zones: ZoneItem[] }) {
                           className="text-sm px-3 py-1.5 rounded-md border dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 whitespace-nowrap"
                         >
                           Print
+                        </button>
+                        <button
+                          onClick={() => printLandscapeQr(site.id)}
+                          title="Print in landscape format with prominent emergency hotline"
+                          className="text-sm px-3 py-1.5 rounded-md border dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 whitespace-nowrap"
+                        >
+                          Print Landscape
                         </button>
                       </div>
                     </div>

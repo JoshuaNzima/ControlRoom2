@@ -37,6 +37,11 @@ class GuardAssignment extends Model
         return $this->belongsTo(ClientSite::class);
     }
 
+    public function site(): BelongsTo
+    {
+        return $this->clientSite();
+    }
+
     public function assignedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'assigned_by');

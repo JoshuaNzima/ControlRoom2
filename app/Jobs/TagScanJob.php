@@ -21,8 +21,6 @@ class TagScanJob implements ShouldQueue
     // Attempts and backoff
     public $tries = 3;
     public $backoff = [60, 120];
-    // Use dedicated redis connection for tagging jobs
-    public $connection = 'redis';
 
     /**
      * Create a new job instance.
@@ -30,6 +28,7 @@ class TagScanJob implements ShouldQueue
     public function __construct(int $scanId)
     {
         $this->scanId = $scanId;
+        $this->onConnection('redis');
     }
 
     /**

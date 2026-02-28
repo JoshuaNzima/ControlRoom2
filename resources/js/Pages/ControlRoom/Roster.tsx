@@ -3,6 +3,9 @@ import { Head, useForm, usePage } from '@inertiajs/react';
 import ControlRoomLayout from '@/Layouts/ControlRoomLayout';
 import Modal from '@/Components/Modal';
 import ManualRosterEntryModal from '@/Components/Roster/ManualRosterEntryModal';
+import { StatCard } from '@/Components/StatCard';
+import { ActionTile } from '@/Components/ActionTile';
+import IconMapper from '@/Components/IconMapper';
 
 type Guard = { id: number; name: string; employee_id?: string };
 type OffDay = { id?: number; guard_id: number; start_date: string; end_date?: string | null; reason?: string | null };
@@ -116,43 +119,93 @@ export default function Roster() {
   return (
     <ControlRoomLayout title="Roster" user={auth?.user as any}>
       <Head title="Roster" />
-      <div className="space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-          <div>
-            <h2 className="text-xl font-semibold">Roster & Calendar</h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400">Manage guard off days. Holidays are shown for context.</p>
+      <div className="space-y-6">
+        {/* Hero Header */}
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-red-700 via-red-600 to-rose-600 text-white shadow-2xl">
+          <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg%20width%3D%2260%22%20height%3D%2260%22%20viewBox%3D%220%200%2060%2060%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%3E%3Cg%20fill%3D%22none%22%20fill-rule%3D%22evenodd%22%3E%3Cg%20fill%3D%22%23ffffff%22%20fill-opacity%3D%220.05%22%3E%3Cpath%20d%3D%22M36%2034v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6%2034v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6%204V0H4v4H0v2h4v4h2V6h4V4H6z%22/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] opacity-20" />
+          <div className="relative p-6 sm:p-8">
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+              <div className="flex items-center gap-4">
+                <div className="p-4 bg-white/10 rounded-xl backdrop-blur-sm">
+                  <IconMapper name="Calendar" size={32} />
+                </div>
+                <div>
+                  <h1 className="text-2xl sm:text-3xl font-bold">Roster & Calendar</h1>
+                  <p className="text-red-100 mt-1">Manage guard off days and view holidays</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="px-4 py-2 bg-white/10 rounded-lg backdrop-blur-sm">
+                  <p className="text-xs text-red-200">Current Month</p>
+                  <p className="text-lg font-semibold">{monthLabel}</p>
+                </div>
+              </div>
+            </div>
           </div>
-          <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-            <button
-              type="button"
-              className="px-3 py-1.5 rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700"
-              onClick={() => setCurrentMonth((d) => new Date(d.getFullYear(), d.getMonth() - 1, 1))}
-            >
-              Prev
-            </button>
-            <div className="flex-1 min-w-0 text-center font-medium truncate">{monthLabel}</div>
-            <button
-              type="button"
-              className="px-3 py-1.5 rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700"
-              onClick={() => setCurrentMonth((d) => new Date(d.getFullYear(), d.getMonth() + 1, 1))}
-            >
-              Next
-            </button>
-            <button
-              type="button"
-              className="px-3 py-1.5 rounded-md bg-coin-700 text-white hover:bg-coin-600"
-              onClick={() => setAddOffDayOpen(true)}
-            >
-              Add Off Day
-            </button>
-            <button
-              type="button"
-              className="px-3 py-1.5 rounded-md bg-emerald-700 text-white hover:bg-emerald-600"
-              onClick={() => setManualEntryOpen(true)}
-            >
-              Quick Entry
-            </button>
-          </div>
+        </div>
+
+        {/* StatCards */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <StatCard
+            icon={<IconMapper name="Users" size={24} />}
+            title="Total Guards"
+            value={guards.length || 0}
+            subtitle="Available guards"
+            color="blue"
+          />
+          <StatCard
+            icon={<IconMapper name="MapPin" size={24} />}
+            title="Active Sites"
+            value={sites.length || 0}
+            subtitle="Assigned locations"
+            color="green"
+          />
+          <StatCard
+            icon={<IconMapper name="CalendarOff" size={24} />}
+            title="Off Days"
+            value={events.filter(e => e.type === 'off_day').length}
+            subtitle="This month"
+            color="amber"
+          />
+          <StatCard
+            icon={<IconMapper name="CalendarCheck" size={24} />}
+            title="Holidays"
+            value={events.filter(e => e.type === 'holiday').length}
+            subtitle="This month"
+            color="purple"
+          />
+        </div>
+
+        {/* Quick Actions */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <ActionTile
+            icon={<IconMapper name="Plus" size={18} />}
+            title="Add Off Day"
+            description="Schedule guard time off"
+            color="bg-red-600"
+            onClick={() => setAddOffDayOpen(true)}
+          />
+          <ActionTile
+            icon={<IconMapper name="Zap" size={18} />}
+            title="Quick Entry"
+            description="Fast roster entry"
+            color="bg-emerald-600"
+            onClick={() => setManualEntryOpen(true)}
+          />
+          <ActionTile
+            icon={<IconMapper name="ChevronLeft" size={18} />}
+            title="Previous Month"
+            description="View last month"
+            color="bg-blue-600"
+            onClick={() => setCurrentMonth((d) => new Date(d.getFullYear(), d.getMonth() - 1, 1))}
+          />
+          <ActionTile
+            icon={<IconMapper name="ChevronRight" size={18} />}
+            title="Next Month"
+            description="View next month"
+            color="bg-purple-600"
+            onClick={() => setCurrentMonth((d) => new Date(d.getFullYear(), d.getMonth() + 1, 1))}
+          />
         </div>
 
         <div className="flex items-center gap-4 text-sm">

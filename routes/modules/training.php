@@ -15,6 +15,8 @@ Route::middleware(['auth'])->prefix('training')->name('training.')->group(functi
         ->middleware('permission:training.dashboard.view')
         ->name('dashboard');
 
+    Route::get('/me', [\App\Http\Controllers\Profile\ProfileDashboardController::class, 'index'])->name('profile');
+
     // Trainees
     Route::prefix('trainees')->name('trainees.')->group(function () {
         Route::get('/', [TraineeController::class, 'index'])

@@ -197,7 +197,7 @@ class ClientsController extends Controller
 		return response($png, 200, ['Content-Type' => 'image/png']);
 	}
 
-	public function siteQrPrint(ClientSite $site)
+	public function siteQrPrint(ClientSite $site, Request $request)
 	{
 		$site->load(['client:id,name']);
 
@@ -206,6 +206,8 @@ class ClientsController extends Controller
 			$site->qr_code = ClientSite::generateUniqueQrCode();
 			\DB::table('client_sites')->where('id', $site->id)->update(['qr_code' => $site->qr_code]);
 		}
+
+		$layout = $request->query('layout', 'portrait'); // portrait or landscape
 
 		$payload = [
 			'issuer' => 'CoinSecurity',
@@ -223,8 +225,24 @@ class ClientsController extends Controller
 		$logoUrl = asset('images/Coin-logo.png');
 		$emergencyHotline = config('app.emergency_hotline', '+265 999 611 711');
 		$clientName = optional($site->client)->name ?? 'Unknown Client';
+		$currentUrl = url()->full();
+		$alternateLayoutUrl = $layout === 'portrait' 
+			? url()->current() . '?layout=landscape' 
+			: url()->current() . '?layout=portrait';
+		$alternateLayoutLabel = $layout === 'portrait' ? 'Switch to Landscape' : 'Switch to Portrait';
 
-		$html = <<<HTML
+		if ($layout === 'landscape') {
+			$html = $this->getLandscapeLayout($site, $qrUrl, $logoUrl, $emergencyHotline, $clientName, $alternateLayoutUrl, $alternateLayoutLabel);
+		} else {
+			$html = $this->getPortraitLayout($site, $qrUrl, $logoUrl, $emergencyHotline, $clientName, $alternateLayoutUrl, $alternateLayoutLabel);
+		}
+
+		return response($html, 200, ['Content-Type' => 'text/html']);
+	}
+
+	private function getPortraitLayout($site, $qrUrl, $logoUrl, $emergencyHotline, $clientName, $alternateLayoutUrl, $alternateLayoutLabel)
+	{
+		return <<<HTML
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -305,20 +323,27 @@ class ClientsController extends Controller
 		.emergency {
 			background: #c41e3a;
 			color: white;
-			padding: 20px;
+			padding: 25px;
 			border-radius: 12px;
 			margin-top: 20px;
+			border: 4px solid #8b1428;
 		}
 		.emergency-label {
-			font-size: 14px;
+			font-size: 16px;
 			text-transform: uppercase;
-			letter-spacing: 1px;
-			margin-bottom: 8px;
-			opacity: 0.9;
+			letter-spacing: 2px;
+			margin-bottom: 10px;
+			opacity: 0.95;
+			font-weight: bold;
 		}
 		.emergency-number {
-			font-size: 32px;
+			font-size: 38px;
 			font-weight: bold;
+			text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+		}
+		.emergency-icon {
+			font-size: 24px;
+			margin-bottom: 8px;
 		}
 		.instructions {
 			margin-top: 20px;
@@ -353,6 +378,19 @@ class ClientsController extends Controller
 			transition: background 0.2s;
 		}
 		.print-btn:hover { background: #a01830; }
+		.layout-toggle {
+			background: #666;
+			color: white;
+			border: none;
+			padding: 10px 20px;
+			font-size: 14px;
+			border-radius: 8px;
+			cursor: pointer;
+			margin-top: 10px;
+			margin-right: 10px;
+			transition: background 0.2s;
+		}
+		.layout-toggle:hover { background: #555; }
 	</style>
 </head>
 <body>
@@ -372,6 +410,7 @@ class ClientsController extends Controller
 		<div class="divider"></div>
 		
 		<div class="emergency">
+			<div class="emergency-icon">&#128222;</div>
 			<div class="emergency-label">Emergency Hotline</div>
 			<div class="emergency-number">{$emergencyHotline}</div>
 		</div>
@@ -384,12 +423,255 @@ class ClientsController extends Controller
 		
 		<div class="qr-id">QR ID: {$site->qr_code}</div>
 		
-		<button class="print-btn no-print" onclick="window.print()">Print QR Code</button>
+		<div class="no-print">
+			<button class="layout-toggle" onclick="window.location.href='{$alternateLayoutUrl}'">{$alternateLayoutLabel}</button>
+			<button class="print-btn" onclick="window.print()">Print QR Code</button>
+		</div>
 	</div>
 </body>
 </html>
 HTML;
+	}
 
-		return response($html, 200, ['Content-Type' => 'text/html']);
+	private function getLandscapeLayout($site, $qrUrl, $logoUrl, $emergencyHotline, $clientName, $alternateLayoutUrl, $alternateLayoutLabel)
+	{
+		return <<<HTML
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>{$site->name} - QR Code</title>
+	<style>
+		* { margin: 0; padding: 0; box-sizing: border-box; }
+		body {
+			font-family: Arial, sans-serif;
+			background: #f5f5f5;
+			display: flex;
+			justify-content: center;
+			align-items: center;
+			min-height: 100vh;
+			padding: 20px;
+		}
+		.print-container {
+			background: white;
+			border-radius: 16px;
+			box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+			padding: 40px;
+			text-align: center;
+			max-width: 900px;
+			width: 100%;
+		}
+		.landscape-header {
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			margin-bottom: 30px;
+			padding-bottom: 20px;
+			border-bottom: 3px solid #c41e3a;
+		}
+		.logo {
+			width: 160px;
+			height: auto;
+		}
+		.emergency-banner {
+			background: #c41e3a;
+			color: white;
+			padding: 20px 30px;
+			border-radius: 12px;
+			border: 4px solid #8b1428;
+			text-align: center;
+		}
+		.emergency-icon {
+			font-size: 32px;
+			margin-bottom: 5px;
+		}
+		.emergency-label {
+			font-size: 14px;
+			text-transform: uppercase;
+			letter-spacing: 2px;
+			font-weight: bold;
+			margin-bottom: 5px;
+		}
+		.emergency-number {
+			font-size: 42px;
+			font-weight: bold;
+			text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+		}
+		.landscape-content {
+			display: flex;
+			gap: 40px;
+			align-items: flex-start;
+			justify-content: center;
+			flex-wrap: wrap;
+		}
+		.qr-section {
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+		}
+		.qr-wrapper {
+			position: relative;
+			display: inline-block;
+			margin: 10px 0;
+		}
+		.qr-code {
+			width: 300px;
+			height: 300px;
+			border-radius: 12px;
+			box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+		}
+		.qr-overlay {
+			position: absolute;
+			top: 50%;
+			left: 50%;
+			transform: translate(-50%, -50%);
+			width: 70px;
+			height: 70px;
+			background: white;
+			border-radius: 50%;
+			padding: 6px;
+			box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+		}
+		.qr-overlay img {
+			width: 100%;
+			height: 100%;
+			object-fit: contain;
+			border-radius: 50%;
+		}
+		.site-info {
+			flex: 1;
+			min-width: 300px;
+			text-align: left;
+		}
+		.site-name {
+			font-size: 32px;
+			font-weight: bold;
+			color: #1a1a1a;
+			margin-bottom: 10px;
+		}
+		.client-name {
+			font-size: 20px;
+			color: #666;
+			margin-bottom: 25px;
+		}
+		.instructions {
+			padding: 20px;
+			background: #f9f9f9;
+			border-radius: 8px;
+			font-size: 16px;
+			color: #555;
+			line-height: 1.6;
+			margin-bottom: 20px;
+		}
+		.qr-id {
+			font-family: monospace;
+			font-size: 14px;
+			color: #999;
+			word-break: break-all;
+			padding: 10px;
+			background: #f5f5f5;
+			border-radius: 6px;
+		}
+		.emergency-footer {
+			margin-top: 30px;
+			padding: 20px;
+			background: linear-gradient(135deg, #c41e3a 0%, #8b1428 100%);
+			color: white;
+			border-radius: 12px;
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			flex-wrap: wrap;
+			gap: 15px;
+		}
+		.emergency-footer-text {
+			font-size: 18px;
+			font-weight: bold;
+		}
+		.emergency-footer-number {
+			font-size: 28px;
+			font-weight: bold;
+		}
+		@media print {
+			body { background: white; }
+			.print-container { box-shadow: none; }
+			.no-print { display: none; }
+		}
+		.print-btn {
+			background: #c41e3a;
+			color: white;
+			border: none;
+			padding: 12px 30px;
+			font-size: 16px;
+			border-radius: 8px;
+			cursor: pointer;
+			margin-top: 20px;
+			transition: background 0.2s;
+		}
+		.print-btn:hover { background: #a01830; }
+		.layout-toggle {
+			background: #666;
+			color: white;
+			border: none;
+			padding: 10px 20px;
+			font-size: 14px;
+			border-radius: 8px;
+			cursor: pointer;
+			margin-top: 10px;
+			margin-right: 10px;
+			transition: background 0.2s;
+		}
+		.layout-toggle:hover { background: #555; }
+	</style>
+</head>
+<body>
+	<div class="print-container">
+		<div class="landscape-header">
+			<img src="{$logoUrl}" alt="Coin Security Logo" class="logo">
+			<div class="emergency-banner">
+				<div class="emergency-icon">&#128222;</div>
+				<div class="emergency-label">Emergency Hotline</div>
+				<div class="emergency-number">{$emergencyHotline}</div>
+			</div>
+		</div>
+		
+		<div class="landscape-content">
+			<div class="qr-section">
+				<div class="qr-wrapper">
+					<img src="{$qrUrl}" alt="QR Code" class="qr-code">
+					<div class="qr-overlay">
+						<img src="{$logoUrl}" alt="Coin">
+					</div>
+				</div>
+			</div>
+			
+			<div class="site-info">
+				<h1 class="site-name">{$site->name}</h1>
+				<p class="client-name">{$clientName}</p>
+				
+				<div class="instructions">
+					<strong>Scan to Check In</strong><br>
+					Please scan this QR code when you arrive at the site. <br>
+					GPS verification required within 10 meters radius.
+				</div>
+				
+				<div class="qr-id">QR ID: {$site->qr_code}</div>
+			</div>
+		</div>
+		
+		<div class="emergency-footer">
+			<div class="emergency-footer-text">&#128222; For Emergencies Call Now</div>
+			<div class="emergency-footer-number">{$emergencyHotline}</div>
+		</div>
+		
+		<div class="no-print">
+			<button class="layout-toggle" onclick="window.location.href='{$alternateLayoutUrl}'">{$alternateLayoutLabel}</button>
+			<button class="print-btn" onclick="window.print()">Print QR Code</button>
+		</div>
+	</div>
+</body>
+</html>
+HTML;
 	}
 }

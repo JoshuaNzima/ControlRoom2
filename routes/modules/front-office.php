@@ -9,4 +9,5 @@ Route::middleware(['auth'])
     ->group(function () {
         Route::get('/', [\App\Http\Controllers\FrontOffice\DashboardController::class, 'index'])->name('dashboard');
         Route::get('/dashboard', [\App\Http\Controllers\FrontOffice\DashboardController::class, 'index']);
+        Route::get('/me', [\App\Http\Controllers\Profile\ProfileDashboardController::class, 'index'])->name('profile');
     });

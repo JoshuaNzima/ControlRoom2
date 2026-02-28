@@ -11,6 +11,14 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (!Schema::hasTable('client_sites')) {
+            return;
+        }
+
+        if (Schema::hasColumn('client_sites', 'site_type')) {
+            return;
+        }
+
         Schema::table('client_sites', function (Blueprint $table) {
             $table->string('site_type')->default('residential')->after('status');
         });
@@ -21,6 +29,14 @@ return new class extends Migration
      */
     public function down(): void
     {
+        if (!Schema::hasTable('client_sites')) {
+            return;
+        }
+
+        if (!Schema::hasColumn('client_sites', 'site_type')) {
+            return;
+        }
+
         Schema::table('client_sites', function (Blueprint $table) {
             $table->dropColumn('site_type');
         });

@@ -103,7 +103,7 @@ export default function FrontDeskLayout({ title, children, user }: Props) {
                   <span className="sm:hidden">{theme === 'dark' ? 'Light' : 'Dark'}</span>
                 </button>
                 <div className="hidden sm:block text-sm text-red-700 dark:text-gray-300 max-w-[10rem] truncate">{user?.name}</div>
-                <Link href={route('profile.dashboard')} className="inline-flex items-center justify-center rounded-md bg-gray-800 text-white hover:bg-gray-700 px-2 py-2 sm:px-3 sm:py-1 text-sm">
+                <Link href={route('admin.front-desk.profile')} className="inline-flex items-center justify-center rounded-md bg-gray-800 text-white hover:bg-gray-700 px-2 py-2 sm:px-3 sm:py-1 text-sm">
                   <IconMapper name="user" className="h-5 w-5 sm:hidden" />
                   <span className="hidden sm:inline">My Profile</span>
                 </Link>

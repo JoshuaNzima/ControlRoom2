@@ -9,6 +9,7 @@ use App\Models\GPSMismatchIncident;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
+use Illuminate\Validation\ValidationException;
 
 class CheckpointScanController extends Controller
 {
@@ -27,7 +28,11 @@ class CheckpointScanController extends Controller
             ->first();
 
         if (!$checkpoint) {
-            return back()->with('error', 'Invalid or inactive checkpoint code.\\n\\nPlease:\n1. Verify you scanned the correct QR code\n2. Check if the checkpoint is still active in the system\n3. Contact your supervisor if the issue persists\n4. Use manual entry with the checkpoint code if available');
+            $msg = 'Invalid or inactive checkpoint code.\n\nPlease:\n1. Verify you scanned the correct QR code\n2. Check if the checkpoint is still active in the system\n3. Contact your supervisor if the issue persists\n4. Use manual entry with the checkpoint code if available';
+            if ($request->header('X-Inertia')) {
+                throw ValidationException::withMessages(['code' => $msg]);
+            }
+            return back()->with('error', $msg);
         }
 
         // Verify location if GPS coordinates provided
@@ -103,7 +108,10 @@ class CheckpointScanController extends Controller
                 } catch (\Throwable $e) {
                 }
 
-                $errorMessage = 'Location verification failed. You are too far from the checkpoint.\\n\\nYou must be within ' . $radiusMeters . ' meters to scan.\\n\\nTo fix this:\n1. Make sure you are at the correct checkpoint location\n2. Ensure GPS signal is strong (move outdoors if needed)\n3. Wait a moment for GPS to stabilize and try again\n4. Contact your supervisor if you are at the correct location';
+                $errorMessage = 'Location verification failed. You are too far from the checkpoint.\n\nYou must be within ' . $radiusMeters . ' meters to scan.\n\nTo fix this:\n1. Make sure you are at the correct checkpoint location\n2. Ensure GPS signal is strong (move outdoors if needed)\n3. Wait a moment for GPS to stabilize and try again\n4. Contact your supervisor if you are at the correct location';
+                if ($request->header('X-Inertia')) {
+                    throw ValidationException::withMessages(['gps' => $errorMessage]);
+                }
                 return back()->with('error', $errorMessage);
             }
         }
@@ -152,8 +160,8 @@ class CheckpointScanController extends Controller
         ));
 
         // Get role-based redirect route
-        $userRole = auth()->user()->role;
-        $redirectRoute = $this->getRoleBasedRedirectRoute($userRole);
+        $roleName = (string) (auth()->user()?->role ?? (auth()->user()?->getRoleNames()?->first() ?? ''));
+        $redirectRoute = $this->getRoleBasedRedirectRoute($roleName ?: 'supervisor');
 
         if ($request->header('X-Inertia')) {
             return redirect()->route($redirectRoute)

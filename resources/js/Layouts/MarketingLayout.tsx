@@ -88,7 +88,7 @@ export default function MarketingLayout({ title, children, user }: Props) {
                   <QuickBudgetButton />
                   <QuickRequisitionButton />
                   <Link
-                    href={route('profile.dashboard')}
+                    href={route('admin.marketing.profile')}
                     className="inline-flex items-center px-3 py-1.5 rounded-md bg-gray-800 text-white hover:bg-gray-700 text-sm"
                   >
                     My Profile

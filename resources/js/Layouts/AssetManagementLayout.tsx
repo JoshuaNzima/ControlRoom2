@@ -100,7 +100,7 @@ export default function AssetManagementLayout({ title, children, user }: Props) 
                   <QuickBudgetButton />
                   <QuickRequisitionButton />
                   <Link
-                    href={route('profile.dashboard')}
+                    href={route('assets.profile')}
                     className="text-sm px-3 py-1 rounded-md bg-gray-800 text-white hover:bg-gray-700"
                   >
                     My Profile

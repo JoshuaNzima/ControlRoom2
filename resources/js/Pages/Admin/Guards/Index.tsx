@@ -1,36 +1,33 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Head, Link, router } from '@inertiajs/react';
 import AdminLayout from '@/Layouts/AdminLayout';
 import IconMapper from '@/Components/IconMapper';
-import useNotification from '@/Providers/useNotifications';
-import Modal from '@/Components/Modal';
-import GuardForm from '@/Components/Guards/GuardForm';
-import { GuardFormData } from '@/types/guards';
-import AssignSiteModal from '@/Components/Guards/AssignSiteModal';
-import PromoteGuardModal from '@/Components/HR/PromoteGuardModal';
-import ConfirmModal from '@/Components/ConfirmModal';
-import ReasonModal from '@/Components/ReasonModal';
-import PayProfileForm from '@/Components/Guards/PayProfileForm';
+import { Card } from '@/Components/ui/card';
+import { Button } from '@/Components/ui/button';
 
 interface Guard {
   id: number;
   name: string;
   employee_id: string;
   phone?: string;
+  email?: string;
   status?: string;
   supervisor?: { id: number; name: string } | null;
+  site?: { id: number; name: string } | null;
   is_profile_complete?: boolean;
+  is_on_duty?: boolean;
+  attendance_rate?: number;
+  performance_score?: number;
+  shifts_this_month?: number;
+  incidents_count?: number;
+  joined_date?: string;
 }
 
 interface Filters {
   search?: string;
   status?: string;
-  profile_status?: string;
   per_page?: number | string;
 }
-
-interface Supervisor { id: number; name: string }
-interface GradeOption { id: number; code: string; name: string }
 
 interface GuardsIndexProps {
   guards: {
@@ -39,867 +36,344 @@ interface GuardsIndexProps {
     links?: Array<{ url: string | null; label: string; active: boolean }>;
   };
   filters: Filters;
-  canAssignSupervisor: boolean;
-  canViewSupervisor: boolean;
-  supervisors?: Supervisor[];
-  grades?: GradeOption[];
-  zones?: Array<{ id: number; name: string }>;
+  stats: {
+    total_guards: number;
+    active_guards: number;
+    on_duty_today: number;
+    average_attendance: number;
+    average_performance: number;
+    total_incidents: number;
+  };
 }
 
-export default function GuardsIndex({ guards, filters, canAssignSupervisor, canViewSupervisor, supervisors = [], grades = [], zones = [] }: GuardsIndexProps) {
-  const [search, setSearch] = React.useState(filters.search || '');
-  const [profileStatus, setProfileStatus] = React.useState(filters.profile_status || '');
-  const initialPerPage = Number(filters?.per_page ?? guards.meta?.per_page ?? 20);
-  const [perPage, setPerPage] = React.useState<number>(initialPerPage);
-  const [loadingId, setLoadingId] = React.useState<number | null>(null);
-  const { push } = useNotification();
+// Animated Counter Component
+const AnimatedCounter: React.FC<{ value: number; duration?: number; suffix?: string }> = ({ 
+  value, duration = 1000, suffix = '' 
+}) => {
+  const [count, setCount] = React.useState(0);
+  
+  React.useEffect(() => {
+    let startTime: number;
+    let animationFrame: number;
+    
+    const animate = (timestamp: number) => {
+      if (!startTime) startTime = timestamp;
+      const progress = Math.min((timestamp - startTime) / duration, 1);
+      setCount(Math.floor(progress * value));
+      
+      if (progress < 1) {
+        animationFrame = requestAnimationFrame(animate);
+      }
+    };
+    
+    animationFrame = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(animationFrame);
+  }, [value, duration]);
+  
+  return <span>{count.toLocaleString()}{suffix}</span>;
+};
 
-  // Modals state
-  const [showAdd, setShowAdd] = React.useState(false);
-  const [showEdit, setShowEdit] = React.useState(false);
-  const [showDetails, setShowDetails] = React.useState(false);
-  const [showAssign, setShowAssign] = React.useState(false);
-  const [showPromote, setShowPromote] = React.useState(false);
-  const [selectedGuard, setSelectedGuard] = React.useState<any | null>(null);
-  const [saving, setSaving] = React.useState(false);
-  const [photoCreate, setPhotoCreate] = React.useState<File | null>(null);
-  const [photoEdit, setPhotoEdit] = React.useState<File | null>(null);
+// Stat Card Component
+interface StatCardProps {
+  icon: React.ReactNode;
+  title: string;
+  value: number | string;
+  subtitle: string;
+  color: 'red' | 'blue' | 'green' | 'amber' | 'purple' | 'cyan';
+}
+
+const StatCard: React.FC<StatCardProps> = ({ icon, title, value, subtitle, color }) => {
+  const colorMap = {
+    red: { bg: 'bg-red-50 dark:bg-red-950/20', border: 'border-red-200 dark:border-red-800', icon: 'bg-red-600 text-white', text: 'text-red-700 dark:text-red-300' },
+    blue: { bg: 'bg-blue-50 dark:bg-blue-950/20', border: 'border-blue-200 dark:border-blue-800', icon: 'bg-blue-600 text-white', text: 'text-blue-700 dark:text-blue-300' },
+    green: { bg: 'bg-emerald-50 dark:bg-emerald-950/20', border: 'border-emerald-200 dark:border-emerald-800', icon: 'bg-emerald-600 text-white', text: 'text-emerald-700 dark:text-emerald-300' },
+    amber: { bg: 'bg-amber-50 dark:bg-amber-950/20', border: 'border-amber-200 dark:border-amber-800', icon: 'bg-amber-600 text-white', text: 'text-amber-700 dark:text-amber-300' },
+    purple: { bg: 'bg-purple-50 dark:bg-purple-950/20', border: 'border-purple-200 dark:border-purple-800', icon: 'bg-purple-600 text-white', text: 'text-purple-700 dark:text-purple-300' },
+    cyan: { bg: 'bg-cyan-50 dark:bg-cyan-950/20', border: 'border-cyan-200 dark:border-cyan-800', icon: 'bg-cyan-600 text-white', text: 'text-cyan-700 dark:text-cyan-300' },
+  };
+  
+  const colors = colorMap[color];
+  const numericValue = typeof value === 'string' ? parseFloat(value.replace(/[^0-9.-]/g, '')) || 0 : value;
+  const isPercentage = typeof value === 'string' && value.includes('%');
+  
+  return (
+    <div className={`${colors.bg} ${colors.border} rounded-xl border p-5 transition-all duration-300 hover:scale-[1.02]`}>
+      <div className="flex items-start justify-between">
+        <div className={`${colors.icon} p-3 rounded-lg shadow-md`}>
+          {icon}
+        </div>
+      </div>
+      <div className="mt-4">
+        <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+          {isPercentage ? value : <AnimatedCounter value={numericValue} />}
+        </p>
+        <p className={`text-sm font-medium ${colors.text} mt-1`}>{title}</p>
+        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{subtitle}</p>
+      </div>
+    </div>
+  );
+};
+
+export default function GuardsIndex({ guards, filters, stats }: GuardsIndexProps) {
+  const [search, setSearch] = React.useState(filters.search || '');
+  const initialPerPage = Number(filters?.per_page ?? guards.meta?.per_page ?? 20);
+  const [perPage] = React.useState<number>(initialPerPage);
 
   const handleSearch = () => {
     router.get(
       route('admin.guards.index'),
-      { search, profile_status: profileStatus || undefined, per_page: perPage },
+      { search, per_page: perPage },
       { preserveState: true }
     );
   };
 
-  function showToast(message: string) {
-    push(message, 'info');
-  }
+  // Stats cards
+  const statCards = useMemo(() => [
+    {
+      icon: <IconMapper name="Shield" size={24} />,
+      title: 'Total Guards',
+      value: stats.total_guards,
+      subtitle: 'All personnel',
+      color: 'red' as const,
+    },
+    {
+      icon: <IconMapper name="CheckCircle" size={24} />,
+      title: 'Active Guards',
+      value: stats.active_guards,
+      subtitle: 'Currently active',
+      color: 'green' as const,
+    },
+    {
+      icon: <IconMapper name="MapPin" size={24} />,
+      title: 'On Duty Now',
+      value: stats.on_duty_today,
+      subtitle: 'Assigned to sites',
+      color: 'blue' as const,
+    },
+    {
+      icon: <IconMapper name="TrendingUp" size={24} />,
+      title: 'Avg Attendance',
+      value: `${stats.average_attendance}%`,
+      subtitle: 'This month',
+      color: 'purple' as const,
+    },
+  ], [stats]);
 
-  const openAdd = () => {
-    setSelectedGuard(null);
-    setShowAdd(true);
-  };
-  const openEdit = async (guardId: number) => {
-    try {
-      const res = await fetch(route('admin.guards.json', guardId));
-      const data = await res.json();
-      setSelectedGuard(data);
-      setShowEdit(true);
-    } catch {}
-  };
-  const openDetails = async (guardId: number) => {
-    try {
-      const res = await fetch(route('admin.guards.json', guardId));
-      const data = await res.json();
-      setSelectedGuard(data);
-      setShowDetails(true);
-    } catch {}
-  };
-  const openAssign = (guardId: number) => {
-    setSelectedGuard({ id: guardId });
-    setShowAssign(true);
-  };
-  // Pay Profile Modal State
-  const [showPayProfile, setShowPayProfile] = React.useState(false);
-  const [payProfileData, setPayProfileData] = React.useState<any>(null);
-
-  const openPayProfile = async (guardId: number) => {
-    try {
-      const res = await fetch(route('admin.guards.json', guardId));
-      const data = await res.json();
-      setSelectedGuard(data);
-      // Fetch pay profile if exists
-      try {
-        const profileRes = await fetch(route('admin.guards.pay-profile', guardId));
-        const profileData = await profileRes.json();
-        setPayProfileData(profileData);
-      } catch {
-        setPayProfileData(null);
-      }
-      setShowPayProfile(true);
-    } catch {}
+  const getPerformanceColor = (score?: number) => {
+    if (!score) return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300';
+    if (score >= 90) return 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300';
+    if (score >= 70) return 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300';
+    if (score >= 50) return 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300';
+    return 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300';
   };
 
-  const savePayProfile = async (profile: any) => {
-    try {
-      const res = await fetch(route('admin.guards.pay-profile.store', selectedGuard?.id), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': (window as any).csrfToken },
-        body: JSON.stringify(profile),
-      });
-      if (res.ok) {
-        showToast('Pay profile saved successfully');
-        setShowPayProfile(false);
-      } else {
-        showToast('Failed to save pay profile');
-      }
-    } catch {
-      showToast('Failed to save pay profile');
-    }
-  };
-
-  // Confirm & Reason Modals
-  const [confirmOpen, setConfirmOpen] = React.useState(false);
-  const [confirmTitle, setConfirmTitle] = React.useState('');
-  const [confirmMessage, setConfirmMessage] = React.useState('');
-  const [confirmAction, setConfirmAction] = React.useState<() => void>(() => {});
-  const [reasonOpen, setReasonOpen] = React.useState(false);
-  const [reasonTitle, setReasonTitle] = React.useState('');
-  const [reasonMessage, setReasonMessage] = React.useState('');
-  const [reasonSubmit, setReasonSubmit] = React.useState<((reason: string) => void) | null>(null);
-
-  const openConfirm = (title: string, message: string, action: () => void) => {
-    setConfirmTitle(title);
-    setConfirmMessage(message);
-    setConfirmAction(() => action);
-    setConfirmOpen(true);
-  };
-  const openReason = (title: string, message: string, submit: (reason: string) => void) => {
-    setReasonTitle(title);
-    setReasonMessage(message);
-    setReasonSubmit(() => submit);
-    setReasonOpen(true);
-  };
-
-  const submitCreate = async (form: GuardFormData) => {
-    setSaving(true);
-    const fd = new FormData();
-    let appendedPhoto = false;
-    Object.entries(form as any).forEach(([k, v]) => {
-      if (v === undefined || v === null) return;
-      if (Array.isArray(v)) {
-        v.forEach((item) => fd.append(`${k}[]`, String(item)));
-      } else if (typeof File !== 'undefined' && v instanceof File) {
-        fd.append(k, v as any);
-        if (k === 'photo') appendedPhoto = true;
-      } else {
-        fd.append(k, String(v));
-      }
-    });
-    if (!appendedPhoto && photoCreate) fd.append('photo', photoCreate);
-    router.post(route('admin.guards.store'), fd, {
-      preserveScroll: true,
-      onFinish: () => setSaving(false),
-      onSuccess: () => { setShowAdd(false); setPhotoCreate(null); },
-    });
-  };
-  const submitUpdate = async (form: GuardFormData) => {
-    if (!selectedGuard) return;
-    setSaving(true);
-    const fd = new FormData();
-    let appendedPhoto = false;
-    Object.entries(form as any).forEach(([k, v]) => {
-      if (v === undefined || v === null) return;
-      if (Array.isArray(v)) {
-        v.forEach((item) => fd.append(`${k}[]`, String(item)));
-      } else if (typeof File !== 'undefined' && v instanceof File) {
-        fd.append(k, v as any);
-        if (k === 'photo') appendedPhoto = true;
-      } else {
-        fd.append(k, String(v));
-      }
-    });
-    fd.append('_method', 'PUT');
-    if (!appendedPhoto && photoEdit) fd.append('photo', photoEdit);
-    router.post(route('admin.guards.update', { guard: selectedGuard.id }), fd, {
-      preserveScroll: true,
-      onFinish: () => setSaving(false),
-      onSuccess: () => { setShowEdit(false); setPhotoEdit(null); },
-    });
-  };
-
-  const printDetails = () => {
-    if (!selectedGuard) return;
-    const w = window.open('', 'PRINT', 'height=650,width=900');
-    if (!w) return;
-    const g = selectedGuard;
-    w.document.write(`<!doctype html><html><head><title>Guard ${g.employee_id || ''} - ${g.name}</title>
-    <style>
-      body{font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu;}
-      h1{font-size:20px;margin:0 0 8px 0}
-      .section{margin:12px 0}
-      .grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-      .row{display:flex;justify-content:space-between;border-bottom:1px dashed #ccc;padding:4px 0}
-      .label{color:#555}
-    </style>
-    </head><body>`);
-    w.document.write(`<h1>Guard Profile</h1>`);
-    const row = (label: string, val: any) => `<div class="row"><span class="label">${label}</span><span>${val ?? ''}</span></div>`;
-    w.document.write(`<div class="section">${row('Name', g.name)}${row('Employee ID', g.employee_id)}${row('Phone', g.phone)}${row('Email', g.email)}</div>`);
-    w.document.write(`<div class="section"><h3>Residence</h3>${row('Address', g.residence_address || g.address)}${row('City', g.residence_city)}${row('District', g.residence_district)}</div>`);
-    w.document.write(`<div class="section"><h3>Marital</h3>${row('Status', g.marital_status)}${row('Spouse', g.spouse_name)}${row('Spouse Phone', g.spouse_phone)}</div>`);
-    w.document.write(`<div class="section"><h3>Next of Kin</h3>${row('Name', g.next_of_kin_name)}${row('Relationship', g.next_of_kin_relationship)}${row('Phone', g.next_of_kin_phone)}</div>`);
-    w.document.write(`<div class="section"><h3>Home</h3>${row('Village', g.home_village)}${row('T/A', g.home_ta)}${row('District', g.home_district)}</div>`);
-    w.document.write(`<div class="section"><h3>Education</h3>${row('Level', g.education_level)}${row('Qualifications', Array.isArray(g.qualifications)? g.qualifications.join(', ') : (g.qualifications||''))}${row('Languages', Array.isArray(g.languages)? g.languages.join(', ') : (g.languages||''))}</div>`);
-    w.document.write('</body></html>');
-    w.document.close();
-    w.focus();
-    w.print();
-    w.close();
+  const getAttendanceColor = (rate?: number) => {
+    if (!rate) return 'text-gray-600 dark:text-gray-400';
+    if (rate >= 95) return 'text-green-600 dark:text-green-400';
+    if (rate >= 80) return 'text-blue-600 dark:text-blue-400';
+    if (rate >= 60) return 'text-amber-600 dark:text-amber-400';
+    return 'text-red-600 dark:text-red-400';
   };
 
   return (
-    <AdminLayout title="Guards Management">
-      <Head title="Guards" />
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-        {/* Notifications are displayed by the global NotificationProvider */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Guards Management</h1>
-            <p className="text-gray-600 dark:text-gray-300">Manage field guards and assignments</p>
-          </div>
-          <button
-            onClick={openAdd}
-            className="flex items-center gap-2 px-6 py-3 bg-coin-600 hover:bg-coin-700 text-white rounded-lg font-bold shadow-md transition-all transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950"
-          >
-            <IconMapper name="Plus" size={20} />
-            Add Guard
-          </button>
-        </div>
-
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
-          <div className="flex flex-col md:flex-row gap-4 mb-4">
-              <div className="flex-1 relative">
-              <span className="absolute left-3 top-3 text-gray-400"><IconMapper name="Search" size={20} /></span>
-              <input
-                type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-                placeholder="Search by name, employee id or phone..."
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950"
-              />
-            </div>
-            <div className="w-full md:w-56">
-              <label className="sr-only">Profile</label>
-              <select
-                value={profileStatus}
-                onChange={(e) => setProfileStatus(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 rounded-lg"
-              >
-                <option value="">All Profiles</option>
-                <option value="complete">Profile Complete</option>
-                <option value="incomplete">Profile Incomplete</option>
-              </select>
-            </div>
-            <button
-              onClick={handleSearch}
-              className="px-6 py-2 bg-coin-600 hover:bg-coin-700 text-white rounded-lg font-medium focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950"
-            >
-              Search
-            </button>
-          </div>
-          <div className="flex items-center gap-3">
-            <label className="text-sm text-gray-600 dark:text-gray-400">Per Page:</label>
-            <select
-              value={String(perPage)}
-              onChange={(e) => {
-                const v = Number(e.target.value);
-                setPerPage(v);
-                router.get(route('admin.guards.index'), { search, profile_status: profileStatus || undefined, per_page: v, page: 1 }, { preserveState: true });
-              }}
-              className="px-3 py-1.5 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-coin-500"
-            >
-              <option value={10}>10</option>
-              <option value={20}>20</option>
-              <option value={50}>50</option>
-              <option value={100}>100</option>
-            </select>
-            {guards.meta && (
-              <span className="text-sm text-gray-500 dark:text-gray-400">
-                Showing {guards.meta.from || 0} to {guards.meta.to || 0} of {guards.meta.total || 0}
-              </span>
-            )}
-          </div>
-        </div>
-
-        <div className="md:hidden grid gap-3">
-          {guards.data.map((guard) => (
-            <div key={guard.id} className="rounded-xl bg-white dark:bg-gray-800 shadow-md border border-gray-100 dark:border-gray-700 p-4 space-y-3">
+    <AdminLayout title="Guards Directory">
+      <Head title="Guards Directory" />
+      
+      <div className="min-h-screen bg-red-50 dark:bg-gray-900">
+        {/* Hero Header */}
+        <div className="relative overflow-hidden bg-gradient-to-br from-red-800 via-red-700 to-rose-800 text-white">
+          <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg%20width%3D%2260%22%20height%3D%2260%22%20viewBox%3D%220%200%2060%2060%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%3E%3Cg%20fill%3D%22none%22%20fill-rule%3D%22evenodd%22%3E%3Cg%20fill%3D%22%23ffffff%22%20fill-opacity%3D%220.05%22%3E%3Cpath%20d%3D%22M36%2034v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6%2034v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6%204V0H4v4H0v2h4v4h2V6h4V4H6z%22/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] opacity-20" />
+          
+          <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-gradient-to-br from-red-500 to-rose-600 rounded-full flex items-center justify-center text-white font-bold text-lg">
-                  {guard.name.charAt(0)}
+                <div className="p-3 bg-white/10 rounded-xl backdrop-blur-sm">
+                  <IconMapper name="ShieldCheck" size={28} />
                 </div>
-                <div className="flex-1 min-w-0">
-                  <button type="button" onClick={() => openDetails(guard.id)} className="text-left w-full">
-                    <div className="font-semibold text-gray-900 dark:text-gray-100 truncate hover:underline">{guard.name}</div>
-                    <div className="mt-0.5 text-sm text-gray-500 dark:text-gray-400 truncate">{guard.employee_id}</div>
-                  </button>
+                <div>
+                  <h1 className="text-2xl md:text-3xl font-bold">Guards Directory</h1>
+                  <p className="text-red-100 text-sm mt-1">View guard profiles and performance metrics</p>
                 </div>
-                {guard.is_profile_complete === false && (
-                  <span className="shrink-0 px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200 text-xs font-semibold">
-                    Incomplete
-                  </span>
-                )}
               </div>
-
-              <div className="flex items-center justify-between gap-3">
-                <div className="text-sm text-gray-600 dark:text-gray-300 truncate">{guard.phone || 'N/A'}</div>
-                <span
-                  className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                    guard.status === 'active'
-                      ? 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300'
-                      : guard.status === 'suspended'
-                      ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-200'
-                      : guard.status === 'absconded'
-                      ? 'bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-200'
-                      : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300'
-                  }`}
+              <div className="flex items-center gap-3">
+                <Link
+                  href={route('admin.guards.export')}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg backdrop-blur-sm transition text-sm font-medium"
                 >
-                  {guard.status || 'Active'}
-                </span>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => openEdit(guard.id)}
-                  className="w-full px-3 py-2 rounded-lg bg-gray-100 text-gray-800 hover:bg-gray-200 dark:bg-gray-900/60 dark:text-gray-100 dark:hover:bg-gray-700/60 focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950"
-                >
-                  Edit
-                </button>
-                <button
-                  type="button"
-                  onClick={() => openAssign(guard.id)}
-                  className="w-full px-3 py-2 rounded-lg bg-coin-600 text-white hover:bg-coin-700 focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950"
-                >
-                  Assign
-                </button>
-                <button
-                  type="button"
-                  onClick={() => openPayProfile(guard.id)}
-                  className="w-full px-3 py-2 rounded-lg bg-blue-100 text-blue-800 hover:bg-blue-200 dark:bg-blue-900/30 dark:text-blue-200 dark:hover:bg-blue-900/40 focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950"
-                >
-                  Pay Profile
-                </button>
-                <button
-                  type="button"
-                  onClick={() => openConfirm('Delete guard', `Are you sure you want to delete ${guard.name}?`, () => router.delete(route('admin.guards.destroy', { guard: guard.id })))}
-                  className="w-full px-3 py-2 rounded-lg bg-red-700 text-white hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950"
-                >
-                  Delete
-                </button>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    const isSuspending = guard.status === 'active';
-                    openConfirm(
-                      `${isSuspending ? 'Suspend' : 'Reinstate'} guard`,
-                      `${isSuspending ? 'Suspend' : 'Reinstate'} ${guard.name}?`,
-                      async () => {
-                        setLoadingId(guard.id);
-                        try {
-                          const routeName = isSuspending ? 'admin.guards.suspend' : 'admin.guards.reinstate';
-                          await router.post(route(routeName, { guard: guard.id }), {});
-                          showToast(`Guard ${guard.name} ${isSuspending ? 'suspended' : 'reinstated'}`);
-                        } catch (e) {
-                          showToast('Failed to update status');
-                        } finally {
-                          setLoadingId(null);
-                        }
-                      }
-                    );
-                  }}
-                  disabled={loadingId === guard.id}
-                  className="w-full px-3 py-2 rounded-lg bg-yellow-100 text-yellow-800 hover:bg-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-200 dark:hover:bg-yellow-900/40 focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950 disabled:opacity-60"
-                >
-                  {loadingId === guard.id ? '...' : guard.status === 'active' ? 'Suspend' : 'Reinstate'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => openReason('Dismiss Guard', `Provide a reason (optional) for dismissing ${guard.name}`, async (reason: string) => {
-                    setLoadingId(guard.id);
-                    try {
-                      await router.post(route('admin.guards.dismiss', { guard: guard.id }), { reason });
-                      showToast(`Guard ${guard.name} dismissed`);
-                    } catch (e) {
-                      showToast('Failed to dismiss guard');
-                    } finally {
-                      setLoadingId(null);
-                    }
-                  })}
-                  disabled={loadingId === guard.id}
-                  className="w-full px-3 py-2 rounded-lg bg-gray-100 text-gray-800 hover:bg-gray-200 dark:bg-gray-900/60 dark:text-gray-100 dark:hover:bg-gray-700/60 focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950 disabled:opacity-60"
-                >
-                  Dismiss
-                </button>
-                <button
-                  type="button"
-                  onClick={() => openReason('Mark as Absconded', `Provide a reason (optional) for marking ${guard.name} as absconded`, async (reason: string) => {
-                    setLoadingId(guard.id);
-                    try {
-                      await router.post(route('admin.guards.abscond', { guard: guard.id }), { reason });
-                      showToast(`Guard ${guard.name} marked absconded`);
-                    } catch (e) {
-                      showToast('Failed to mark absconded');
-                    } finally {
-                      setLoadingId(null);
-                    }
-                  })}
-                  disabled={loadingId === guard.id}
-                  className="w-full px-3 py-2 rounded-lg bg-rose-100 text-rose-800 hover:bg-rose-200 dark:bg-rose-900/30 dark:text-rose-200 dark:hover:bg-rose-900/40 focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950 disabled:opacity-60"
-                >
-                  Abscond
-                </button>
-                <button
-                  type="button"
-                  onClick={() => openDetails(guard.id)}
-                  className="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900/60 dark:text-gray-100 dark:hover:bg-gray-800/60 focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950"
-                >
-                  Details
-                </button>
+                  <IconMapper name="Download" size={18} />
+                  <span className="hidden sm:inline">Export</span>
+                </Link>
               </div>
             </div>
-          ))}
+          </div>
         </div>
 
-        <div className="hidden md:block bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
-          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-            <thead className="bg-gray-50 dark:bg-gray-900/50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Guard</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Employee ID</th>
-                {canViewSupervisor && (
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Supervisor</th>
-                )}
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Phone</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Status</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-              {guards.data.map((guard) => (
-                <tr key={guard.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-gradient-to-br from-red-500 to-rose-600 rounded-full flex items-center justify-center text-white font-bold">
-                        {guard.name.charAt(0)}
-                      </div>
-                      <button onClick={() => openDetails(guard.id)} className="text-left">
-                        <div className="font-medium text-gray-900 dark:text-gray-100 hover:underline">{guard.name}</div>
-                        <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-                          <span>Tap to view details</span>
-                          {guard.is_profile_complete === false && (
-                            <span className="px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200">
-                              Profile incomplete
-                            </span>
-                          )}
-                        </div>
-                      </button>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-900 dark:text-gray-100">{guard.employee_id}</td>
-                  {canViewSupervisor && (
-                    <td className="px-6 py-4">
-                      {canAssignSupervisor ? (
-                        <button
-                          onClick={() => openEdit(guard.id)}
-                          className="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded-lg text-gray-700 transition dark:bg-gray-900/60 dark:text-gray-100 dark:hover:bg-gray-800/60"
-                        >
-                          {guard.supervisor?.name || 'Assign Supervisor'}
-                        </button>
-                      ) : (
-                        <span className="text-sm text-gray-700 dark:text-gray-200">
-                          {guard.supervisor?.name || 'Unassigned'}
-                        </span>
-                      )}
-                    </td>
-                  )}
-                  <td className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">{guard.phone || 'N/A'}</td>
-                  <td className="px-6 py-4">
-                    <span
-                      className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                        guard.status === 'active'
-                          ? 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300'
-                          : guard.status === 'suspended'
-                          ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-200'
-                          : guard.status === 'absconded'
-                          ? 'bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-200'
-                          : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300'
-                      }`}
-                    >
-                      {guard.status || 'Active'}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => openEdit(guard.id)}
-                        className="p-2 text-coin-700 hover:bg-coin-50 dark:text-coin-300 dark:hover:bg-coin-900/20 rounded-lg transition"
-                        title="Edit"
-                      >
-                        <IconMapper name="Pencil" size={18} />
-                      </button>
-                      <button
-                        onClick={() => openAssign(guard.id)}
-                        className="p-2 text-coin-700 hover:bg-coin-50 dark:text-coin-300 dark:hover:bg-coin-900/20 rounded-lg transition"
-                        title="Assign to site"
-                      >
-                        Assign
-                      </button>
-                      <button
-                        onClick={() => openPayProfile(guard.id)}
-                        className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition"
-                        title="Pay Profile"
-                      >
-                        Pay
-                      </button>
-                      <button
-                        onClick={() => openConfirm('Delete guard', `Are you sure you want to delete ${guard.name}?`, () => router.delete(route('admin.guards.destroy', { guard: guard.id })))}
-                        className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition"
-                      >
-                        <IconMapper name="Trash" size={18} />
-                      </button>
-                      {/* Suspend / Reinstate */}
-                      <button
-                        onClick={() => {
-                          const isSuspending = guard.status === 'active';
-                          openConfirm(
-                            `${isSuspending ? 'Suspend' : 'Reinstate'} guard`,
-                            `${isSuspending ? 'Suspend' : 'Reinstate'} ${guard.name}?`,
-                            async () => {
-                              setLoadingId(guard.id);
-                              try {
-                                const routeName = isSuspending ? 'admin.guards.suspend' : 'admin.guards.reinstate';
-                                await router.post(route(routeName, { guard: guard.id }), {});
-                                showToast(`Guard ${guard.name} ${isSuspending ? 'suspended' : 'reinstated'}`);
-                              } catch (e) {
-                                showToast('Failed to update status');
-                              } finally {
-                                setLoadingId(null);
-                              }
-                            }
-                          );
-                        }}
-                        className="p-2 text-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 rounded-lg transition"
-                        title={guard.status === 'active' ? 'Suspend guard' : 'Reinstate guard'}
-                        disabled={loadingId === guard.id}
-                      >
-                        {loadingId === guard.id ? '...' : guard.status === 'active' ? 'Suspend' : 'Reinstate'}
-                      </button>
-                      {/* Dismiss */}
-                      <button
-                        onClick={() => openReason('Dismiss Guard', `Provide a reason (optional) for dismissing ${guard.name}`, async (reason: string) => {
-                          setLoadingId(guard.id);
-                          try {
-                            await router.post(route('admin.guards.dismiss', { guard: guard.id }), { reason });
-                            showToast(`Guard ${guard.name} dismissed`);
-                          } catch (e) {
-                            showToast('Failed to dismiss guard');
-                          } finally {
-                            setLoadingId(null);
-                          }
-                        })}
-                        className="p-2 text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-800 rounded-lg transition"
-                        title="Dismiss guard"
-                        disabled={loadingId === guard.id}
-                      >
-                        Dismiss
-                      </button>
-                      {/* Absconded */}
-                      <button
-                        onClick={() => openReason('Mark as Absconded', `Provide a reason (optional) for marking ${guard.name} as absconded`, async (reason: string) => {
-                          setLoadingId(guard.id);
-                          try {
-                            await router.post(route('admin.guards.abscond', { guard: guard.id }), { reason });
-                            showToast(`Guard ${guard.name} marked absconded`);
-                          } catch (e) {
-                            showToast('Failed to mark absconded');
-                          } finally {
-                            setLoadingId(null);
-                          }
-                        })}
-                        className="p-2 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-lg transition"
-                        title="Mark as absconded"
-                        disabled={loadingId === guard.id}
-                      >
-                        Abscond
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Pagination */}
-        {guards.meta && guards.meta.last_page > 1 && (
-          <div className="flex flex-wrap justify-center gap-2">
-            {guards.links && guards.links.map((link: any, index: number) => (
-              <Link
-                key={index}
-                href={link.url || '#'}
-                className={`px-3 py-2 rounded ${
-                  link.active
-                    ? 'bg-coin-600 text-white'
-                    : link.url
-                    ? 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 dark:bg-gray-900 dark:text-gray-200 dark:border-gray-700 dark:hover:bg-gray-800'
-                    : 'bg-transparent text-gray-400 cursor-default'
-                }`}
-                dangerouslySetInnerHTML={{ __html: link.label }}
-              />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          {/* Stats Grid */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            {statCards.map((stat, idx) => (
+              <StatCard key={idx} {...stat} />
             ))}
           </div>
-        )}
 
-        {/* Add Guard Modal */}
-        <Modal show={showAdd} onClose={() => setShowAdd(false)} maxWidth="2xl">
-          <div className="p-4 sm:p-6 bg-white dark:bg-gray-800">
-            <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">Add Guard</h2>
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Photo</label>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={(e) => setPhotoCreate(e.target.files?.[0] || null)}
-                className="w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-coin-50 file:text-coin-700 hover:file:bg-coin-100 dark:file:bg-gray-800 dark:file:text-gray-100"
-              />
+          {/* Filters */}
+          <Card className="p-4 md:p-5 mb-6">
+            <div className="flex flex-col md:flex-row gap-4">
+              <div className="flex-1 relative">
+                <span className="absolute left-3 top-3 text-gray-400">
+                  <IconMapper name="Search" size={20} />
+                </span>
+                <input
+                  type="text"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+                  placeholder="Search by name, employee ID or phone..."
+                  className="w-full pl-10 pr-4 py-2.5 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                />
+              </div>
+              <Button onClick={handleSearch} className="bg-red-600 hover:bg-red-700">
+                <IconMapper name="Search" size={18} className="mr-2" />
+                Search
+              </Button>
             </div>
-            <GuardForm
-              initialData={{ status: 'active', guard_type: 'permanent' } as any}
-              supervisors={supervisors}
-              grades={grades}
-              onSubmit={submitCreate}
-              canAssignSupervisor={canAssignSupervisor}
-              processing={saving}
-              errors={{}}
-              hideCancel={false}
-              onCancel={() => setShowAdd(false)}
-            />
-          </div>
-        </Modal>
+          </Card>
 
-        {/* Edit Guard Modal */}
-        <Modal show={showEdit} onClose={() => setShowEdit(false)} maxWidth="2xl">
-          <div className="p-4 sm:p-6 bg-white dark:bg-gray-800">
-            <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">Edit Guard</h2>
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Photo</label>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={(e) => setPhotoEdit(e.target.files?.[0] || null)}
-                className="w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-coin-50 file:text-coin-700 hover:file:bg-coin-100 dark:file:bg-gray-800 dark:file:text-gray-100"
-              />
-            </div>
-            {selectedGuard && (
-              <GuardForm
-                initialData={selectedGuard}
-                supervisors={supervisors}
-                grades={grades}
-                onSubmit={submitUpdate}
-                canAssignSupervisor={canAssignSupervisor}
-                processing={saving}
-                errors={{}}
-                hideCancel={false}
-                onCancel={() => setShowEdit(false)}
-              />
-            )}
-          </div>
-        </Modal>
-
-        {/* Guard Details Modal */}
-        <Modal show={showDetails} onClose={() => setShowDetails(false)} maxWidth="xl">
-          <div className="p-4 sm:p-6 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold">Guard Details</h2>
-              <button onClick={printDetails} className="px-3 py-1.5 rounded bg-coin-600 text-white hover:bg-coin-700 focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950">Print</button>
-            </div>
-            {!selectedGuard ? (
-              <div className="text-sm text-gray-500">Loading...</div>
-            ) : (
-              <div className="space-y-4">
-                {/* Photo Preview */}
-                {(() => {
-                  const p = (selectedGuard as any).photo as string | undefined;
-                  if (!p) return null;
-                  const url = p.startsWith('http') || p.startsWith('/storage') ? p : `/storage/${p}`;
-                  return (
-                    <div className="flex items-center gap-3">
-                      <img
-                        src={url}
-                        alt={selectedGuard.name}
-                        className="w-24 h-24 rounded-lg object-cover border border-gray-200 dark:border-gray-700"
-                      />
-                      <div className="text-sm text-gray-600 dark:text-gray-300">Profile photo</div>
-                    </div>
-                  );
-                })()}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <div><span className="text-sm text-gray-500">Name</span><div className="font-medium">{selectedGuard.name}</div></div>
-                  <div><span className="text-sm text-gray-500">Employee ID</span><div className="font-medium">{selectedGuard.employee_id}</div></div>
-                  <div><span className="text-sm text-gray-500">Phone</span><div className="font-medium">{selectedGuard.phone || '—'}</div></div>
-                  <div><span className="text-sm text-gray-500">Email</span><div className="font-medium">{selectedGuard.email || '—'}</div></div>
-                </div>
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Identity</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
-                    <div><span className="text-gray-500">Date of Birth</span><div>{selectedGuard.date_of_birth || '—'}</div></div>
-                    <div><span className="text-gray-500">Gender</span><div>{selectedGuard.gender || '—'}</div></div>
-                    <div><span className="text-gray-500">ID Number</span><div>{selectedGuard.id_number || '—'}</div></div>
-                    <div><span className="text-gray-500">Role</span><div>{selectedGuard.employee_role || 'guard'}</div></div>
-                    <div><span className="text-gray-500">Guard Type</span><div>{selectedGuard.guard_type || '—'}</div></div>
-                    <div><span className="text-gray-500">Supervisor</span><div>{selectedGuard.supervisor?.name || '—'}</div></div>
+          {/* Mobile Cards */}
+          <div className="md:hidden grid gap-4 mb-6">
+            {guards.data.map((guard) => (
+              <div key={guard.id} className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center text-white font-bold text-lg">
+                    {guard.name?.charAt(0) || '?'}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-gray-900 dark:text-gray-100 truncate">{guard.name}</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">{guard.employee_id}</p>
                   </div>
                 </div>
-
-                {selectedGuard.attendance_tally ? (
-                  <div>
-                    <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Attendance (This Month)</h3>
-                    <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
-                      <div className="rounded-md border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 p-3">
-                        <div className="text-xs text-gray-500">Present</div>
-                        <div className="mt-1 text-lg font-semibold text-emerald-700 dark:text-emerald-400">{(selectedGuard.attendance_tally.by_status?.present ?? 0) as any}</div>
-                      </div>
-                      <div className="rounded-md border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 p-3">
-                        <div className="text-xs text-gray-500">Absent</div>
-                        <div className="mt-1 text-lg font-semibold text-red-700 dark:text-red-400">{(selectedGuard.attendance_tally.by_status?.absent ?? 0) as any}</div>
-                      </div>
-                      <div className="rounded-md border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 p-3">
-                        <div className="text-xs text-gray-500">Late</div>
-                        <div className="mt-1 text-lg font-semibold text-yellow-700 dark:text-yellow-400">{(selectedGuard.attendance_tally.by_status?.late ?? 0) as any}</div>
-                      </div>
-                      <div className="rounded-md border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 p-3">
-                        <div className="text-xs text-gray-500">Half Day</div>
-                        <div className="mt-1 text-lg font-semibold text-orange-700 dark:text-orange-400">{(selectedGuard.attendance_tally.by_status?.half_day ?? 0) as any}</div>
-                      </div>
-                      <div className="rounded-md border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 p-3">
-                        <div className="text-xs text-gray-500">Leave</div>
-                        <div className="mt-1 text-lg font-semibold text-sky-700 dark:text-sky-400">{(selectedGuard.attendance_tally.by_status?.leave ?? 0) as any}</div>
-                      </div>
-                      <div className="rounded-md border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 p-3">
-                        <div className="text-xs text-gray-500">Hours</div>
-                        <div className="mt-1 text-lg font-semibold text-gray-900 dark:text-gray-100">
-                          {Number(selectedGuard.attendance_tally.hours_worked ?? 0).toFixed(1)}
-                          {Number(selectedGuard.attendance_tally.overtime_hours ?? 0) > 0 ? (
-                            <span className="ml-2 text-xs text-gray-500">OT {Number(selectedGuard.attendance_tally.overtime_hours ?? 0).toFixed(1)}</span>
-                          ) : null}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                      Range: {selectedGuard.attendance_tally.range?.start} → {selectedGuard.attendance_tally.range?.end}
-                    </div>
+                
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-500 dark:text-gray-400">Status:</span>
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                      guard.status === 'active'
+                        ? 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300'
+                        : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300'
+                    }`}>
+                      {guard.status || 'Active'}
+                    </span>
                   </div>
-                ) : null}
-
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Residence</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
-                    <div><span className="text-gray-500">Address</span><div>{selectedGuard.residence_address || selectedGuard.address || '—'}</div></div>
-                    <div><span className="text-gray-500">City</span><div>{selectedGuard.residence_city || '—'}</div></div>
-                    <div><span className="text-gray-500">District</span><div>{selectedGuard.residence_district || '—'}</div></div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500 dark:text-gray-400">Site:</span>
+                    <span className="text-gray-900 dark:text-gray-100">{guard.site?.name || 'Unassigned'}</span>
                   </div>
-                </div>
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Marital</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
-                    <div><span className="text-gray-500">Status</span><div>{selectedGuard.marital_status || '—'}</div></div>
-                    <div><span className="text-gray-500">Spouse</span><div>{selectedGuard.spouse_name || '—'}</div></div>
-                    <div><span className="text-gray-500">Spouse Phone</span><div>{selectedGuard.spouse_phone || '—'}</div></div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500 dark:text-gray-400">Attendance:</span>
+                    <span className={`font-medium ${getAttendanceColor(guard.attendance_rate)}`}>
+                      {guard.attendance_rate ? `${guard.attendance_rate}%` : 'N/A'}
+                    </span>
                   </div>
-                </div>
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Next of Kin</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
-                    <div><span className="text-gray-500">Name</span><div>{selectedGuard.next_of_kin_name || '—'}</div></div>
-                    <div><span className="text-gray-500">Relationship</span><div>{selectedGuard.next_of_kin_relationship || '—'}</div></div>
-                    <div><span className="text-gray-500">Phone</span><div>{selectedGuard.next_of_kin_phone || '—'}</div></div>
-                  </div>
-                </div>
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Home</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
-                    <div><span className="text-gray-500">Village</span><div>{selectedGuard.home_village || '—'}</div></div>
-                    <div><span className="text-gray-500">T/A</span><div>{selectedGuard.home_ta || '—'}</div></div>
-                    <div><span className="text-gray-500">District</span><div>{selectedGuard.home_district || '—'}</div></div>
-                  </div>
-                </div>
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Education</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                    <div><span className="text-gray-500">Level</span><div>{selectedGuard.education_level || '—'}</div></div>
-                    <div><span className="text-gray-500">Qualifications</span><div>{Array.isArray(selectedGuard.qualifications) ? selectedGuard.qualifications.join(', ') : (selectedGuard.qualifications || '—')}</div></div>
-                    <div><span className="text-gray-500">Languages</span><div>{Array.isArray(selectedGuard.languages) ? selectedGuard.languages.join(', ') : (selectedGuard.languages || '—')}</div></div>
-                  </div>
-                </div>
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Emergency Contact</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
-                    <div><span className="text-gray-500">Name</span><div>{selectedGuard.emergency_contact_name || '—'}</div></div>
-                    <div><span className="text-gray-500">Phone</span><div>{selectedGuard.emergency_contact_phone || '—'}</div></div>
-                    <div><span className="text-gray-500">Dependents</span><div>{selectedGuard.dependents_count ?? '—'}</div></div>
-                  </div>
-                </div>
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Family</h3>
-                  <div className="text-sm">
-                    <span className="text-gray-500">Children Names</span>
-                    <div>{selectedGuard.children_names || '—'}</div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500 dark:text-gray-400">Performance:</span>
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getPerformanceColor(guard.performance_score)}`}>
+                      {guard.performance_score ? `${guard.performance_score}%` : 'N/A'}
+                    </span>
                   </div>
                 </div>
               </div>
-            )}
+            ))}
           </div>
-        </Modal>
 
-        {/* Assign to Site Modal */}
-        <AssignSiteModal
-          open={showAssign}
-          onClose={() => setShowAssign(false)}
-          guardId={selectedGuard?.id ?? null}
-          zones={zones}
-          scope="admin"
-          onSuccess={() => { push('Guard assigned to site', 'success'); router.reload(); }}
-        />
+          {/* Desktop Table */}
+          <Card className="hidden md:block overflow-hidden">
+            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+              <thead className="bg-gray-50 dark:bg-gray-900/50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Guard</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Employee ID</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Site</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Status</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Attendance</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Performance</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Shifts</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                {guards.data.map((guard) => (
+                  <tr key={guard.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                    <td className="px-6 py-4">
+                      <div className="flex items-center">
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center text-white font-semibold text-sm mr-3">
+                          {guard.name?.charAt(0) || '?'}
+                        </div>
+                        <div>
+                          <div className="font-medium text-gray-900 dark:text-gray-100">{guard.name}</div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">{guard.phone || 'No phone'}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-900 dark:text-gray-100">{guard.employee_id}</td>
+                    <td className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">
+                      {guard.site?.name || <span className="text-gray-400 italic">Unassigned</span>}
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                        guard.status === 'active'
+                          ? 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300'
+                          : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300'
+                      }`}>
+                        {guard.status || 'Active'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-2">
+                        <div className="w-16 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                          <div 
+                            className={`h-full rounded-full ${
+                              (guard.attendance_rate || 0) >= 95 ? 'bg-green-500' :
+                              (guard.attendance_rate || 0) >= 80 ? 'bg-blue-500' :
+                              (guard.attendance_rate || 0) >= 60 ? 'bg-amber-500' : 'bg-red-500'
+                            }`}
+                            style={{ width: `${guard.attendance_rate || 0}%` }}
+                          />
+                        </div>
+                        <span className={`text-sm font-medium ${getAttendanceColor(guard.attendance_rate)}`}>
+                          {guard.attendance_rate ? `${guard.attendance_rate}%` : 'N/A'}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${getPerformanceColor(guard.performance_score)}`}>
+                        {guard.performance_score ? `${guard.performance_score}%` : 'N/A'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">
+                      {guard.shifts_this_month || 0}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </Card>
 
-        {/* Promote Guard Modal */}
-        <PromoteGuardModal
-          open={showPromote}
-          guard={selectedGuard}
-          zones={zones}
-          onClose={() => setShowPromote(false)}
-          onSuccess={() => push('Guard promoted')}
-        />
-
-        {/* Pay Profile Modal */}
-        <Modal show={showPayProfile} onClose={() => setShowPayProfile(false)} maxWidth="lg">
-          <div className="p-6 bg-white dark:bg-gray-800">
-            <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">
-              Pay Profile - {selectedGuard?.name}
-            </h2>
-            <PayProfileForm
-              guard={selectedGuard}
-              initialData={payProfileData}
-              onSubmit={savePayProfile}
-              onCancel={() => setShowPayProfile(false)}
-            />
-          </div>
-        </Modal>
-
-        {/* Confirm & Reason Modals */}
-        <ConfirmModal
-          open={confirmOpen}
-          title={confirmTitle}
-          message={confirmMessage}
-          onConfirm={() => { setConfirmOpen(false); confirmAction(); }}
-          onCancel={() => setConfirmOpen(false)}
-        />
-        <ReasonModal
-          open={reasonOpen}
-          title={reasonTitle}
-          message={reasonMessage}
-          confirmLabel="Submit"
-          onConfirm={(reason) => { setReasonOpen(false); reasonSubmit && reasonSubmit(reason); }}
-          onCancel={() => setReasonOpen(false)}
-        />
+          {/* Pagination */}
+          {guards.meta && guards.meta.last_page > 1 && (
+            <div className="mt-6 flex flex-wrap justify-center gap-2">
+              {guards.links?.map((link, idx) => (
+                <Button
+                  key={idx}
+                  variant={link.active ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => link.url && router.get(link.url, {}, { preserveState: true })}
+                  disabled={!link.url}
+                  className={link.active ? 'bg-red-600 hover:bg-red-700' : ''}
+                  dangerouslySetInnerHTML={{ __html: link.label }}
+                />
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </AdminLayout>
   );

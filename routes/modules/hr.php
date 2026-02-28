@@ -6,6 +6,7 @@ use Inertia\Inertia;
 Route::middleware(['auth'])->group(function () {
 	Route::middleware(['permission:hr.employees.view'])->prefix('hr')->name('hr.')->group(function () {
 		Route::get('/dashboard', [\App\Http\Controllers\HR\DashboardController::class, 'index'])->name('dashboard');
+		Route::get('/me', [\App\Http\Controllers\Profile\ProfileDashboardController::class, 'index'])->name('profile');
 		Route::get('/dashboard/compliance-export', [\App\Http\Controllers\HR\DashboardController::class, 'complianceExport'])->name('dashboard.compliance-export');
 		Route::get('/leaves', [\App\Http\Controllers\HR\LeaveController::class, 'index'])->name('leaves');
 		Route::get('/leaves/events', [\App\Http\Controllers\HR\LeaveController::class, 'events'])->name('leaves.events');
@@ -13,6 +14,10 @@ Route::middleware(['auth'])->group(function () {
 		
 		// Downs for HR visibility
 		Route::get('/downs', [\App\Http\Controllers\ControlRoom\DownController::class, 'index'])->name('downs.index');
+		Route::post('/downs', [\App\Http\Controllers\ControlRoom\DownController::class, 'store'])->name('downs.store');
+		Route::post('/downs/{down}/escalate', [\App\Http\Controllers\ControlRoom\DownController::class, 'escalate'])->name('downs.escalate');
+		Route::post('/downs/{down}/resolve', [\App\Http\Controllers\ControlRoom\DownController::class, 'resolve'])->name('downs.resolve');
+		Route::post('/downs/{down}/abscond', [\App\Http\Controllers\ControlRoom\DownController::class, 'abscond'])->name('downs.abscond');
 
 		// Employees & Training
 		Route::get('/employees', [\App\Http\Controllers\HR\EmployeeController::class, 'index'])->name('employees.index');

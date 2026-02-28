@@ -35,6 +35,8 @@ return new class extends Migration
             $table->text('special_instructions')->nullable();
             $table->integer('required_guards')->default(1);
             $table->enum('status', ['active', 'inactive'])->default('active');
+            $table->string('qr_code', 32)->nullable()->unique()->index();
+            $table->string('site_type')->default('residential');
             $table->timestamps();
             $table->softDeletes();
         });

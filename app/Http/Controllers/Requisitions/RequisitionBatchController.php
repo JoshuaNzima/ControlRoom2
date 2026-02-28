@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Requisitions;
 use App\Http\Controllers\Controller;
 use App\Models\Requisition;
 use App\Models\RequisitionBatch;
+use App\Models\RequisitionItem;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -187,18 +188,47 @@ class RequisitionBatchController extends Controller
             }
 
             DB::transaction(function () use ($batch, $user, $selectedIds) {
+                // Update selected requisitions to pending_disbursement
                 Requisition::where('batch_id', $batch->id)
                     ->whereIn('id', $selectedIds)
                     ->update([
                         'status' => 'pending_disbursement',
                     ]);
 
+                // Update unselected requisitions to pending_funding
                 Requisition::where('batch_id', $batch->id)
                     ->whereNotIn('id', $selectedIds)
                     ->where('status', 'pending_disbursement')
                     ->update([
                         'status' => 'pending_funding',
                     ]);
+
+                // Also update inline items - approved items become funded (for unselected)
+                // or stay approved (for selected, ready for disbursement)
+                foreach ($selectedIds as $reqId) {
+                    // For selected requisitions: approved items remain approved
+                    RequisitionItem::where('requisition_id', $reqId)
+                        ->where('status', 'pending')
+                        ->update([
+                            'status' => 'approved',
+                            'approved_by' => $user->id,
+                            'approved_at' => now(),
+                        ]);
+                }
+
+                // For unselected requisitions: approved items become funded
+                $unselectedIds = array_diff(
+                    Requisition::where('batch_id', $batch->id)->pluck('id')->all(),
+                    $selectedIds
+                );
+
+                foreach ($unselectedIds as $reqId) {
+                    RequisitionItem::where('requisition_id', $reqId)
+                        ->where('status', 'approved')
+                        ->update([
+                            'status' => 'funded',
+                        ]);
+                }
 
                 $batch->status = 'acknowledged';
                 $batch->acknowledged_by = $user->id;

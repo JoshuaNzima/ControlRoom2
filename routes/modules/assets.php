@@ -9,6 +9,8 @@ Route::middleware(['auth', 'role:super_admin,asset_manager'])
     ->group(function () {
         Route::get('/', [\App\Http\Controllers\Admin\AssetManagementController::class, 'index'])->name('index');
 
+        Route::get('/me', [\App\Http\Controllers\Profile\ProfileDashboardController::class, 'index'])->name('profile');
+
         // Equipment
         Route::get('/equipment/{equipment}/json', [\App\Http\Controllers\Admin\EquipmentController::class, 'showJson'])->name('equipment.json');
         Route::resource('equipment', \App\Http\Controllers\Admin\EquipmentController::class)->except(['create','edit','show']);

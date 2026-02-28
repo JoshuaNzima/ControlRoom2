@@ -19,7 +19,7 @@ export interface Requisition {
   id: number;
   title: string;
   description?: string | null;
-  category?: 'general' | 'fuel' | 'vehicle_hire' | string;
+  category?: 'general' | 'fuel' | 'vehicle_hire' | 'events' | 'k9' | 'utilities' | 'office_supplies' | 'stationery' | 'cleaning_supplies' | 'security_equipment' | 'uniforms' | 'training_materials' | 'vehicle_maintenance' | 'communications' | 'it_equipment' | 'medical_supplies' | string;
   status: 'pending_admin' | 'needs_revision' | 'pending_disbursement' | 'pending_funding' | 'disbursed' | 'expired';
   needed_by?: string | null;
   amount?: number | string | null;

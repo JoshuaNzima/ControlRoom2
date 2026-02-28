@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Session;
 use App\Events\QRScanned;
 use Inertia\Inertia;
+use Illuminate\Validation\ValidationException;
 
 class SiteScanController extends Controller
 {
@@ -24,6 +25,7 @@ class SiteScanController extends Controller
     public function scan(Request $request, ?ClientSite $site = null)
     {
         $user = Auth::user();
+        $roleName = (string) ($user?->role ?? ($user?->getRoleNames()?->first() ?? ''));
         $requireGps = config('scanner.require_gps', true);
         $siteRadius = config('scanner.site_radius_meters', 10);
 
@@ -32,14 +34,18 @@ class SiteScanController extends Controller
             $siteId = $request->input('site');
             if (!$siteId) {
                 if ($request->header('X-Inertia')) {
-                    return redirect()->back()->with('error', 'No site specified. Please scan a valid QR code at the client site.');
+                    throw ValidationException::withMessages([
+                        'site' => 'No site specified. Please scan a valid QR code at the client site.',
+                    ]);
                 }
                 return response()->json(['error' => 'No site specified. Please scan a valid QR code at the client site.'], 400);
             }
             $site = ClientSite::find($siteId);
             if (!$site) {
                 if ($request->header('X-Inertia')) {
-                    return redirect()->back()->with('error', 'Site not found. The QR code may be expired or invalid. Please contact your supervisor or try scanning again.');
+                    throw ValidationException::withMessages([
+                        'site' => 'Site not found. The QR code may be expired or invalid. Please contact your supervisor or try scanning again.',
+                    ]);
                 }
                 return response()->json(['error' => 'Site not found. The QR code may be expired or invalid. Please contact your supervisor or try scanning again.'], 404);
             }
@@ -50,13 +56,15 @@ class SiteScanController extends Controller
         $longitude = $request->input('longitude');
 
         // Validate GPS is provided if required
-        if ($requireGps && (!$latitude || !$longitude)) {
+        if ($requireGps && (($latitude === null || $latitude === '') || ($longitude === null || $longitude === ''))) {
             $this->logFailedScan($user, $site, 'GPS coordinates required but not provided', $latitude, $longitude);
             
             $errorMessage = 'GPS location is required. Please:\n1. Enable location services in your browser settings\n2. Allow location access when prompted\n3. Ensure you are outdoors or have a clear GPS signal\n4. Try scanning again';
             
             if ($request->header('X-Inertia')) {
-                return redirect()->back()->with('error', $errorMessage);
+                throw ValidationException::withMessages([
+                    'gps' => $errorMessage,
+                ]);
             }
             return response()->json(['error' => $errorMessage], 400);
         }
@@ -64,7 +72,8 @@ class SiteScanController extends Controller
         // Location verification (within configurable radius of site)
         $locationVerified = false;
         $distance = null;
-        if ($latitude && $longitude && $site->latitude && $site->longitude) {
+        if (($latitude !== null && $latitude !== '') && ($longitude !== null && $longitude !== '')
+            && ($site->latitude !== null && $site->latitude !== '') && ($site->longitude !== null && $site->longitude !== '')) {
             $distance = $this->haversineDistance(
                 $latitude,
                 $longitude,
@@ -127,7 +136,9 @@ class SiteScanController extends Controller
             ));
 
             if ($request->header('X-Inertia')) {
-                return redirect()->back()->with('error', $errorMessage);
+                throw ValidationException::withMessages([
+                    'gps' => $errorMessage,
+                ]);
             }
             return response()->json([
                 'error' => $errorMessage,
@@ -161,16 +172,29 @@ class SiteScanController extends Controller
             'longitude' => $longitude,
             'device_info' => $request->userAgent(),
             'location_verified' => $locationVerified,
-            'notes' => 'Site QR scan via ' . $user->role,
+            'notes' => 'Site QR scan via ' . $roleName,
         ]);
 
-        // Dispatch QR scanned event
-        event(new QRScanned($user, $site, $scan));
+        // Dispatch event for real-time notifications (control-room + supervisor private channel)
+        event(new QRScanned(
+            $user->id,
+            'Site scanned successfully',
+            [
+                'id' => $scan->id,
+                'supervisor_name' => $user->name,
+                'site_name' => $site->name,
+                'client_name' => (string) ($site->client?->name ?? ''),
+                'scanned_at' => $scan->scanned_at ? $scan->scanned_at->toIso8601String() : now()->toIso8601String(),
+                'location_verified' => (bool) $locationVerified,
+                'latitude' => $latitude !== null ? (float) $latitude : null,
+                'longitude' => $longitude !== null ? (float) $longitude : null,
+            ]
+        ));
 
         // Determine redirect based on role
         $managementRoles = ['supervisor', 'zone_commander', 'sergeant'];
 
-        if (in_array($user->role, $managementRoles)) {
+        if (in_array($roleName, $managementRoles) || $user->hasAnyRole($managementRoles)) {
             // Check if attendance already taken today
             $attendance = Attendance::where('supervisor_id', $user->id)
                 ->whereDate('scanned_at', today())
@@ -231,7 +255,9 @@ class SiteScanController extends Controller
      */
     private function getRoleBasedRedirect($user, $site, $scan, $locationVerified)
     {
-        switch ($user->role) {
+        $roleName = (string) ($user?->role ?? ($user?->getRoleNames()?->first() ?? ''));
+
+        switch ($roleName) {
             case 'trainer':
                 return redirect()->route('training.dashboard')->with('success', 'Patrol recorded at ' . $site->name);
 

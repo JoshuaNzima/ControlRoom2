@@ -458,6 +458,25 @@ function CreateTraineeModal({
     regimen_id: '',
     primary_trainer_id: '',
     trainer_ids: [] as number[],
+    // Guard-matching fields for data migration
+    residence_address: '',
+    residence_district: '',
+    marital_status: '',
+    spouse_name: '',
+    spouse_phone: '',
+    emergency_contact_name: '',
+    emergency_contact_phone: '',
+    next_of_kin_name: '',
+    next_of_kin_relationship: '',
+    next_of_kin_phone: '',
+    home_village: '',
+    home_ta: '',
+    home_district: '',
+    education_level: '',
+    qualifications: '',
+    languages: '',
+    dependents_count: '',
+    children_names: '',
   });
 
   React.useEffect(() => {
@@ -510,6 +529,116 @@ function CreateTraineeModal({
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Address</label>
             <input value={form.data.address} onChange={(e) => form.setData('address', e.target.value)} className={fieldClassName} />
+          </div>
+
+          {/* Guard-matching fields */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Residence Address</label>
+              <input value={form.data.residence_address} onChange={(e) => form.setData('residence_address', e.target.value)} className={fieldClassName} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Residence District</label>
+              <select value={form.data.residence_district} onChange={(e) => form.setData('residence_district', e.target.value)} className={fieldClassName}>
+                <option value="">—</option>
+                {['Balaka','Blantyre','Chikwawa','Chiradzulu','Chitipa','Dedza','Dowa','Karonga','Kasungu','Likoma','Lilongwe','Machinga','Mangochi','Mchinji','Mulanje','Mwanza','Mzimba','Neno','Nkhata Bay','Nkhotakota','Nsanje','Ntcheu','Ntchisi','Phalombe','Rumphi','Salima','Thyolo','Zomba'].map((d) => (
+                  <option key={d} value={d}>{d}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Marital Status</label>
+              <select value={form.data.marital_status} onChange={(e) => form.setData('marital_status', e.target.value)} className={fieldClassName}>
+                <option value="">—</option>
+                <option value="single">Single</option>
+                <option value="married">Married</option>
+                <option value="divorced">Divorced</option>
+                <option value="widowed">Widowed</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Spouse Name</label>
+              <input value={form.data.spouse_name} onChange={(e) => form.setData('spouse_name', e.target.value)} className={fieldClassName} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Spouse Phone</label>
+              <input value={form.data.spouse_phone} onChange={(e) => form.setData('spouse_phone', e.target.value)} className={fieldClassName} />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Emergency Contact Name</label>
+              <input value={form.data.emergency_contact_name} onChange={(e) => form.setData('emergency_contact_name', e.target.value)} className={fieldClassName} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Emergency Contact Phone</label>
+              <input value={form.data.emergency_contact_phone} onChange={(e) => form.setData('emergency_contact_phone', e.target.value)} className={fieldClassName} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Next of Kin Name</label>
+              <input value={form.data.next_of_kin_name} onChange={(e) => form.setData('next_of_kin_name', e.target.value)} className={fieldClassName} />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Next of Kin Relationship</label>
+              <input value={form.data.next_of_kin_relationship} onChange={(e) => form.setData('next_of_kin_relationship', e.target.value)} className={fieldClassName} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Next of Kin Phone</label>
+              <input value={form.data.next_of_kin_phone} onChange={(e) => form.setData('next_of_kin_phone', e.target.value)} className={fieldClassName} />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Home Village</label>
+              <input value={form.data.home_village} onChange={(e) => form.setData('home_village', e.target.value)} className={fieldClassName} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Home T/A</label>
+              <input value={form.data.home_ta} onChange={(e) => form.setData('home_ta', e.target.value)} className={fieldClassName} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Home District</label>
+              <select value={form.data.home_district} onChange={(e) => form.setData('home_district', e.target.value)} className={fieldClassName}>
+                <option value="">—</option>
+                {['Balaka','Blantyre','Chikwawa','Chiradzulu','Chitipa','Dedza','Dowa','Karonga','Kasungu','Likoma','Lilongwe','Machinga','Mangochi','Mchinji','Mulanje','Mwanza','Mzimba','Neno','Nkhata Bay','Nkhotakota','Nsanje','Ntcheu','Ntchisi','Phalombe','Rumphi','Salima','Thyolo','Zomba'].map((d) => (
+                  <option key={d} value={d}>{d}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Education Level</label>
+              <input value={form.data.education_level} onChange={(e) => form.setData('education_level', e.target.value)} className={fieldClassName} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Dependents Count</label>
+              <input type="number" value={form.data.dependents_count} onChange={(e) => form.setData('dependents_count', e.target.value)} className={fieldClassName} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Children Names</label>
+              <input value={form.data.children_names} onChange={(e) => form.setData('children_names', e.target.value)} className={fieldClassName} placeholder="Comma separated" />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Qualifications</label>
+              <textarea rows={2} value={form.data.qualifications} onChange={(e) => form.setData('qualifications', e.target.value)} className={fieldClassName} placeholder="Comma separated or JSON" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Languages</label>
+              <textarea rows={2} value={form.data.languages} onChange={(e) => form.setData('languages', e.target.value)} className={fieldClassName} placeholder="Comma separated or JSON" />
+            </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">

@@ -40,6 +40,7 @@ export default function HRLayout({ title, children, user }: Props) {
   const hrLinks: NavItem[] = [
     { name: 'Dashboard', href: route('hr.dashboard'), icon: <IconMapper name="layout-dashboard" className="h-6 w-6" />, current: isCurrent(route('hr.dashboard')) },
     { name: 'Employees', href: route('hr.employees.index'), icon: <IconMapper name="users" className="h-6 w-6" />, current: isCurrent(route('hr.employees.index')) },
+    { name: 'Downs', href: route('hr.downs.index'), icon: <IconMapper name="alert-triangle" className="h-6 w-6" />, current: isCurrent(route('hr.downs.index')), badge: (()=>{ const n = Number(counters?.control_downs_active||0); return n>0? String(n): undefined; })() },
     { name: 'Roster', href: route('hr.leaves'), icon: <IconMapper name="calendar" className="h-6 w-6" />, current: isCurrent(route('hr.leaves')) },
     { name: 'Careers', href: route('hr.jobs.index'), icon: <IconMapper name="megaphone" className="h-6 w-6" />, current: isCurrent(route('hr.jobs.index')) },
   ];
@@ -145,7 +146,7 @@ export default function HRLayout({ title, children, user }: Props) {
             <div className="text-base font-medium text-white">{user?.name}</div>
             <div className="text-sm font-medium text-red-200 dark:text-gray-400">{roleDisplay}</div>
           </div>
-          <Link href={route('profile.dashboard')} className="inline-flex items-center gap-2 rounded-md bg-gray-800 px-3 py-2 text-sm font-medium text-white hover:bg-gray-700">
+          <Link href={route('hr.profile')} className="inline-flex items-center gap-2 rounded-md bg-gray-800 px-3 py-2 text-sm font-medium text-white hover:bg-gray-700">
             My Profile
           </Link>
         </div>

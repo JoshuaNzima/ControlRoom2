@@ -2,6 +2,7 @@ import React from 'react';
 import SuperAdminLayout from '@/Layouts/SuperAdminLayout';
 import { Head, usePage, router } from '@inertiajs/react';
 import Modal from '@/Components/Modal';
+import IconMapper from '@/Components/IconMapper';
 import { useTheme } from '@/Providers/ThemeProvider';
 
 type FinanceDefaults = {
@@ -184,14 +185,45 @@ export default function SuperAdminSettings() {
   return (
     <SuperAdminLayout title="System Settings" user={auth?.user as any}>
       <Head title="System Settings" />
-      <div className="max-w-6xl mx-auto">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+        {/* Hero Header */}
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-red-700 via-red-600 to-rose-600 text-white shadow-2xl">
+          <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg%20width%3D%2260%22%20height%3D%2260%22%20viewBox%3D%220%200%2060%2060%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%3E%3Cg%20fill%3D%22none%22%20fill-rule%3D%22evenodd%22%3E%3Cg%20fill%3D%22%23ffffff%22%20fill-opacity%3D%220.05%22%3E%3Cpath%20d%3D%22M36%2034v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6%2034v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6%204V0H4v4H0v2h4v4h2V6h4V4H6z%22/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] opacity-20" />
+          <div className="relative p-6 sm:p-8">
+            <div className="flex items-center gap-4">
+              <div className="p-4 bg-white/10 rounded-xl backdrop-blur-sm">
+                <IconMapper name="Settings" size={32} />
+              </div>
+              <div>
+                <h1 className="text-2xl sm:text-3xl font-bold">System Settings</h1>
+                <p className="text-red-100 mt-1">Configure core system parameters and defaults</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Tabs */}
-        <div className="mb-4 w-full overflow-x-auto">
-          <div className="inline-flex whitespace-nowrap rounded-full bg-red-100 p-1 dark:bg-gray-800">
-            <button onClick={() => setTab('finance')} className={`px-4 py-1.5 rounded-full text-sm font-medium ${tab==='finance' ? 'bg-red-600 text-white' : 'text-red-700 hover:bg-red-200 dark:text-gray-200 dark:hover:bg-gray-700'}`}>Finance</button>
-            <button onClick={() => setTab('hr')} className={`px-4 py-1.5 rounded-full text-sm font-medium ${tab==='hr' ? 'bg-red-600 text-white' : 'text-red-700 hover:bg-red-200 dark:text-gray-200 dark:hover:bg-gray-700'}`}>HR</button>
-            <button onClick={() => setTab('attendance')} className={`px-4 py-1.5 rounded-full text-sm font-medium ${tab==='attendance' ? 'bg-red-600 text-white' : 'text-red-700 hover:bg-red-200 dark:text-gray-200 dark:hover:bg-gray-700'}`}>Attendance</button>
-            <button onClick={() => setTab('system')} className={`px-4 py-1.5 rounded-full text-sm font-medium ${tab==='system' ? 'bg-red-600 text-white' : 'text-red-700 hover:bg-red-200 dark:text-gray-200 dark:hover:bg-gray-700'}`}>System</button>
+        <div className="w-full overflow-x-auto">
+          <div className="inline-flex whitespace-nowrap rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-1 shadow-sm">
+            {[
+              { id: 'finance', label: 'Finance', icon: 'DollarSign' },
+              { id: 'hr', label: 'HR', icon: 'Users2' },
+              { id: 'attendance', label: 'Attendance', icon: 'Clock' },
+              { id: 'system', label: 'System', icon: 'Server' },
+            ].map((t) => (
+              <button
+                key={t.id}
+                onClick={() => setTab(t.id as any)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                  tab === t.id
+                    ? 'bg-red-600 text-white shadow-sm'
+                    : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                }`}
+              >
+                <IconMapper name={t.icon as any} size={16} />
+                {t.label}
+              </button>
+            ))}
           </div>
         </div>
 

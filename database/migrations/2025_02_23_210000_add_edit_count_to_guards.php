@@ -8,6 +8,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (!Schema::hasTable('guards')) {
+            return;
+        }
+
         Schema::table('guards', function (Blueprint $table) {
             $table->unsignedInteger('edit_count')->default(0)->after('status');
         });
@@ -15,6 +19,10 @@ return new class extends Migration
 
     public function down(): void
     {
+        if (!Schema::hasTable('guards')) {
+            return;
+        }
+
         Schema::table('guards', function (Blueprint $table) {
             $table->dropColumn('edit_count');
         });

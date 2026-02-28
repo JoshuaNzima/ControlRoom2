@@ -35,12 +35,10 @@ type GuardRow = {
 
 export default function Attendance({ sites = [], guards = [] }: { sites: Site[]; guards: GuardRow[] }) {
   const [search, setSearch] = useState('');
-  const [action, setAction] = useState<'checkin' | 'checkout' | null>(null);
+  const [action, setAction] = useState<'markpresent' | 'checkout' | null>(null);
   const [selectedGuard, setSelectedGuard] = useState<GuardRow | null>(null);
   const [selectedSiteId, setSelectedSiteId] = useState<number | ''>('');
   const [notes, setNotes] = useState('');
-  const [time, setTime] = useState<string>('');
-  const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   const filteredGuards = useMemo(() => {
@@ -58,17 +56,16 @@ export default function Attendance({ sites = [], guards = [] }: { sites: Site[];
   const stats = useMemo(() => {
     const total = guards.length;
     const checkedIn = guards.filter((g) => !!g.attendance?.check_in_time).length;
+    const markedPresent = guards.filter((g) => g.attendance?.status === 'present' && !g.attendance?.check_in_time).length;
     const checkedOut = guards.filter((g) => !!g.attendance?.check_out_time).length;
-    const pending = Math.max(0, total - checkedIn);
-    return { total, checkedIn, checkedOut, pending };
+    const pending = Math.max(0, total - checkedIn - markedPresent);
+    return { total, checkedIn, markedPresent, checkedOut, pending };
   }, [guards]);
 
-  const openCheckIn = (g: GuardRow) => {
+  const openMarkPresent = (g: GuardRow) => {
     setSelectedGuard(g);
-    setAction('checkin');
+    setAction('markpresent');
     setNotes('');
-    setTime(new Date().toTimeString().slice(0, 5));
-    setPhotoFile(null);
     setSelectedSiteId(g.default_site_id ?? '');
   };
 
@@ -76,8 +73,6 @@ export default function Attendance({ sites = [], guards = [] }: { sites: Site[];
     setSelectedGuard(g);
     setAction('checkout');
     setNotes('');
-    setTime(new Date().toTimeString().slice(0, 5));
-    setPhotoFile(null);
     const siteId = g.attendance?.client_site_id ?? g.default_site_id ?? '';
     setSelectedSiteId(siteId || '');
   };
@@ -87,26 +82,21 @@ export default function Attendance({ sites = [], guards = [] }: { sites: Site[];
     setSelectedGuard(null);
     setSelectedSiteId('');
     setNotes('');
-    setTime('');
-    setPhotoFile(null);
     setSubmitting(false);
   };
 
   const submit = () => {
     if (!selectedGuard || !action) return;
     if (!selectedSiteId) return;
-    if (!photoFile) return;
 
     const fd = new FormData();
     fd.append('guard_id', String(selectedGuard.id));
     fd.append('client_site_id', String(selectedSiteId));
     if (notes) fd.append('notes', notes);
-    if (time) fd.append('time', time);
-    fd.append('photo', photoFile);
 
     setSubmitting(true);
     router.post(
-      action === 'checkin' ? route('zone.attendance.check-in') : route('zone.attendance.check-out'),
+      action === 'markpresent' ? route('zone.attendance.mark-present') : route('zone.attendance.check-out'),
       fd,
       {
         forceFormData: true,
@@ -118,8 +108,9 @@ export default function Attendance({ sites = [], guards = [] }: { sites: Site[];
   };
 
   const getAttendanceBadge = (g: GuardRow) => {
-    if (!g.attendance?.check_in_time) return <Badge variant="outline">Not Checked In</Badge>;
+    if (!g.attendance?.check_in_time && g.attendance?.status !== 'present') return <Badge variant="outline">Not Checked In</Badge>;
     if (g.attendance?.check_in_time && !g.attendance?.check_out_time) return <Badge variant="success">On Duty</Badge>;
+    if (g.attendance?.status === 'present' && !g.attendance?.check_in_time) return <Badge variant="success">Present</Badge>;
     return <Badge variant="secondary">Completed</Badge>;
   };
 
@@ -233,11 +224,11 @@ export default function Attendance({ sites = [], guards = [] }: { sites: Site[];
                         </div>
 
                         <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
-                          {!g.attendance?.check_in_time ? (
-                            <Button onClick={() => openCheckIn(g)} className="w-full sm:w-auto">
-                              Check In
+                          {!g.attendance?.check_in_time && g.attendance?.status !== 'present' ? (
+                            <Button onClick={() => openMarkPresent(g)} className="w-full sm:w-auto">
+                              Mark Present
                             </Button>
-                          ) : !g.attendance?.check_out_time ? (
+                          ) : (g.attendance?.check_in_time || g.attendance?.status === 'present') && !g.attendance?.check_out_time ? (
                             <Button onClick={() => openCheckOut(g)} variant="destructive" className="w-full sm:w-auto">
                               Check Out
                             </Button>
@@ -262,10 +253,10 @@ export default function Attendance({ sites = [], guards = [] }: { sites: Site[];
           <div className="flex items-start justify-between gap-3">
             <div>
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                {action === 'checkin' ? 'Check In' : 'Check Out'}{selectedGuard ? `: ${selectedGuard.name}` : ''}
+                {action === 'markpresent' ? 'Mark Present' : 'Check Out'}{selectedGuard ? `: ${selectedGuard.name}` : ''}
               </h3>
               <p className="text-sm text-gray-600 dark:text-gray-300">
-                Photo evidence is required.
+                {action === 'markpresent' ? 'Confirm guard is present at the selected site.' : 'Record check-out time and notes.'}
               </p>
             </div>
             <button
@@ -297,39 +288,14 @@ export default function Attendance({ sites = [], guards = [] }: { sites: Site[];
             )}
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Time (optional)</label>
-              <input
-                type="time"
-                value={time}
-                onChange={(e) => setTime(e.target.value)}
-                className="w-full rounded-md border border-gray-300 dark:border-gray-800 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 px-3 py-2"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Notes (optional)</label>
-              <input
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="Context (optional)"
-                className="w-full rounded-md border border-gray-300 dark:border-gray-800 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 px-3 py-2"
-              />
-            </div>
-          </div>
-
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Photo evidence *</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Notes (optional)</label>
             <input
-              type="file"
-              accept="image/*"
-              capture="environment"
-              onChange={(e) => setPhotoFile(e.target.files?.[0] ?? null)}
-              className="block w-full text-sm text-gray-700 dark:text-gray-200 file:mr-4 file:py-2 file:px-3 file:rounded-md file:border-0 file:bg-gray-100 file:text-gray-900 dark:file:bg-gray-900 dark:file:text-gray-100"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Context (optional)"
+              className="w-full rounded-md border border-gray-300 dark:border-gray-800 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 px-3 py-2"
             />
-            {!photoFile && (
-              <div className="mt-1 text-xs text-red-600 dark:text-red-300">Photo is required.</div>
-            )}
           </div>
 
           <div className="flex items-center justify-end gap-2 pt-2">
@@ -339,10 +305,10 @@ export default function Attendance({ sites = [], guards = [] }: { sites: Site[];
             <Button
               type="button"
               onClick={submit}
-              disabled={submitting || !selectedGuard || !selectedSiteId || !photoFile}
+              disabled={submitting || !selectedGuard || !selectedSiteId}
               variant={action === 'checkout' ? 'destructive' : 'default'}
             >
-              {submitting ? (action === 'checkout' ? 'Checking out…' : 'Checking in…') : (action === 'checkout' ? 'Check Out' : 'Check In')}
+              {submitting ? (action === 'checkout' ? 'Checking out…' : 'Marking present…') : (action === 'checkout' ? 'Check Out' : 'Mark Present')}
             </Button>
           </div>
         </div>

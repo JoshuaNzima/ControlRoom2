@@ -173,10 +173,77 @@ export default function SuperAdminUsers({ users, filters, roles, zones }: UsersI
       <Head title="Users" />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+        {/* Hero Header */}
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-red-700 via-red-600 to-rose-600 text-white shadow-2xl">
+          <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg%20width%3D%2260%22%20height%3D%2260%22%20viewBox%3D%220%200%2060%2060%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%3E%3Cg%20fill%3D%22none%22%20fill-rule%3D%22evenodd%22%3E%3Cg%20fill%3D%22%23ffffff%22%20fill-opacity%3D%220.05%22%3E%3Cpath%20d%3D%22M36%2034v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6%2034v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6%204V0H4v4H0v2h4v4h2V6h4V4H6z%22/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] opacity-20" />
+          <div className="relative p-6 sm:p-8">
+            <div className="flex items-center gap-4">
+              <div className="p-4 bg-white/10 rounded-xl backdrop-blur-sm">
+                <IconMapper name="Users" size={32} />
+              </div>
+              <div>
+                <h1 className="text-2xl sm:text-3xl font-bold">Users Management</h1>
+                <p className="text-red-100 mt-1">Create, edit and manage system users and their roles</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Stats Cards */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-100 dark:bg-blue-900/20 rounded-lg text-blue-600">
+                <IconMapper name="Users" size={20} />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{users.meta?.total ?? users.data.length}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Total Users</p>
+              </div>
+            </div>
+          </div>
+          <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-green-100 dark:bg-green-900/20 rounded-lg text-green-600">
+                <IconMapper name="UserCheck" size={20} />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                  {users.data.filter((u: UserRow) => u.status === 'active').length}
+                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Active</p>
+              </div>
+            </div>
+          </div>
+          <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-purple-100 dark:bg-purple-900/20 rounded-lg text-purple-600">
+                <IconMapper name="Shield" size={20} />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{roles.length}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Roles</p>
+              </div>
+            </div>
+          </div>
+          <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-amber-100 dark:bg-amber-900/20 rounded-lg text-amber-600">
+                <IconMapper name="MapPin" size={20} />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{zones.length}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Zones</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Search and Add */}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Users Management</h1>
-            <p className="text-gray-600 dark:text-gray-300">Create, edit and remove users and roles</p>
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">User Directory</h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400">Manage system users and their access</p>
           </div>
           <button
             onClick={() => setShowAdd(true)}

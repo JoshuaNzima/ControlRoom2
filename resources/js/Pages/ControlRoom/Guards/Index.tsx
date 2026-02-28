@@ -2,12 +2,13 @@ import React, { useState } from 'react';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import ControlRoomLayout from '@/Layouts/ControlRoomLayout';
 import { Card } from '@/Components/ui/card';
-import PageHeader from '@/Components/ui/page-header';
 import EmptyState from '@/Components/ui/empty-state';
 import IconMapper from '@/Components/IconMapper';
 import Modal from '@/Components/Modal';
 import GuardForm from '@/Components/Guards/GuardForm';
 import AssignSiteModal from '@/Components/Guards/AssignSiteModal';
+import { StatCard } from '@/Components/StatCard';
+import { ActionTile } from '@/Components/ActionTile';
 
 type Guard = {
   id: number;
@@ -231,36 +232,93 @@ export default function GuardsIndex() {
       <Head title="Guards" />
 
       <div className="max-w-7xl mx-auto mt-6 px-4 sm:px-6 lg:px-8 space-y-6">
-        <PageHeader
-          title="Guards Management"
-          description="Control Room scoped guard list and quick actions"
-          actions={(
-            <>
-              <button
-                onClick={() => (window.location.href = route('control-room.assignments.index'))}
-                className="w-full sm:w-auto px-4 py-2 bg-coin-600 text-white rounded"
-              >
-                Manage Assignments
-              </button>
-              <Link href={route('control-room.clients')} className="w-full sm:w-auto px-4 py-2 bg-gray-100 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-800">
-                Clients
-              </Link>
-              <button
-                onClick={() => setShowAdd(true)}
-                className="w-full sm:w-auto px-4 py-2 bg-coin-700 hover:bg-coin-800 text-white rounded"
-              >
-                Add Guard
-              </button>
-              <button
-                type="button"
-                onClick={handleExport}
-                className="w-full sm:w-auto px-4 py-2 border border-gray-200 dark:border-gray-700 rounded text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-900"
-              >
-                Export CSV
-              </button>
-            </>
-          )}
-        />
+        {/* Hero Header */}
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-red-700 via-red-600 to-rose-600 text-white shadow-2xl">
+          <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg%20width%3D%2260%22%20height%3D%2260%22%20viewBox%3D%220%200%2060%2060%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%3E%3Cg%20fill%3D%22none%22%20fill-rule%3D%22evenodd%22%3E%3Cg%20fill%3D%22%23ffffff%22%20fill-opacity%3D%220.05%22%3E%3Cpath%20d%3D%22M36%2034v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6%2034v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6%204V0H4v4H0v2h4v4h2V6h4V4H6z%22/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] opacity-20" />
+          <div className="relative p-6 sm:p-8">
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+              <div className="flex items-center gap-4">
+                <div className="p-4 bg-white/10 rounded-xl backdrop-blur-sm">
+                  <IconMapper name="Shield" size={32} />
+                </div>
+                <div>
+                  <h1 className="text-2xl sm:text-3xl font-bold">Guards Management</h1>
+                  <p className="text-red-100 mt-1">Control Room scoped guard list and quick actions</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="px-4 py-2 bg-white/10 rounded-lg backdrop-blur-sm">
+                  <p className="text-xs text-red-200">Total Guards</p>
+                  <p className="text-lg font-semibold">{guardsProp.meta?.total || guardsProp.data.length}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* StatCards */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <StatCard
+            icon={<IconMapper name="Users" size={24} />}
+            title="Total Guards"
+            value={guardsProp.meta?.total || guardsProp.data.length}
+            subtitle="All guards"
+            color="blue"
+          />
+          <StatCard
+            icon={<IconMapper name="Activity" size={24} />}
+            title="Active"
+            value={guardsProp.data.filter((g: Guard) => g.status === 'active').length}
+            subtitle="On duty guards"
+            color="green"
+          />
+          <StatCard
+            icon={<IconMapper name="MapPin" size={24} />}
+            title="Assigned"
+            value={guardsProp.data.filter((g: Guard) => g.active_assignment).length}
+            subtitle="To sites"
+            color="purple"
+          />
+          <StatCard
+            icon={<IconMapper name="AlertCircle" size={24} />}
+            title="Incomplete"
+            value={guardsProp.data.filter((g: Guard) => g.is_profile_complete === false).length}
+            subtitle="Profiles need attention"
+            color="amber"
+          />
+        </div>
+
+        {/* Quick Actions */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <ActionTile
+            icon={<IconMapper name="Plus" size={18} />}
+            title="Add Guard"
+            description="Register new guard"
+            color="bg-red-600"
+            onClick={() => setShowAdd(true)}
+          />
+          <ActionTile
+            icon={<IconMapper name="MapPin" size={18} />}
+            title="Assignments"
+            description="Manage site assignments"
+            color="bg-blue-600"
+            href={route('control-room.assignments.index')}
+          />
+          <ActionTile
+            icon={<IconMapper name="Download" size={18} />}
+            title="Export CSV"
+            description="Download guard list"
+            color="bg-emerald-600"
+            onClick={handleExport}
+          />
+          <ActionTile
+            icon={<IconMapper name="Building2" size={18} />}
+            title="Clients"
+            description="View client sites"
+            color="bg-purple-600"
+            href={route('control-room.clients')}
+          />
+        </div>
 
         <Card className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-8 gap-4">

@@ -6,6 +6,7 @@ use App\Http\Controllers\Requisitions\RequisitionApprovalController;
 use App\Http\Controllers\Requisitions\RequisitionDisbursementController;
 use App\Http\Controllers\Requisitions\RequisitionBatchController;
 use App\Http\Controllers\Requisitions\RequisitionAttachmentController;
+use App\Http\Controllers\Requisitions\RequisitionItemController;
 
 Route::middleware(['auth'])
     ->prefix('requisitions')
@@ -26,6 +27,22 @@ Route::middleware(['auth'])
 
         Route::post('/{requisition}/disburse', [RequisitionDisbursementController::class, 'disburse'])
             ->name('disburse');
+
+        // Inline Items Management
+        Route::post('/{requisition}/items', [RequisitionItemController::class, 'store'])
+            ->name('items.store');
+        Route::put('/{requisition}/items/{item}', [RequisitionItemController::class, 'update'])
+            ->name('items.update');
+        Route::delete('/{requisition}/items/{item}', [RequisitionItemController::class, 'destroy'])
+            ->name('items.destroy');
+
+        // Individual Item Approvals
+        Route::post('/{requisition}/items/{item}/approve', [RequisitionItemController::class, 'approve'])
+            ->name('items.approve');
+        Route::post('/{requisition}/items/{item}/decline', [RequisitionItemController::class, 'decline'])
+            ->name('items.decline');
+        Route::post('/{requisition}/items/{item}/disburse', [RequisitionItemController::class, 'disburse'])
+            ->name('items.disburse');
 
         // Attachments
         Route::get('/{requisition}/attachments/{attachment}', [RequisitionAttachmentController::class, 'download'])

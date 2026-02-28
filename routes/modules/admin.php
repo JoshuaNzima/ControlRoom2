@@ -16,6 +16,8 @@ Route::middleware(['auth', 'role:admin,super_admin,marketing,marketing_officer,m
     ->group(function () {
         Route::get('/marketing', [\App\Http\Controllers\Admin\MarketingController::class, 'index'])->name('marketing');
 
+        Route::get('/marketing/me', [\App\Http\Controllers\Profile\ProfileDashboardController::class, 'index'])->name('marketing.profile');
+
         Route::prefix('marketing')->name('marketing.')->group(function () {
             Route::get('/campaigns/{campaign}/json', [\App\Http\Controllers\Admin\MarketingCampaignController::class, 'showJson'])->name('campaigns.json');
             Route::resource('campaigns', \App\Http\Controllers\Admin\MarketingCampaignController::class)->except(['show', 'create', 'edit']);
@@ -41,7 +43,14 @@ Route::middleware(['auth', 'role:admin,super_admin'])
     ->name('admin.')
     ->group(function () {
         Route::get('/dashboard', [\App\Http\Controllers\Admin\DashboardController::class, 'index'])->name('dashboard');
+        Route::get('/me', [\App\Http\Controllers\Profile\ProfileDashboardController::class, 'index'])->name('profile');
         Route::get('/settings', [\App\Http\Controllers\Admin\SettingController::class, 'index'])->name('settings.index');
+        Route::prefix('qr-codes')->name('qr-codes.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\SupervisorQRCodesController::class, 'index'])->name('index');
+            Route::get('/download-bulk', [\App\Http\Controllers\SupervisorQRCodesController::class, 'downloadBulk'])->name('download-bulk');
+            Route::get('/download-saved', [\App\Http\Controllers\SupervisorQRCodesController::class, 'downloadSaved'])->name('download-saved');
+            Route::get('/list-saved', [\App\Http\Controllers\SupervisorQRCodesController::class, 'listSaved'])->name('list-saved');
+        });
         // Finance Settings endpoints
         Route::post('/settings/finance/payroll-defaults', [\App\Http\Controllers\Admin\FinanceSettingController::class, 'updatePayrollDefaults'])
             ->name('settings.finance.payroll-defaults');
@@ -78,6 +87,14 @@ Route::middleware(['auth', 'role:admin,super_admin'])
             Route::get('/{client}/json', [\App\Http\Controllers\Admin\ClientController::class, 'apiShow'])->name('json');
             // JSON API for listing all client sites (active), supports optional search and zone filter
             Route::get('/sites/json', [\App\Http\Controllers\Admin\ClientController::class, 'sitesJson'])->name('sites.json');
+
+            // QR Code helpers for Admin module (must not depend on control-room role middleware)
+            Route::get('/sites/{site}/qr-code', [\App\Http\Controllers\ControlRoom\ClientsController::class, 'siteQr'])
+                ->whereNumber('site')
+                ->name('sites.qr');
+            Route::get('/sites/{site}/qr-print', [\App\Http\Controllers\ControlRoom\ClientsController::class, 'siteQrPrint'])
+                ->whereNumber('site')
+                ->name('sites.qr-print');
             Route::get('/{client}/edit', [\App\Http\Controllers\Admin\ClientController::class, 'edit'])->name('edit');
             Route::put('/{client}', [\App\Http\Controllers\Admin\ClientController::class, 'update'])->name('update');
             Route::delete('/{client}', [\App\Http\Controllers\Admin\ClientController::class, 'destroy'])->name('destroy');
@@ -97,10 +114,12 @@ Route::middleware(['auth', 'role:admin,super_admin'])
             Route::post('/{client}/toggle-status', [\App\Http\Controllers\Admin\ClientController::class, 'toggleStatus'])->name('toggle-status');
 
             // Supervisor/Sergeant assignment
-            Route::post('/{client}/assign-supervisor', [\App\Http\Controllers\Admin\ClientController::class, 'assignSupervisor'])->name('assign-supervisor');
-            Route::post('/{client}/unassign-supervisor', [\App\Http\Controllers\Admin\ClientController::class, 'unassignSupervisor'])->name('unassign-supervisor');
-            Route::post('/{client}/assign-sergeant', [\App\Http\Controllers\Admin\ClientController::class, 'assignSergeant'])->name('assign-sergeant');
-            Route::post('/{client}/unassign-sergeant', [\App\Http\Controllers\Admin\ClientController::class, 'unassignSergeant'])->name('unassign-sergeant');
+            Route::middleware(['role:super_admin'])->group(function () {
+                Route::post('/{client}/assign-supervisor', [\App\Http\Controllers\Admin\ClientController::class, 'assignSupervisor'])->name('assign-supervisor');
+                Route::post('/{client}/unassign-supervisor', [\App\Http\Controllers\Admin\ClientController::class, 'unassignSupervisor'])->name('unassign-supervisor');
+                Route::post('/{client}/assign-sergeant', [\App\Http\Controllers\Admin\ClientController::class, 'assignSergeant'])->name('assign-sergeant');
+                Route::post('/{client}/unassign-sergeant', [\App\Http\Controllers\Admin\ClientController::class, 'unassignSergeant'])->name('unassign-sergeant');
+            });
         });
 
         // Services Management
@@ -147,11 +166,40 @@ Route::middleware(['auth', 'role:admin,super_admin'])
             Route::post('/{approval}/reject', [\App\Http\Controllers\Finance\ApprovalController::class, 'reject'])->name('reject');
         });
 
+        // Front Desk module (admin-scoped)
+        Route::get('/front-desk', [\App\Http\Controllers\Admin\FrontDeskController::class, 'index'])->name('front-desk');
+        Route::prefix('front-desk')->name('front-desk.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Admin\FrontDeskController::class, 'index'])->name('index');
+            Route::get('/me', [\App\Http\Controllers\Profile\ProfileDashboardController::class, 'index'])->name('profile');
+
+            // Visitors
+            Route::get('/visitors', [\App\Http\Controllers\Admin\VisitorController::class, 'index'])->name('visitors.index');
+            Route::post('/visitors', [\App\Http\Controllers\Admin\VisitorController::class, 'store'])->name('visitors.store');
+            Route::put('/visitors/{visitor}', [\App\Http\Controllers\Admin\VisitorController::class, 'update'])->name('visitors.update');
+            Route::delete('/visitors/{visitor}', [\App\Http\Controllers\Admin\VisitorController::class, 'destroy'])->name('visitors.destroy');
+            Route::get('/visitors/{visitor}/json', [\App\Http\Controllers\Admin\VisitorController::class, 'showJson'])->name('visitors.json');
+
+            // Tickets
+            Route::get('/tickets', [\App\Http\Controllers\Admin\TicketController::class, 'index'])->name('tickets.index');
+            Route::post('/tickets', [\App\Http\Controllers\Admin\TicketController::class, 'store'])->name('tickets.store');
+            Route::put('/tickets/{ticket}', [\App\Http\Controllers\Admin\TicketController::class, 'update'])->name('tickets.update');
+            Route::delete('/tickets/{ticket}', [\App\Http\Controllers\Admin\TicketController::class, 'destroy'])->name('tickets.destroy');
+            Route::get('/tickets/{ticket}/json', [\App\Http\Controllers\Admin\TicketController::class, 'showJson'])->name('tickets.json');
+
+            // Settings
+            Route::get('/settings', [\App\Http\Controllers\Admin\FrontDeskSettingController::class, 'index'])->name('settings');
+            Route::post('/settings', [\App\Http\Controllers\Admin\FrontDeskSettingController::class, 'update'])->name('settings.update');
+        });
+
         // Downs (admin can view same control-room UI for now)
         Route::get('/downs', [\App\Http\Controllers\ControlRoom\DownController::class, 'index'])->name('downs.index');
         Route::post('/downs', [\App\Http\Controllers\ControlRoom\DownController::class, 'store'])->name('downs.store');
         Route::post('/downs/{down}/escalate', [\App\Http\Controllers\ControlRoom\DownController::class, 'escalate'])->name('downs.escalate');
         Route::post('/downs/{down}/resolve', [\App\Http\Controllers\ControlRoom\DownController::class, 'resolve'])->name('downs.resolve');
+        Route::post('/downs/{down}/abscond', [\App\Http\Controllers\ControlRoom\DownController::class, 'abscond'])->name('downs.abscond');
+
+        // Guards search helper (used by Admin Downs to link a guard)
+        Route::get('/guards/search', [\App\Http\Controllers\ControlRoom\GuardsController::class, 'search'])->name('guards.search');
 
         // Admin Control Room dashboard
         Route::get('/control-room', [\App\Http\Controllers\Admin\ControlRoomController::class, 'dashboard'])->name('control-room.dashboard');
@@ -165,6 +213,8 @@ Route::middleware(['auth', 'role:admin,super_admin,business_dev,business_develop
     ->name('admin.')
     ->group(function () {
         Route::get('/business-dev', [\App\Http\Controllers\Admin\BusinessDevController::class, 'index'])->name('business-dev');
+
+        Route::get('/business-dev/me', [\App\Http\Controllers\Profile\ProfileDashboardController::class, 'index'])->name('business-dev.profile');
 
         Route::prefix('business-dev')->name('business-dev.')->group(function () {
             // Expose sites data to Business Dev module (read-only JSON for lookups/search)

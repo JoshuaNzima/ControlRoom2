@@ -40,6 +40,11 @@ export default function ClientShow() {
     window.open(url, '_blank', 'width=600,height=800');
   };
 
+  const printLandscapeQr = (site: any) => {
+    const url = route('control-room.clients.sites.qr-print', site.id) + '?layout=landscape';
+    window.open(url, '_blank', 'width=900,height=700');
+  };
+
   return (
     <ControlRoomLayout title={`Client • ${client.name}`}>
       <Head title={`Client • ${client.name}`} />
@@ -186,6 +191,16 @@ export default function ClientShow() {
                         >
                           <IconMapper name="Printer" size={14} />
                           Print
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => printLandscapeQr(site)}
+                          className="gap-1"
+                          title="Print in landscape format with prominent emergency hotline"
+                        >
+                          <IconMapper name="Printer" size={14} />
+                          Print Landscape
                         </Button>
                       </div>
                     </div>

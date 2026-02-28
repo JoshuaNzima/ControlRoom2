@@ -1,15 +1,77 @@
-import React from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { Head, Link, router } from '@inertiajs/react';
 import axios from 'axios';
 import AdminLayout from '@/Layouts/AdminLayout';
 import IconMapper from '@/Components/IconMapper';
 import { Card } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
+import { Badge } from '@/Components/ui/badge';
 import EditClientModal from '@/Components/Clients/EditClientModal';
 import ClientDetailsModal from '@/Components/Clients/ClientDetailsModal';
 import BulkImportClientsModal from '@/Components/Clients/BulkImportClientsModal';
 import AddClientModal from '@/Components/Clients/AddClientModal';
-import { Pagination } from '@/Components/ui/Pagination';
+import EmptyState from '@/Components/ui/empty-state';
+import { formatCurrencyMWK, formatDistanceToNow } from '@/Components/format';
+
+// Animated Counter Component
+const AnimatedCounter: React.FC<{ value: number; duration?: number }> = ({ value, duration = 1000 }) => {
+  const [count, setCount] = useState(0);
+  useEffect(() => {
+    let startTime: number;
+    let animationFrame: number;
+    const animate = (timestamp: number) => {
+      if (!startTime) startTime = timestamp;
+      const progress = Math.min((timestamp - startTime) / duration, 1);
+      setCount(Math.floor(progress * value));
+      if (progress < 1) animationFrame = requestAnimationFrame(animate);
+    };
+    animationFrame = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(animationFrame);
+  }, [value, duration]);
+  return <span>{count.toLocaleString()}</span>;
+};
+
+// StatCard Component
+const StatCard: React.FC<{
+  icon: React.ReactNode;
+  title: string;
+  value: number;
+  subtitle: string;
+  color: 'red' | 'blue' | 'green' | 'amber' | 'purple' | 'cyan';
+}> = ({ icon, title, value, subtitle, color }) => {
+  const colorMap = {
+    red: { bg: 'bg-red-50 dark:bg-red-950/20', border: 'border-red-200 dark:border-red-800', icon: 'bg-red-600 text-white', text: 'text-red-700 dark:text-red-300' },
+    blue: { bg: 'bg-blue-50 dark:bg-blue-950/20', border: 'border-blue-200 dark:border-blue-800', icon: 'bg-blue-600 text-white', text: 'text-blue-700 dark:text-blue-300' },
+    green: { bg: 'bg-emerald-50 dark:bg-emerald-950/20', border: 'border-emerald-200 dark:border-emerald-800', icon: 'bg-emerald-600 text-white', text: 'text-emerald-700 dark:text-emerald-300' },
+    amber: { bg: 'bg-amber-50 dark:bg-amber-950/20', border: 'border-amber-200 dark:border-amber-800', icon: 'bg-amber-600 text-white', text: 'text-amber-700 dark:text-amber-300' },
+    purple: { bg: 'bg-purple-50 dark:bg-purple-950/20', border: 'border-purple-200 dark:border-purple-800', icon: 'bg-purple-600 text-white', text: 'text-purple-700 dark:text-purple-300' },
+    cyan: { bg: 'bg-cyan-50 dark:bg-cyan-950/20', border: 'border-cyan-200 dark:border-cyan-800', icon: 'bg-cyan-600 text-white', text: 'text-cyan-700 dark:text-cyan-300' },
+  };
+  const colors = colorMap[color];
+  return (
+    <div className={`${colors.bg} ${colors.border} rounded-xl border p-4 transition-all duration-300 hover:scale-[1.02]`}>
+      <div className="flex items-start justify-between">
+        <div className={`${colors.icon} p-2.5 rounded-lg shadow-md`}>{icon}</div>
+      </div>
+      <div className="mt-3">
+        <p className="text-xl font-bold text-gray-900 dark:text-gray-100"><AnimatedCounter value={value} /></p>
+        <p className={`text-sm font-medium ${colors.text} mt-0.5`}>{title}</p>
+        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{subtitle}</p>
+      </div>
+    </div>
+  );
+};
+
+// Action Tile Component
+const ActionTile: React.FC<{ icon: React.ReactNode; title: string; description: string; color: string; onClick?: () => void }> = ({ icon, title, description, color, onClick }) => (
+  <button onClick={onClick} className="flex items-center gap-3 p-3 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:shadow-md transition-all text-left">
+    <div className={`${color} p-2.5 rounded-lg text-white shadow-md shrink-0`}>{icon}</div>
+    <div className="min-w-0">
+      <p className="font-medium text-sm text-gray-900 dark:text-gray-100 truncate">{title}</p>
+      <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{description}</p>
+    </div>
+  </button>
+);
 
 interface Client {
   id: number;
@@ -22,9 +84,16 @@ interface Client {
   total_due?: number;
   total_paid?: number;
   services_count?: number;
+  monthly_rate?: number;
   last_payment_date?: string;
   billing_start_date?: string;
 }
+
+const statusConfig: Record<string, { color: string; icon: string; label: string }> = {
+  active: { color: 'bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-500/20 dark:text-emerald-300 dark:border-emerald-500/40', icon: 'CheckCircle', label: 'Active' },
+  overdue: { color: 'bg-rose-100 text-rose-800 border-rose-200 dark:bg-rose-500/20 dark:text-rose-300 dark:border-rose-500/40', icon: 'AlertCircle', label: 'Overdue' },
+  inactive: { color: 'bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-700/40 dark:text-gray-300 dark:border-gray-600', icon: 'XCircle', label: 'Inactive' },
+};
 
 interface Filters {
   search?: string;
@@ -151,7 +220,27 @@ export default function ClientsIndex({ clients, filters, services = [], zones = 
     : null;
   const meta: any = Array.isArray(rawClients) ? defaultMeta : (rawClients?.meta ?? metaFromTop ?? defaultMeta);
 
-  const urlParams = React.useMemo(() => {
+  const [currentTime, setCurrentTime] = useState(new Date());
+  useEffect(() => { const timer = setInterval(() => setCurrentTime(new Date()), 60000); return () => clearInterval(timer); }, []);
+
+  const totalSites = clients.data.reduce((sum, client) => sum + (client.sites_count || 0), 0);
+  const totalServices = clients.data.reduce((sum, client) => sum + (client.services_count || 0), 0);
+
+  const statCards = useMemo(() => [
+    { icon: <IconMapper name="Users" size={20} />, title: 'Total Clients', value: clients.meta?.total || clients.data.length, subtitle: 'Registered clients', color: 'blue' as const },
+    { icon: <IconMapper name="MapPin" size={20} />, title: 'Total Sites', value: totalSites, subtitle: 'Managed locations', color: 'green' as const },
+    { icon: <IconMapper name="ShieldCheck" size={20} />, title: 'Active Services', value: totalServices, subtitle: 'Services provided', color: 'purple' as const },
+    { icon: <IconMapper name="DollarSign" size={20} />, title: 'Revenue', value: clients.data.reduce((sum, c) => sum + (c.total_due || 0), 0), subtitle: 'Total due', color: 'amber' as const },
+  ], [clients, totalSites, totalServices]);
+
+  const quickActions = [
+    { icon: <IconMapper name="Plus" size={18} />, title: 'Add Client', description: 'Register new client', color: 'bg-red-600', onClick: () => setShowAddClient(true) },
+    { icon: <IconMapper name="FileUp" size={18} />, title: 'Bulk Import', description: 'Import clients CSV', color: 'bg-blue-600', onClick: () => setShowBulkImport(true) },
+    { icon: <IconMapper name="RefreshCw" size={18} />, title: 'Refresh', description: 'Reload data', color: 'bg-emerald-600', onClick: () => router.reload() },
+    { icon: <IconMapper name="Filter" size={18} />, title: 'Filters', description: 'Advanced options', color: 'bg-purple-600', onClick: () => {} },
+  ];
+
+  const urlParams = useMemo(() => {
     if (typeof window === 'undefined') return {} as any;
     const p = new URLSearchParams(window.location.search);
     const o: any = {};
@@ -162,394 +251,342 @@ export default function ClientsIndex({ clients, filters, services = [], zones = 
   return (
     <AdminLayout title="Clients Management">
       <Head title="Clients" />
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Clients Management</h1>
-            <p className="text-gray-600 dark:text-gray-400">Manage clients, sites, and services</p>
-          </div>
-          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-            <Button variant="outline" asChild>
-              <Link href={route('admin.payments.index')}>
-                <IconMapper name="DollarSign" size={18} className="mr-2" />
-                View Payments
-              </Link>
-            </Button>
-            <Button
-              onClick={() => setShowAddClient(true)}
-              className="flex items-center gap-2 bg-coin-700 text-white hover:bg-coin-600 focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950"
-            >
-              <IconMapper name="Plus" size={18} />
-              Add Client
-            </Button>
-            <Button onClick={() => setShowBulkImport(true)} variant="outline">
-              <IconMapper name="FileUp" size={18} className="mr-2" />
-              Bulk Import
-            </Button>
+      
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+        {/* Hero Header */}
+        <div className="bg-gradient-to-br from-red-900 via-red-800 to-red-900 text-white">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 bg-white/10 rounded-lg backdrop-blur-sm">
+                    <IconMapper name="Users" size={24} className="text-white" />
+                  </div>
+                  <div>
+                    <h1 className="text-2xl md:text-3xl font-bold">Clients Management</h1>
+                    <p className="text-red-100 text-sm mt-0.5">Manage clients, sites, and services</p>
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <Button variant="outline" asChild className="bg-white/10 border-white/20 text-white hover:bg-white/20">
+                  <Link href={route('admin.payments.index')}>
+                    <IconMapper name="DollarSign" size={18} className="mr-2" />
+                    View Payments
+                  </Link>
+                </Button>
+                <Button
+                  onClick={() => setShowAddClient(true)}
+                  className="bg-white text-red-700 hover:bg-red-50"
+                >
+                  <IconMapper name="Plus" size={18} className="mr-2" />
+                  Add Client
+                </Button>
+                <div className="text-right hidden sm:block">
+                  <p className="text-2xl font-mono font-semibold">
+                    {currentTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                  </p>
+                  <p className="text-red-200 text-xs">
+                    {currentTime.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <Card className="p-6 bg-gradient-to-br from-coin-50 to-coin-100 border-coin-200 dark:from-coin-900/20 dark:to-coin-900/10 dark:border-coin-900/30">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-medium text-coin-900 dark:text-coin-100">Total Clients</h3>
-              <IconMapper name="Users" size={20} className="text-coin-600 dark:text-coin-300" />
-            </div>
-            <p className="text-2xl font-bold text-coin-900 dark:text-coin-100">{clients.meta?.total ?? clients.data.length}</p>
-            <p className="text-sm text-coin-700 dark:text-coin-200 mt-1">Active clients in the system</p>
-          </Card>
-
-          <Card className="p-6 bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-200 dark:from-emerald-900/20 dark:to-emerald-900/10 dark:border-emerald-900/30">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-medium text-emerald-900 dark:text-emerald-100">Total Sites</h3>
-              <IconMapper name="MapPin" size={20} className="text-emerald-600 dark:text-emerald-300" />
-            </div>
-            <p className="text-2xl font-bold text-emerald-900 dark:text-emerald-100">
-              {clients.data.reduce((sum, client) => sum + (client.sites_count || 0), 0)}
-            </p>
-            <p className="text-sm text-emerald-700 dark:text-emerald-200 mt-1">Managed locations</p>
-          </Card>
-
-          <Card className="p-6 bg-gradient-to-br from-coin-50 to-coin-100 border-coin-200 dark:from-coin-900/20 dark:to-coin-900/10 dark:border-coin-900/30">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-medium text-coin-900 dark:text-coin-100">Active Services</h3>
-              <IconMapper name="ShieldCheck" size={20} className="text-coin-600 dark:text-coin-300" />
-            </div>
-            <p className="text-2xl font-bold text-coin-900 dark:text-coin-100">
-              {clients.data.reduce((sum, client) => sum + (client.services_count || 0), 0)}
-            </p>
-            <p className="text-sm text-coin-700 dark:text-coin-200 mt-1">Services being provided</p>
-          </Card>
-        </div>
-
-        <Card className="p-6 mb-6 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800">
-          <div className="flex flex-col sm:flex-row gap-3 mb-4">
-            <div className="flex-1 relative">
-              <span className="absolute left-3 top-3 text-gray-400">
-                <IconMapper name="Search" size={20} />
-              </span>
-              <input
-                type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-                placeholder="Search clients by name, contact person, or email..."
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950"
-              />
-            </div>
-            <Button
-              onClick={handleSearch}
-              className="w-full sm:w-auto bg-coin-700 text-white hover:bg-coin-600 focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950"
-            >
-              <IconMapper name="Search" size={18} className="mr-2" />
-              Search
-            </Button>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          {/* Stats Grid */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6">
+            {statCards.map((stat, idx) => (
+              <StatCard key={idx} {...stat} />
+            ))}
           </div>
 
-          <div className="flex gap-2 flex-wrap">
-            <Button variant="outline" size="sm" onClick={() => handleSearch()}>All</Button>
-            <Button variant="outline" size="sm" onClick={() => router.get(route('admin.clients.index'), { status: 'active', per_page: perPage })}>Active</Button>
-            <Button variant="outline" size="sm" onClick={() => router.get(route('admin.clients.index'), { status: 'overdue', per_page: perPage })}>Overdue</Button>
-            <Button variant="outline" size="sm" onClick={() => router.get(route('admin.clients.index'), { status: 'inactive', per_page: perPage })}>Inactive</Button>
-            <div className="ml-2">
+          {/* Quick Actions */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+            {quickActions.map((action, idx) => (
+              <ActionTile key={idx} {...action} />
+            ))}
+          </div>
+
+          {/* Filters */}
+          <Card className="p-4 md:p-5 mb-6">
+            <div className="flex flex-col md:flex-row gap-3">
+              <div className="flex-1 relative">
+                <IconMapper name="Search" size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <input
+                  type="text"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+                  placeholder="Search clients by name, contact person, or email..."
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-red-500"
+                />
+              </div>
+              <Button onClick={handleSearch} className="bg-red-600 hover:bg-red-700">
+                <IconMapper name="Search" size={18} className="mr-2" />
+                Search
+              </Button>
+            </div>
+
+            <div className="flex flex-wrap gap-2 mt-4">
+              <Button variant="outline" size="sm" onClick={() => handleSearch()}>All</Button>
+              <Button variant="outline" size="sm" onClick={() => router.get(route('admin.clients.index'), { status: 'active', per_page: perPage })}>Active</Button>
+              <Button variant="outline" size="sm" onClick={() => router.get(route('admin.clients.index'), { status: 'overdue', per_page: perPage })}>Overdue</Button>
+              <Button variant="outline" size="sm" onClick={() => router.get(route('admin.clients.index'), { status: 'inactive', per_page: perPage })}>Inactive</Button>
               <select
-                className="px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950"
+                className="h-9 px-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm"
                 value={String(perPage)}
                 onChange={(e) => {
                   const v = Number(e.target.value);
                   setPerPage(v);
-                  // reset to first page when changing page size
                   router.get(route('admin.clients.index'), { per_page: v, page: 1 }, { preserveState: true });
                 }}
               >
-                <option value={10}>10</option>
-                <option value={20}>20</option>
-                <option value={50}>50</option>
-                <option value={100}>100</option>
+                <option value={10}>10/page</option>
+                <option value={20}>20/page</option>
+                <option value={50}>50/page</option>
+                <option value={100}>100/page</option>
               </select>
             </div>
-          </div>
-        </Card>
+          </Card>
 
-        <Card className="overflow-hidden bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800">
-          <div className="md:hidden divide-y divide-gray-200 dark:divide-gray-800">
-            {clients.data.length ? (
-              clients.data.map((client) => (
-                <div key={client.id} className="p-4 flex flex-col gap-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <button
-                        onClick={() => fetchClientAndView(client.id)}
-                        className="text-sm font-semibold text-gray-900 dark:text-gray-100 hover:text-coin-700 dark:hover:text-coin-300 break-words text-left focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950 rounded"
-                      >
-                        {client.name}
-                      </button>
-                      <div className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
-                        Since: {client.billing_start_date || 'Not set'}
-                      </div>
-                    </div>
-                    <span
-                      className={`shrink-0 px-3 py-1 rounded-full text-xs font-semibold ${
-                        client.status === 'active'
-                          ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-200'
-                          : client.status === 'overdue'
-                            ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200'
-                            : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200'
-                      }`}
-                    >
-                      {client.status || 'Active'}
-                    </span>
-                  </div>
+          {/* Clients List - Card Based */}
+          {clients.data.length === 0 ? (
+            <EmptyState
+              title="No clients found"
+              description={search ? "Try adjusting your search." : "Add your first client to get started."}
+              icon="Users"
+            />
+          ) : (
+            <div className="space-y-3">
+              {clients.data.map((client) => {
+                const status = statusConfig[client.status || 'active'] || statusConfig.active;
+                const balance = (client.total_due || 0) - (client.total_paid || 0);
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                    <div className="text-gray-700 dark:text-gray-300">
-                      <span className="font-medium text-gray-900 dark:text-gray-100">Contact:</span>{' '}
-                      <span className="break-words">{client.contact_person || 'N/A'}</span>
-                    </div>
-                    <div className="text-gray-700 dark:text-gray-300">
-                      <span className="font-medium text-gray-900 dark:text-gray-100">Phone:</span>{' '}
-                      <span className="break-words">{client.phone || 'No phone'}</span>
-                    </div>
-                    <div className="text-gray-700 dark:text-gray-300">
-                      <span className="font-medium text-gray-900 dark:text-gray-100">Email:</span>{' '}
-                      <span className="break-words">{client.email || 'No email'}</span>
-                    </div>
-                    <div className="text-gray-700 dark:text-gray-300">
-                      <span className="font-medium text-gray-900 dark:text-gray-100">Sites / Services:</span>{' '}
-                      <button
-                        onClick={() => fetchClientAndView(client.id)}
-                        className="font-semibold text-coin-700 dark:text-coin-300 hover:text-coin-600 focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950 rounded"
-                      >
-                        {(client.sites_count || 0)} / {(client.services_count || 0)}
-                      </button>
-                    </div>
-                  </div>
+                return (
+                  <Card
+                    key={client.id}
+                    className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer"
+                    onClick={() => fetchClientAndView(client.id)}
+                  >
+                    <div className="flex flex-col sm:flex-row">
+                      {/* Left accent bar based on status */}
+                      <div className={`w-full sm:w-1.5 ${
+                        client.status === 'overdue' ? 'bg-rose-500' :
+                        client.status === 'inactive' ? 'bg-gray-500' : 'bg-emerald-500'
+                      }`} />
 
-                  {client.last_payment_date && (
-                    <div className="text-xs text-gray-500 dark:text-gray-400">Last paid: {client.last_payment_date}</div>
-                  )}
+                      <div className="flex-1 p-4 sm:p-5">
+                        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              {/* Avatar */}
+                              <div className="w-10 h-10 bg-gradient-to-br from-red-600 to-red-700 rounded-lg flex items-center justify-center text-white font-bold shadow-sm shrink-0">
+                                {client.name.charAt(0).toUpperCase()}
+                              </div>
+                              <div>
+                                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                                  {client.name}
+                                </h3>
+                                <span className="text-xs text-gray-500 dark:text-gray-400">
+                                  Since {client.billing_start_date || 'Not set'}
+                                </span>
+                              </div>
+                              <Badge className={`${status.color} text-xs ml-2`}>
+                                <IconMapper name={status.icon} size={12} className="mr-1 inline" />
+                                {status.label}
+                              </Badge>
+                            </div>
 
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => fetchClientAndView(client.id)}
-                      disabled={loadingClientId === client.id}
-                      className="bg-white dark:bg-gray-950 dark:text-gray-100 dark:border-gray-700"
-                    >
-                      <IconMapper name="Eye" size={16} className="mr-2" />
-                      View
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => fetchClientAndEdit(client.id)}
-                      disabled={loadingClientId === client.id}
-                      className="bg-white dark:bg-gray-950 dark:text-gray-100 dark:border-gray-700"
-                    >
-                      {loadingClientId === client.id ? (
-                        <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path></svg>
-                      ) : (
-                        <>
-                          <IconMapper name="Pencil" size={16} className="mr-2" />
-                          Edit
-                        </>
-                      )}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => toggleClientStatus(client)}
-                      className={`bg-white dark:bg-gray-950 dark:border-gray-700 ${
-                        client.status === 'active'
-                          ? 'text-amber-600 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300'
-                          : 'text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300'
-                      }`}
-                    >
-                      <IconMapper name={client.status === 'active' ? 'PauseCircle' : 'PlayCircle'} size={16} className="mr-2" />
-                      {client.status === 'active' ? 'Deactivate' : 'Activate'}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => deleteClient(client)}
-                      className="bg-white dark:bg-gray-950 dark:text-gray-100 dark:border-gray-700"
-                    >
-                      <IconMapper name="Trash" size={16} className="mr-2 text-red-500" />
-                      Delete
-                    </Button>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="py-6 text-center text-gray-500 dark:text-gray-400 text-sm">No clients found.</div>
-            )}
-          </div>
+                            {/* Contact Info */}
+                            <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-600 dark:text-gray-400">
+                              {client.contact_person && (
+                                <span className="flex items-center gap-1">
+                                  <IconMapper name="User" size={14} />
+                                  {client.contact_person}
+                                </span>
+                              )}
+                              {client.phone && (
+                                <span className="flex items-center gap-1">
+                                  <IconMapper name="Phone" size={14} />
+                                  {client.phone}
+                                </span>
+                              )}
+                              {client.email && (
+                                <span className="flex items-center gap-1">
+                                  <IconMapper name="Mail" size={14} />
+                                  {client.email}
+                                </span>
+                              )}
+                            </div>
 
-          <div className="hidden md:block overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-800">
-              <thead className="bg-gray-50 dark:bg-gray-950">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Client</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Contact Info</th>
-                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Sites</th>
-                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Services</th>
-                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Status</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-800">
-                {clients.data.map((client) => (
-                  <tr key={client.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/40">
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-gradient-to-br from-coin-600 to-coin-700 rounded-lg flex items-center justify-center text-white font-bold shadow-sm">
-                          {client.name.charAt(0)}
+                            {/* Stats Row */}
+                            <div className="mt-3 flex flex-wrap items-center gap-4">
+                              <span className="inline-flex items-center gap-1.5 text-sm">
+                                <IconMapper name="MapPin" size={14} className="text-blue-500" />
+                                <span className="font-medium text-gray-900 dark:text-gray-100">{client.sites_count || 0}</span>
+                                <span className="text-gray-500 dark:text-gray-400">Sites</span>
+                              </span>
+                              <span className="inline-flex items-center gap-1.5 text-sm">
+                                <IconMapper name="ShieldCheck" size={14} className="text-purple-500" />
+                                <span className="font-medium text-gray-900 dark:text-gray-100">{client.services_count || 0}</span>
+                                <span className="text-gray-500 dark:text-gray-400">Services</span>
+                              </span>
+                              {client.monthly_rate ? (
+                                <span className="inline-flex items-center gap-1.5 text-sm">
+                                  <IconMapper name="DollarSign" size={14} className="text-amber-500" />
+                                  <span className="font-medium text-gray-900 dark:text-gray-100">
+                                    {formatCurrencyMWK(client.monthly_rate)}
+                                  </span>
+                                  <span className="text-gray-500 dark:text-gray-400">/month</span>
+                                </span>
+                              ) : null}
+                              {client.last_payment_date && (
+                                <span className="inline-flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400">
+                                  <IconMapper name="Clock" size={14} />
+                                  Paid {formatDistanceToNow(client.last_payment_date)}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Right side: Balance & Actions */}
+                          <div className="flex flex-col items-end gap-3">
+                            {/* Balance Indicator */}
+                            {balance > 0 ? (
+                              <div className="text-right">
+                                <div className="text-xs text-gray-500 dark:text-gray-400">Outstanding</div>
+                                <div className="text-lg font-bold text-rose-600 dark:text-rose-400">
+                                  {formatCurrencyMWK(balance)}
+                                </div>
+                              </div>
+                            ) : balance < 0 ? (
+                              <div className="text-right">
+                                <div className="text-xs text-gray-500 dark:text-gray-400">Credit</div>
+                                <div className="text-lg font-bold text-emerald-600 dark:text-emerald-400">
+                                  {formatCurrencyMWK(Math.abs(balance))}
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="text-right">
+                                <div className="text-xs text-gray-500 dark:text-gray-400">Balance</div>
+                                <div className="text-lg font-bold text-emerald-600 dark:text-emerald-400">
+                                  Paid Up
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Action Buttons */}
+                            <div className="flex items-center gap-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  fetchClientAndView(client.id);
+                                }}
+                                disabled={loadingClientId === client.id}
+                              >
+                                <IconMapper name="Eye" size={16} />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  fetchClientAndEdit(client.id);
+                                }}
+                                disabled={loadingClientId === client.id}
+                              >
+                                {loadingClientId === client.id ? (
+                                  <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path></svg>
+                                ) : (
+                                  <IconMapper name="Pencil" size={16} />
+                                )}
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  toggleClientStatus(client);
+                                }}
+                                className={client.status === 'active' ? 'text-amber-600' : 'text-emerald-600'}
+                                title={client.status === 'active' ? 'Deactivate' : 'Activate'}
+                              >
+                                <IconMapper name={client.status === 'active' ? 'PauseCircle' : 'PlayCircle'} size={16} />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  deleteClient(client);
+                                }}
+                                className="text-red-500"
+                              >
+                                <IconMapper name="Trash" size={16} />
+                              </Button>
+                            </div>
+                          </div>
                         </div>
-                        <div>
-                          <button onClick={() => fetchClientAndView(client.id)} className="font-medium text-gray-900 dark:text-gray-100 hover:text-coin-700 dark:hover:text-coin-300 block text-left focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950 rounded">
-                            {client.name}
-                          </button>
-                          <span className="text-xs text-gray-500 dark:text-gray-400">
-                            Since: {client.billing_start_date || 'Not set'}
-                          </span>
-                        </div>
                       </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="text-sm">
-                        <div className="font-medium text-gray-900 dark:text-gray-100">{client.contact_person || 'N/A'}</div>
-                        <div className="text-gray-500 dark:text-gray-400">{client.phone || 'No phone'}</div>
-                        <div className="text-gray-500 dark:text-gray-400">{client.email || 'No email'}</div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <button onClick={() => fetchClientAndView(client.id)} className="inline-flex items-center gap-1 text-sm font-medium text-coin-700 dark:text-coin-300 hover:text-coin-600 focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950 rounded">
-                        <span>{client.sites_count || 0}</span>
-                        <IconMapper name="ChevronRight" size={16} />
-                      </button>
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <button onClick={() => fetchClientAndView(client.id)} className="inline-flex items-center gap-1 text-sm font-medium text-coin-700 dark:text-coin-300 hover:text-coin-600 focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950 rounded">
-                        <span>{client.services_count || 0}</span>
-                        <IconMapper name="ChevronRight" size={16} />
-                      </button>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex flex-col items-center gap-1">
-                        <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                          client.status === 'active' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-200' :
-                          client.status === 'overdue' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200' :
-                          'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200'
-                        }`}>
-                          {client.status || 'Active'}
-                        </span>
-                        {client.last_payment_date && (
-                          <span className="text-xs text-gray-500 dark:text-gray-400">
-                            Last paid: {client.last_payment_date}
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center justify-end gap-2">
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          onClick={() => fetchClientAndView(client.id)}
-                          disabled={loadingClientId === client.id}
-                          className="text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
-                        >
-                          <IconMapper name="Eye" size={16} />
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          onClick={() => fetchClientAndEdit(client.id)}
-                          disabled={loadingClientId === client.id}
-                          className="text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
-                        >
-                          {loadingClientId === client.id ? (
-                            <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path></svg>
-                          ) : (
-                            <IconMapper name="Pencil" size={16} />
-                          )}
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          onClick={() => toggleClientStatus(client)}
-                          className={`${
-                            client.status === 'active'
-                              ? 'text-amber-600 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-900/20'
-                              : 'text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/20'
-                          }`}
-                          title={client.status === 'active' ? 'Deactivate client' : 'Activate client'}
-                        >
-                          <IconMapper name={client.status === 'active' ? 'PauseCircle' : 'PlayCircle'} size={16} />
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          onClick={() => deleteClient(client)}
-                          className="text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
-                        >
-                          <IconMapper name="Trash" size={16} className="text-red-500" />
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </Card>
+                    </div>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
 
-        <div className="mt-4">
-          <Pagination
-            currentPage={meta.current_page}
-            lastPage={meta.last_page}
-            total={meta.total}
-            perPage={meta.per_page}
-            from={meta.from}
-            to={meta.to}
-            baseUrl={route('admin.clients.index')}
-            filters={{ ...urlParams, search, per_page: perPage }}
+          {/* Pagination */}
+          {clients.meta && clients.meta.last_page > 1 && (
+            <div className="mt-6 flex flex-wrap justify-center gap-2">
+              {clients.links?.map((link: any, idx: number) => (
+                <Button
+                  key={idx}
+                  variant={link.active ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => link.url && router.get(link.url, {}, { preserveState: true })}
+                  disabled={!link.url}
+                  className={link.active ? 'bg-red-600 hover:bg-red-700' : ''}
+                  dangerouslySetInnerHTML={{ __html: link.label }}
+                />
+              ))}
+            </div>
+          )}
+          {editingClient && (
+            <EditClientModal
+              client={editingClient}
+              open={true}
+              services={services}
+              onClose={() => setEditingClient(null)}
+            />
+          )}
+          {viewingClient && (
+            <ClientDetailsModal
+              client={viewingClient}
+              open={true}
+              services={services}
+              onClientUpdated={(c: any) => {
+                setViewingClient(c);
+                router.reload({ only: ['clients'] });
+              }}
+              onClose={() => setViewingClient(null)}
+            />
+          )}
+          <BulkImportClientsModal
+            open={showBulkImport}
+            onClose={() => setShowBulkImport(false)}
+          />
+          <AddClientModal
+            open={showAddClient}
+            onClose={() => setShowAddClient(false)}
+            services={services}
+            zones={zones}
           />
         </div>
-
-        {editingClient && (
-          <EditClientModal
-            client={editingClient}
-            open={true}
-            services={services}
-            onClose={() => setEditingClient(null)}
-          />
-        )}
-
-        {viewingClient && (
-          <ClientDetailsModal
-            client={viewingClient}
-            open={true}
-            services={services}
-            onClientUpdated={(c: any) => {
-              setViewingClient(c);
-              router.reload({ only: ['clients'] });
-            }}
-            onClose={() => setViewingClient(null)}
-          />
-        )}
-        <BulkImportClientsModal
-          open={showBulkImport}
-          onClose={() => setShowBulkImport(false)}
-        />
-        <AddClientModal
-          open={showAddClient}
-          onClose={() => setShowAddClient(false)}
-          services={services}
-          zones={zones}
-        />
       </div>
     </AdminLayout>
   );

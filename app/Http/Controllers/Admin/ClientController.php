@@ -46,6 +46,10 @@ class ClientController extends Controller
             'site_type' => 'nullable|string|max:50',
         ]);
 
+        if (!isset($validated['site_type']) || $validated['site_type'] === null || $validated['site_type'] === '') {
+            $validated['site_type'] = 'residential';
+        }
+
         $site->update($validated);
 
         if ($request->wantsJson() || $request->ajax()) {
@@ -85,7 +89,10 @@ class ClientController extends Controller
         $zones = \App\Models\Zone::orderBy('name')->get(['id', 'name']);
 
         // Get supervisors and sergeants for assignment
-        $supervisors = \App\Models\User::role('supervisor')->select(['id','name'])->orderBy('name')->get();
+        $supervisors = collect();
+        if (\Spatie\Permission\Models\Role::where('name', 'supervisor')->where('guard_name', 'web')->exists()) {
+            $supervisors = \App\Models\User::role('supervisor')->select(['id','name'])->orderBy('name')->get();
+        }
         $sergeants = \App\Models\Guards\Guard::select(['id','name','position'])
             ->where('status','active')
             ->where('position', 'sergeant')
@@ -327,8 +334,12 @@ class ClientController extends Controller
             $client->save();
         }
 
-        return redirect()->route('admin.clients.index')
-            ->withSuccess('Client updated successfully.');
+        $referer = (string) $request->headers->get('referer', '');
+        if ($referer && str_contains($referer, '/superadmin/')) {
+            return redirect()->back()->withSuccess('Client updated successfully.');
+        }
+
+        return redirect()->route('admin.clients.index')->withSuccess('Client updated successfully.');
     }
 
     // Update just the services/pivot for a client (custom prices)
@@ -386,6 +397,10 @@ class ClientController extends Controller
             'zone_id' => 'nullable|integer|exists:zones,id',
             'site_type' => 'nullable|string|max:50',
         ]);
+
+        if (!isset($validated['site_type']) || $validated['site_type'] === null || $validated['site_type'] === '') {
+            $validated['site_type'] = 'residential';
+        }
 
         $client->sites()->create($validated);
 

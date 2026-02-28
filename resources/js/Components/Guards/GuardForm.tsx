@@ -85,7 +85,7 @@ export default function GuardForm({
     children_names: (initialData as any).children_names || '',
     notes: initialData.notes || '',
     status: initialData.status || 'active',
-    employee_role: (initialData as any).employee_role || 'guard',
+    position: (initialData as any).position || 'guard',
     default_off_day: (initialData as any).default_off_day ?? '',
   });
 
@@ -493,16 +493,17 @@ export default function GuardForm({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Employee Role</label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Position *</label>
           <select
-            value={(data.employee_role as any) || 'guard'}
-            onChange={handleChange('employee_role')}
-            className={`w-full px-4 py-2 border rounded-lg focus:ring-2 ${err('employee_role') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-red-500'}`}
+            value={(data.position as any) || 'guard'}
+            onChange={handleChange('position')}
+            className={`w-full px-4 py-2 border rounded-lg focus:ring-2 ${err('position') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-red-500'}`}
           >
             <option value="guard">Guard</option>
-            <option value="driver">Driver</option>
+            <option value="supervisor">Supervisor</option>
+            <option value="sergeant">Sergeant</option>
           </select>
-          {err('employee_role') && <p className="text-red-600 text-sm mt-1">{err('employee_role')}</p>}
+          {err('position') && <p className="text-red-600 text-sm mt-1">{err('position')}</p>}
         </div>
 
         <div>

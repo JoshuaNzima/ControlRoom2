@@ -73,7 +73,7 @@ class TraineeController extends Controller
             'regimens' => $regimens,
             'zones' => $zones,
             'clients' => $clients,
-            'minTrainingDays' => 10,
+            'minTrainingDays' => 5,
         ]);
     }
 

@@ -114,7 +114,7 @@ export default function FrontOfficeLayout({ title, children, user }: Props) {
                   <IconMapper name="moon" className="h-5 w-5" />
                 )}
               </button>
-              <Link href={route('profile.dashboard')} className="inline-flex items-center justify-center rounded-md bg-gray-800 text-white hover:bg-gray-700 px-2 py-2 sm:px-3 sm:py-1.5 text-sm">
+              <Link href={route('front-office.profile')} className="inline-flex items-center justify-center rounded-md bg-gray-800 text-white hover:bg-gray-700 px-2 py-2 sm:px-3 sm:py-1.5 text-sm">
                 <IconMapper name="user" className="h-5 w-5 sm:hidden" />
                 <span className="hidden sm:inline">My Profile</span>
               </Link>

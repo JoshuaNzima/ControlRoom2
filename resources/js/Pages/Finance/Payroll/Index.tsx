@@ -1,5 +1,5 @@
 import React from 'react';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import PayrollLayout from '@/Layouts/PayrollLayout';
 
 interface Run {
@@ -13,7 +13,11 @@ interface Run {
 }
 
 interface Props {
-  runs: { data: Run[] };
+  runs: { 
+    data: Run[];
+    links?: Array<{ url: string | null; label: string; active: boolean }>;
+    meta?: { current_page: number; last_page: number; total?: number };
+  };
 }
 
 export default function PayrollIndex({ runs }: Props) {
@@ -51,6 +55,22 @@ export default function PayrollIndex({ runs }: Props) {
             ))}
           </tbody>
         </table>
+        {/* Pagination */}
+        {(runs as any)?.links && (runs as any).meta?.last_page > 1 && (
+          <div className="p-4 border-t dark:border-gray-700 flex flex-wrap gap-2 items-center justify-between">
+            <div className="text-sm text-gray-600 dark:text-gray-400">Page {(runs as any).meta?.current_page ?? ''} of {(runs as any).meta?.last_page ?? ''}</div>
+            <div className="flex flex-wrap gap-2">
+              {(runs as any).links?.filter((l: any) => l.url).map((l: any, idx: number) => (
+                <button
+                  key={idx}
+                  className={`px-3 py-1 rounded border dark:border-gray-700 ${l.active ? 'bg-red-600 text-white' : 'bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200'}`}
+                  onClick={() => router.get(l.url, {}, { preserveScroll: true, preserveState: true })}
+                  dangerouslySetInnerHTML={{ __html: l.label }}
+                />
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </PayrollLayout>
   );

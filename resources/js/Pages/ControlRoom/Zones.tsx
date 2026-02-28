@@ -1,10 +1,13 @@
 import React from 'react';
-import { Head, useForm, usePage } from '@inertiajs/react';
+import { Head, useForm, usePage, router } from '@inertiajs/react';
 import ControlRoomLayout from '@/Layouts/ControlRoomLayout';
 import { Card, CardContent, CardHeader } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import { Badge } from '@/Components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/Components/ui/dialog';
+import { StatCard } from '@/Components/StatCard';
+import { ActionTile } from '@/Components/ActionTile';
+import IconMapper from '@/Components/IconMapper';
 import { User } from '@/types';
 
 interface ZoneItem { id: number; name: string; code: string; description?: string | null; status: 'active' | 'inactive' | 'understaffed'; required_guard_count?: number; target_sites_count?: number; coverage_rate?: number; coverage?: number; active_guard_count?: number; sites_count?: number; commander_id?: number | null; commander_name?: string | null }
@@ -128,6 +131,94 @@ const Zones = ({ auth, zones: zonesProp = [], commanders = [], sites = [], guard
       <Head title="Zone Management" />
 
       <div className="space-y-6">
+        {/* Hero Header */}
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-red-700 via-red-600 to-rose-600 text-white shadow-2xl">
+          <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg%20width%3D%2260%22%20height%3D%2260%22%20viewBox%3D%220%200%2060%2060%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%3E%3Cg%20fill%3D%22none%22%20fill-rule%3D%22evenodd%22%3E%3Cg%20fill%3D%22%23ffffff%22%20fill-opacity%3D%220.05%22%3E%3Cpath%20d%3D%22M36%2034v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6%2034v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6%204V0H4v4H0v2h4v4h2V6h4V4H6z%22/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] opacity-20" />
+          <div className="relative p-6 sm:p-8">
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+              <div className="flex items-center gap-4">
+                <div className="p-4 bg-white/10 rounded-xl backdrop-blur-sm">
+                  <IconMapper name="Map" size={32} />
+                </div>
+                <div>
+                  <h1 className="text-2xl sm:text-3xl font-bold">Zone Management</h1>
+                  <p className="text-red-100 mt-1">Manage zones, assignments, and coverage</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="px-4 py-2 bg-white/10 rounded-lg backdrop-blur-sm">
+                  <p className="text-xs text-red-200">Total Zones</p>
+                  <p className="text-lg font-semibold">{zones.length}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* StatCards */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <StatCard
+            icon={<IconMapper name="MapPin" size={24} />}
+            title="Total Zones"
+            value={zones.length}
+            subtitle="All zones"
+            color="blue"
+          />
+          <StatCard
+            icon={<IconMapper name="Activity" size={24} />}
+            title="Active Zones"
+            value={zones.filter((z: ZoneItem) => z.status === 'active').length}
+            subtitle="Operational"
+            color="green"
+          />
+          <StatCard
+            icon={<IconMapper name="Users" size={24} />}
+            title="Total Guards"
+            value={zones.reduce((sum: number, z: ZoneItem) => sum + (z.active_guard_count ?? 0), 0)}
+            subtitle="Across all zones"
+            color="purple"
+          />
+          <StatCard
+            icon={<IconMapper name="Building2" size={24} />}
+            title="Total Sites"
+            value={zones.reduce((sum: number, z: ZoneItem) => sum + (z.sites_count ?? 0), 0)}
+            subtitle="Assigned locations"
+            color="amber"
+          />
+        </div>
+
+        {/* Quick Actions */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <ActionTile
+            icon={<IconMapper name="Plus" size={18} />}
+            title="Add Zone"
+            description="Create new zone"
+            color="bg-red-600"
+            onClick={startCreate}
+          />
+          <ActionTile
+            icon={<IconMapper name="UserPlus" size={18} />}
+            title="Assign Guards"
+            description="Zone assignments"
+            color="bg-blue-600"
+            href={route('control-room.zones.assign', zones[0]?.id || 1)}
+          />
+          <ActionTile
+            icon={<IconMapper name="BarChart3" size={18} />}
+            title="Zone Reports"
+            description="View analytics"
+            color="bg-emerald-600"
+            href={route('control-room.zones.reports', zones[0]?.id || 1)}
+          />
+          <ActionTile
+            icon={<IconMapper name="Map" size={18} />}
+            title="Zone Map"
+            description="Visual overview"
+            color="bg-purple-600"
+            href={route('control-room.zones.map', zones[0]?.id || 1)}
+          />
+        </div>
+
         {/* Filters */}
         <Card className="dark:bg-gray-800 dark:border-gray-700">
           <CardContent className="p-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -232,64 +323,6 @@ const Zones = ({ auth, zones: zonesProp = [], commanders = [], sites = [], guard
             </div>
           </CardContent>
         </Card>
-        {/* Zone Statistics */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card className="dark:bg-gray-800 dark:border-gray-700">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Zones</p>
-                  <p className="text-2xl font-bold text-coin-700 dark:text-coin-200">{zones.length}</p>
-                </div>
-                <div className="h-8 w-8 bg-coin-100 dark:bg-coin-900/20 rounded-full flex items-center justify-center">
-                  <span className="text-coin-700 dark:text-coin-200">🗺️</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="dark:bg-gray-800 dark:border-gray-700">
-            <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Active Zones</p>
-                  <p className="text-2xl font-bold text-green-600 dark:text-green-400">{zones.filter((z: ZoneItem) => z.status === 'active').length}</p>
-                </div>
-                <div className="h-8 w-8 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center">
-                  <span className="text-green-600 dark:text-green-400">✅</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="dark:bg-gray-800 dark:border-gray-700">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Guards</p>
-                  <p className="text-2xl font-bold text-coin-700 dark:text-coin-200">{zones.reduce((sum: number, z: ZoneItem) => sum + (z.active_guard_count ?? 0), 0)}</p>
-                </div>
-                <div className="h-8 w-8 bg-coin-100 dark:bg-coin-900/20 rounded-full flex items-center justify-center">
-                  <span className="text-coin-700 dark:text-coin-200">👮</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="dark:bg-gray-800 dark:border-gray-700">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Sites</p>
-                  <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">{zones.reduce((sum: number, z: ZoneItem) => sum + (z.sites_count ?? 0), 0)}</p>
-                </div>
-                <div className="h-8 w-8 bg-orange-100 dark:bg-orange-900/20 rounded-full flex items-center justify-center">
-                  <span className="text-orange-600 dark:text-orange-400">🏢</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
 
         {/* Zone List */}
         <Card className="dark:bg-gray-800 dark:border-gray-700">
@@ -357,33 +390,22 @@ const Zones = ({ auth, zones: zonesProp = [], commanders = [], sites = [], guard
               ))}
             </div>
           </CardContent>
-        </Card>
-
-        {/* Quick Actions */}
-        <Card className="dark:bg-gray-800 dark:border-gray-700">
-          <CardHeader>
-            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Zone Management</h3>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <Button variant="outline" className="h-12 flex flex-col items-center justify-center space-y-1 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
-                <span className="text-lg">➕</span>
-                <span className="text-sm">Add Zone</span>
-              </Button>
-              <Button variant="outline" className="h-12 flex flex-col items-center justify-center space-y-1 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
-                <span className="text-lg">👮</span>
-                <span className="text-sm">Assign Guards</span>
-              </Button>
-              <Button variant="outline" className="h-12 flex flex-col items-center justify-center space-y-1 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
-                <span className="text-lg">📊</span>
-                <span className="text-sm">Zone Reports</span>
-              </Button>
-              <Button variant="outline" className="h-12 flex flex-col items-center justify-center space-y-1 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
-                <span className="text-lg">🗺️</span>
-                <span className="text-sm">Zone Map</span>
-              </Button>
+          {/* Pagination */}
+          {(zones as any)?.links && (zones as any).meta?.last_page > 1 && (
+            <div className="p-4 border-t dark:border-gray-700 flex flex-wrap gap-2 items-center justify-between">
+              <div className="text-sm text-gray-600 dark:text-gray-400">Page {(zones as any).meta?.current_page ?? ''} of {(zones as any).meta?.last_page ?? ''}</div>
+              <div className="flex flex-wrap gap-2">
+                {(zones as any).links.filter((l: any) => l.url).map((l: any, idx: number) => (
+                  <button
+                    key={idx}
+                    className={`px-3 py-1 rounded border dark:border-gray-700 ${l.active ? 'bg-coin-600 text-white' : 'bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200'}`}
+                    onClick={() => router.get(l.url, {}, { preserveScroll: true, preserveState: true })}
+                    dangerouslySetInnerHTML={{ __html: l.label }}
+                  />
+                ))}
+              </div>
             </div>
-          </CardContent>
+          )}
         </Card>
 
         {/* Quick Assign Modal */}

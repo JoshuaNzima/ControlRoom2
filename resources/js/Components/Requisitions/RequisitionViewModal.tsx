@@ -3,6 +3,25 @@ import Modal from '@/Components/Modal';
 import { Link, router, useForm, usePage } from '@inertiajs/react';
 import { formatCurrencyMWK } from '@/Components/format';
 import IconMapper from '@/Components/IconMapper';
+import { CheckCircle, XCircle, DollarSign, Loader2 } from 'lucide-react';
+
+type RequisitionItem = {
+  id: number;
+  description: string;
+  category: string;
+  quantity: number;
+  unit_price: number | null;
+  amount: number;
+  status: 'pending' | 'approved' | 'declined' | 'funded' | 'disbursed';
+  approved_by?: number | null;
+  approved_at?: string | null;
+  disbursed_by?: number | null;
+  disbursed_at?: string | null;
+  notes_admin?: string | null;
+  notes_disbursement?: string | null;
+  approvedBy?: { id: number; name: string } | null;
+  disbursedBy?: { id: number; name: string } | null;
+};
 
 type Props = {
   requisitionId: number | null;
@@ -29,6 +48,7 @@ export default function RequisitionViewModal({ requisitionId, open, onClose, ini
   const resubmitForm = useForm<any>({ title: '', description: '', needed_by: '', amount: '' });
   const editForm = useForm<any>({ title: '', description: '', needed_by: '', amount: '', category: 'general' });
   const attachForm = useForm<any>({ attachments: [] as any });
+  const [processingItems, setProcessingItems] = React.useState<Record<number, boolean>>({});
 
   React.useEffect(() => {
     if (!open || !requisitionId) return;
@@ -91,7 +111,53 @@ export default function RequisitionViewModal({ requisitionId, open, onClose, ini
     (resubmitForm as any).reset();
     (editForm as any).reset();
     (attachForm as any).reset();
+    setProcessingItems({});
     onClose();
+  };
+
+  const handleItemAction = async (itemId: number, action: 'approve' | 'decline' | 'disburse', notes?: string) => {
+    if (!req) return;
+    setProcessingItems(prev => ({ ...prev, [itemId]: true }));
+
+    try {
+      const response = await fetch(route(`requisitions.items.${action}`, [req.id, itemId]), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '',
+        },
+        body: JSON.stringify({ [`notes_${action === 'disburse' ? 'disbursement' : 'admin'}`]: notes }),
+      });
+
+      if (response.ok) {
+        // Refresh requisition data
+        const refreshed = await fetch(route('requisitions.show', req.id), {
+          headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+        }).then(r => r.json());
+        setReq(refreshed);
+        router.reload();
+      }
+    } catch (error) {
+      console.error('Item action failed:', error);
+    } finally {
+      setProcessingItems(prev => ({ ...prev, [itemId]: false }));
+    }
+  };
+
+  const getItemStatusColor = (status: string) => {
+    switch (status) {
+      case 'pending':
+        return 'bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-500/20 dark:text-yellow-300 dark:border-yellow-500/40';
+      case 'approved':
+      case 'funded':
+        return 'bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-500/20 dark:text-emerald-300 dark:border-emerald-500/40';
+      case 'declined':
+        return 'bg-rose-100 text-rose-800 border-rose-200 dark:bg-rose-500/20 dark:text-rose-300 dark:border-rose-500/40';
+      case 'disbursed':
+        return 'bg-indigo-100 text-indigo-800 border-indigo-200 dark:bg-indigo-500/20 dark:text-indigo-300 dark:border-indigo-500/40';
+      default:
+        return 'bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-700/40 dark:text-gray-300 dark:border-gray-600';
+    }
   };
 
   return (
@@ -240,6 +306,127 @@ export default function RequisitionViewModal({ requisitionId, open, onClose, ini
                 </div>
               </div>
             </section>
+
+            {/* Inline Items Section */}
+            {Array.isArray(req?.items) && req.items.length > 0 && (
+              <section className="bg-gray-50 dark:bg-gray-900/60 border border-gray-200 dark:border-gray-800 rounded-lg p-3 sm:p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-xs font-semibold text-gray-700 dark:text-gray-300">Line Items ({req.items.length})</h3>
+                  <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
+                    Total: {formatCurrencyMWK(req.items.reduce((sum: number, item: RequisitionItem) => sum + (Number(item.amount) || 0), 0))}
+                  </span>
+                </div>
+                <div className="space-y-2">
+                  {req.items.map((item: RequisitionItem) => (
+                    <div
+                      key={item.id}
+                      className="rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-950 p-3"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+                              {item.description}
+                            </p>
+                            <span
+                              className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide border ${getItemStatusColor(item.status)}`}
+                            >
+                              {item.status}
+                            </span>
+                          </div>
+                          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500 dark:text-gray-400">
+                            <span className="capitalize">{item.category.replace('_', ' ')}</span>
+                            <span>•</span>
+                            <span>Qty: {item.quantity}</span>
+                            {item.unit_price != null && (
+                              <>
+                                <span>•</span>
+                                <span>Unit: {formatCurrencyMWK(item.unit_price)}</span>
+                              </>
+                            )}
+                            <span>•</span>
+                            <span className="font-medium text-gray-700 dark:text-gray-300">
+                              {formatCurrencyMWK(item.amount)}
+                            </span>
+                          </div>
+                          {(item.notes_admin || item.notes_disbursement) && (
+                            <div className="mt-2 text-xs text-gray-600 dark:text-gray-400 space-y-1">
+                              {item.notes_admin && (
+                                <p><span className="font-medium">Admin note:</span> {item.notes_admin}</p>
+                              )}
+                              {item.notes_disbursement && (
+                                <p><span className="font-medium">Disbursement note:</span> {item.notes_disbursement}</p>
+                              )}
+                            </div>
+                          )}
+                          {(item.approvedBy || item.disbursedBy) && (
+                            <div className="mt-1 text-[11px] text-gray-500 dark:text-gray-500">
+                              {item.approvedBy && (
+                                <span>Approved by {item.approvedBy.name}</span>
+                              )}
+                              {item.approvedBy && item.disbursedBy && <span> • </span>}
+                              {item.disbursedBy && (
+                                <span>Disbursed by {item.disbursedBy.name}</span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Item Actions */}
+                        <div className="flex flex-col items-end gap-1">
+                          {/* Admin Actions */}
+                          {isAdmin && item.status === 'pending' && (
+                            <div className="flex items-center gap-1">
+                              <button
+                                onClick={() => handleItemAction(item.id, 'approve')}
+                                disabled={processingItems[item.id]}
+                                className="inline-flex items-center rounded-md bg-emerald-600/10 p-1.5 text-emerald-600 hover:bg-emerald-600/20 dark:bg-emerald-500/10 dark:text-emerald-400 dark:hover:bg-emerald-500/20 disabled:opacity-60"
+                                title="Approve item"
+                              >
+                                {processingItems[item.id] ? (
+                                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                ) : (
+                                  <CheckCircle className="h-3.5 w-3.5" />
+                                )}
+                              </button>
+                              <button
+                                onClick={() => handleItemAction(item.id, 'decline')}
+                                disabled={processingItems[item.id]}
+                                className="inline-flex items-center rounded-md bg-rose-600/10 p-1.5 text-rose-600 hover:bg-rose-600/20 dark:bg-rose-500/10 dark:text-rose-400 dark:hover:bg-rose-500/20 disabled:opacity-60"
+                                title="Decline item"
+                              >
+                                {processingItems[item.id] ? (
+                                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                ) : (
+                                  <XCircle className="h-3.5 w-3.5" />
+                                )}
+                              </button>
+                            </div>
+                          )}
+
+                          {/* Asset Manager Disburse Action */}
+                          {isAssetManager && (item.status === 'approved' || item.status === 'funded') && req?.batch?.status === 'acknowledged' && (
+                            <button
+                              onClick={() => handleItemAction(item.id, 'disburse')}
+                              disabled={processingItems[item.id]}
+                              className="inline-flex items-center gap-1 rounded-md bg-indigo-600/10 px-2 py-1 text-xs font-medium text-indigo-600 hover:bg-indigo-600/20 dark:bg-indigo-500/10 dark:text-indigo-400 dark:hover:bg-indigo-500/20 disabled:opacity-60"
+                              title="Mark as disbursed"
+                            >
+                              {processingItems[item.id] ? (
+                                <Loader2 className="h-3 w-3 animate-spin" />
+                              ) : (
+                                <DollarSign className="h-3 w-3" />
+                              )}
+                              Disburse
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
 
             {(req.notes_admin || req.notes_disbursement) && (
               <section className="bg-gray-50 dark:bg-gray-900/60 border border-gray-200 dark:border-gray-800 rounded-lg p-3 sm:p-4">

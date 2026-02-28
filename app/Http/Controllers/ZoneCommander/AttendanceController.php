@@ -171,8 +171,7 @@ class AttendanceController extends Controller
 			'guard_id' => ['required','integer','exists:guards,id'],
 			'client_site_id' => ['required','integer','exists:client_sites,id'],
 			'notes' => ['nullable','string','max:500'],
-			'time' => ['nullable','date_format:H:i'],
-			'photo' => ['required','image','max:5120'],
+			'photo' => ['nullable','image','max:5120'],
 		]);
 
 		$user = Auth::user();
@@ -208,20 +207,121 @@ class AttendanceController extends Controller
 			abort(403, 'Site not in your zone');
 		}
 
-		$checkOutTime = $validated['time']
-			? \Carbon\Carbon::parse(today()->toDateString() . ' ' . $validated['time'])
-			: now();
-		$path = $request->file('photo')->store('attendance/'.now()->format('Y-m-d'), 'public');
+		$checkOutTime = now();
+		$path = $request->hasFile('photo') ? $request->file('photo')->store('attendance/'.now()->format('Y-m-d'), 'public') : null;
 
-		$attendance->update([
+		$updateData = [
 			'check_out_time' => $checkOutTime,
 			'check_out_notes' => $validated['notes'] ?? null,
-			'check_out_photo' => $path,
 			'source' => $attendance->source ?: 'zone_commander_manual',
-		]);
+		];
+		if ($path) {
+			$updateData['check_out_photo'] = $path;
+		}
+		$attendance->update($updateData);
 		$attendance->calculateHours();
 
 		return back()->with('success', 'Attendance checked out');
+	}
+
+	public function markPresent(Request $request)
+	{
+		$validated = $request->validate([
+			'guard_id' => ['required','integer','exists:guards,id'],
+			'client_site_id' => ['nullable','integer','exists:client_sites,id'],
+			'notes' => ['nullable','string','max:500'],
+		]);
+
+		$guard = Guard::findOrFail($validated['guard_id']);
+		if (in_array($guard->status, ['dismissed', 'absconded'], true)) {
+			return back()->withErrors(['guard_id' => 'Cannot mark attendance for dismissed or absconded guards.']);
+		}
+
+		$user = Auth::user();
+		$siteId = $validated['client_site_id'] ?? null;
+
+		// Validate site is in zone
+		if ($siteId) {
+			$site = ClientSite::findOrFail($siteId);
+			if ((int)$site->zone_id !== (int)$user->zone_id) {
+				abort(403, 'Site not in your zone');
+			}
+		}
+
+		// Validate guard is in zone
+		$guardZoneId = (int) ($guard->zone_id ?? 0);
+		if ($guardZoneId && (int) $user->zone_id !== $guardZoneId) {
+			abort(403, 'Guard not in your zone');
+		}
+		if (!$guardZoneId) {
+			$hasZoneAssignment = GuardAssignment::query()
+				->where('guard_id', $guard->id)
+				->active()
+				->current()
+				->whereHas('clientSite', fn ($q) => $q->where('zone_id', $user->zone_id))
+				->exists();
+			if (!$hasZoneAssignment) {
+				abort(403, 'Guard not assigned within your zone');
+			}
+		}
+
+		$date = \Carbon\Carbon::today();
+		$notes = $validated['notes'] ?? null;
+
+		$attendance = Attendance::where('guard_id', $validated['guard_id'])
+			->whereDate('date', $date)
+			->orderByDesc('id')
+			->first();
+
+		if ($attendance) {
+			if ($attendance->check_in_time) {
+				return back()->with('success', 'Guard already checked in.');
+			}
+			if ($attendance->status === 'present') {
+				return back()->with('success', 'Guard already marked present.');
+			}
+			$attendance->status = 'present';
+			$attendance->supervisor_id = $user->id;
+			if (!$attendance->client_site_id && $siteId) {
+				$attendance->client_site_id = $siteId;
+			}
+			$attendance->check_in_notes = trim(($attendance->check_in_notes ?: '') . ' Marked present by zone commander.' . ($notes ? ' ' . $notes : ''));
+			$attendance->source = 'zone_commander_mark_present';
+			$attendance->save();
+		} else {
+			$guard = Guard::with('assignments')->findOrFail($validated['guard_id']);
+			$currentAssignment = $guard->currentAssignment();
+			$attendance = new Attendance([
+				'guard_id' => $validated['guard_id'],
+				'supervisor_id' => $user->id,
+				'client_site_id' => $siteId ?: $currentAssignment?->client_site_id,
+				'date' => $date,
+				'check_in_time' => null,
+				'check_out_time' => null,
+				'hours_worked' => null,
+				'overtime_hours' => 0,
+				'status' => 'present',
+				'check_in_notes' => trim('Marked present by zone commander.' . ($notes ? ' ' . $notes : '')),
+				'check_out_notes' => null,
+				'backdated' => false,
+				'backdated_reason' => null,
+				'source' => 'zone_commander_mark_present',
+			]);
+			$attendance->save();
+		}
+
+		try {
+			event(new \App\Events\AttendanceUpdated($attendance->id, 'Marked present by zone commander', [
+				'supervisor_id' => $user->id,
+				'guard_id' => $attendance->guard_id,
+				'client_site_id' => $attendance->client_site_id,
+				'date' => $attendance->date?->toDateString(),
+				'status' => $attendance->status,
+				'source' => $attendance->source,
+			]));
+		} catch (\Throwable $e) {}
+
+		return back()->with('success', 'Guard marked present.');
 	}
 }
 

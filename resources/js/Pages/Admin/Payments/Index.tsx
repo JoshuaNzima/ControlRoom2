@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Head, router } from '@inertiajs/react';
 import AdminLayout from '@/Layouts/AdminLayout';
 import { Card } from '@/Components/ui/card';
@@ -8,6 +8,9 @@ import { formatCurrencyMWK } from '@/Components/format';
 import { SortIcon } from '@/Components/ui/icons/SortIcon';
 import { PaymentLegend } from '@/Components/ui/PaymentLegend';
 import { Pagination } from '@/Components/ui/Pagination';
+import { StatCard } from '@/Components/StatCard';
+import { ActionTile } from '@/Components/ActionTile';
+import IconMapper from '@/Components/IconMapper';
 
 type Site = {
   id: number;
@@ -241,44 +244,93 @@ export default function PaymentsIndex({
 
       <div className="py-6">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
-          {/* Summary Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Card className="p-4">
-              <div className="flex flex-col">
-                <div className="text-sm text-gray-500 dark:text-gray-400">Outstanding Balance</div>
-                <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{formatCurrencyMWK(overallSummary.total_outstanding)}</div>
-                <div className="mt-1 text-xs text-gray-400 dark:text-gray-400">
-                  Collection Rate: {overallSummary.collection_rate}%
+          {/* Hero Header */}
+          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-red-700 via-red-600 to-rose-600 text-white shadow-2xl">
+            <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg%20width%3D%2260%22%20height%3D%2260%22%20viewBox%3D%220%200%2060%2060%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%3E%3Cg%20fill%3D%22none%22%20fill-rule%3D%22evenodd%22%3E%3Cg%20fill%3D%22%23ffffff%22%20fill-opacity%3D%220.05%22%3E%3Cpath%20d%3D%22M36%2034v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6%2034v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6%204V0H4v4H0v2h4v4h2V6h4V4H6z%22/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] opacity-20" />
+            <div className="relative p-6 sm:p-8">
+              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+                <div className="flex items-center gap-4">
+                  <div className="p-4 bg-white/10 rounded-xl backdrop-blur-sm">
+                    <IconMapper name="DollarSign" size={32} />
+                  </div>
+                  <div>
+                    <h1 className="text-2xl sm:text-3xl font-bold">Payments Checker</h1>
+                    <p className="text-red-100 mt-1">Track client payments and outstanding balances</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4">
+                  <div className="px-4 py-2 bg-white/10 rounded-lg backdrop-blur-sm">
+                    <p className="text-xs text-red-200">Current Year</p>
+                    <p className="text-lg font-semibold">{selectedYear}</p>
+                  </div>
                 </div>
               </div>
-            </Card>
-            <Card className="p-4">
-              <div className="flex flex-col">
-                <div className="text-sm text-gray-500 dark:text-gray-400">Clients with Outstanding</div>
-                <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{overallSummary.clients_with_outstanding} / {overallSummary.total_clients}</div>
-                <div className="mt-1 text-xs text-gray-400 dark:text-gray-400">
-                  {overallSummary.clients_overdue_percentage}% of clients have outstanding balance
-                </div>
-              </div>
-            </Card>
-            <Card className="p-4">
-              <div className="flex flex-col">
-                <div className="text-sm text-gray-500 dark:text-gray-400">Max Outstanding Duration</div>
-                <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{overallSummary.max_outstanding_months} months</div>
-                <div className="mt-1 text-xs text-gray-400 dark:text-gray-400">
-                  Longest period without payment
-                </div>
-              </div>
-            </Card>
-            <Card className="p-4">
-              <div className="flex flex-col">
-                <div className="text-sm text-gray-500 dark:text-gray-400">Total Amount Due</div>
-                <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{formatCurrencyMWK(overallSummary.total_due)}</div>
-                <div className="mt-1 text-xs text-gray-400 dark:text-gray-400">
-                  Paid: {formatCurrencyMWK(overallSummary.total_paid)}
-                </div>
-              </div>
-            </Card>
+            </div>
+          </div>
+
+          {/* StatCards */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <StatCard
+              icon={<IconMapper name="AlertTriangle" size={24} />}
+              title="Outstanding"
+              value={overallSummary.total_outstanding || 0}
+              subtitle={`${overallSummary.clients_with_outstanding || 0} clients`}
+              color="red"
+              isCurrency
+            />
+            <StatCard
+              icon={<IconMapper name="Users" size={24} />}
+              title="Total Clients"
+              value={overallSummary.total_clients || 0}
+              subtitle={`${overallSummary.clients_with_outstanding || 0} with outstanding`}
+              color="blue"
+            />
+            <StatCard
+              icon={<IconMapper name="TrendingUp" size={24} />}
+              title="Collection Rate"
+              value={`${overallSummary.collection_rate || 0}%`}
+              subtitle="Payment efficiency"
+              color="green"
+            />
+            <StatCard
+              icon={<IconMapper name="Clock" size={24} />}
+              title="Max Overdue"
+              value={`${overallSummary.max_outstanding_months || 0} months`}
+              subtitle="Longest duration"
+              color="amber"
+            />
+          </div>
+
+          {/* Quick Actions */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <ActionTile
+              icon={<IconMapper name="Download" size={18} />}
+              title="Export Report"
+              description="Download payment data"
+              color="bg-purple-600"
+              onClick={() => {}}
+            />
+            <ActionTile
+              icon={<IconMapper name="RefreshCw" size={18} />}
+              title="Refresh Data"
+              description="Reload current view"
+              color="bg-emerald-600"
+              onClick={() => router.reload()}
+            />
+            <ActionTile
+              icon={<IconMapper name="Filter" size={18} />}
+              title="Late Payments"
+              description="View overdue clients"
+              href={route('admin.payments.index', { status: 'late', year: selectedYear })}
+              color="bg-red-600"
+            />
+            <ActionTile
+              icon={<IconMapper name="CheckCircle" size={18} />}
+              title="Paid Clients"
+              description="Fully paid clients"
+              href={route('admin.payments.index', { status: 'paid', year: selectedYear })}
+              color="bg-blue-600"
+            />
           </div>
 
           {/* Top Overdue Clients */}
@@ -508,8 +560,8 @@ export default function PaymentsIndex({
                 })}
               </div>
 
-              <div className="hidden md:block relative overflow-x-auto sm:overflow-x-visible">
-                <table className="border border-gray-200 dark:border-gray-800 min-w-[820px] sm:min-w-full">
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full border border-gray-200 dark:border-gray-800">
                   <thead>
                     <tr className="bg-gray-50 dark:bg-gray-800">
                       <th 
@@ -517,7 +569,7 @@ export default function PaymentsIndex({
                           sort_field: 'name',
                           sort_direction: filters.sort_field === 'name' && filters.sort_direction === 'asc' ? 'desc' : 'asc'
                         })}
-                        className="sticky left-0 z-20 px-3 py-2 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-800 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 bg-white dark:bg-gray-900 w-[200px] min-w-[200px] max-w-[260px]"
+                        className="sticky left-0 z-20 px-3 py-2 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-800 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 bg-white dark:bg-gray-900"
                       >
                         <div className="flex items-center gap-2">
                           Client
@@ -567,7 +619,7 @@ export default function PaymentsIndex({
                       
                       return (
                         <tr key={c.id} className={`${isOverdue ? 'bg-red-50/80 hover:bg-red-100/90 dark:bg-red-900/30 dark:hover:bg-red-900/40' : 'odd:bg-white even:bg-gray-50 hover:bg-gray-100 odd:dark:bg-gray-900 even:dark:bg-gray-800 hover:dark:bg-gray-700'} transition-colors group`} title={isOverdue ? `${outstandingMonths} months overdue` : ''}>
-                          <td className={`sticky left-0 z-10 px-3 py-2 text-sm border border-gray-200 dark:border-gray-800 whitespace-nowrap bg-white dark:bg-gray-900 w-[200px] min-w-[200px] max-w-[260px] ${isOverdue ? 'text-red-900 dark:text-red-300 font-semibold' : 'text-gray-900 dark:text-gray-100'} group-hover:bg-gray-100 dark:group-hover:bg-gray-800`}>
+                          <td className={`sticky left-0 z-10 px-3 py-2 text-sm border border-gray-200 dark:border-gray-800 whitespace-nowrap bg-white dark:bg-gray-900 ${isOverdue ? 'text-red-900 dark:text-red-300 font-semibold' : 'text-gray-900 dark:text-gray-100'} group-hover:bg-gray-100 dark:group-hover:bg-gray-800`}>
                             <div className="flex items-center gap-2">
                               <span className="group-hover:underline">{c.name}</span>
                               {isOverdue && (

@@ -11,6 +11,8 @@ Route::middleware(['auth', 'role:super_admin|finance_officer|accountant|finance|
         Route::get('/', [\App\Http\Controllers\Finance\DashboardController::class, 'index'])
             ->name('dashboard');
 
+        Route::get('me', [\App\Http\Controllers\Profile\ProfileDashboardController::class, 'index'])->name('profile');
+
         // Drilldown API endpoints (returns JSON)
         Route::get('drilldown/month/{year}/{month}', [\App\Http\Controllers\Finance\DashboardController::class, 'monthDrilldown'])
             ->name('drilldown.month');

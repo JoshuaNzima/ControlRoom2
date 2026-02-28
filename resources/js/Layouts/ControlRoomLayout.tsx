@@ -141,7 +141,7 @@ export default function ControlRoomLayout({ title, children, user }: Props) {
             <div className="text-sm font-medium text-red-200 dark:text-gray-400">{roleDisplay}</div>
           </div>
           <Link
-            href={route('profile.dashboard')}
+            href={route('control-room.profile')}
             className="inline-flex items-center gap-2 rounded-md bg-gray-800 px-3 py-2 text-sm font-medium text-white hover:bg-gray-700"
           >
             My Profile
