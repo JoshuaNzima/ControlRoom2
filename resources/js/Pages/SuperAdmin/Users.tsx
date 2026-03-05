@@ -41,8 +41,6 @@ export default function SuperAdminUsers({ users, filters, roles, zones }: UsersI
     role: roles?.[0]?.name || 'admin',
     status: 'active',
     zone_id: '' as any,
-    password: '',
-    password_confirmation: '',
   });
 
   const [editForm, setEditForm] = React.useState({
@@ -53,8 +51,6 @@ export default function SuperAdminUsers({ users, filters, roles, zones }: UsersI
     role: '',
     status: 'active',
     zone_id: '' as any,
-    password: '',
-    password_confirmation: '',
   });
 
   React.useEffect(() => {
@@ -67,23 +63,17 @@ export default function SuperAdminUsers({ users, filters, roles, zones }: UsersI
         role: selectedUser.roles?.[0]?.name || '',
         status: selectedUser.status || 'active',
         zone_id: (selectedUser.zone_id as any) ?? '',
-        password: '',
-        password_confirmation: '',
       });
     }
   }, [selectedUser]);
 
   const roleNormalized = (createForm.role || '').toLowerCase().replace(' ', '_');
-  const createPasswordsMatch = !!createForm.password && createForm.password === createForm.password_confirmation;
-  const createPasswordValid = (createForm.password || '').length >= 8;
   const createZoneRequired = roleNormalized === 'zone_commander';
   const createZoneValid = !createZoneRequired || !!createForm.zone_id;
   const canCreate =
     !!createForm.name &&
     !!createForm.email &&
     !!createForm.role &&
-    createPasswordValid &&
-    createPasswordsMatch &&
     createZoneValid &&
     !saving;
 
@@ -98,16 +88,12 @@ export default function SuperAdminUsers({ users, filters, roles, zones }: UsersI
   }, [createForm.role, roleNormalized, zones]);
 
   const editRoleNormalized = (editForm.role || '').toLowerCase().replace(' ', '_');
-  const editPasswordsMatch = !editForm.password || editForm.password === editForm.password_confirmation;
-  const editPasswordValid = !editForm.password || (editForm.password || '').length >= 8;
   const editZoneRequired = editRoleNormalized === 'zone_commander';
   const editZoneValid = !editZoneRequired || !!editForm.zone_id;
   const canEdit =
     !!editForm.name &&
     !!editForm.email &&
     !!editForm.role &&
-    editPasswordValid &&
-    editPasswordsMatch &&
     editZoneValid &&
     !saving;
 
@@ -146,8 +132,6 @@ export default function SuperAdminUsers({ users, filters, roles, zones }: UsersI
           role: roles?.[0]?.name || 'admin',
           status: 'active',
           zone_id: '' as any,
-          password: '',
-          password_confirmation: '',
         });
       },
       onError: () => push('Failed to create user'),
@@ -429,8 +413,17 @@ export default function SuperAdminUsers({ users, filters, roles, zones }: UsersI
 
         {/* Add User Modal */}
         <Modal show={showAdd} onClose={() => setShowAdd(false)} maxWidth="2xl">
-          <div className="p-4 sm:p-6 bg-white dark:bg-gray-800">
-            <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">Add User</h2>
+          <div className="p-4 sm:p-6 bg-white dark:bg-gray-900">
+            <div className="flex items-center gap-2 mb-4">
+              <IconMapper name="UserPlus" size={20} className="text-coin-600" />
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Add User</h2>
+            </div>
+            <div className="mb-4 p-3 bg-coin-50 dark:bg-coin-950/30 border border-coin-200 dark:border-coin-800 rounded-lg">
+              <p className="text-sm text-coin-800 dark:text-coin-200">
+                <IconMapper name="Info" size={14} className="inline mr-1" />
+                User ID will be auto-generated. A password reset email will be sent to the user.
+              </p>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Full Name *</label>
@@ -445,8 +438,8 @@ export default function SuperAdminUsers({ users, filters, roles, zones }: UsersI
                 <input value={createForm.phone} onChange={(e) => setCreateForm({ ...createForm, phone: e.target.value })} className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg dark:bg-gray-900 dark:text-gray-100" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Employee ID</label>
-                <input value={createForm.employee_id} onChange={(e) => setCreateForm({ ...createForm, employee_id: e.target.value })} className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg dark:bg-gray-900 dark:text-gray-100" />
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Employee ID <span className="text-gray-400">(Auto-generated)</span></label>
+                <input value={createForm.employee_id} onChange={(e) => setCreateForm({ ...createForm, employee_id: e.target.value })} placeholder="Leave empty to auto-generate" className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg dark:bg-gray-900 dark:text-gray-100" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Role *</label>
@@ -469,18 +462,10 @@ export default function SuperAdminUsers({ users, filters, roles, zones }: UsersI
                   <option value="inactive">Inactive</option>
                 </select>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Password *</label>
-                <input type="password" value={createForm.password} onChange={(e) => setCreateForm({ ...createForm, password: e.target.value })} className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg dark:bg-gray-900 dark:text-gray-100" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Confirm Password *</label>
-                <input type="password" value={createForm.password_confirmation} onChange={(e) => setCreateForm({ ...createForm, password_confirmation: e.target.value })} className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg dark:bg-gray-900 dark:text-gray-100" />
-              </div>
             </div>
             <div className="mt-4 flex gap-3 justify-end">
               <button onClick={() => setShowAdd(false)} className="px-6 py-3 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-100 rounded-lg font-bold">Cancel</button>
-              <button onClick={submitCreate} disabled={!canCreate} className={`px-6 py-3 rounded-lg font-bold text-white ${canCreate ? 'bg-red-600 hover:bg-red-700' : 'bg-red-400 cursor-not-allowed'}`}>{saving ? 'Saving...' : 'Save User'}</button>
+              <button onClick={submitCreate} disabled={!canCreate} className={`px-6 py-3 rounded-lg font-bold text-white ${canCreate ? 'bg-coin-700 hover:bg-coin-600' : 'bg-gray-400 cursor-not-allowed'}`}>{saving ? 'Saving...' : 'Save User'}</button>
             </div>
           </div>
         </Modal>
@@ -529,20 +514,6 @@ export default function SuperAdminUsers({ users, filters, roles, zones }: UsersI
                     <option value="active">Active</option>
                     <option value="inactive">Inactive</option>
                   </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Password</label>
-                  <input type="password" value={editForm.password} onChange={(e) => setEditForm({ ...editForm, password: e.target.value })} className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg dark:bg-gray-900 dark:text-gray-100" />
-                  {!editPasswordValid && editForm.password && (
-                    <p className="text-xs text-red-500 mt-1">Minimum 8 characters.</p>
-                  )}
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Confirm Password</label>
-                  <input type="password" value={editForm.password_confirmation} onChange={(e) => setEditForm({ ...editForm, password_confirmation: e.target.value })} className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg dark:bg-gray-900 dark:text-gray-100" />
-                  {editForm.password_confirmation && !editPasswordsMatch && (
-                    <p className="text-xs text-red-500 mt-1">Passwords must match.</p>
-                  )}
                 </div>
               </div>
             )}

@@ -327,7 +327,6 @@ class DashboardController extends Controller
             ->get(['id', 'name', 'employee_id']);
 
         // Compliance: missing HR data counts
-        $missingEmail = Guard::whereNull('email')->orWhere('email', '')->count();
         $missingPhone = Guard::whereNull('phone')->orWhere('phone', '')->count();
         $missingDob = Guard::whereNull('date_of_birth')->count();
         $missingIdNumber = Guard::whereNull('id_number')->orWhere('id_number', '')->count();
@@ -336,8 +335,7 @@ class DashboardController extends Controller
 
         $incompleteProfiles = Guard::query()
             ->where(function ($q) {
-                $q->whereNull('email')->orWhere('email', '')
-                  ->orWhereNull('phone')->orWhere('phone', '')
+                $q->whereNull('phone')->orWhere('phone', '')
                   ->orWhereNull('date_of_birth')
                   ->orWhereNull('id_number')->orWhere('id_number', '')
                   ->orWhereNull('hire_date')
@@ -345,10 +343,9 @@ class DashboardController extends Controller
             })
             ->orderBy('name')
             ->limit(10)
-            ->get(['id','name','employee_id','email','phone','date_of_birth','id_number','hire_date','emergency_contact_phone'])
+            ->get(['id','name','employee_id','phone','date_of_birth','id_number','hire_date','emergency_contact_phone'])
             ->map(function ($g) {
                 $missing = [];
-                if (empty($g->email)) $missing[] = 'email';
                 if (empty($g->phone)) $missing[] = 'phone';
                 if (empty($g->date_of_birth)) $missing[] = 'date_of_birth';
                 if (empty($g->id_number)) $missing[] = 'id_number';
@@ -468,7 +465,6 @@ class DashboardController extends Controller
             'guards' => $guards,
             'compliance' => [
                 'missing' => [
-                    'email' => $missingEmail,
                     'phone' => $missingPhone,
                     'date_of_birth' => $missingDob,
                     'id_number' => $missingIdNumber,
@@ -490,11 +486,10 @@ class DashboardController extends Controller
 
         $guards = Guard::query()
             ->orderBy('name')
-            ->get(['id','name','employee_id','email','phone','date_of_birth','id_number','hire_date','emergency_contact_phone']);
+            ->get(['id','name','employee_id','phone','date_of_birth','id_number','hire_date','emergency_contact_phone']);
 
         foreach ($guards as $g) {
             $missing = [];
-            if (empty($g->email)) $missing[] = 'email';
             if (empty($g->phone)) $missing[] = 'phone';
             if (empty($g->date_of_birth)) $missing[] = 'date_of_birth';
             if (empty($g->id_number)) $missing[] = 'id_number';
@@ -502,6 +497,11 @@ class DashboardController extends Controller
             if (empty($g->emergency_contact_phone)) $missing[] = 'emergency_contact';
             if (count($missing) === 0) continue;
             $rows[] = [$g->id, $g->name, $g->employee_id, implode('|', $missing)];
+        }
+
+        // Clean output buffer to prevent corruption
+        if (ob_get_level()) {
+            ob_end_clean();
         }
 
         $callback = function () use ($rows) {
@@ -512,6 +512,7 @@ class DashboardController extends Controller
 
         return response()->streamDownload($callback, $filename, [
             'Content-Type' => 'text/csv',
+            'Cache-Control' => 'no-cache, must-revalidate',
         ]);
     }
 }

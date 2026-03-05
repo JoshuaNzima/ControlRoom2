@@ -7,6 +7,7 @@ import { Input } from '@/Components/ui/input';
 import { Label } from '@/Components/ui/label';
 import { Textarea } from '@/Components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/Components/ui/select';
+import IconMapper from '@/Components/IconMapper';
 
 interface CreateIncidentProps {
   auth?: { user?: { name?: string } };
@@ -78,13 +79,28 @@ const CreateIncident = ({ auth }: CreateIncidentProps) => {
     <ControlRoomLayout title="Create Incident" user={auth?.user as any}>
       <Head title="Create Incident" />
 
-      <div className="max-w-2xl mx-auto">
-        <Card className="dark:bg-gray-800 dark:border-gray-700">
-          <CardHeader>
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Create New Incident</h2>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="px-4 sm:px-6 lg:px-8 py-6">
+        {/* Hero Header */}
+        <div className="bg-gradient-to-r from-coin-700 via-coin-600 to-coin-500 rounded-2xl shadow-lg p-6 text-white mb-6">
+          <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-3">
+            <IconMapper name="PlusCircle" size={28} />
+            Create New Incident
+          </h1>
+          <p className="mt-1 text-coin-100 text-sm">
+            Report and document a new security incident
+          </p>
+        </div>
+
+        <div className="max-w-2xl mx-auto">
+          <Card className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800">
+            <CardHeader className="pb-3">
+              <div className="flex items-center gap-2">
+                <IconMapper name="FileText" size={20} className="text-coin-600" />
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Incident Details</h2>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSubmit} className="space-y-6">
               <div>
                 <Label htmlFor="title" className="text-gray-700 dark:text-gray-300">
                   Incident Title
@@ -94,7 +110,7 @@ const CreateIncident = ({ auth }: CreateIncidentProps) => {
                   type="text"
                   value={data.title}
                   onChange={(e) => setData('title', e.target.value)}
-                  className="mt-1 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
+                  className="mt-1 bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100"
                   placeholder="Enter incident title"
                 />
                 {errors.title && <p className="text-red-500 text-sm mt-1">{errors.title}</p>}
@@ -297,6 +313,7 @@ const CreateIncident = ({ auth }: CreateIncidentProps) => {
           </CardContent>
         </Card>
       </div>
+    </div>
     </ControlRoomLayout>
   );
 };

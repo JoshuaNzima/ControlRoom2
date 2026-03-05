@@ -5,6 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import { Input } from '@/Components/ui/input';
 import { Label } from '@/Components/ui/label';
+import { Badge } from '@/Components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/Components/ui/tabs';
 import {
   Dialog,
   DialogContent,
@@ -18,9 +20,25 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/Components/ui/select';
-import { Badge } from '@/Components/ui/badge';
 import { useToast } from '@/Components/ui/use-toast';
-import { Search, Plus, Calculator, CheckCircle, DollarSign, Trash2, Edit2 } from 'lucide-react';
+import {
+  Search,
+  Plus,
+  Calculator,
+  CheckCircle,
+  DollarSign,
+  Trash2,
+  Edit2,
+  TrendingUp,
+  Users,
+  AlertCircle,
+  Award,
+  Calendar,
+  ChevronRight,
+  Filter,
+  Download,
+  RefreshCw,
+} from 'lucide-react';
 
 interface Guard {
   id: number;
@@ -200,14 +218,22 @@ export default function SupervisorIncentives({ profiles, leaders }: PageProps) {
       <Head title="Supervisor Incentives" />
 
       <div className="w-full px-4 py-6 space-y-6">
+        {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Supervisor Incentives</h1>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+              <Award className="w-7 h-7 text-red-500" />
+              Supervisor Incentives
+            </h1>
             <p className="text-gray-600 dark:text-gray-400 mt-1">
               Manage incentive profiles and calculate payments for supervisors and sergeants
             </p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" onClick={fetchRecords} disabled={recordsLoading}>
+              <RefreshCw className={`w-4 h-4 mr-2 ${recordsLoading ? 'animate-spin' : ''}`} />
+              {recordsLoading ? 'Loading...' : 'Refresh'}
+            </Button>
             <Button
               onClick={() => {
                 setEditingProfile(null);
@@ -233,35 +259,66 @@ export default function SupervisorIncentives({ profiles, leaders }: PageProps) {
           </div>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card>
+        {/* Stats Cards - Enhanced with Coin Theme */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <Card className="bg-gradient-to-br from-red-900/20 to-red-800/10 border-red-900/30">
             <CardContent className="p-4">
-              <div className="text-sm text-gray-600 dark:text-gray-400">Total Profiles</div>
-              <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{profiles.length}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="text-sm text-gray-600 dark:text-gray-400">Active Leaders</div>
-              <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                {profiles.filter(p => p.is_active).length}
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-red-900/30">
+                  <Users className="w-5 h-5 text-red-400" />
+                </div>
+                <div>
+                  <div className="text-sm text-gray-400">Total Profiles</div>
+                  <div className="text-2xl font-bold text-gray-100">{profiles.length}</div>
+                </div>
               </div>
             </CardContent>
           </Card>
-          <Card>
+
+          <Card className="bg-gradient-to-br from-green-900/20 to-green-800/10 border-green-900/30">
             <CardContent className="p-4">
-              <div className="text-sm text-gray-600 dark:text-gray-400">Pending Calculations</div>
-              <div className="text-2xl font-bold text-yellow-600">
-                {records.filter(r => r.status === 'pending').length}
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-green-900/30">
+                  <CheckCircle className="w-5 h-5 text-green-400" />
+                </div>
+                <div>
+                  <div className="text-sm text-gray-400">Active Leaders</div>
+                  <div className="text-2xl font-bold text-gray-100">
+                    {profiles.filter(p => p.is_active).length}
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>
-          <Card>
+
+          <Card className="bg-gradient-to-br from-yellow-900/20 to-yellow-800/10 border-yellow-900/30">
             <CardContent className="p-4">
-              <div className="text-sm text-gray-600 dark:text-gray-400">Total Pending Amount</div>
-              <div className="text-2xl font-bold text-green-600">
-                {formatCurrency(records.filter(r => r.status === 'pending').reduce((sum, r) => sum + r.net_amount, 0))}
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-yellow-900/30">
+                  <AlertCircle className="w-5 h-5 text-yellow-400" />
+                </div>
+                <div>
+                  <div className="text-sm text-gray-400">Pending</div>
+                  <div className="text-2xl font-bold text-gray-100">
+                    {records.filter(r => r.status === 'pending').length}
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-br from-emerald-900/20 to-emerald-800/10 border-emerald-900/30">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-emerald-900/30">
+                  <DollarSign className="w-5 h-5 text-emerald-400" />
+                </div>
+                <div>
+                  <div className="text-sm text-gray-400">Pending Amount</div>
+                  <div className="text-lg font-bold text-gray-100">
+                    {formatCurrency(records.filter(r => r.status === 'pending').reduce((sum, r) => sum + r.net_amount, 0))}
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -397,7 +454,7 @@ export default function SupervisorIncentives({ profiles, leaders }: PageProps) {
 
       {/* Profile Modal */}
       <Dialog open={showProfileModal} onOpenChange={setShowProfileModal}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg bg-gray-900 border-gray-800 text-gray-100">
           <DialogHeader>
             <DialogTitle>{editingProfile ? 'Edit Incentive Profile' : 'Add Incentive Profile'}</DialogTitle>
           </DialogHeader>

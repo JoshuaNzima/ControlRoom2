@@ -47,8 +47,8 @@ export function DialogHeader({ children }: { children: React.ReactNode }) {
   return <div className="px-4 pt-4 pb-2 border-b border-gray-100 bg-white/80 backdrop-blur-sm dark:border-gray-800 dark:bg-gray-950/80">{children}</div>;
 }
 
-export function DialogTitle({ children }: { children: React.ReactNode }) {
-  return <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{children}</h3>;
+export function DialogTitle({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+  return <h3 className={`text-lg font-semibold text-gray-900 dark:text-gray-100 ${className}`}>{children}</h3>;
 }
 
 export default Dialog;

@@ -6,7 +6,6 @@ import { Button } from '@/Components/ui/button';
 import EmptyState from '@/Components/ui/empty-state';
 import IconMapper from '@/Components/IconMapper';
 import LiveMonitoring from '@/Components/ControlRoom/LiveMonitoring';
-import QuickRequisitionModal from '@/Components/Requisitions/QuickRequisitionModal';
 import RequisitionSummary from '@/Components/Requisitions/RequisitionSummary';
 import useControlRoomEcho from '@/Hooks/useControlRoomEcho';
 import { User } from '@/types';
@@ -185,14 +184,14 @@ interface DashboardProps {
   auth?: { user?: { name?: string } };
 }
 
-export default function ControlRoomDashboard({ 
-  stats, 
-  recentIncidents, 
-  activeAlerts, 
-  coverageData, 
-  attendanceData, 
-  zones, 
-  auth 
+export default function ControlRoomDashboard({
+  stats,
+  recentIncidents,
+  activeAlerts,
+  coverageData,
+  attendanceData,
+  zones,
+  auth,
 }: DashboardProps) {
   // Initialize control room echo
   useControlRoomEcho((scanEvent) => {
@@ -270,8 +269,6 @@ export default function ControlRoomDashboard({
   return (
     <ControlRoomLayout title="Control Room Dashboard" user={auth?.user as User | undefined}>
       <Head title="Control Room Dashboard" />
-
-      <QuickRequisitionModal />
       <RequisitionSummary />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">

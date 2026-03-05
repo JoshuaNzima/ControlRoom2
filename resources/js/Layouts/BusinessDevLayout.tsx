@@ -31,13 +31,16 @@ export default function BusinessDevLayout({ title, children, user }: Props) {
   const page = usePage<any>();
   const roles = ((user as any)?.roles ?? (page?.props as any)?.auth?.user?.roles ?? []) as any;
   const isSuperAdmin = Array.isArray(roles) ? roles.includes('super_admin') : roles === 'super_admin';
+  const isAdminUser = Array.isArray(roles) && (roles.includes('admin') || roles.includes('super_admin'));
 
   const nav: NavItem[] = [
     { name: 'Overview', href: route('admin.business-dev'), icon: <IconMapper name="handshake" className="h-6 w-6" />, current: isCurrent(route('admin.business-dev')) },
     { name: 'Ops', href: route('admin.business-dev.ops'), icon: <IconMapper name="activity" className="h-6 w-6" />, current: isCurrent(route('admin.business-dev.ops')) },
     { name: 'Events', href: route('admin.business-dev'), icon: <IconMapper name="calendar" className="h-6 w-6" />, current: isCurrent(route('admin.business-dev')) },
     { name: 'Contracts', href: route('admin.business-dev.contracts.index'), icon: <IconMapper name="file-text" className="h-6 w-6" />, current: isCurrent(route('admin.business-dev.contracts.index')) },
-    { name: 'My Requisitions', href: route('requisitions.index'), icon: <IconMapper name="clipboard-list" className="h-6 w-6" />, current: isCurrent(route('requisitions.index')), badge: (()=>{ const n = Number(counters?.requisitions_my_open||0); return n>0? String(n): undefined; })() },
+    ...(!isAdminUser ? ([
+      { name: 'My Requisitions', href: route('requisitions.index'), icon: <IconMapper name="clipboard-list" className="h-6 w-6" />, current: isCurrent(route('requisitions.index')), badge: (()=>{ const n = Number(counters?.requisitions_my_open||0); return n>0? String(n): undefined; })() },
+    ] as NavItem[]) : []),
     { name: 'Settings', href: route('admin.business-dev.settings'), icon: <IconMapper name="settings" className="h-6 w-6" />, current: isCurrent(route('admin.business-dev.settings')) },
     { name: 'K9 Dashboard', href: route('admin.business-dev.k9.dashboard'), icon: <IconMapper name="layout-dashboard" className="h-6 w-6" />, current: isCurrent(route('admin.business-dev.k9.dashboard')) },
     { name: 'K9 Dogs', href: route('admin.business-dev.k9.dogs'), icon: <IconMapper name="dog" className="h-6 w-6" />, current: isCurrent(route('admin.business-dev.k9.dogs')) },

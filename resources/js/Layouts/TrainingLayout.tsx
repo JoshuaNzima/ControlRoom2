@@ -32,6 +32,7 @@ export default function TrainingLayout({ title, children, user }: Props) {
   const page = usePage<any>();
   const roles = ((user as any)?.roles ?? (page?.props as any)?.auth?.user?.roles ?? []) as any;
   const isSuperAdmin = Array.isArray(roles) ? roles.includes('super_admin') : roles === 'super_admin';
+  const isAdminUser = Array.isArray(roles) && (roles.includes('admin') || roles.includes('super_admin'));
 
   // Main Training Navigation
   const mainLinks: NavItem[] = [
@@ -50,7 +51,9 @@ export default function TrainingLayout({ title, children, user }: Props) {
 
   // Tools
   const toolsLinks: NavItem[] = [
-    { name: 'Requisitions', href: route('requisitions.index'), icon: <IconMapper name="ClipboardList" className="h-6 w-6" />, current: isCurrent(route('requisitions.index')), badge: (() => { const n = Number(counters?.requisitions_my_open || 0); return n > 0 ? String(n) : undefined; })() },
+    ...(!isAdminUser ? ([
+      { name: 'My Requisitions', href: route('requisitions.index'), icon: <IconMapper name="ClipboardList" className="h-6 w-6" />, current: isCurrent(route('requisitions.index')), badge: (() => { const n = Number(counters?.requisitions_my_open || 0); return n > 0 ? String(n) : undefined; })() },
+    ] as NavItem[]) : []),
     { name: 'Budgets', href: route('budgets.index'), icon: <IconMapper name="PieChart" className="h-6 w-6" />, current: isCurrent(route('budgets.index')) },
   ];
 

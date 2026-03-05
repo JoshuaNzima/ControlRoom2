@@ -3,9 +3,11 @@ import { Head, useForm, usePage, Link, router } from '@inertiajs/react';
 import ControlRoomLayout from '@/Layouts/ControlRoomLayout';
 import Modal from '@/Components/Modal';
 import useToast from '@/Components/ui/use-toast';
-import PageHeader from '@/Components/ui/page-header';
 import EmptyState from '@/Components/ui/empty-state';
 import ManualRosterEntryModal from '@/Components/Roster/ManualRosterEntryModal';
+import { Button } from '@/Components/ui/button';
+import { Card } from '@/Components/ui/card';
+import IconMapper from '@/Components/IconMapper';
 
 type DayKey = string; // YYYY-MM-DD
 
@@ -58,24 +60,592 @@ type WeeklyData = {
   active_sites?: Site[];
 };
 
+type GuardPlanCell = {
+  client_site_id?: number | null;
+  entry_type: 'site' | 'off';
+  notes?: string | null;
+};
+
+type WeeklyPlanStatus = {
+  id: number;
+  week_start: string;
+  supervisor_id: number;
+  shift_type: ShiftType;
+  status: 'draft' | 'published';
+  published_at?: string | null;
+};
+
+type DraftEntry = {
+  guard_id: number;
+  date: string;
+  entry_type: 'site' | 'off';
+  client_site_id?: number | '';
+  notes?: string;
+  delete?: boolean;
+};
+
 function getCsrfToken(): string {
   if (typeof document === 'undefined') return '';
   const el = document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement | null;
   return el?.content || '';
 }
 
-function formatYmd(d: Date): string {
+function startOfWeekMonday(d: Date) {
+  const date = new Date(d);
+  const day = date.getDay(); // 0=Sun
+  const diff = (day === 0 ? -6 : 1) - day; // make Monday start
+  date.setDate(date.getDate() + diff);
+  date.setHours(0, 0, 0, 0);
+  return date;
+}
+
+function formatYmd(d: Date) {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, '0');
   const dd = String(d.getDate()).padStart(2, '0');
   return `${y}-${m}-${dd}`;
 }
 
-function StandbyTable({ data, onRefresh, shiftType, canManageAttendance }: { data: WeeklyData; onRefresh: () => void; shiftType: ShiftType; canManageAttendance: boolean }) {
+export default function RosterWeekly() {
+  const { auth, initial_week_start, zones = [], supervisors = [] } = (usePage().props as any);
+  const { toast } = useToast();
+
+  const [weekStart, setWeekStart] = useState<Date>(() => initial_week_start ? new Date(initial_week_start) : startOfWeekMonday(new Date()));
+  const [zoneId, setZoneId] = useState<number | ''>('');
+  const [supervisorId, setSupervisorId] = useState<number | ''>('');
+  const [guardTypeFilter, setGuardTypeFilter] = useState<string>('');
+  const [shiftType, setShiftType] = useState<ShiftType>('day');
+  const [filtersOpen, setFiltersOpen] = useState(false);
+
+  const [data, setData] = useState<WeeklyData | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const [plan, setPlan] = useState<WeeklyPlanStatus | null>(null);
+  const [planEntries, setPlanEntries] = useState<Record<number, Record<DayKey, GuardPlanCell>> | null>(null);
+  const [draftEdits, setDraftEdits] = useState<Record<string, DraftEntry>>({});
+  const [savingDraft, setSavingDraft] = useState(false);
+  const [publishing, setPublishing] = useState(false);
+  const [manualEntryOpen, setManualEntryOpen] = useState(false);
+
+  const canManageAttendance = useMemo(() => {
+    const can = (auth as any)?.user?.can;
+    if (can && can['attendance.manage']) return true;
+    const roles = (auth as any)?.user?.roles || [];
+    if (Array.isArray(roles)) {
+      return roles.includes('control_room_operator') || roles.includes('operations_officer') || roles.includes('manager') || roles.includes('super_admin');
+    }
+    return false;
+  }, [auth]);
+
+  const planLocked = useMemo(() => plan?.status === 'published', [plan?.status]);
+
+  const loadPlan = useCallback(async (params: { start: string; supervisor_id: number; shift_type: ShiftType }) => {
+    try {
+      const url = route('control-room.roster.weekly.plan', params);
+      const res = await fetch(url, { headers: { Accept: 'application/json' } });
+      if (!res.ok) {
+        setPlan(null);
+        setPlanEntries(null);
+        return;
+      }
+      const json = await res.json();
+      setPlan(json?.plan ?? null);
+      setPlanEntries(json?.entries ?? null);
+    } catch {
+      setPlan(null);
+      setPlanEntries(null);
+    }
+  }, []);
+
+  const load = useCallback(async (overrides?: { weekStart?: Date; zoneId?: number | ''; supervisorId?: number | '' }) => {
+    setLoading(true);
+    try {
+      const ws = overrides?.weekStart ?? weekStart;
+      const zid = overrides?.zoneId ?? zoneId;
+      const sid = overrides?.supervisorId ?? supervisorId;
+
+      const params: any = { start: formatYmd(ws), shift_type: shiftType };
+      if (zid) params.zone_id = zid;
+      if (sid) params.supervisor_id = sid;
+
+      if (sid) {
+        await loadPlan({ start: formatYmd(ws), supervisor_id: Number(sid), shift_type: shiftType });
+      } else {
+        setPlan(null);
+        setPlanEntries(null);
+      }
+
+      const res = await fetch(route('control-room.roster.weekly.data', params), { headers: { Accept: 'application/json' } });
+      if (!res.ok) {
+        toast({ title: 'Failed to load roster', description: `Request failed (${res.status})`, variant: 'destructive' });
+        setData(null);
+        return;
+      }
+      const json = await res.json();
+      setData(json as WeeklyData);
+    } finally {
+      setLoading(false);
+    }
+  }, [loadPlan, shiftType, supervisorId, toast, weekStart, zoneId]);
+
+  useEffect(() => {
+    load({});
+  }, [load]);
+
+  const stageDraftEntry = useCallback((entry: DraftEntry) => {
+    const key = `${entry.guard_id}-${entry.date}`;
+    setDraftEdits((prev) => ({ ...prev, [key]: entry }));
+  }, []);
+
+  const saveDraft = useCallback(async () => {
+    if (!supervisorId) {
+      toast({ title: 'Supervisor required', description: 'Select a supervisor to save a weekly plan.', variant: 'destructive' });
+      return;
+    }
+    const entries = Object.values(draftEdits);
+    if (entries.length === 0) {
+      toast({ title: 'No changes to save', description: 'Make changes first, then click Save Draft.' });
+      return;
+    }
+
+    setSavingDraft(true);
+    try {
+      const token = getCsrfToken();
+      const payload = {
+        start: formatYmd(weekStart),
+        supervisor_id: Number(supervisorId),
+        shift_type: shiftType,
+        entries,
+      };
+      const res = await fetch(route('control-room.roster.weekly.plan.save'), {
+        method: 'POST',
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+          ...(token ? { 'X-CSRF-TOKEN': token } : {}),
+        },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        toast({ title: 'Failed to save draft', description: `Request failed (${res.status})`, variant: 'destructive' });
+        return;
+      }
+      toast({ title: 'Draft saved', description: `${entries.length} change(s) saved.` });
+      setDraftEdits({});
+      await load({});
+    } finally {
+      setSavingDraft(false);
+    }
+  }, [draftEdits, load, shiftType, supervisorId, toast, weekStart]);
+
+  const publishPlan = useCallback(async () => {
+    if (!supervisorId) {
+      toast({ title: 'Supervisor required', description: 'Select a supervisor to publish a weekly plan.', variant: 'destructive' });
+      return;
+    }
+    if (Object.keys(draftEdits).length > 0) {
+      toast({ title: 'Save draft first', description: 'You have unsaved changes. Click Save Draft before publishing.', variant: 'destructive' });
+      return;
+    }
+
+    setPublishing(true);
+    try {
+      const token = getCsrfToken();
+      const payload = {
+        start: formatYmd(weekStart),
+        supervisor_id: Number(supervisorId),
+        shift_type: shiftType,
+      };
+      const res = await fetch(route('control-room.roster.weekly.plan.publish'), {
+        method: 'POST',
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+          ...(token ? { 'X-CSRF-TOKEN': token } : {}),
+        },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        toast({ title: 'Publish failed', description: `Request failed (${res.status})`, variant: 'destructive' });
+        return;
+      }
+      toast({ title: 'Published', description: 'Weekly plan published.' });
+      await load({});
+    } finally {
+      setPublishing(false);
+    }
+  }, [draftEdits, load, shiftType, supervisorId, toast, weekStart]);
+
+  const safeDays: DayKey[] = useMemo(() => (Array.isArray(data?.days) ? data!.days : []), [data?.days]);
+  const safeSites: Site[] = useMemo(() => (Array.isArray(data?.sites) ? data!.sites : []), [data?.sites]);
+  const safeGuards: GuardWeekly[] = useMemo(() => (Array.isArray(data?.guards) ? data!.guards : []), [data?.guards]);
+  const safeRelievers: RelieverWeekly[] = useMemo(() => (Array.isArray(data?.relievers) ? data!.relievers : []), [data?.relievers]);
+
+  const planned = useMemo(() => {
+    const siteById = new Map<number, Site>();
+    safeSites.forEach((s) => siteById.set(s.id, s));
+
+    const sites: Record<number, Record<DayKey, Site | null>> = {};
+    const off: Record<number, Record<DayKey, boolean>> = {};
+
+    const allGuards = [...safeGuards, ...safeRelievers];
+    for (const g of allGuards) {
+      sites[g.id] = {};
+      off[g.id] = {};
+      for (const d of safeDays) {
+        sites[g.id][d] = null;
+        off[g.id][d] = false;
+      }
+    }
+
+    // persisted plan entries
+    if (planEntries) {
+      for (const [gidRaw, perDay] of Object.entries(planEntries)) {
+        const gid = Number(gidRaw);
+        if (!sites[gid]) sites[gid] = {};
+        if (!off[gid]) off[gid] = {};
+        for (const [d, cell] of Object.entries(perDay)) {
+          if (cell.entry_type === 'off') {
+            off[gid][d] = true;
+            sites[gid][d] = null;
+            continue;
+          }
+          const sid = cell.client_site_id ?? null;
+          off[gid][d] = false;
+          sites[gid][d] = sid ? (siteById.get(Number(sid)) ?? { id: Number(sid), name: 'Site' }) : null;
+        }
+      }
+    }
+
+    // draft edits
+    for (const e of Object.values(draftEdits)) {
+      if (!e.guard_id || !e.date) continue;
+      if (!sites[e.guard_id]) sites[e.guard_id] = {};
+      if (!off[e.guard_id]) off[e.guard_id] = {};
+
+      if (e.delete) {
+        sites[e.guard_id][e.date] = null;
+        off[e.guard_id][e.date] = false;
+        continue;
+      }
+      if (e.entry_type === 'off') {
+        sites[e.guard_id][e.date] = null;
+        off[e.guard_id][e.date] = true;
+        continue;
+      }
+      const sid = e.client_site_id;
+      sites[e.guard_id][e.date] = sid ? (siteById.get(Number(sid)) ?? { id: Number(sid), name: 'Site' }) : null;
+      off[e.guard_id][e.date] = false;
+    }
+
+    return { sites, off };
+  }, [draftEdits, planEntries, safeDays, safeGuards, safeRelievers, safeSites]);
+
+  return (
+    <ControlRoomLayout title="Weekly Planner">
+      <Head title="Weekly Planner" />
+
+      <div className="px-4 sm:px-6 lg:px-8 py-6 space-y-4">
+        {/* Hero Header */}
+        <div className="bg-gradient-to-r from-coin-700 via-coin-600 to-coin-500 rounded-2xl shadow-lg p-6 text-white">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-3">
+                <IconMapper name="CalendarDays" size={28} />
+                Weekly Planner
+              </h1>
+              <p className="mt-1 text-coin-100 text-sm">
+                Schedule and manage guard assignments for the week
+              </p>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Button 
+                type="button" 
+                variant="secondary" 
+                className="bg-white/20 hover:bg-white/30 text-white border-0"
+                onClick={saveDraft} 
+                disabled={savingDraft || planLocked || Object.keys(draftEdits).length === 0}
+              >
+                <IconMapper name="Save" size={16} className="mr-2" />
+                Save Draft
+              </Button>
+              <Button 
+                type="button" 
+                className="bg-white text-coin-700 hover:bg-coin-50"
+                onClick={publishPlan} 
+                disabled={publishing || planLocked || !supervisorId || Object.keys(draftEdits).length > 0}
+              >
+                <IconMapper name="Send" size={16} className="mr-2" />
+                Publish
+              </Button>
+            </div>
+          </div>
+
+          {/* Stats Row */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-6">
+            <div className="bg-white/10 backdrop-blur rounded-xl p-3">
+              <div className="text-xs text-coin-100">Week Starting</div>
+              <div className="text-lg font-bold">{formatYmd(weekStart)}</div>
+            </div>
+            <div className="bg-white/10 backdrop-blur rounded-xl p-3">
+              <div className="text-xs text-coin-100">Assigned Guards</div>
+              <div className="text-2xl font-bold">{data?.guards?.length || 0}</div>
+            </div>
+            <div className="bg-white/10 backdrop-blur rounded-xl p-3">
+              <div className="text-xs text-coin-100">Relievers</div>
+              <div className="text-2xl font-bold">{data?.relievers?.length || 0}</div>
+            </div>
+            <div className="bg-white/10 backdrop-blur rounded-xl p-3">
+              <div className="text-xs text-coin-100">Plan Status</div>
+              <div className="text-lg font-bold">{plan?.status === 'published' ? 'Published' : 'Draft'}</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Filters Card */}
+        <Card className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800">
+          <div className="p-4">
+            {/* Mobile Filter Toggle */}
+            <div className="sm:hidden flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                <IconMapper name="Filter" size={16} />
+                Filters
+                {(zoneId || supervisorId || shiftType !== 'day') && (
+                  <span className="bg-coin-700 text-white text-xs px-1.5 py-0.5 rounded-full">
+                    {[zoneId, supervisorId, shiftType !== 'day' ? 'shift' : null].filter(Boolean).length}
+                  </span>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => setFiltersOpen(!filtersOpen)}
+                className="text-sm text-coin-700 dark:text-coin-300 hover:underline"
+              >
+                {filtersOpen ? 'Hide' : 'Show'}
+              </button>
+            </div>
+
+            <div className={`${filtersOpen ? 'block' : 'hidden'} sm:block`}>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Week Start</label>
+                  <input 
+                    type="date" 
+                    className="w-full border border-gray-200 dark:border-gray-700 rounded-md p-2 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100"
+                    value={formatYmd(weekStart)} 
+                    onChange={(e) => setWeekStart(startOfWeekMonday(new Date(e.target.value)))} 
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Zone</label>
+                  <select 
+                    className="w-full border border-gray-200 dark:border-gray-700 rounded-md p-2 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100"
+                    value={zoneId as any} 
+                    onChange={(e) => setZoneId(e.target.value ? Number(e.target.value) : '')}
+                  >
+                    <option value="">All Zones</option>
+                    {zones.map((z: any) => (<option key={z.id} value={z.id}>{z.name}</option>))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Supervisor</label>
+                  <select 
+                    className="w-full border border-gray-200 dark:border-gray-700 rounded-md p-2 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100"
+                    value={supervisorId as any} 
+                    onChange={(e) => setSupervisorId(e.target.value ? Number(e.target.value) : '')}
+                  >
+                    <option value="">Select Supervisor</option>
+                    {supervisors.map((s: any) => (<option key={s.id} value={s.id}>{s.name}</option>))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Shift Type</label>
+                  <select 
+                    className="w-full border border-gray-200 dark:border-gray-700 rounded-md p-2 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100"
+                    value={shiftType} 
+                    onChange={(e) => setShiftType(e.target.value as ShiftType)}
+                  >
+                    <option value="day">Day</option>
+                    <option value="night">Night</option>
+                  </select>
+                </div>
+              </div>
+              <div className="mt-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                <div className="text-sm text-gray-500 dark:text-gray-400">
+                  {supervisorId ? (
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${
+                      planLocked 
+                        ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' 
+                        : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300'
+                    }`}>
+                      <IconMapper name={planLocked ? 'Lock' : 'Unlock'} size={12} />
+                      {planLocked ? 'Published (Locked)' : 'Draft Mode'}
+                    </span>
+                  ) : (
+                    'Select a supervisor to enable plan editing'
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  <Button 
+                    type="button" 
+                    className="bg-coin-700 hover:bg-coin-600 text-white"
+                    onClick={() => load({})}
+                  >
+                    <IconMapper name="Filter" size={16} className="mr-2" />
+                    Apply
+                  </Button>
+                  <Button 
+                    type="button" 
+                    variant="secondary" 
+                    className="dark:bg-gray-800 dark:hover:bg-gray-700"
+                    onClick={() => { setZoneId(''); setSupervisorId(''); setGuardTypeFilter(''); load({ zoneId: '', supervisorId: '' }); }}
+                  >
+                    Reset
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </Card>
+
+        {loading && (
+          <EmptyState title="Loading roster" description="Fetching weekly roster data…" size="sm" contentClassName="py-2" />
+        )}
+
+        {data && (
+          <div className="space-y-8">
+            {(!guardTypeFilter || guardTypeFilter === 'permanent') && (
+              <GuardsTable
+                data={{ ...data, days: safeDays, sites: safeSites, guards: safeGuards, relievers: safeRelievers }}
+                onRefresh={load}
+                shiftType={shiftType}
+                canManageAttendance={canManageAttendance}
+                plannedSites={planned.sites}
+                plannedOff={planned.off}
+                planLocked={planLocked}
+                onStageDraftEntry={stageDraftEntry}
+              />
+            )}
+            {(!guardTypeFilter || guardTypeFilter === 'standby') && (
+              <StandbyTable
+                data={{ ...data, days: safeDays, sites: safeSites, guards: safeGuards, relievers: safeRelievers }}
+                onRefresh={load}
+                shiftType={shiftType}
+                canManageAttendance={canManageAttendance}
+                plannedSites={planned.sites}
+                plannedOff={planned.off}
+                planLocked={planLocked}
+                onStageDraftEntry={stageDraftEntry}
+              />
+            )}
+            {(!guardTypeFilter || guardTypeFilter === 'reliever') && (
+              <RelieversTable
+                data={{ ...data, days: safeDays, sites: safeSites, guards: safeGuards, relievers: safeRelievers }}
+                onRefresh={load}
+                shiftType={shiftType}
+                canManageAttendance={canManageAttendance}
+                plannedSites={planned.sites}
+                planLocked={planLocked}
+                onStageDraftEntry={stageDraftEntry}
+              />
+            )}
+          </div>
+        )}
+
+        <ManualRosterEntryModal
+          open={manualEntryOpen}
+          onClose={() => setManualEntryOpen(false)}
+          guards={safeGuards}
+          sites={safeSites}
+          onSaved={() => { setManualEntryOpen(false); load({}); }}
+        />
+      </div>
+    </ControlRoomLayout>
+  );
+}
+
+function AssignGuardSiteModal({ open, onClose, guardId, date, initialSiteId, sites, planLocked, onStage, onSaved }: { open: boolean; onClose: () => void; guardId?: number; date?: string; initialSiteId?: number; sites: Site[]; planLocked: boolean; onStage: (e: DraftEntry) => void; onSaved: () => void }) {
+  const { data, setData, processing, reset } = useForm<{ guard_id: number | string; client_site_id: number | string; date: string }>(
+    {
+      guard_id: guardId ?? ('' as any),
+      client_site_id: initialSiteId ?? ('' as any),
+      date: date ?? '',
+    }
+  );
+
+  useEffect(() => {
+    if (!open) return;
+    setData('guard_id', guardId ?? ('' as any));
+    setData('client_site_id', initialSiteId ?? ('' as any));
+    setData('date', date ?? '');
+  }, [open, guardId, date, initialSiteId, setData]);
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (planLocked) return;
+    if (!data.guard_id || !data.date || !data.client_site_id) return;
+    onStage({
+      guard_id: Number(data.guard_id),
+      date: data.date,
+      entry_type: 'site',
+      client_site_id: Number(data.client_site_id),
+    });
+    reset();
+    onSaved();
+  };
+
+  const clearOverride = () => {
+    if (planLocked) return;
+    if (!guardId || !date) return;
+    onStage({ guard_id: guardId, date, entry_type: 'site', delete: true });
+    reset();
+    onSaved();
+  };
+
+  const handleClose = () => {
+    if (!processing) onClose();
+  };
+
+  return (
+    <Modal show={open} onClose={handleClose} maxWidth="sm">
+      <div className="px-6 py-4 border-b flex items-center justify-between bg-white dark:bg-gray-900 dark:border-gray-800">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Override Site</h2>
+        <button type="button" onClick={handleClose} className="text-gray-400 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-200">✕</button>
+      </div>
+      <div className="px-6 py-4 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+        <form className="grid grid-cols-1 gap-3" onSubmit={submit}>
+          <div>
+            <label className="block text-sm font-medium">Date</label>
+            <input type="date" className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100" value={data.date} onChange={(e) => setData('date', e.target.value)} />
+          </div>
+          <div>
+            <label className="block text-sm font-medium">Site</label>
+            <select className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100" value={data.client_site_id as any} onChange={(e) => setData('client_site_id', e.target.value ? Number(e.target.value) : '')}>
+              <option value="">Select a site</option>
+              {sites.map((s) => (
+                <option key={s.id} value={s.id}>{s.name}</option>
+              ))}
+            </select>
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <button type="button" onClick={handleClose} className="px-4 py-2 text-sm rounded-md bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700" disabled={processing}>Cancel</button>
+            {initialSiteId ? (
+              <button type="button" onClick={clearOverride} className="px-4 py-2 text-sm rounded-md bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700" disabled={processing || planLocked}>Clear</button>
+            ) : null}
+            <button type="submit" disabled={processing || planLocked || !data.client_site_id || !data.date} className="px-4 py-2 text-sm rounded-md bg-coin-700 text-white hover:bg-coin-600">Save</button>
+          </div>
+        </form>
+      </div>
+    </Modal>
+  );
+}
+
+function StandbyTable({ data, onRefresh, shiftType, canManageAttendance, plannedSites, plannedOff, planLocked, onStageDraftEntry }: { data: WeeklyData; onRefresh: () => void; shiftType: ShiftType; canManageAttendance: boolean; plannedSites: Record<number, Record<DayKey, Site | null>>; plannedOff: Record<number, Record<DayKey, boolean>>; planLocked: boolean; onStageDraftEntry: (e: DraftEntry) => void }) {
   const dayLabels = useMemo(() => data.days.map((d) => new Date(d).toLocaleDateString(undefined, { weekday: 'short' })), [data.days]);
   const [offModal, setOffModal] = useState<{ open: boolean; guardId?: number; date?: string }>({ open: false });
   const [selected, setSelected] = useState<Record<number, boolean>>({});
   const [bulkOffOpen, setBulkOffOpen] = useState(false);
+  const [assignModal, setAssignModal] = useState<{ open: boolean; guardId?: number; date?: string; siteId?: number }>( { open: false } );
   const [manualModal, setManualModal] = useState<{ open: boolean; guardId?: number; date?: string; siteId?: number; shiftId?: number }>({ open: false });
   const [attModal, setAttModal] = useState<{ open: boolean; guardId?: number; siteId?: number | null; action?: 'present' | 'absent' }>({ open: false });
   const { toast } = useToast();
@@ -128,9 +698,10 @@ function StandbyTable({ data, onRefresh, shiftType, canManageAttendance }: { dat
 
             <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
               {data.days.map((d, idx) => {
-                const off = !!g.off?.[d];
-                const site = g.sites?.[d];
                 const meta = g.meta?.[d];
+                const isShift = meta?.source === 'shift';
+                const off = isShift ? !!g.off?.[d] : !!plannedOff?.[g.id]?.[d];
+                const site = isShift ? (g.sites?.[d] ?? null) : (plannedSites?.[g.id]?.[d] ?? null);
                 const isToday = !!todayKey && d === todayKey;
                 const att = g.attendance_today || null;
                 return (
@@ -140,7 +711,19 @@ function StandbyTable({ data, onRefresh, shiftType, canManageAttendance }: { dat
                     className={`flex items-center justify-between gap-2 w-full px-3 py-2 rounded-md border text-sm ${off ? 'bg-gray-800 text-gray-100 border-gray-700' : site ? 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100 border-gray-200 dark:border-gray-700' : 'bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-800'}`}
                     onClick={() => {
                       if (off) {
+                        if (planLocked) {
+                          toast({ title: 'Plan is published', description: 'This weekly plan is locked.' });
+                          return;
+                        }
                         setOffModal({ open: true, guardId: g.id, date: d });
+                        return;
+                      }
+                      if (!meta?.source) {
+                        if (planLocked) {
+                          toast({ title: 'Plan is published', description: 'This weekly plan is locked.' });
+                          return;
+                        }
+                        setAssignModal({ open: true, guardId: g.id, date: d, siteId: site?.id });
                         return;
                       }
                       setManualModal({
@@ -215,9 +798,10 @@ function StandbyTable({ data, onRefresh, shiftType, canManageAttendance }: { dat
                   </label>
                 </td>
                 {data.days.map((d) => {
-                  const off = !!g.off?.[d];
-                  const site = g.sites?.[d];
                   const meta = g.meta?.[d];
+                  const isShift = meta?.source === 'shift';
+                  const off = isShift ? !!g.off?.[d] : !!plannedOff?.[g.id]?.[d];
+                  const site = isShift ? (g.sites?.[d] ?? null) : (plannedSites?.[g.id]?.[d] ?? null);
                   const isToday = !!todayKey && d === todayKey;
                   const att = g.attendance_today || null;
                   return (
@@ -228,7 +812,19 @@ function StandbyTable({ data, onRefresh, shiftType, canManageAttendance }: { dat
                           className={`inline-flex items-center gap-2 px-2 py-1 rounded-md border text-xs ${off ? 'bg-gray-800 text-gray-100 border-gray-700' : site ? 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100 border-gray-200 dark:border-gray-700' : 'bg-white dark:bg-gray-900 text-gray-500 border-gray-200 dark:border-gray-800'}`}
                           onClick={() => {
                             if (off) {
+                              if (planLocked) {
+                                toast({ title: 'Plan is published', description: 'This weekly plan is locked.' });
+                                return;
+                              }
                               setOffModal({ open: true, guardId: g.id, date: d });
+                              return;
+                            }
+                            if (!meta?.source) {
+                              if (planLocked) {
+                                toast({ title: 'Plan is published', description: 'This weekly plan is locked.' });
+                                return;
+                              }
+                              setAssignModal({ open: true, guardId: g.id, date: d, siteId: site?.id });
                               return;
                             }
                             setManualModal({
@@ -282,14 +878,31 @@ function StandbyTable({ data, onRefresh, shiftType, canManageAttendance }: { dat
         onClose={() => setOffModal({ open: false })}
         guardId={offModal.guardId}
         date={offModal.date}
-        onSaved={() => { setOffModal({ open: false }); onRefresh(); }}
+        planLocked={planLocked}
+        onStage={(e) => onStageDraftEntry(e)}
+        onSaved={() => { setOffModal({ open: false }); }}
       />
 
       <BulkOffModal
         open={bulkOffOpen}
         onClose={() => setBulkOffOpen(false)}
         guardIds={selectedIds}
-        onSaved={() => { setBulkOffOpen(false); onRefresh(); }}
+        days={data.days}
+        planLocked={planLocked}
+        onStage={(entries) => entries.forEach((e) => onStageDraftEntry(e))}
+        onSaved={() => { setBulkOffOpen(false); }}
+      />
+
+      <AssignReliefModal
+        open={assignModal.open}
+        onClose={() => setAssignModal({ open: false })}
+        guardId={assignModal.guardId}
+        date={assignModal.date}
+        initialSiteId={assignModal.siteId}
+        sites={data.sites}
+        planLocked={planLocked}
+        onStage={(e) => onStageDraftEntry(e)}
+        onSaved={() => { setAssignModal({ open: false }); }}
       />
 
       <ManualRosterShiftModal
@@ -320,676 +933,19 @@ function StandbyTable({ data, onRefresh, shiftType, canManageAttendance }: { dat
   );
 }
 
-function GenerateShiftsPanel({ weekStart, zoneId, supervisorId, defaultShiftType }: { weekStart: Date; zoneId: number | ''; supervisorId: number | ''; defaultShiftType: ShiftType }) {
-  const { toast } = useToast();
-  const { data, setData, post, processing } = useForm<{ start: string; start_time: string; end_time: string; shift_type?: 'day' | 'night'; include_relievers?: boolean; include_standby?: boolean; zone_id?: number | ''; supervisor_id?: number | '' }>({
-    start: formatYmd(weekStart),
-    start_time: '06:00',
-    end_time: '18:00',
-    shift_type: (defaultShiftType === 'night' ? 'night' : 'day'),
-    include_relievers: false,
-    include_standby: true,
-    zone_id: zoneId,
-    supervisor_id: supervisorId,
-  });
-
-  useEffect(() => {
-    setData('start', formatYmd(weekStart));
-    setData('zone_id', zoneId);
-    setData('supervisor_id', supervisorId);
-    setData('shift_type', (defaultShiftType === 'night' ? 'night' : 'day'));
-    setData('shift_type', defaultShiftType === 'night' ? 'night' : 'day');
-    if (defaultShiftType === 'night') {
-      setData('start_time', '18:00');
-      setData('end_time', '06:00');
-    } else {
-      setData('start_time', '06:00');
-      setData('end_time', '18:00');
-    }
-  }, [setData, weekStart, zoneId, supervisorId]);
-
-  const submit = (e: React.FormEvent) => {
-    e.preventDefault();
-    post(route('control-room.roster.generate-shifts'), {
-      onSuccess: () => { toast({ title: 'Shifts generated', description: 'Guard shifts created from roster for the selected week.' }); },
-    });
-  };
-
-  return (
-    <div className="border rounded-md dark:border-gray-800">
-      <div className="px-4 py-3 border-b dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
-        <div className="flex items-center justify-between">
-          <h3 className="text-sm font-medium">Generate Shifts from Roster (Week of {weekStart.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })})</h3>
-        </div>
-      </div>
-      <div className="px-4 py-3 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
-        <form onSubmit={submit} className="grid grid-cols-1 sm:grid-cols-6 gap-3 items-end">
-          <div>
-            <label className="block text-sm">Start Time</label>
-            <input type="time" className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100" value={data.start_time} onChange={(e) => setData('start_time', e.target.value)} />
-          </div>
-          <div>
-            <label className="block text-sm">End Time</label>
-            <input type="time" className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100" value={data.end_time} onChange={(e) => setData('end_time', e.target.value)} />
-          </div>
-          <div>
-            <label className="block text-sm">Type</label>
-            <select className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100" value={data.shift_type as any} onChange={(e) => setData('shift_type', e.target.value as any)}>
-              <option value="day">Day</option>
-              <option value="night">Night</option>
-            </select>
-          </div>
-          <div className="flex items-center gap-2 mt-6">
-            <button type="button" className="px-2 py-1 rounded-md bg-gray-100 dark:bg-gray-800 text-xs" onClick={() => { setData('shift_type','day'); setData('start_time','06:00'); setData('end_time','18:00'); }}>Day Preset</button>
-            <button type="button" className="px-2 py-1 rounded-md bg-gray-100 dark:bg-gray-800 text-xs" onClick={() => { setData('shift_type','night'); setData('start_time','18:00'); setData('end_time','06:00'); }}>Night Preset</button>
-          </div>
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
-            <label className="inline-flex items-center gap-2 text-sm mt-2 sm:mt-6">
-              <input type="checkbox" checked={!!data.include_relievers} onChange={(e) => setData('include_relievers', e.target.checked)} />
-              <span>Include relievers</span>
-            </label>
-            <label className="inline-flex items-center gap-2 text-sm mt-1 sm:mt-6">
-              <input type="checkbox" checked={data.include_standby !== false} onChange={(e) => setData('include_standby', e.target.checked)} />
-              <span>Include standby</span>
-            </label>
-          </div>
-          <div className="flex justify-end">
-            <button type="submit" disabled={processing || !data.start_time || !data.end_time} className="w-full sm:w-auto px-3 py-2 rounded-md bg-coin-700 text-white hover:bg-coin-600 text-sm">Generate</button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-}
-
-function BundlesSection({ weekStart, zoneId, supervisorId, relievers, sites }: { weekStart: Date; zoneId: number | ''; supervisorId: number | ''; relievers: any[]; sites: Site[] }) {
-  const [bundles, setBundles] = useState<any[]>([]);
-  const [createOpen, setCreateOpen] = useState(false);
-  const [editing, setEditing] = useState<any | null>(null);
-  const [loading, setLoading] = useState(false);
-  const { toast } = useToast();
-  const applyForm = useForm<{ start: string }>({ start: formatYmd(weekStart) });
-
-  const hasRelievers = Array.isArray(relievers) && relievers.length > 0;
-
-  const loadBundles = useCallback(async () => {
-    setLoading(true);
-    try {
-      const params: any = {};
-      if (zoneId) params.zone_id = zoneId;
-      if (supervisorId) params.supervisor_id = supervisorId;
-      const url = route('control-room.roster.bundles', params);
-      const res = await fetch(url, { headers: { Accept: 'application/json' } });
-      if (res.ok) {
-        const json = await res.json();
-        setBundles(json.bundles || []);
-      }
-    } finally {
-      setLoading(false);
-    }
-  }, [zoneId, supervisorId]);
-
-  useEffect(() => {
-    loadBundles();
-  }, [loadBundles]);
-
-  useEffect(() => {
-    applyForm.setData('start', formatYmd(weekStart));
-  }, [applyForm, weekStart]);
-
-  const applyWeek = async (bundleId: number) => {
-    applyForm.post(route('control-room.roster.bundles.apply-week', bundleId), {
-      preserveScroll: true,
-      onSuccess: () => { toast({ title: 'Bundle applied', description: 'Reliever rotation applied for the week.' }); },
-    });
-  };
-
-  return (
-    <div className="space-y-3">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Bundles (6 sites + 1 reliever)</h3>
-        <button
-          type="button"
-          disabled={!hasRelievers}
-          className="w-full sm:w-auto px-3 py-1.5 rounded-md bg-coin-700 text-white hover:bg-coin-600 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-          onClick={() => {
-            if (!hasRelievers) return;
-            setEditing(null);
-            setCreateOpen(true);
-          }}
-        >
-          New Bundle
-        </button>
-      </div>
-      {!hasRelievers ? (
-        <EmptyState
-          title="No relievers available"
-          description="Bundles can’t be created for the current zone/supervisor scope."
-          size="sm"
-          contentClassName="py-2"
-        />
-      ) : null}
-      {loading && (
-        <EmptyState
-          title="Loading bundles"
-          description="Fetching bundle configuration…"
-          size="sm"
-          contentClassName="py-2"
-        />
-      )}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        {bundles.map((b) => (
-          <div key={b.id} className="border rounded-md p-3 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
-            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
-              <div>
-                <div className="font-medium">{b.name}</div>
-                <div className="text-xs text-gray-500 dark:text-gray-400">Reliever: {b.reliever?.name || '—'}</div>
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <button type="button" className="text-xs px-2 py-1 rounded-md bg-gray-100 dark:bg-gray-800" onClick={() => { setEditing(b); setCreateOpen(true); }}>Edit</button>
-                <DeleteBundleButton id={b.id} onDone={loadBundles} />
-                <button type="button" className="text-xs px-2 py-1 rounded-md bg-coin-700 text-white hover:bg-coin-600" onClick={() => applyWeek(b.id)}>Apply Week</button>
-              </div>
-            </div>
-            <div className="mt-2 text-xs text-gray-600 dark:text-gray-300">
-              Sites: {b.sites && b.sites.length ? b.sites.map((s: any) => s.name).join(', ') : '—'}
-            </div>
-          </div>
-        ))}
-      </div>
-      {!loading && bundles.length === 0 && (
-        <EmptyState
-          title="No bundles yet"
-          description="Create a bundle to define reliever rotations across 6 sites."
-          size="sm"
-          variant="card"
-          contentClassName="py-4"
-        />
-      )}
-
-      <BundleFormModal
-        open={createOpen}
-        onClose={() => setCreateOpen(false)}
-        initial={editing}
-        relievers={relievers}
-        sites={sites}
-        filters={{ zone_id: zoneId, supervisor_id: supervisorId }}
-        onSaved={() => { setCreateOpen(false); loadBundles(); }}
-      />
-    </div>
-  );
-}
-
-function DeleteBundleButton({ id, onDone }: { id: number; onDone: () => void }) {
-  const { post, processing } = useForm({});
-  const { toast } = useToast();
-  const onDelete = () => {
-    if (!confirm('Delete this bundle?')) return;
-    post(route('control-room.roster.bundles.destroy', id), {
-      method: 'delete',
-      onSuccess: () => { onDone(); toast({ title: 'Bundle deleted' }); },
-    } as any);
-  };
-  return (
-    <button type="button" className="text-xs px-2 py-1 rounded-md bg-red-600 text-white disabled:opacity-50" onClick={onDelete} disabled={processing}>Delete</button>
-  );
-}
-
-function BundleFormModal({ open, onClose, initial, relievers, sites, filters, onSaved }: { open: boolean; onClose: () => void; initial?: any; relievers: any[]; sites: Site[]; filters: { zone_id: number | ''; supervisor_id: number | '' }; onSaved: () => void }) {
-  const isEdit = !!initial;
-  const { toast } = useToast();
-  const { data, setData, post, put, processing, errors } = useForm<{ name: string; reliever_guard_id: number | ''; site_ids: number[]; zone_id?: number | ''; supervisor_id?: number | '' }>({
-    name: initial?.name || '',
-    reliever_guard_id: initial?.reliever?.id || ('' as any),
-    site_ids: (initial?.sites || []).map((s: any) => s.id) || [],
-    zone_id: filters.zone_id,
-    supervisor_id: filters.supervisor_id,
-  });
-
-  useEffect(() => {
-    if (open) {
-      setData('name', initial?.name || '');
-      setData('reliever_guard_id', initial?.reliever?.id || ('' as any));
-      setData('site_ids', (initial?.sites || []).map((s: any) => s.id));
-      setData('zone_id', filters.zone_id);
-      setData('supervisor_id', filters.supervisor_id);
-    }
-  }, [open, initial, filters.zone_id, filters.supervisor_id, setData]);
-
-  const toggleSite = (sid: number) => {
-    const set = new Set(data.site_ids as any[]);
-    if (set.has(sid)) set.delete(sid); else set.add(sid);
-    const arr = Array.from(set) as number[];
-    if (arr.length > 6) return; // enforce max 6
-    setData('site_ids', arr as any);
-  };
-
-  const moveSite = (sid: number, dir: -1 | 1) => {
-    const arr = [...(data.site_ids as any[])];
-    const idx = arr.indexOf(sid);
-    if (idx === -1) return;
-    const ni = idx + dir;
-    if (ni < 0 || ni >= arr.length) return;
-    const tmp = arr[idx];
-    arr[idx] = arr[ni];
-    arr[ni] = tmp;
-    setData('site_ids', arr as any);
-  };
-
-  const submit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (isEdit) {
-      put(route('control-room.roster.bundles.update', initial.id), {
-        onSuccess: () => { toast({ title: 'Bundle updated' }); onSaved(); },
-      });
-    } else {
-      post(route('control-room.roster.bundles'), {
-        onSuccess: () => { toast({ title: 'Bundle created' }); onSaved(); },
-      });
-    }
-  };
-
-  return (
-    <Modal show={open} onClose={onClose} maxWidth="lg">
-      <div className="px-6 py-4 border-b flex items-center justify-between bg-white dark:bg-gray-900 dark:border-gray-800">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{isEdit ? 'Edit Bundle' : 'New Bundle'}</h2>
-        <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-200">✕</button>
-      </div>
-      <div className="px-6 py-4 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
-        <form className="grid grid-cols-1 gap-3" onSubmit={submit}>
-          <div>
-            <label className="block text-sm font-medium">Name</label>
-            <input className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100" value={data.name} onChange={(e) => setData('name', e.target.value)} />
-            {errors.name && <p className="text-xs text-red-600 mt-1">{errors.name}</p>}
-          </div>
-          <div>
-            <label className="block text-sm font-medium">Reliever</label>
-            <select className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100" value={data.reliever_guard_id as any} onChange={(e) => setData('reliever_guard_id', Number(e.target.value))}>
-              <option value="">Select reliever</option>
-              {relievers.map((r) => (
-                <option key={r.id} value={r.id}>{r.name} {r.employee_id ? `(${r.employee_id})` : ''}</option>
-              ))}
-            </select>
-            {errors.reliever_guard_id && <p className="text-xs text-red-600 mt-1">{errors.reliever_guard_id}</p>}
-          </div>
-          <div>
-            <label className="block text-sm font-medium">Sites (max 6)</label>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-auto border rounded p-2 dark:border-gray-800">
-              {sites.map((s) => (
-                <label key={s.id} className="flex items-center gap-2 text-sm">
-                  <input type="checkbox" checked={(data.site_ids as any[]).includes(s.id)} onChange={() => toggleSite(s.id)} />
-                  <span>{s.name}</span>
-                </label>
-              ))}
-            </div>
-            {errors.site_ids && <p className="text-xs text-red-600 mt-1">{errors.site_ids}</p>}
-          </div>
-          <div>
-            <label className="block text-sm font-medium">Selected order</label>
-            <div className="space-y-2">
-              {(data.site_ids as any[]).map((sid) => {
-                const s = sites.find((x) => x.id === sid);
-                if (!s) return null;
-                return (
-                  <div key={sid} className="flex items-center justify-between text-sm border rounded p-2 dark:border-gray-800">
-                    <div>{s.name}</div>
-                    <div className="flex items-center gap-2">
-                      <button type="button" className="px-2 py-1 rounded-md bg-gray-100 dark:bg-gray-800" onClick={() => moveSite(sid, -1)}>↑</button>
-                      <button type="button" className="px-2 py-1 rounded-md bg-gray-100 dark:bg-gray-800" onClick={() => moveSite(sid, 1)}>↓</button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-          <div className="flex justify-end gap-2 pt-2">
-            <button type="button" onClick={onClose} className="px-4 py-2 text-sm rounded-md bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700" disabled={processing}>Cancel</button>
-            <button type="submit" disabled={processing || !data.name || !data.reliever_guard_id || !(data.site_ids || []).length} className="px-4 py-2 text-sm rounded-md bg-coin-700 text-white hover:bg-coin-600">{processing ? 'Saving…' : 'Save'}</button>
-          </div>
-        </form>
-      </div>
-    </Modal>
-  );
-}
-
-function startOfWeekMonday(d: Date) {
-  const date = new Date(d);
-  const day = date.getDay(); // 0=Sun
-  const diff = (day === 0 ? -6 : 1) - day; // make Monday start
-  date.setDate(date.getDate() + diff);
-  date.setHours(0, 0, 0, 0);
-  return date;
-}
-
-export default function RosterWeekly() {
-  const { auth, initial_week_start, zones = [], supervisors = [] } = (usePage().props as any);
-  const { toast } = useToast();
-  const [weekStart, setWeekStart] = useState<Date>(() => initial_week_start ? new Date(initial_week_start) : startOfWeekMonday(new Date()));
-  const [data, setData] = useState<WeeklyData | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [zoneId, setZoneId] = useState<number | ''>('');
-  const [supervisorId, setSupervisorId] = useState<number | ''>('');
-  const [guardTypeFilter, setGuardTypeFilter] = useState<string>('');
-  const [shiftType, setShiftType] = useState<ShiftType>('day');
-  const [reuseInfo, setReuseInfo] = useState<any | null>(null);
-  const [manualEntryOpen, setManualEntryOpen] = useState(false);
-  const lastReuseToastKeyRef = useRef<string>('');
-
-  const canManageAttendance = useMemo(() => {
-    const can = (auth as any)?.user?.can;
-    if (can && can['attendance.manage']) return true;
-    const roles = (auth as any)?.user?.roles || [];
-    if (Array.isArray(roles)) {
-      return roles.includes('control_room_operator') || roles.includes('operations_officer') || roles.includes('manager') || roles.includes('super_admin');
-    }
-    return false;
-  }, [auth]);
-
-  const hasRelieversInScope = useMemo(() => {
-    return !!data?.relievers?.length;
-  }, [data]);
-
-  const hasRelieverAssignments = useMemo(() => {
-    if (!data?.relievers?.length) return false;
-    return data.relievers.some((r) => r.sites && Object.keys(r.sites).length > 0);
-  }, [data]);
-
-  const hasStandbyInScope = useMemo(() => {
-    return !!data?.guards?.some((g) => (g.guard_type || 'permanent') === 'standby');
-  }, [data]);
-
-  const ensureReuse = useCallback(async (params: { start: string; zone_id?: number; supervisor_id?: number; force?: boolean }) => {
-    try {
-      const token = getCsrfToken();
-      const res = await fetch(route('control-room.roster.weekly.reuse'), {
-        method: 'POST',
-        headers: {
-          Accept: 'application/json',
-          'Content-Type': 'application/json',
-          ...(token ? { 'X-CSRF-TOKEN': token } : {}),
-        },
-        body: JSON.stringify(params),
-      });
-      if (!res.ok) return;
-      const json = await res.json();
-      setReuseInfo(json);
-      if (json?.reused) {
-        const key = `${params.start}-${params.zone_id || ''}-${params.supervisor_id || ''}-${json.source_week_start || ''}`;
-        if (key !== lastReuseToastKeyRef.current) {
-          toast({
-            title: 'Reused last roster',
-            description: json.source_week_start ? `Copied ${json.copied || 0} reliever assignments from week of ${json.source_week_start}.` : 'Copied reliever assignments from the last saved week.',
-          });
-          lastReuseToastKeyRef.current = key;
-        }
-      }
-    } catch {
-      return;
-    }
-  }, [toast]);
-
-  const load = useCallback(async (overrides?: { weekStart?: Date; zoneId?: number | ''; supervisorId?: number | ''; forceReuse?: boolean }) => {
-    setLoading(true);
-    try {
-      const ws = overrides?.weekStart ?? weekStart;
-      const zid = overrides?.zoneId ?? zoneId;
-      const sid = overrides?.supervisorId ?? supervisorId;
-
-      setReuseInfo(null);
-
-      const params: any = { start: formatYmd(ws) };
-      if (zid) params.zone_id = zid;
-      if (sid) params.supervisor_id = sid;
-      params.shift_type = shiftType;
-
-      const currentWeekStart = startOfWeekMonday(new Date());
-      const shouldAutoReuse = ws.getTime() >= currentWeekStart.getTime();
-      if (overrides?.forceReuse) {
-        await ensureReuse({ ...params, force: true });
-      } else if (shouldAutoReuse) {
-        await ensureReuse(params);
-      }
-
-      const url = route('control-room.roster.weekly.data', params);
-      const res = await fetch(url, { headers: { Accept: 'application/json' } });
-      if (!res.ok) {
-        let details = `Request failed (${res.status})`;
-        try {
-          const text = await res.text();
-          if (text) {
-            details = details + `: ${text.slice(0, 200)}`;
-          }
-        } catch {
-        }
-        toast({ title: 'Failed to load roster', description: details, variant: 'destructive' });
-        setData(null);
-        return;
-      }
-      try {
-        const json = await res.json();
-        setData(json as WeeklyData);
-      } catch {
-        toast({ title: 'Failed to load roster', description: 'Server returned an invalid response.', variant: 'destructive' });
-        setData(null);
-      }
-    } finally {
-      setLoading(false);
-    }
-  }, [ensureReuse, supervisorId, weekStart, zoneId, shiftType, toast]);
-
-  const reuseOverwrite = async () => {
-    if (!hasRelieversInScope) {
-      toast({ title: 'No relievers in this scope', description: 'Change filters (zone/supervisor) to a scope that has relievers.' });
-      return;
-    }
-    const ok = confirm('Reuse last saved reliever roster for this week and overwrite current reliever assignments?');
-    if (!ok) return;
-    await load({ forceReuse: true });
-  };
-
-  useEffect(() => {
-    load();
-  }, [load]);
-
-  const prevWeek = () => setWeekStart((d) => { const nd = new Date(d); nd.setDate(nd.getDate() - 7); return startOfWeekMonday(nd); });
-  const nextWeek = () => setWeekStart((d) => { const nd = new Date(d); nd.setDate(nd.getDate() + 7); return startOfWeekMonday(nd); });
-  const thisWeek = () => setWeekStart(startOfWeekMonday(new Date()));
-
-  return (
-    <ControlRoomLayout title="Weekly Roster" user={auth?.user as any}>
-      <Head title="Weekly Roster" />
-      <div className="space-y-4">
-        <div className="space-y-3">
-          <PageHeader
-            title="Weekly Roster"
-            description="Show guard off-days and reliever sites for each day."
-            actions={(
-              <>
-                <button
-                  type="button"
-                  onClick={() => setManualEntryOpen(true)}
-                  className="w-full sm:w-auto px-3 py-1.5 rounded-md bg-emerald-700 text-white hover:bg-emerald-600 text-sm"
-                >
-                  Quick Entry
-                </button>
-                <Link href={route('control-room.shifts.index')} className="w-full sm:w-auto px-3 py-1.5 rounded-md bg-coin-700 text-white hover:bg-coin-600 text-sm">View Guard Shifts</Link>
-                <button onClick={prevWeek} className="w-full sm:w-auto px-3 py-1.5 rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700">Prev</button>
-                <button onClick={thisWeek} className="w-full sm:w-auto px-3 py-1.5 rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700">This Week</button>
-                <button onClick={nextWeek} className="w-full sm:w-auto px-3 py-1.5 rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700">Next</button>
-              </>
-            )}
-          />
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
-              <label className="text-sm text-gray-600 dark:text-gray-300 sm:min-w-[70px]">Zone</label>
-              <select className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100" value={zoneId as any} onChange={(e) => setZoneId(e.target.value ? Number(e.target.value) : '')}>
-                <option value="">All zones</option>
-                {zones.map((z: any) => (<option key={z.id} value={z.id}>{z.name}</option>))}
-              </select>
-            </div>
-            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
-              <label className="text-sm text-gray-600 dark:text-gray-300 sm:min-w-[90px]">Supervisor</label>
-              <select className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100" value={supervisorId as any} onChange={(e) => setSupervisorId(e.target.value ? Number(e.target.value) : '')}>
-                <option value="">All supervisors</option>
-                {supervisors.map((s: any) => (<option key={s.id} value={s.id}>{s.name}</option>))}
-              </select>
-            </div>
-            <div className="flex flex-col sm:flex-row sm:items-center gap-2 md:justify-end">
-              <button onClick={() => load()} className="w-full sm:w-auto px-3 py-1.5 rounded-md bg-coin-700 text-white hover:bg-coin-600">Apply</button>
-              <button
-                onClick={() => {
-                  setZoneId('');
-                  setSupervisorId('');
-                  setGuardTypeFilter('');
-                  load({ zoneId: '', supervisorId: '' });
-                }}
-                className="w-full sm:w-auto px-3 py-1.5 rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700"
-              >
-                Reset
-              </button>
-            </div>
-          </div>
-
-          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
-            <label className="text-sm text-gray-600 dark:text-gray-300 sm:min-w-[90px]">Guard Type</label>
-            <select
-              className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100 sm:max-w-xs"
-              value={guardTypeFilter}
-              onChange={(e) => setGuardTypeFilter(e.target.value)}
-            >
-              <option value="">All types</option>
-              <option value="permanent">Standard</option>
-              <option value="standby">Standby</option>
-              <option value="reliever">Reliever</option>
-            </select>
-          </div>
-
-          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
-            <label className="text-sm text-gray-600 dark:text-gray-300 sm:min-w-[90px]">Roster</label>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setShiftType('day')}
-                className={`px-3 py-1.5 rounded-md text-sm border ${shiftType === 'day' ? 'bg-coin-700 border-coin-800 text-white' : 'bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200'}`}
-              >
-                Day (06:00-18:00)
-              </button>
-              <button
-                type="button"
-                onClick={() => setShiftType('night')}
-                className={`px-3 py-1.5 rounded-md text-sm border ${shiftType === 'night' ? 'bg-coin-700 border-coin-800 text-white' : 'bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200'}`}
-              >
-                Night (18:00-06:00)
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <div className="rounded-md border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-3">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-            <div className="text-sm text-gray-700 dark:text-gray-200">
-              {!hasRelieversInScope
-                ? 'Relievers not found for the selected zone/supervisor.'
-                : (hasRelieverAssignments ? 'Reliever roster is saved for this week.' : 'Reliever roster not saved for this week yet.')}
-            </div>
-            <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-              <button
-                type="button"
-                onClick={reuseOverwrite}
-                disabled={loading || !hasRelieversInScope}
-                className="w-full sm:w-auto px-3 py-1.5 rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Reuse Last (Overwrite)
-              </button>
-            </div>
-          </div>
-          {hasRelieversInScope && reuseInfo?.reused && reuseInfo?.source_week_start ? (
-            <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">Reused from week starting {reuseInfo.source_week_start}.</div>
-          ) : null}
-        </div>
-
-        {loading && (
-          <EmptyState
-            title="Loading roster"
-            description="Fetching weekly roster data…"
-            size="sm"
-            contentClassName="py-2"
-          />
-        )}
-
-        {data && (
-          <div className="space-y-8">
-            <GenerateShiftsPanel
-              weekStart={weekStart}
-              zoneId={zoneId}
-              supervisorId={supervisorId}
-              defaultShiftType={shiftType}
-            />
-            {(!guardTypeFilter || guardTypeFilter === 'permanent') && (
-              <GuardsTable data={data} onRefresh={load} shiftType={shiftType} canManageAttendance={canManageAttendance} />
-            )}
-            {(!guardTypeFilter || guardTypeFilter === 'standby') && (
-              hasStandbyInScope
-                ? <StandbyTable data={data} onRefresh={load} shiftType={shiftType} canManageAttendance={canManageAttendance} />
-                : (guardTypeFilter === 'standby' ? (
-                  <EmptyState
-                    title="No standby guards"
-                    description="Change zone/supervisor filters to a scope that has standby guards."
-                    size="sm"
-                    variant="card"
-                  />
-                ) : null)
-            )}
-            {(!guardTypeFilter || guardTypeFilter === 'reliever') && (
-              data.relievers?.length
-                ? <RelieversTable data={data} onRefresh={load} shiftType={shiftType} canManageAttendance={canManageAttendance} />
-                : (guardTypeFilter === 'reliever' ? (
-                  <EmptyState
-                    title="No relievers found"
-                    description="Change zone/supervisor filters to a scope that has relievers."
-                    size="sm"
-                    variant="card"
-                  />
-                ) : null)
-            )}
-            <BundlesSection
-              weekStart={weekStart}
-              zoneId={zoneId}
-              supervisorId={supervisorId}
-              relievers={(data.guards || []).filter((g: any) => (g.guard_type || 'permanent') === 'reliever')}
-              sites={data.sites}
-            />
-          </div>
-        )}
-        <ManualRosterEntryModal
-          open={manualEntryOpen}
-          onClose={() => setManualEntryOpen(false)}
-          guards={(data?.guards || [])}
-          sites={(data?.sites || [])}
-          onSaved={() => {
-            setManualEntryOpen(false);
-            load();
-          }}
-        />
-      </div>
-    </ControlRoomLayout>
-  );
-}
-
-function GuardsTable({ data, onRefresh, shiftType, canManageAttendance }: { data: WeeklyData; onRefresh: () => void; shiftType: ShiftType; canManageAttendance: boolean }) {
+function GuardsTable({ data, onRefresh, shiftType, canManageAttendance, plannedSites, plannedOff, planLocked, onStageDraftEntry }: { data: WeeklyData; onRefresh: () => void; shiftType: ShiftType; canManageAttendance: boolean; plannedSites: Record<number, Record<DayKey, Site | null>>; plannedOff: Record<number, Record<DayKey, boolean>>; planLocked: boolean; onStageDraftEntry: (e: DraftEntry) => void }) {
   const dayLabels = useMemo(() => data.days.map((d) => new Date(d).toLocaleDateString(undefined, { weekday: 'short' })), [data.days]);
-  const [offModal, setOffModal] = useState<{ open: boolean; guardId?: number; date?: string }>({ open: false });
+  const [offModal, setOffModal] = useState<{ open: boolean; guardId?: number; date?: string }>( { open: false } );
   const [selected, setSelected] = useState<Record<number, boolean>>({});
   const [bulkOffOpen, setBulkOffOpen] = useState(false);
-  const [manualModal, setManualModal] = useState<{ open: boolean; guardId?: number; date?: string; siteId?: number; shiftId?: number; notes?: string }>({ open: false });
-  const [attModal, setAttModal] = useState<{ open: boolean; guardId?: number; siteId?: number | null; action?: 'present' | 'absent' }>({ open: false });
+  const [assignModal, setAssignModal] = useState<{ open: boolean; guardId?: number; date?: string; siteId?: number }>( { open: false } );
+  const [manualModal, setManualModal] = useState<{ open: boolean; guardId?: number; date?: string; siteId?: number; shiftId?: number; notes?: string }>( { open: false } );
   const { toast } = useToast();
 
-  const toggleSel = (id: number) => setSelected((prev) => ({ ...prev, [id]: !prev[id] }));
-  const selectedIds = Object.entries(selected).filter(([_, v]) => !!v).map(([k]) => Number(k));
-
   const todayKey = data.today;
+
+  const selectedIds = useMemo(() => Object.entries(selected).filter(([, v]) => v).map(([id]) => Number(id)), [selected]);
+  const toggleSel = (id: number) => setSelected((prev) => ({ ...prev, [id]: !prev[id] }));
 
   const doQuick = (guardId: number, action: 'present' | 'absent', siteId?: number | null) => {
     if (!canManageAttendance) return;
@@ -1003,13 +959,26 @@ function GuardsTable({ data, onRefresh, shiftType, canManageAttendance }: { data
 
   return (
     <div className="space-y-2">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Assigned Guards</h3>
-        <div className="text-xs text-gray-500 dark:text-gray-400">Click a day to add off-day</div>
-      </div>
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-        <div className="text-xs text-gray-500 dark:text-gray-400">Select guards then bulk mark OFF</div>
-        <button disabled={!selectedIds.length} onClick={() => setBulkOffOpen(true)} className={`w-full sm:w-auto px-3 py-1.5 rounded-md text-white ${selectedIds.length ? 'bg-coin-700 hover:bg-coin-600' : 'bg-gray-400 cursor-not-allowed'}`}>Bulk Off-day</button>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+            <IconMapper name="Users" size={20} className="text-coin-600" />
+            Assigned Guards
+          </h3>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Click a day to add off-day or assign site</p>
+        </div>
+        <button 
+          disabled={!selectedIds.length} 
+          onClick={() => setBulkOffOpen(true)} 
+          className={`px-3 py-1.5 rounded-md text-white text-sm font-medium transition-colors ${
+            selectedIds.length 
+              ? 'bg-coin-700 hover:bg-coin-600' 
+              : 'bg-gray-400 cursor-not-allowed'
+          }`}
+        >
+          <IconMapper name="CalendarX" size={14} className="mr-1.5 inline" />
+          Bulk Off-day
+        </button>
       </div>
 
       <div className="md:hidden space-y-2">
@@ -1031,14 +1000,30 @@ function GuardsTable({ data, onRefresh, shiftType, canManageAttendance }: { data
 
             <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
               {data.days.map((d, idx) => {
-                const off = !!g.off?.[d];
-                const site = g.sites?.[d];
+                const meta = g.meta?.[d];
+                const isShift = meta?.source === 'shift';
+                const off = isShift ? !!g.off?.[d] : !!plannedOff?.[g.id]?.[d];
+                const site = isShift ? (g.sites?.[d] ?? null) : (plannedSites?.[g.id]?.[d] ?? null);
                 return (
                   <button
                     key={d}
                     type="button"
                     className={`flex items-center justify-between gap-2 w-full px-3 py-2 rounded-md border text-sm ${off ? 'bg-gray-800 text-gray-100 border-gray-700' : site ? 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100 border-gray-200 dark:border-gray-700' : 'bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-800'}`}
-                    onClick={() => setOffModal({ open: true, guardId: g.id, date: d })}
+                    onClick={() => {
+                      if (meta?.source === 'shift') {
+                        setManualModal({ open: true, guardId: g.id, date: d, siteId: site?.id, shiftId: meta?.shift_id });
+                        return;
+                      }
+                      if (planLocked) {
+                        toast({ title: 'Plan is published', description: 'This weekly plan is locked.' });
+                        return;
+                      }
+                      if (off) {
+                        setOffModal({ open: true, guardId: g.id, date: d });
+                        return;
+                      }
+                      setAssignModal({ open: true, guardId: g.id, date: d, siteId: site?.id });
+                    }}
                     title="Add off-day"
                   >
                     <span className="text-xs font-medium text-gray-500 dark:text-gray-400">{dayLabels[idx]}</span>
@@ -1074,14 +1059,30 @@ function GuardsTable({ data, onRefresh, shiftType, canManageAttendance }: { data
                   </label>
                 </td>
                 {data.days.map((d) => {
-                  const off = !!g.off?.[d];
-                  const site = g.sites?.[d];
+                  const meta = g.meta?.[d];
+                  const isShift = meta?.source === 'shift';
+                  const off = isShift ? !!g.off?.[d] : !!plannedOff?.[g.id]?.[d];
+                  const site = isShift ? (g.sites?.[d] ?? null) : (plannedSites?.[g.id]?.[d] ?? null);
                   return (
                     <td key={d} className="px-3 py-2 text-sm">
                       <button
                         type="button"
                         className={`inline-flex items-center gap-2 px-2 py-1 rounded-md border text-xs ${off ? 'bg-gray-800 text-gray-100 border-gray-700' : site ? 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100 border-gray-200 dark:border-gray-700' : 'bg-white dark:bg-gray-900 text-gray-500 border-gray-200 dark:border-gray-800'}`}
-                        onClick={() => setOffModal({ open: true, guardId: g.id, date: d })}
+                        onClick={() => {
+                          if (meta?.source === 'shift') {
+                            setManualModal({ open: true, guardId: g.id, date: d, siteId: site?.id, shiftId: meta?.shift_id });
+                            return;
+                          }
+                          if (planLocked) {
+                            toast({ title: 'Plan is published', description: 'This weekly plan is locked.' });
+                            return;
+                          }
+                          if (off) {
+                            setOffModal({ open: true, guardId: g.id, date: d });
+                            return;
+                          }
+                          setAssignModal({ open: true, guardId: g.id, date: d, siteId: site?.id });
+                        }}
                         title="Add off-day"
                       >
                         {off ? 'OFF' : (site ? site.name : '—')}
@@ -1100,20 +1101,373 @@ function GuardsTable({ data, onRefresh, shiftType, canManageAttendance }: { data
         onClose={() => setOffModal({ open: false })}
         guardId={offModal.guardId}
         date={offModal.date}
-        onSaved={() => { setOffModal({ open: false }); onRefresh(); }}
+        planLocked={planLocked}
+        onStage={(e) => onStageDraftEntry(e)}
+        onSaved={() => { setOffModal({ open: false }); }}
       />
 
       <BulkOffModal
         open={bulkOffOpen}
         onClose={() => setBulkOffOpen(false)}
         guardIds={selectedIds}
-        onSaved={() => { setBulkOffOpen(false); onRefresh(); }}
+        days={data.days}
+        planLocked={planLocked}
+        onStage={(entries) => entries.forEach((e) => onStageDraftEntry(e))}
+        onSaved={() => { setBulkOffOpen(false); }}
+      />
+
+      <AssignGuardSiteModal
+        open={assignModal.open}
+        onClose={() => setAssignModal({ open: false })}
+        guardId={assignModal.guardId}
+        date={assignModal.date}
+        initialSiteId={assignModal.siteId}
+        sites={data.sites}
+        planLocked={planLocked}
+        onStage={(e) => onStageDraftEntry(e)}
+        onSaved={() => { setAssignModal({ open: false }); }}
+      />
+
+      <ManualRosterShiftModal
+        open={manualModal.open}
+        onClose={() => setManualModal({ open: false })}
+        guardId={manualModal.guardId}
+        date={manualModal.date}
+        sites={data.sites}
+        shiftType={shiftType}
+        initialSiteId={manualModal.siteId}
+        shiftId={manualModal.shiftId}
+        notes={manualModal.notes}
+        onSaved={() => { setManualModal({ open: false }); onRefresh(); }}
+        onDeleted={() => { setManualModal({ open: false }); onRefresh(); }}
       />
     </div>
   );
 }
 
-function RelieversTable({ data, onRefresh, shiftType, canManageAttendance }: { data: WeeklyData; onRefresh: () => void; shiftType: ShiftType; canManageAttendance: boolean }) {
+function AddOffDayModal({ open, onClose, guardId, date, planLocked, onStage, onSaved }: { open: boolean; onClose: () => void; guardId?: number; date?: string; planLocked: boolean; onStage: (e: DraftEntry) => void; onSaved: () => void }) {
+  const { data, setData, processing, reset } = useForm<{ guard_id: number | string; date: string; action: 'off' | 'clear' }>({
+    guard_id: guardId ?? ('' as any),
+    date: date ?? '',
+    action: 'off',
+  });
+
+  useEffect(() => {
+    if (!open) return;
+    setData('guard_id', guardId ?? ('' as any));
+    setData('date', date ?? '');
+    setData('action', 'off');
+  }, [open, guardId, date, setData]);
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (planLocked) return;
+    if (!data.guard_id || !data.date) return;
+    const gid = Number(data.guard_id);
+    if (data.action === 'clear') {
+      onStage({ guard_id: gid, date: data.date, entry_type: 'off', delete: true });
+    } else {
+      onStage({ guard_id: gid, date: data.date, entry_type: 'off' });
+    }
+    reset();
+    onSaved();
+  };
+
+  const handleClose = () => {
+    if (!processing) onClose();
+  };
+
+  return (
+    <Modal show={open} onClose={handleClose} maxWidth="sm">
+      <div className="px-6 py-4 border-b flex items-center justify-between bg-white dark:bg-gray-900 dark:border-gray-800">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Off Day</h2>
+        <button type="button" onClick={handleClose} className="text-gray-400 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-200">✕</button>
+      </div>
+      <div className="px-6 py-4 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+        <form className="grid grid-cols-1 gap-3" onSubmit={submit}>
+          <div>
+            <label className="block text-sm font-medium">Date</label>
+            <input type="date" className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100" value={data.date} onChange={(e) => setData('date', e.target.value)} />
+          </div>
+          <div>
+            <label className="block text-sm font-medium">Action</label>
+            <select className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100" value={data.action} onChange={(e) => setData('action', e.target.value as any)}>
+              <option value="off">Mark OFF</option>
+              <option value="clear">Clear OFF</option>
+            </select>
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <button type="button" onClick={handleClose} className="px-4 py-2 text-sm rounded-md bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700" disabled={processing}>Cancel</button>
+            <button type="submit" disabled={processing || planLocked || !data.guard_id || !data.date} className="px-4 py-2 text-sm rounded-md bg-coin-700 text-white hover:bg-coin-600">Save</button>
+          </div>
+        </form>
+      </div>
+    </Modal>
+  );
+}
+
+function BulkOffModal({ open, onClose, guardIds, days, planLocked, onStage, onSaved }: { open: boolean; onClose: () => void; guardIds: number[]; days: DayKey[]; planLocked: boolean; onStage: (entries: DraftEntry[]) => void; onSaved: () => void }) {
+  const { data, setData, processing, reset } = useForm<{ start: string; end: string; action: 'off' | 'clear' }>({
+    start: days?.[0] ?? '',
+    end: days?.[days.length - 1] ?? '',
+    action: 'off',
+  });
+
+  useEffect(() => {
+    if (!open) return;
+    setData('start', days?.[0] ?? '');
+    setData('end', days?.[days.length - 1] ?? '');
+    setData('action', 'off');
+  }, [open, days, setData]);
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (planLocked) return;
+    if (!guardIds?.length) return;
+    if (!data.start || !data.end) return;
+
+    const rangeDays = (days || []).filter((d) => d >= data.start && d <= data.end);
+    const entries: DraftEntry[] = [];
+    for (const gid of guardIds) {
+      for (const d of rangeDays) {
+        if (data.action === 'clear') {
+          entries.push({ guard_id: gid, date: d, entry_type: 'off', delete: true });
+        } else {
+          entries.push({ guard_id: gid, date: d, entry_type: 'off' });
+        }
+      }
+    }
+    onStage(entries);
+    reset();
+    onSaved();
+  };
+
+  const handleClose = () => {
+    if (!processing) onClose();
+  };
+
+  return (
+    <Modal show={open} onClose={handleClose} maxWidth="md">
+      <div className="px-6 py-4 border-b flex items-center justify-between bg-white dark:bg-gray-900 dark:border-gray-800">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Bulk Off Day</h2>
+        <button type="button" onClick={handleClose} className="text-gray-400 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-200">✕</button>
+      </div>
+      <div className="px-6 py-4 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+        <form className="grid grid-cols-1 gap-3" onSubmit={submit}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium">Start</label>
+              <input type="date" className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100" value={data.start} onChange={(e) => setData('start', e.target.value)} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium">End</label>
+              <input type="date" className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100" value={data.end} onChange={(e) => setData('end', e.target.value)} />
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium">Action</label>
+            <select className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100" value={data.action} onChange={(e) => setData('action', e.target.value as any)}>
+              <option value="off">Mark OFF</option>
+              <option value="clear">Clear OFF</option>
+            </select>
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <button type="button" onClick={handleClose} className="px-4 py-2 text-sm rounded-md bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700" disabled={processing}>Cancel</button>
+            <button type="submit" disabled={processing || planLocked || !guardIds?.length || !data.start || !data.end} className="px-4 py-2 text-sm rounded-md bg-coin-700 text-white hover:bg-coin-600">Save</button>
+          </div>
+        </form>
+      </div>
+    </Modal>
+  );
+}
+
+function ManualRosterShiftModal({
+  open,
+  onClose,
+  guardId,
+  date,
+  sites,
+  shiftType,
+  initialSiteId,
+  shiftId,
+  notes,
+  onSaved,
+  onDeleted,
+}: {
+  open: boolean;
+  onClose: () => void;
+  guardId?: number;
+  date?: string;
+  sites: Site[];
+  shiftType: ShiftType;
+  initialSiteId?: number;
+  shiftId?: number;
+  notes?: string;
+  onSaved: () => void;
+  onDeleted: () => void;
+}) {
+  const { toast } = useToast();
+  const { data, setData, post, processing, reset } = useForm<{
+    shift_id: number | '';
+    guard_id: number | '';
+    client_site_id: number | '';
+    date: string;
+    shift_type: ShiftType;
+    start_time: string;
+    end_time: string;
+    notes?: string;
+  }>({
+    shift_id: (shiftId ?? '') as any,
+    guard_id: (guardId ?? '') as any,
+    client_site_id: (initialSiteId ?? '') as any,
+    date: date ?? '',
+    shift_type: shiftType,
+    start_time: shiftType === 'night' ? '18:00' : '06:00',
+    end_time: shiftType === 'night' ? '06:00' : '18:00',
+    notes: notes ?? '',
+  });
+
+  useEffect(() => {
+    if (!open) return;
+    setData('shift_id', (shiftId ?? '') as any);
+    setData('guard_id', (guardId ?? '') as any);
+    setData('client_site_id', (initialSiteId ?? '') as any);
+    setData('date', date ?? '');
+    setData('shift_type', shiftType);
+    setData('start_time', shiftType === 'night' ? '18:00' : '06:00');
+    setData('end_time', shiftType === 'night' ? '06:00' : '18:00');
+    setData('notes', notes ?? '');
+  }, [open, guardId, date, initialSiteId, notes, setData, shiftId, shiftType]);
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!data.guard_id || !data.client_site_id || !data.date) {
+      toast({ title: 'Missing fields', description: 'Select date and site.', variant: 'destructive' });
+      return;
+    }
+    post(route('control-room.roster.manual-shifts.upsert'), {
+      preserveScroll: true,
+      onSuccess: () => {
+        reset();
+        onSaved();
+      },
+    });
+  };
+
+  const doDelete = () => {
+    if (!shiftId) return;
+    if (!confirm('Delete this manual roster shift?')) return;
+    router.post(route('control-room.roster.manual-shifts.delete'), { shift_id: shiftId }, {
+      preserveScroll: true,
+      onSuccess: () => {
+        reset();
+        onDeleted();
+      },
+    });
+  };
+
+  const handleClose = () => {
+    if (!processing) onClose();
+  };
+
+  return (
+    <Modal show={open} onClose={handleClose} maxWidth="md">
+      <div className="px-6 py-4 border-b flex items-center justify-between bg-white dark:bg-gray-900 dark:border-gray-800">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Manual Roster Shift</h2>
+        <button type="button" onClick={handleClose} className="text-gray-400 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-200">✕</button>
+      </div>
+      <div className="px-6 py-4 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+        <form className="grid grid-cols-1 gap-3" onSubmit={submit}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium">Date</label>
+              <input type="date" className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100" value={data.date} onChange={(e) => setData('date', e.target.value)} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium">Site</label>
+              <select className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100" value={data.client_site_id as any} onChange={(e) => setData('client_site_id', e.target.value ? Number(e.target.value) : '')}>
+                <option value="">Select a site</option>
+                {sites.map((s) => (
+                  <option key={s.id} value={s.id}>{s.name}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium">Start time</label>
+              <input type="time" className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100" value={data.start_time} onChange={(e) => setData('start_time', e.target.value)} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium">End time</label>
+              <input type="time" className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100" value={data.end_time} onChange={(e) => setData('end_time', e.target.value)} />
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium">Notes (optional)</label>
+            <input className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100" value={data.notes || ''} onChange={(e) => setData('notes', e.target.value)} />
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            {shiftId ? (
+              <button type="button" onClick={doDelete} className="px-4 py-2 text-sm rounded-md bg-red-700 text-white hover:bg-red-600" disabled={processing}>Delete</button>
+            ) : null}
+            <button type="button" onClick={handleClose} className="px-4 py-2 text-sm rounded-md bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700" disabled={processing}>Cancel</button>
+            <button type="submit" disabled={processing || !data.date || !data.client_site_id || !data.guard_id} className="px-4 py-2 text-sm rounded-md bg-coin-700 text-white hover:bg-coin-600">{processing ? 'Saving…' : 'Save'}</button>
+          </div>
+        </form>
+      </div>
+    </Modal>
+  );
+}
+
+function QuickAttendanceConfirmModal({
+  open,
+  onClose,
+  guardId,
+  siteId,
+  action,
+  onConfirm,
+}: {
+  open: boolean;
+  onClose: () => void;
+  guardId?: number;
+  siteId?: number | null;
+  action?: 'present' | 'absent';
+  onConfirm: (guardId: number, action: 'present' | 'absent', siteId?: number | null) => void;
+}) {
+  const handleClose = () => onClose();
+  const canConfirm = !!guardId && !!action;
+
+  return (
+    <Modal show={open} onClose={handleClose} maxWidth="sm">
+      <div className="px-6 py-4 border-b flex items-center justify-between bg-white dark:bg-gray-900 dark:border-gray-800">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Confirm Attendance</h2>
+        <button type="button" onClick={handleClose} className="text-gray-400 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-200">✕</button>
+      </div>
+      <div className="px-6 py-4 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 space-y-3">
+        <div className="text-sm text-gray-700 dark:text-gray-200">
+          {action === 'present' ? 'Mark this guard as present for today?' : 'Mark this guard as absent for today?'}
+        </div>
+        <div className="flex justify-end gap-2 pt-2">
+          <button type="button" onClick={handleClose} className="px-4 py-2 text-sm rounded-md bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700">Cancel</button>
+          <button
+            type="button"
+            disabled={!canConfirm}
+            onClick={() => {
+              if (!guardId || !action) return;
+              onConfirm(guardId, action, siteId ?? null);
+            }}
+            className={`px-4 py-2 text-sm rounded-md text-white ${action === 'absent' ? 'bg-red-700 hover:bg-red-600' : 'bg-emerald-700 hover:bg-emerald-600'} disabled:opacity-60`}
+          >
+            Confirm
+          </button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+function RelieversTable({ data, onRefresh, shiftType, canManageAttendance, plannedSites, planLocked, onStageDraftEntry }: { data: WeeklyData; onRefresh: () => void; shiftType: ShiftType; canManageAttendance: boolean; plannedSites: Record<number, Record<DayKey, Site | null>>; planLocked: boolean; onStageDraftEntry: (e: DraftEntry) => void }) {
   const dayLabels = useMemo(() => data.days.map((d) => new Date(d).toLocaleDateString(undefined, { weekday: 'short' })), [data.days]);
   const [relModal, setRelModal] = useState<{ open: boolean; guardId?: number; date?: string; siteId?: number }>( { open: false } );
   const [bulkRel, setBulkRel] = useState<{ open: boolean; guardId?: number }>({ open: false });
@@ -1152,8 +1506,9 @@ function RelieversTable({ data, onRefresh, shiftType, canManageAttendance }: { d
 
             <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
               {data.days.map((d, idx) => {
-                const site = r.sites?.[d];
                 const meta = r.meta?.[d];
+                const isShift = meta?.source === 'shift';
+                const site = isShift ? (r.sites?.[d] ?? null) : (plannedSites?.[r.id]?.[d] ?? null);
                 const isToday = !!todayKey && d === todayKey;
                 const att = r.attendance_today || null;
                 return (
@@ -1164,6 +1519,10 @@ function RelieversTable({ data, onRefresh, shiftType, canManageAttendance }: { d
                     onClick={() => {
                       if (meta?.source === 'shift') {
                         setManualModal({ open: true, guardId: r.id, date: d, siteId: site?.id, shiftId: meta?.shift_id });
+                        return;
+                      }
+                      if (planLocked) {
+                        toast({ title: 'Plan is published', description: 'This weekly plan is locked.' });
                         return;
                       }
                       setRelModal({ open: true, guardId: r.id, date: d, siteId: site?.id });
@@ -1214,8 +1573,9 @@ function RelieversTable({ data, onRefresh, shiftType, canManageAttendance }: { d
                   </div>
                 </td>
                 {data.days.map((d) => {
-                  const site = r.sites?.[d];
                   const meta = r.meta?.[d];
+                  const isShift = meta?.source === 'shift';
+                  const site = isShift ? (r.sites?.[d] ?? null) : (plannedSites?.[r.id]?.[d] ?? null);
                   const isToday = !!todayKey && d === todayKey;
                   const att = r.attendance_today || null;
                   return (
@@ -1227,6 +1587,10 @@ function RelieversTable({ data, onRefresh, shiftType, canManageAttendance }: { d
                           onClick={() => {
                             if (meta?.source === 'shift') {
                               setManualModal({ open: true, guardId: r.id, date: d, siteId: site?.id, shiftId: meta?.shift_id });
+                              return;
+                            }
+                            if (planLocked) {
+                              toast({ title: 'Plan is published', description: 'This weekly plan is locked.' });
                               return;
                             }
                             setRelModal({ open: true, guardId: r.id, date: d, siteId: site?.id });
@@ -1263,7 +1627,9 @@ function RelieversTable({ data, onRefresh, shiftType, canManageAttendance }: { d
         date={relModal.date}
         initialSiteId={relModal.siteId}
         sites={data.sites}
-        onSaved={() => { setRelModal({ open: false }); onRefresh(); }}
+        planLocked={planLocked}
+        onStage={(entry) => onStageDraftEntry(entry)}
+        onSaved={() => { setRelModal({ open: false }); }}
       />
 
       <BulkReliefModal
@@ -1271,13 +1637,12 @@ function RelieversTable({ data, onRefresh, shiftType, canManageAttendance }: { d
         onClose={() => setBulkRel({ open: false })}
         guardId={bulkRel.guardId}
         days={data.days}
-        initialMap={(() => {
-          const r = data.relievers.find(x => x.id === bulkRel.guardId);
-          return r?.sites || {};
-        })()}
+        initialMap={bulkRel.guardId ? (plannedSites?.[bulkRel.guardId] || {}) : {}}
         sites={data.sites}
         activeSites={data.active_sites || []}
-        onSaved={() => { setBulkRel({ open: false }); onRefresh(); }}
+        planLocked={planLocked}
+        onStage={(entries) => entries.forEach((e) => onStageDraftEntry(e))}
+        onSaved={() => { setBulkRel({ open: false }); }}
       />
 
       <ManualRosterShiftModal
@@ -1296,170 +1661,15 @@ function RelieversTable({ data, onRefresh, shiftType, canManageAttendance }: { d
   );
 }
 
-function QuickAttendanceConfirmModal({ open, onClose, guardId, siteId, action, onConfirm }: { open: boolean; onClose: () => void; guardId?: number; siteId?: number | null; action?: 'present' | 'absent'; onConfirm: (guardId: number, action: 'present' | 'absent', siteId?: number | null) => void }) {
-  if (!open || !guardId || !action) return null;
-  const title = action === 'present' ? 'Mark Present' : 'Mark Absent';
-  const desc = action === 'present'
-    ? 'This will mark the guard present for today (no check-in/out times).'
-    : 'This will mark the guard absent for today.';
-
-  return (
-    <Modal show={open} onClose={onClose} maxWidth="sm">
-      <div className="px-6 py-4 border-b flex items-center justify-between bg-white dark:bg-gray-900 dark:border-gray-800">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{title}</h2>
-        <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-200">✕</button>
-      </div>
-      <div className="px-6 py-4 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 space-y-3">
-        <div className="text-sm text-gray-600 dark:text-gray-300">{desc}</div>
-        <div className="flex justify-end gap-2 pt-2">
-          <button type="button" onClick={onClose} className="px-4 py-2 text-sm rounded-md bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700">Cancel</button>
-          <button type="button" onClick={() => onConfirm(guardId, action, siteId)} className={`px-4 py-2 rounded-md text-white ${action === 'absent' ? 'bg-red-700 hover:bg-red-600' : 'bg-emerald-700 hover:bg-emerald-600'}`}>Confirm</button>
-        </div>
-      </div>
-    </Modal>
-  );
-}
-
-function ManualRosterShiftModal({ open, onClose, guardId, date, sites, shiftType, initialSiteId, shiftId, onSaved, onDeleted }: { open: boolean; onClose: () => void; guardId?: number; date?: string; sites: Site[]; shiftType: ShiftType; initialSiteId?: number; shiftId?: number; onSaved: () => void; onDeleted: () => void }) {
-  const { post, processing, setData, data, reset } = useForm<{ guard_id: number | string; client_site_id: number | string; date: string; shift_type: ShiftType; start_time: string; end_time: string; notes?: string; shift_id?: number }>(
+function AssignReliefModal({ open, onClose, guardId, date, initialSiteId, sites, planLocked, onStage, onSaved }: { open: boolean; onClose: () => void; guardId?: number; date?: string; initialSiteId?: number; sites: Site[]; planLocked: boolean; onStage: (e: DraftEntry) => void; onSaved: () => void }) {
+  const { data, setData, processing, errors, reset } = useForm<{ guard_id: number | string; client_site_id: number | string; date: string; notes?: string }>(
     {
       guard_id: guardId ?? ('' as any),
       client_site_id: initialSiteId ?? ('' as any),
       date: date ?? '',
-      shift_type: shiftType,
-      start_time: shiftType === 'night' ? '18:00' : '06:00',
-      end_time: shiftType === 'night' ? '06:00' : '18:00',
       notes: '',
-      shift_id: shiftId,
     }
   );
-
-  useEffect(() => {
-    if (!open) return;
-    setData('guard_id', guardId ?? ('' as any));
-    setData('client_site_id', initialSiteId ?? ('' as any));
-    setData('date', date ?? '');
-    setData('shift_type', shiftType);
-    setData('start_time', shiftType === 'night' ? '18:00' : '06:00');
-    setData('end_time', shiftType === 'night' ? '06:00' : '18:00');
-    setData('shift_id', shiftId);
-  }, [open, guardId, initialSiteId, date, shiftType, shiftId, setData]);
-
-  const submit = (e: React.FormEvent) => {
-    e.preventDefault();
-    post(route('control-room.roster.manual-shifts.upsert'), {
-      preserveScroll: true,
-      onSuccess: () => { reset(); onSaved(); },
-    });
-  };
-
-  const remove = () => {
-    if (!shiftId) return;
-    if (!confirm('Remove this manual roster entry?')) return;
-    router.post(route('control-room.roster.manual-shifts.delete'), { shift_id: shiftId }, { preserveScroll: true, onSuccess: () => { onDeleted(); } });
-  };
-
-  return (
-    <Modal show={open} onClose={onClose} maxWidth="sm">
-      <div className="px-6 py-4 border-b flex items-center justify-between bg-white dark:bg-gray-900 dark:border-gray-800">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Manual Roster</h2>
-        <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-200">✕</button>
-      </div>
-      <div className="px-6 py-4 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
-        <form className="grid grid-cols-1 gap-3" onSubmit={submit}>
-          <div>
-            <label className="block text-sm font-medium">Site</label>
-            <select className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100" value={data.client_site_id as any} onChange={(e) => setData('client_site_id', Number(e.target.value) as any)}>
-              <option value="">Select site</option>
-              {sites.map((s) => (
-                <option key={s.id} value={s.id}>{s.name}</option>
-              ))}
-            </select>
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <label className="block text-sm font-medium">Start</label>
-              <input type="time" className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100" value={data.start_time} onChange={(e) => setData('start_time', e.target.value)} />
-            </div>
-            <div>
-              <label className="block text-sm font-medium">End</label>
-              <input type="time" className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100" value={data.end_time} onChange={(e) => setData('end_time', e.target.value)} />
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm font-medium">Notes (optional)</label>
-            <input className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100" value={data.notes || ''} onChange={(e) => setData('notes', e.target.value)} />
-          </div>
-
-          <div className="flex items-center justify-between gap-2 pt-2">
-            <button type="button" onClick={remove} className="px-4 py-2 text-sm rounded-md bg-red-600 text-white hover:bg-red-500 disabled:opacity-50" disabled={!shiftId}>Remove</button>
-            <div className="flex items-center gap-2">
-              <button type="button" onClick={onClose} className="px-4 py-2 text-sm rounded-md bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700" disabled={processing}>Cancel</button>
-              <button type="submit" disabled={processing || !data.client_site_id || !data.start_time || !data.end_time} className="px-4 py-2 text-sm rounded-md bg-coin-700 text-white hover:bg-coin-600">{processing ? 'Saving…' : 'Save'}</button>
-            </div>
-          </div>
-        </form>
-      </div>
-    </Modal>
-  );
-}
-
-function AddOffDayModal({ open, onClose, guardId, date, onSaved }: { open: boolean; onClose: () => void; guardId?: number; date?: string; onSaved: () => void }) {
-  const { data, setData, post, processing, errors, reset } = useForm<{ guard_id: number | string; start_date: string; end_date?: string; reason?: string }>({
-    guard_id: guardId ?? ('' as any),
-    start_date: date ?? '',
-    end_date: '',
-    reason: '',
-  });
-
-  useEffect(() => {
-    if (!open) return;
-    setData('guard_id', guardId ?? ('' as any));
-    setData('start_date', date ?? '');
-  }, [open, guardId, date, setData]);
-
-  const submit = (e: React.FormEvent) => {
-    e.preventDefault();
-    post(route('control-room.roster.off-days.store'), {
-      onSuccess: () => { reset(); onSaved(); },
-    });
-  };
-
-  return (
-    <Modal show={open} onClose={onClose} maxWidth="sm">
-      <div className="px-6 py-4 border-b flex items-center justify-between bg-white dark:bg-gray-900 dark:border-gray-800">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Add Off Day</h2>
-        <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-200">✕</button>
-      </div>
-      <div className="px-6 py-4 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
-        <form className="grid grid-cols-1 gap-3" onSubmit={submit}>
-          <div>
-            <label className="block text-sm font-medium">Date</label>
-            <input type="date" className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100" value={data.start_date} onChange={(e) => setData('start_date', e.target.value)} />
-            {errors.start_date && <p className="text-xs text-red-600 mt-1">{errors.start_date}</p>}
-          </div>
-          <div>
-            <label className="block text-sm font-medium">Reason (optional)</label>
-            <input className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100" value={data.reason || ''} onChange={(e) => setData('reason', e.target.value)} />
-            {errors.reason && <p className="text-xs text-red-600 mt-1">{errors.reason}</p>}
-          </div>
-          <div className="flex justify-end gap-2 pt-2">
-            <button type="button" onClick={onClose} className="px-4 py-2 text-sm rounded-md bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700" disabled={processing}>Cancel</button>
-            <button type="submit" disabled={processing || !data.start_date} className="px-4 py-2 text-sm rounded-md bg-coin-700 text-white hover:bg-coin-600">{processing ? 'Saving…' : 'Save'}</button>
-          </div>
-        </form>
-      </div>
-    </Modal>
-  );
-}
-
-function AssignReliefModal({ open, onClose, guardId, date, initialSiteId, sites, onSaved }: { open: boolean; onClose: () => void; guardId?: number; date?: string; initialSiteId?: number; sites: Site[]; onSaved: () => void }) {
-  const { data, setData, post, processing, errors, reset } = useForm<{ guard_id: number | string; client_site_id: number | string; date: string; notes?: string }>({
-    guard_id: guardId ?? ('' as any),
-    client_site_id: initialSiteId ?? ('' as any),
-    date: date ?? '',
-    notes: '',
-  });
 
   useEffect(() => {
     if (!open) return;
@@ -1470,18 +1680,25 @@ function AssignReliefModal({ open, onClose, guardId, date, initialSiteId, sites,
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
-    post(route('control-room.roster.relief.assign'), {
-      onSuccess: () => { reset(); onSaved(); },
+    if (planLocked) return;
+    if (!data.guard_id || !data.date || !data.client_site_id) return;
+    onStage({
+      guard_id: Number(data.guard_id),
+      date: data.date,
+      entry_type: 'site',
+      client_site_id: Number(data.client_site_id),
+      notes: data.notes || undefined,
     });
+    reset();
+    onSaved();
   };
 
   const clearAssignment = () => {
-    setData('guard_id', (guardId ?? '') as any);
-    setData('date', date ?? '');
-    post(route('control-room.roster.relief.delete'), {
-      preserveScroll: true,
-      onSuccess: () => { reset(); onSaved(); },
-    });
+    if (planLocked) return;
+    if (!guardId || !date) return;
+    onStage({ guard_id: guardId, date, entry_type: 'site', delete: true });
+    reset();
+    onSaved();
   };
 
   return (
@@ -1517,7 +1734,7 @@ function AssignReliefModal({ open, onClose, guardId, date, initialSiteId, sites,
             {initialSiteId ? (
               <button type="button" onClick={clearAssignment} className="px-4 py-2 text-sm rounded-md bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700" disabled={processing}>Clear</button>
             ) : null}
-            <button type="submit" disabled={processing || !data.client_site_id || !data.date} className="px-4 py-2 text-sm rounded-md bg-coin-700 text-white hover:bg-coin-600">{processing ? 'Saving…' : 'Save'}</button>
+            <button type="submit" disabled={processing || planLocked || !data.client_site_id || !data.date} className="px-4 py-2 text-sm rounded-md bg-coin-700 text-white hover:bg-coin-600">Save</button>
           </div>
         </form>
       </div>
@@ -1525,55 +1742,13 @@ function AssignReliefModal({ open, onClose, guardId, date, initialSiteId, sites,
   );
 }
 
-function BulkOffModal({ open, onClose, guardIds, onSaved }: { open: boolean; onClose: () => void; guardIds: number[]; onSaved: () => void }) {
-  const { data, setData, post, processing, errors, reset } = useForm<{ guard_ids: number[]; date: string; reason?: string }>({
-    guard_ids: guardIds,
-    date: '',
-    reason: '',
-  });
-
-  useEffect(() => { setData('guard_ids', guardIds); }, [guardIds]);
-
-  const submit = (e: React.FormEvent) => {
-    e.preventDefault();
-    post(route('control-room.roster.off-days.bulk'), {
-      onSuccess: () => { reset(); onSaved(); },
-    });
-  };
-
-  return (
-    <Modal show={open} onClose={onClose} maxWidth="sm">
-      <div className="px-6 py-4 border-b flex items-center justify-between bg-white dark:bg-gray-900 dark:border-gray-800">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Bulk Off-day</h2>
-        <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-200">✕</button>
-      </div>
-      <div className="px-6 py-4 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
-        <form className="grid grid-cols-1 gap-3" onSubmit={submit}>
-          <div>
-            <label className="block text-sm font-medium">Date</label>
-            <input type="date" className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100" value={data.date} onChange={(e) => setData('date', e.target.value)} />
-            {errors?.date && <p className="text-xs text-red-600 mt-1">{errors.date}</p>}
-          </div>
-          <div>
-            <label className="block text-sm font-medium">Reason (optional)</label>
-            <input className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100" value={data.reason || ''} onChange={(e) => setData('reason', e.target.value)} />
-            {errors?.reason && <p className="text-xs text-red-600 mt-1">{errors.reason}</p>}
-          </div>
-          <div className="flex justify-end gap-2 pt-2">
-            <button type="button" onClick={onClose} className="px-4 py-2 text-sm rounded-md bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700" disabled={processing}>Cancel</button>
-            <button type="submit" disabled={processing || !data.date || !guardIds.length} className="px-4 py-2 text-sm rounded-md bg-coin-700 text-white hover:bg-coin-600">{processing ? 'Saving…' : 'Save'}</button>
-          </div>
-        </form>
-      </div>
-    </Modal>
+function BulkReliefModal({ open, onClose, guardId, days, initialMap, sites, activeSites, planLocked, onStage, onSaved }: { open: boolean; onClose: () => void; guardId?: number; days: DayKey[]; initialMap: Record<DayKey, Site | null>; sites: Site[]; activeSites: Site[]; planLocked: boolean; onStage: (entries: DraftEntry[]) => void; onSaved: () => void }) {
+  const { data, setData, processing, reset } = useForm<{ guard_id: number | string; day_site_map: Record<DayKey, number | ''> }>(
+    {
+      guard_id: guardId ?? ('' as any),
+      day_site_map: days.reduce((acc: any, d) => { acc[d] = initialMap?.[d]?.id || ''; return acc; }, {} as Record<DayKey, number | ''>),
+    }
   );
-}
-
-function BulkReliefModal({ open, onClose, guardId, days, initialMap, sites, activeSites, onSaved }: { open: boolean; onClose: () => void; guardId?: number; days: DayKey[]; initialMap: Record<DayKey, Site | null>; sites: Site[]; activeSites: Site[]; onSaved: () => void }) {
-  const { data, setData, post, processing, reset } = useForm<{ guard_id: number | string; day_site_map: Record<DayKey, number | ''> }>({
-    guard_id: guardId ?? ('' as any),
-    day_site_map: days.reduce((acc: any, d) => { acc[d] = initialMap?.[d]?.id || ''; return acc; }, {} as Record<DayKey, number | ''>),
-  });
   const [onlyActive, setOnlyActive] = useState(true);
 
   useEffect(() => {
@@ -1586,9 +1761,18 @@ function BulkReliefModal({ open, onClose, guardId, days, initialMap, sites, acti
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
-    post(route('control-room.roster.relief.assign-bulk'), {
-      onSuccess: () => { reset(); onSaved(); },
+    if (planLocked) return;
+    if (!guardId) return;
+    const entries: DraftEntry[] = days.map((d) => {
+      const sid = data.day_site_map?.[d];
+      if (!sid) {
+        return { guard_id: guardId, date: d, entry_type: 'site', delete: true };
+      }
+      return { guard_id: guardId, date: d, entry_type: 'site', client_site_id: Number(sid) };
     });
+    onStage(entries);
+    reset();
+    onSaved();
   };
 
   return (
@@ -1613,7 +1797,7 @@ function BulkReliefModal({ open, onClose, guardId, days, initialMap, sites, acti
           ))}
           <div className="flex justify-end gap-2 pt-2">
             <button type="button" onClick={onClose} className="px-4 py-2 text-sm rounded-md bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700" disabled={processing}>Cancel</button>
-            <button type="submit" disabled={processing || !guardId} className="px-4 py-2 text-sm rounded-md bg-coin-700 text-white hover:bg-coin-600">{processing ? 'Saving…' : 'Save'}</button>
+            <button type="submit" disabled={processing || planLocked || !guardId} className="px-4 py-2 text-sm rounded-md bg-coin-700 text-white hover:bg-coin-600">Save</button>
           </div>
         </form>
       </div>

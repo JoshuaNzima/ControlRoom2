@@ -4,6 +4,7 @@ namespace App\Http\Controllers\ControlRoom;
 
 use App\Http\Controllers\Controller;
 use App\Models\Down;
+use App\Services\SupervisorIncentiveBalanceService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -52,12 +53,15 @@ class DownController extends Controller
             'client_id' => 'nullable|exists:clients,id',
             'client_site_id' => 'nullable|exists:client_sites,id',
             'guard_id' => 'nullable|exists:guards,id',
+            'supervisor_id' => 'nullable|exists:guards,id',
             'type' => 'required|in:guard_absent,site_unmanned,other',
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
             'flag_guard' => 'sometimes|boolean',
             'flag_reason' => 'required_if:flag_guard,1|nullable|string|max:255',
             'flag_details' => 'nullable|string',
+            'affects_incentive' => 'sometimes|boolean',
+            'incentive_deduction_amount' => 'nullable|numeric|min:0',
         ]);
 
         if (($validated['client_id'] ?? null) === null && ($validated['client_site_id'] ?? null)) {
@@ -71,6 +75,8 @@ class DownController extends Controller
             ...$validated,
             'reported_by' => Auth::id(),
             'status' => 'open',
+            'affects_incentive' => $validated['affects_incentive'] ?? true,
+            'incentive_deduction_amount' => $validated['incentive_deduction_amount'] ?? 5000.00,
         ]);
 
         if ($request->boolean('flag_guard') && ($validated['guard_id'] ?? null)) {
@@ -103,18 +109,51 @@ class DownController extends Controller
         return back()->withSuccess('Down escalated.');
     }
 
-    public function resolve(Request $request, Down $down)
+    public function resolveWithIncentive(Request $request, Down $down, SupervisorIncentiveBalanceService $service)
     {
         $validated = $request->validate([
             'resolution_notes' => 'nullable|string',
+            'resolution_type' => 'required|in:self_resolved,control_room_resolved,escalated,unresolved',
+            'resolution_method' => 'nullable|string|max:255',
+            'resolved_by_override' => 'nullable|exists:users,id',
+            'affects_incentive' => 'sometimes|boolean',
         ]);
 
+        // Determine who resolved the issue
+        $resolvedBy = $validated['resolved_by_override'] ?? Auth::id();
+        $resolutionType = $validated['resolution_type'];
+
+        // Update down with resolution details
         $down->update([
             'status' => 'resolved',
             'resolved_at' => now(),
-            'resolved_by' => Auth::id(),
-            ...$validated,
+            'resolved_by' => $resolvedBy,
+            'resolution_type' => $resolutionType,
+            'resolved_by_user_id' => $resolvedBy,
+            'affects_incentive' => $validated['affects_incentive'] ?? $down->affects_incentive,
         ]);
+
+        // Process incentive deduction if applicable
+        if ($down->affects_incentive) {
+            $resolutionData = [
+                'resolution_type' => $resolutionType,
+                'resolved_by' => $resolvedBy,
+                'resolved_by_name' => Auth::user()?->name,
+                'resolution_method' => $validated['resolution_method'] ?? null,
+            ];
+
+            $deduction = $service->processDown($down, $resolutionData);
+
+            $message = 'Down marked as resolved.';
+            if ($deduction) {
+                $amount = number_format($deduction->deduction_amount, 2);
+                $message .= " Incentive deduction of MWK {$amount} applied.";
+            } elseif ($resolutionType === 'self_resolved') {
+                $message .= ' No incentive deduction (self-resolved).';
+            }
+
+            return back()->withSuccess($message);
+        }
 
         return back()->withSuccess('Down marked as resolved.');
     }

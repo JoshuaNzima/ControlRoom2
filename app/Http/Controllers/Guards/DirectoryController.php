@@ -70,11 +70,42 @@ class DirectoryController extends Controller
                 ];
             });
 
+        // Calculate stats for ALL guards (not just paginated)
+        $statsQuery = Guard::query()
+            ->when($request->input('search'), function ($q, $search) {
+                $q->where(function ($qq) use ($search) {
+                    $qq->where('name', 'like', "%{$search}%")
+                       ->orWhere('employee_id', 'like', "%{$search}%");
+                });
+            })
+            ->when($request->input('status'), function ($q, $status) {
+                $q->where('status', $status);
+            })
+            ->when($request->input('zone_id'), function ($q, $zoneId) {
+                $q->where('zone_id', (int) $zoneId);
+            })
+            ->when($request->input('grade_id'), function ($q, $gradeId) {
+                $q->where('guard_grade_id', (int) $gradeId);
+            });
+
+        $totalGuards = $statsQuery->count();
+        $activeGuards = (clone $statsQuery)->where('status', 'active')->count();
+        $onDutyGuards = (clone $statsQuery)->whereHas('todayAttendance', function ($qa) {
+            $qa->whereNotNull('check_in_time')->whereNull('check_out_time');
+        })->count();
+        $offDutyGuards = $totalGuards - $onDutyGuards;
+
         return Inertia::render('Guards/Index', [
             'guards' => $guards,
             'filters' => $request->only(['search','status','zone_id','grade_id','on_duty','sort','dir','per_page']),
             'grades' => GuardGrade::orderBy('name')->get(['id','code','name']),
             'zones' => Zone::orderBy('name')->get(['id','name']),
+            'stats' => [
+                'total' => $totalGuards,
+                'active' => $activeGuards,
+                'on_duty' => $onDutyGuards,
+                'off_duty' => $offDutyGuards,
+            ],
         ]);
     }
 

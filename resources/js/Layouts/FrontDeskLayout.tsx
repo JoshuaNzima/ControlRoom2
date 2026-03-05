@@ -31,12 +31,15 @@ export default function FrontDeskLayout({ title, children, user }: Props) {
   const page = usePage<any>();
   const roles = ((user as any)?.roles ?? (page?.props as any)?.auth?.user?.roles ?? []) as any;
   const isSuperAdmin = Array.isArray(roles) ? roles.includes('super_admin') : roles === 'super_admin';
+  const isAdminUser = Array.isArray(roles) && (roles.includes('admin') || roles.includes('super_admin'));
 
   const nav: NavItem[] = [
     { name: 'Overview', href: route('admin.front-desk'), icon: <IconMapper name="users-2" className="h-6 w-6" />, current: isCurrent(route('admin.front-desk')) },
     { name: 'Visitors', href: route('admin.front-desk.visitors.index'), icon: <IconMapper name="id-card" className="h-6 w-6" />, current: isCurrent(route('admin.front-desk.visitors.index')) },
     { name: 'Tickets', href: route('admin.front-desk.tickets.index'), icon: <IconMapper name="ticket" className="h-6 w-6" />, current: isCurrent(route('admin.front-desk.tickets.index')), badge: (()=>{ const n = Number(counters?.control_tickets_open||0); return n>0? String(n): undefined; })() },
-    { name: 'My Requisitions', href: route('requisitions.index'), icon: <IconMapper name="clipboard-list" className="h-6 w-6" />, current: isCurrent(route('requisitions.index')), badge: (()=>{ const n = Number(counters?.requisitions_my_open||0); return n>0? String(n): undefined; })() },
+    ...(!isAdminUser ? ([
+      { name: 'My Requisitions', href: route('requisitions.index'), icon: <IconMapper name="clipboard-list" className="h-6 w-6" />, current: isCurrent(route('requisitions.index')), badge: (()=>{ const n = Number(counters?.requisitions_my_open||0); return n>0? String(n): undefined; })() },
+    ] as NavItem[]) : []),
     { name: 'Settings', href: route('admin.front-desk.settings'), icon: <IconMapper name="settings" className="h-6 w-6" />, current: isCurrent(route('admin.front-desk.settings')) },
   ];
 

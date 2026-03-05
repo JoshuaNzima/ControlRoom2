@@ -38,6 +38,7 @@ export default function FrontOfficeLayout({ title, children, user }: Props) {
 
   const links: ModuleNavItem[] = [
     { name: 'Dashboard', href: safeRoute('front-office.dashboard', '/front-office'), icon: <IconMapper name="home" className="h-6 w-6" />, current: isCurrent(safeRoute('front-office.dashboard', '/front-office')) },
+    { name: 'Assistant', href: safeRoute('front-office.assistant', '/front-office/assistant'), icon: <IconMapper name="Briefcase" className="h-6 w-6" />, current: isCurrent(safeRoute('front-office.assistant', '/front-office/assistant')) },
   ];
 
   const handleLogout = (e: React.FormEvent) => {

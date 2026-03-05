@@ -4,30 +4,100 @@ import AdminLayout from '@/Layouts/AdminLayout';
 import { Card } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import IconMapper from '@/Components/IconMapper';
-import QuickRequisitionModal from '@/Components/Requisitions/QuickRequisitionModal';
+import { Badge } from '@/Components/ui/badge';
+
+interface ClientDashboardProps {
+  auth: {
+    user: {
+      id: number;
+      name: string;
+      email: string;
+    };
+  };
+  client: {
+    id: number;
+    name: string;
+    contact_person: string | null;
+    email: string | null;
+    phone: string | null;
+    contract_start_date: string | null;
+    contract_end_date: string | null;
+    monthly_rate: number;
+    status: string;
+  } | null;
+  stats: {
+    activeSites: number;
+    totalGuards: number;
+    monthlyReports: number;
+    activeAlerts: number;
+  };
+  sites: Array<{
+    id: number;
+    name: string;
+    address: string;
+    contact_person: string | null;
+    phone: string | null;
+    required_guards: number;
+    status: string;
+    site_type: string;
+  }>;
+  recentIncidents: Array<{
+    id: number;
+    title: string;
+    type: string;
+    severity: string;
+    status: string;
+    site_name: string | null;
+    guard_name: string | null;
+    created_at: string;
+  }>;
+  invoices: Array<{
+    id: number;
+    invoice_number: string;
+    total_amount: number;
+    status: string;
+    due_date: string | null;
+    billing_period: string | null;
+  }>;
+  contractStatus: {
+    status: string;
+    message: string;
+    days_remaining: number | null;
+    is_expiring_soon: boolean;
+  } | null;
+  paymentSummary: {
+    expected_amount: number;
+    total_due: number;
+    total_paid: number;
+    outstanding_amount: number;
+    outstanding_months: number;
+    billing_start: string | null;
+    is_overdue: boolean;
+  } | null;
+}
 
 // Animated Counter Component
 const AnimatedCounter: React.FC<{ value: number; duration?: number }> = ({ value, duration = 1000 }) => {
   const [count, setCount] = useState(0);
-  
+
   useEffect(() => {
     let startTime: number;
     let animationFrame: number;
-    
+
     const animate = (timestamp: number) => {
       if (!startTime) startTime = timestamp;
       const progress = Math.min((timestamp - startTime) / duration, 1);
       setCount(Math.floor(progress * value));
-      
+
       if (progress < 1) {
         animationFrame = requestAnimationFrame(animate);
       }
     };
-    
+
     animationFrame = requestAnimationFrame(animate);
     return () => cancelAnimationFrame(animationFrame);
   }, [value, duration]);
-  
+
   return <span>{count.toLocaleString()}</span>;
 };
 
@@ -53,11 +123,11 @@ const colorMap = {
 
 const StatCard: React.FC<StatCardProps> = ({ icon, title, value, subtitle, color, onClick }) => {
   const colors = colorMap[color];
-  
+
   return (
-    <div 
+    <div
       onClick={onClick}
-      className={`${colors.bg} ${colors.border} ${onClick ? 'cursor-pointer hover:shadow-lg' : ''} 
+      className={`${colors.bg} ${colors.border} ${onClick ? 'cursor-pointer hover:shadow-lg' : ''}
         rounded-xl border p-5 transition-all duration-300 hover:scale-[1.02]`}
     >
       <div className="flex items-start justify-between">
@@ -77,17 +147,17 @@ const StatCard: React.FC<StatCardProps> = ({ icon, title, value, subtitle, color
 };
 
 // Quick Action Tile
-const ActionTile: React.FC<{ 
-  icon: React.ReactNode; 
-  title: string; 
-  description: string; 
-  href: string; 
+const ActionTile: React.FC<{
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+  href: string;
   color: string;
 }> = ({ icon, title, description, href, color }) => {
   return (
     <Link
       href={href}
-      className="group relative overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700 
+      className="group relative overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700
         bg-white dark:bg-gray-800 p-5 transition-all duration-300 hover:shadow-xl hover:-translate-y-1"
     >
       <div className={`absolute top-0 right-0 w-24 h-24 -mr-8 -mt-8 rounded-full opacity-10 ${color}`} />
@@ -104,7 +174,63 @@ const ActionTile: React.FC<{
   );
 };
 
-export default function ClientDashboard({ auth = {} as any }) {
+// Severity Badge
+const SeverityBadge: React.FC<{ severity: string }> = ({ severity }) => {
+  const colors: Record<string, string> = {
+    critical: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
+    high: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300',
+    medium: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300',
+    low: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
+  };
+
+  return (
+    <span className={`px-2 py-1 rounded text-xs font-medium ${colors[severity] || colors.medium}`}>
+      {severity.charAt(0).toUpperCase() + severity.slice(1)}
+    </span>
+  );
+};
+
+// Status Badge
+const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
+  const colors: Record<string, string> = {
+    open: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
+    'in-progress': 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
+    resolved: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
+    closed: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
+    draft: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
+    sent: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
+    paid: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
+    overdue: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
+    active: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
+    inactive: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
+  };
+
+  return (
+    <span className={`px-2 py-1 rounded text-xs font-medium ${colors[status] || colors.draft}`}>
+      {status.charAt(0).toUpperCase() + status.slice(1).replace('-', ' ')}
+    </span>
+  );
+};
+
+// Format currency
+const formatCurrency = (amount: number) => {
+  return new Intl.NumberFormat('en-MW', {
+    style: 'currency',
+    currency: 'MWK',
+    minimumFractionDigits: 2,
+  }).format(amount);
+};
+
+export default function ClientDashboard({
+  auth,
+  client,
+  stats,
+  sites,
+  recentIncidents,
+  invoices,
+  contractStatus,
+  paymentSummary,
+}: ClientDashboardProps) {
   const [currentTime, setCurrentTime] = useState(new Date());
 
   useEffect(() => {
@@ -113,22 +239,72 @@ export default function ClientDashboard({ auth = {} as any }) {
   }, []);
 
   const quickActions = useMemo(() => [
-    { title: 'My Sites', description: 'View your assigned sites', href: '#', icon: <IconMapper name="Building" size={20} />, color: 'bg-blue-600' },
-    { title: 'Reports', description: 'Access security reports', href: '#', icon: <IconMapper name="FileText" size={20} />, color: 'bg-purple-600' },
-    { title: 'Support', description: 'Contact support team', href: '#', icon: <IconMapper name="Headphones" size={20} />, color: 'bg-emerald-600' },
-    { title: 'Documents', description: 'View contracts & invoices', href: '#', icon: <IconMapper name="FileCheck" size={20} />, color: 'bg-cyan-600' },
+    { title: 'My Sites', description: 'View your assigned sites', href: '#sites', icon: <IconMapper name="Building" size={20} />, color: 'bg-blue-600' },
+    { title: 'Reports', description: 'Access security reports', href: '#incidents', icon: <IconMapper name="FileText" size={20} />, color: 'bg-purple-600' },
+    { title: 'Support', description: 'Contact support team', href: 'mailto:support@coinsec.com', icon: <IconMapper name="Headphones" size={20} />, color: 'bg-emerald-600' },
+    { title: 'Invoices', description: 'View contracts & invoices', href: '#invoices', icon: <IconMapper name="FileCheck" size={20} />, color: 'bg-cyan-600' },
   ], []);
+
+  // Format date for display
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return 'N/A';
+    return new Date(dateString).toLocaleDateString('en-GB', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    });
+  };
+
+  // Format relative time
+  const formatRelativeTime = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return formatDate(dateString);
+  };
+
+  if (!client) {
+    return (
+      <AdminLayout title="Client Dashboard" user={auth?.user}>
+        <Head title="Client Dashboard" />
+
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <Card className="p-8 text-center">
+            <div className="flex flex-col items-center gap-4">
+              <div className="p-4 bg-amber-100 dark:bg-amber-900/20 rounded-full">
+                <IconMapper name="AlertCircle" size={32} className="text-amber-600 dark:text-amber-400" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">No Client Assigned</h3>
+                <p className="text-gray-500 dark:text-gray-400 mt-1">
+                  Your account is not linked to any client. Please contact support for assistance.
+                </p>
+              </div>
+            </div>
+          </Card>
+        </div>
+      </AdminLayout>
+    );
+  }
 
   return (
     <AdminLayout title="Client Dashboard" user={auth?.user}>
       <Head title="Client Dashboard" />
-      
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-        
+
         {/* Hero Header */}
         <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-red-700 via-red-600 to-rose-600 text-white shadow-2xl">
           <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg%20width%3D%2260%22%20height%3D%2260%22%20viewBox%3D%220%200%2060%2060%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%3E%3Cg%20fill%3D%22none%22%20fill-rule%3D%22evenodd%22%3E%3Cg%20fill%3D%22%23ffffff%22%20fill-opacity%3D%220.05%22%3E%3Cpath%20d%3D%22M36%2034v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6%2034v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6%204V0H4v4H0v2h4v4h2V6h4V4H6z%22/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] opacity-20" />
-          
+
           <div className="relative p-6 sm:p-8">
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
               <div className="flex items-center gap-4">
@@ -136,11 +312,11 @@ export default function ClientDashboard({ auth = {} as any }) {
                   <IconMapper name="Building2" size={32} />
                 </div>
                 <div>
-                  <h1 className="text-2xl sm:text-3xl font-bold">Client Portal</h1>
+                  <h1 className="text-2xl sm:text-3xl font-bold">{client.name}</h1>
                   <p className="text-red-100 mt-1">Welcome to your security management dashboard</p>
                 </div>
               </div>
-              
+
               <div className="flex flex-wrap items-center gap-4">
                 <div className="px-4 py-2 bg-white/10 rounded-lg backdrop-blur-sm">
                   <p className="text-xs text-red-200">System Time</p>
@@ -148,6 +324,16 @@ export default function ClientDashboard({ auth = {} as any }) {
                     {currentTime.toLocaleTimeString('en-US', { hour12: false })}
                   </p>
                 </div>
+                {contractStatus && (
+                  <div className={`px-4 py-2 rounded-lg backdrop-blur-sm ${
+                    contractStatus.status === 'expired' ? 'bg-red-500/30' :
+                    contractStatus.status === 'expiring' ? 'bg-amber-500/30' :
+                    'bg-green-500/30'
+                  }`}>
+                    <p className="text-xs text-white/80">Contract Status</p>
+                    <p className="text-sm font-semibold">{contractStatus.message}</p>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -158,32 +344,65 @@ export default function ClientDashboard({ auth = {} as any }) {
           <StatCard
             icon={<IconMapper name="Building" size={20} />}
             title="Active Sites"
-            value={0}
+            value={stats.activeSites}
             subtitle="Your sites"
             color="blue"
           />
           <StatCard
             icon={<IconMapper name="Shield" size={20} />}
             title="Security Guards"
-            value={0}
+            value={stats.totalGuards}
             subtitle="On duty"
             color="green"
           />
           <StatCard
             icon={<IconMapper name="FileText" size={20} />}
             title="Reports"
-            value={0}
+            value={stats.monthlyReports}
             subtitle="This month"
             color="purple"
           />
           <StatCard
             icon={<IconMapper name="AlertCircle" size={20} />}
             title="Alerts"
-            value={0}
+            value={stats.activeAlerts}
             subtitle="Active"
-            color="amber"
+            color={stats.activeAlerts > 0 ? 'red' : 'amber'}
           />
         </div>
+
+        {/* Payment Summary Card */}
+        {paymentSummary && (
+          <Card className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                <IconMapper name="CreditCard" size={20} />
+                Payment Summary ({new Date().getFullYear()})
+              </h3>
+              <StatusBadge status={paymentSummary.is_overdue ? 'overdue' : 'active'} />
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <p className="text-sm text-gray-500 dark:text-gray-400">Total Due</p>
+                <p className="text-xl font-bold text-gray-900 dark:text-gray-100">{formatCurrency(paymentSummary.total_due)}</p>
+              </div>
+              <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <p className="text-sm text-gray-500 dark:text-gray-400">Total Paid</p>
+                <p className="text-xl font-bold text-green-600 dark:text-green-400">{formatCurrency(paymentSummary.total_paid)}</p>
+              </div>
+              <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <p className="text-sm text-gray-500 dark:text-gray-400">Outstanding</p>
+                <p className={`text-xl font-bold ${paymentSummary.outstanding_amount > 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-gray-100'}`}>
+                  {formatCurrency(paymentSummary.outstanding_amount)}
+                </p>
+              </div>
+              <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <p className="text-sm text-gray-500 dark:text-gray-400">Monthly Rate</p>
+                <p className="text-xl font-bold text-gray-900 dark:text-gray-100">{formatCurrency(client.monthly_rate)}</p>
+              </div>
+            </div>
+          </Card>
+        )}
 
         {/* Quick Actions */}
         <div>
@@ -202,24 +421,149 @@ export default function ClientDashboard({ auth = {} as any }) {
           </div>
         </div>
 
-        {/* Coming Soon Notice */}
-        <Card className="p-6 text-center">
-          <div className="flex flex-col items-center gap-4">
-            <div className="p-4 bg-red-100 dark:bg-red-900/20 rounded-full">
-              <IconMapper name="Construction" size={32} className="text-red-600 dark:text-red-400" />
+        {/* Two Column Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Sites Section */}
+          <Card className="p-6" id="sites">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                <IconMapper name="Building" size={20} />
+                My Sites
+              </h3>
+              <span className="text-sm text-gray-500 dark:text-gray-400">{sites.length} total</span>
+            </div>
+            {sites.length === 0 ? (
+              <p className="text-gray-500 dark:text-gray-400 text-center py-4">No sites assigned</p>
+            ) : (
+              <div className="space-y-3 max-h-80 overflow-y-auto">
+                {sites.map((site) => (
+                  <div key={site.id} className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <p className="font-medium text-gray-900 dark:text-gray-100">{site.name}</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">{site.address}</p>
+                      </div>
+                      <StatusBadge status={site.status} />
+                    </div>
+                    <div className="mt-2 flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
+                      <span className="flex items-center gap-1">
+                        <IconMapper name="Shield" size={14} />
+                        {site.required_guards} guards required
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <IconMapper name="MapPin" size={14} />
+                        {site.site_type}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+
+          {/* Recent Incidents */}
+          <Card className="p-6" id="incidents">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                <IconMapper name="AlertTriangle" size={20} />
+                Recent Incidents
+              </h3>
+              <span className="text-sm text-gray-500 dark:text-gray-400">{recentIncidents.length} recent</span>
+            </div>
+            {recentIncidents.length === 0 ? (
+              <p className="text-gray-500 dark:text-gray-400 text-center py-4">No recent incidents</p>
+            ) : (
+              <div className="space-y-3 max-h-80 overflow-y-auto">
+                {recentIncidents.map((incident) => (
+                  <div key={incident.id} className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <p className="font-medium text-gray-900 dark:text-gray-100">{incident.title}</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                          {incident.site_name} {incident.guard_name && `• ${incident.guard_name}`}
+                        </p>
+                      </div>
+                      <SeverityBadge severity={incident.severity} />
+                    </div>
+                    <div className="mt-2 flex items-center justify-between">
+                      <StatusBadge status={incident.status} />
+                      <span className="text-xs text-gray-400 dark:text-gray-500">{formatRelativeTime(incident.created_at)}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+        </div>
+
+        {/* Invoices Section */}
+        <Card className="p-6" id="invoices">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+              <IconMapper name="FileText" size={20} />
+              Recent Invoices
+            </h3>
+            <span className="text-sm text-gray-500 dark:text-gray-400">{invoices.length} recent</span>
+          </div>
+          {invoices.length === 0 ? (
+            <p className="text-gray-500 dark:text-gray-400 text-center py-4">No invoices available</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-gray-200 dark:border-gray-700">
+                    <th className="text-left py-2 px-4 text-sm font-medium text-gray-500 dark:text-gray-400">Invoice #</th>
+                    <th className="text-left py-2 px-4 text-sm font-medium text-gray-500 dark:text-gray-400">Period</th>
+                    <th className="text-left py-2 px-4 text-sm font-medium text-gray-500 dark:text-gray-400">Amount</th>
+                    <th className="text-left py-2 px-4 text-sm font-medium text-gray-500 dark:text-gray-400">Due Date</th>
+                    <th className="text-left py-2 px-4 text-sm font-medium text-gray-500 dark:text-gray-400">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {invoices.map((invoice) => (
+                    <tr key={invoice.id} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                      <td className="py-3 px-4 text-sm text-gray-900 dark:text-gray-100">{invoice.invoice_number}</td>
+                      <td className="py-3 px-4 text-sm text-gray-500 dark:text-gray-400">{invoice.billing_period || 'N/A'}</td>
+                      <td className="py-3 px-4 text-sm font-medium text-gray-900 dark:text-gray-100">{formatCurrency(invoice.total_amount)}</td>
+                      <td className="py-3 px-4 text-sm text-gray-500 dark:text-gray-400">{formatDate(invoice.due_date)}</td>
+                      <td className="py-3 px-4"><StatusBadge status={invoice.status} /></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </Card>
+
+        {/* Client Info Footer */}
+        <Card className="p-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div>
+              <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Contact Information</h4>
+              <div className="space-y-1 text-sm">
+                <p className="text-gray-900 dark:text-gray-100">{client.contact_person || 'N/A'}</p>
+                <p className="text-gray-500 dark:text-gray-400">{client.email || 'N/A'}</p>
+                <p className="text-gray-500 dark:text-gray-400">{client.phone || 'N/A'}</p>
+              </div>
             </div>
             <div>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Coming Soon</h3>
-              <p className="text-gray-500 dark:text-gray-400 mt-1">
-                The full client portal is under development. Check back soon for more features!
-              </p>
+              <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Contract Details</h4>
+              <div className="space-y-1 text-sm">
+                <p className="text-gray-900 dark:text-gray-100">Start: {formatDate(client.contract_start_date)}</p>
+                <p className="text-gray-900 dark:text-gray-100">End: {formatDate(client.contract_end_date)}</p>
+                <p className="text-gray-500 dark:text-gray-400">Monthly: {formatCurrency(client.monthly_rate)}</p>
+              </div>
             </div>
-            <QuickRequisitionModal />
+            <div className="flex items-center justify-end">
+              <div className="text-right">
+                <p className="text-sm text-gray-500 dark:text-gray-400">Client ID</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">#{client.id}</p>
+                <StatusBadge status={client.status} />
+              </div>
+            </div>
           </div>
         </Card>
       </div>
     </AdminLayout>
   );
 }
-
-

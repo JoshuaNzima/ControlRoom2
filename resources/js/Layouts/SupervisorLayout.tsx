@@ -9,6 +9,7 @@ import useNotifications from '@/Hooks/useNotifications';
 import { Toaster } from 'react-hot-toast';
 import NotificationBell from '@/Components/Common/NotificationBell';
 import QuickBudgetButton from '@/Components/Budgets/QuickBudgetButton';
+import FloatingNavButton from '@/Components/FloatingNavButton';
 
 const navLinks = [
   { href: "/supervisor/overview", label: "Overview", icon: <IconMapper name="LayoutDashboard" size={22} /> },
@@ -279,6 +280,8 @@ export default function SupervisorLayout({ children, title }: SupervisorLayoutPr
           </div>
         </>
       )}
+
+      <FloatingNavButton />
     </div>
   );
 }

@@ -8,6 +8,7 @@ import { useTheme } from '@/Providers/ThemeProvider';
 import QuickRequisitionButton from '@/Components/Requisitions/QuickRequisitionButton';
 import QuickBudgetButton from '@/Components/Budgets/QuickBudgetButton';
 import useCounters from '@/Hooks/useCounters';
+import FloatingNavButton from '@/Components/FloatingNavButton';
 
 interface Props {
   title: string;
@@ -32,6 +33,7 @@ export default function FinanceLayout({ title, children, user }: Props) {
   const currentUser = (page?.props?.auth?.user as any) as (User & { roles?: string[]; permissions?: string[] }) | undefined;
   const permissions = currentUser?.permissions ?? [];
   const roles = currentUser?.roles ?? [];
+  const isAdminUser = Array.isArray(roles) && (roles.includes('admin') || roles.includes('super_admin'));
   const allowedRoles = ['admin', 'super_admin', 'finance_officer', 'accountant'];
   const hasRoleApproval = Array.isArray(roles) && roles.some((r) => allowedRoles.includes(String(r)));
   const hasPermApproval = Array.isArray(permissions) && permissions.some((p) => (
@@ -64,9 +66,9 @@ export default function FinanceLayout({ title, children, user }: Props) {
 
   // Budget & Requisitions
   const managementLinks: NavItem[] = [
-    { name: 'Requisitions', href: safeRoute('finance.expenses.index', '/finance/expenses'), icon: <IconMapper name="trending-down" className="h-6 w-6" />, current: isCurrent(safeRoute('finance.expenses.index', '/finance/expenses')), badge: (()=>{ const n = Number(counters?.finance_approvals_pending || counters?.finance_expenses_pending_mine || 0); return n>0? String(n): undefined; })() },
+    { name: 'Requisitions', href: route('requisitions.index') as unknown as string, icon: <IconMapper name="clipboard-list" className="h-6 w-6" />, current: isCurrent(route('requisitions.index') as unknown as string), badge: (()=>{ const n = Number(counters?.requisitions_my_open||0); return n>0? String(n): undefined; })() },
+    { name: 'Expenses', href: safeRoute('finance.expenses.index', '/finance/expenses'), icon: <IconMapper name="trending-down" className="h-6 w-6" />, current: isCurrent(safeRoute('finance.expenses.index', '/finance/expenses')), badge: (()=>{ const n = Number(counters?.finance_approvals_pending || counters?.finance_expenses_pending_mine || 0); return n>0? String(n): undefined; })() },
     { name: 'Budgets', href: safeRoute('finance.budgets.index', '/finance/budgets'), icon: <IconMapper name="pie-chart" className="h-6 w-6" />, current: isCurrent(safeRoute('finance.budgets.index', '/finance/budgets')) },
-    { name: 'Req Summary', href: route('requisitions.index') as unknown as string, icon: <IconMapper name="clipboard-list" className="h-6 w-6" />, current: isCurrent(route('requisitions.index') as unknown as string), badge: (()=>{ const n = Number(counters?.requisitions_my_open||0); return n>0? String(n): undefined; })() },
     { name: 'My Budgets', href: route('budgets.index'), icon: <IconMapper name="pie-chart" className="h-6 w-6" />, current: isCurrent(route('budgets.index')) },
   ];
 
@@ -194,7 +196,7 @@ export default function FinanceLayout({ title, children, user }: Props) {
                   </Link>
                 )}
                 <Link
-                  href={route('finance.expenses.create')}
+                  href={route('requisitions.index')}
                   className="hidden sm:inline-flex items-center px-3 py-1.5 rounded-md bg-red-600 text-white hover:bg-red-700 text-sm"
                 >
                   Request Requisition
@@ -229,6 +231,7 @@ export default function FinanceLayout({ title, children, user }: Props) {
             {children}
           </div>
         </BaseShell>
+        <FloatingNavButton />
       </div>
     </div>
   );

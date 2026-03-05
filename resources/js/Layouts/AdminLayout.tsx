@@ -7,6 +7,7 @@ import BaseShell from './BaseShell';
 import useCounters from '@/Hooks/useCounters';
 import { useTheme } from '@/Providers/ThemeProvider';
 import useGpsAlerts from '@/Hooks/useGpsAlerts';
+import FloatingNavButton from '@/Components/FloatingNavButton';
 
 interface Props {
     title: string;
@@ -49,6 +50,14 @@ export default function AdminLayout({ title, children, user }: Props) {
     const { counters } = useCounters();
     const { theme, toggle } = useTheme();
     useGpsAlerts();
+
+    const roles = (() => {
+        const r: any = (user as any)?.roles;
+        if (Array.isArray(r)) return r.map(String);
+        if (typeof r === 'string' && r.length) return [r];
+        return [] as string[];
+    })();
+    const isAdminUser = roles.includes('admin') || roles.includes('super_admin');
 
     const isCurrent = (href: string) => {
         try {
@@ -114,12 +123,14 @@ export default function AdminLayout({ title, children, user }: Props) {
             href: route('admin.payments.index'), 
             icon: <IconMapper name="Wallet" size={20} />,
         },
-        { 
-            name: 'Requisitions', 
-            href: route('requisitions.index'), 
-            icon: <IconMapper name="ClipboardList" size={20} />,
-            badge: counters?.requisitions_my_open,
-        },
+        ...(!isAdminUser ? ([
+            {
+                name: 'My Requisitions',
+                href: route('requisitions.index'),
+                icon: <IconMapper name="ClipboardList" size={20} />,
+                badge: counters?.requisitions_my_open,
+            },
+        ] as NavItem[]) : []),
         { 
             name: 'Budgets', 
             href: route('budgets.index'), 
@@ -322,6 +333,7 @@ export default function AdminLayout({ title, children, user }: Props) {
                         {children}
                     </div>
                 </BaseShell>
+                <FloatingNavButton />
             </div>
         </div>
     );

@@ -13,6 +13,7 @@ import {
   Activity, Clock, CheckCircle, AlertCircle, Moon, Sun
 } from 'lucide-react';
 import { useTheme } from '@/Providers/ThemeProvider';
+import ControlRoomLayout from '@/Layouts/ControlRoomLayout';
 
 interface UserData {
   id: number;
@@ -67,7 +68,7 @@ export default function ControlRoomProfile() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <ControlRoomLayout title="My Profile">
       <Head title="Control Room Profile" />
       <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
         <div className="mb-6">
@@ -174,6 +175,6 @@ export default function ControlRoomProfile() {
           </TabsContent>
         </Tabs>
       </div>
-    </div>
+    </ControlRoomLayout>
   );
 }

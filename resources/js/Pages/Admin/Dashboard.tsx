@@ -154,6 +154,15 @@ type KPIs = {
   k9?: any;
   administration?: any;
   supervisor_incentives?: any;
+  incentive_system?: {
+    total_types?: number;
+    total_rules?: number;
+    pending_entries?: number;
+    approved_entries?: number;
+    paid_entries?: number;
+    pending_amount?: number;
+    paid_amount_mtd?: number;
+  };
   cross_module?: any;
 };
 
@@ -1156,14 +1165,104 @@ export default function Dashboard({
         {/* Incentives Tab */}
         {activeTab === 'incentives' && (
           <div className="space-y-6 animate-in fade-in duration-300">
+            {/* New Comprehensive Incentive System */}
             <Card className="p-6">
               <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
                 <div>
-                  <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Supervisor Incentives</h2>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">Commission tracking and calculations</p>
+                  <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Incentive System</h2>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Comprehensive incentive management and tracking</p>
                 </div>
                 <div className="flex gap-2">
-                  <Button size="sm" variant="outline" onClick={() => window.location.href = safeRoute('admin.commissions.index')}>
+                  <Button size="sm" variant="outline" onClick={() => window.location.href = safeRoute('hr.incentive-settings.index')}>
+                    <IconMapper name="Settings" size={16} className="mr-2" />
+                    Settings
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => window.location.href = safeRoute('hr.incentive-settings.index')}>
+                    <IconMapper name="Calculator" size={16} className="mr-2" />
+                    Calculate
+                  </Button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <div className="p-4 rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950/40">
+                  <div className="text-xs text-gray-500 dark:text-gray-400">Active Types</div>
+                  <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{kpis?.incentive_system?.total_types || 0}</div>
+                </div>
+                <div className="p-4 rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950/40">
+                  <div className="text-xs text-gray-500 dark:text-gray-400">Active Rules</div>
+                  <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">{kpis?.incentive_system?.total_rules || 0}</div>
+                </div>
+                <div className="p-4 rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950/40">
+                  <div className="text-xs text-gray-500 dark:text-gray-400">Pending</div>
+                  <div className="text-2xl font-bold text-amber-600 dark:text-amber-400">{kpis?.incentive_system?.pending_entries || 0}</div>
+                </div>
+                <div className="p-4 rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950/40">
+                  <div className="text-xs text-gray-500 dark:text-gray-400">Pending Amount</div>
+                  <div className="text-xl font-bold text-emerald-600 dark:text-emerald-400">{formatCurrencyMWK(kpis?.incentive_system?.pending_amount || 0)}</div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="p-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
+                  <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Entry Status</h4>
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600 dark:text-gray-400">Pending</span>
+                      <span className="font-medium text-amber-600 dark:text-amber-400">{kpis?.incentive_system?.pending_entries || 0}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600 dark:text-gray-400">Approved</span>
+                      <span className="font-medium text-blue-600 dark:text-blue-400">{kpis?.incentive_system?.approved_entries || 0}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600 dark:text-gray-400">Paid</span>
+                      <span className="font-medium text-emerald-600 dark:text-emerald-400">{kpis?.incentive_system?.paid_entries || 0}</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="p-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
+                  <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Amount Summary</h4>
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600 dark:text-gray-400">Pending/Approved</span>
+                      <span className="font-medium text-amber-600 dark:text-amber-400">{formatCurrencyMWK(kpis?.incentive_system?.pending_amount || 0)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600 dark:text-gray-400">Paid (MTD)</span>
+                      <span className="font-medium text-emerald-600 dark:text-emerald-400">{formatCurrencyMWK(kpis?.incentive_system?.paid_amount_mtd || 0)}</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="p-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 flex flex-col justify-center">
+                  <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Quick Actions</h4>
+                  <div className="space-y-2">
+                    <Button size="sm" variant="outline" className="w-full justify-start" onClick={() => window.location.href = safeRoute('hr.supervisor-incentives.index')}>
+                      <IconMapper name="Award" size={14} className="mr-2" />
+                      Supervisor Incentives
+                    </Button>
+                    <Button size="sm" variant="outline" className="w-full justify-start" onClick={() => window.location.href = safeRoute('admin.incentives.index')}>
+                      <IconMapper name="DollarSign" size={14} className="mr-2" />
+                      Legacy Incentives
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </Card>
+
+            {/* Legacy Supervisor Incentives */}
+            <Card className="p-6">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Supervisor Incentives (Legacy)</h2>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Commission tracking and calculations for supervisors/sergeants</p>
+                </div>
+                <div className="flex gap-2">
+                  <Button size="sm" variant="outline" onClick={() => window.location.href = safeRoute('hr.supervisor-incentives.index')}>
+                    <IconMapper name="Users" size={16} className="mr-2" />
+                    Profiles
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => window.location.href = safeRoute('admin.incentives.index')}>
                     <IconMapper name="Calculator" size={16} className="mr-2" />
                     Calculations
                   </Button>
@@ -1177,52 +1276,15 @@ export default function Dashboard({
                 </div>
                 <div className="p-4 rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950/40">
                   <div className="text-xs text-gray-500 dark:text-gray-400">Ready for Payment</div>
-                  <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{kpis?.supervisor_incentives?.ready_for_payment || 0}</div>
+                  <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{kpis?.supervisor_incentives?.approved_pending_payment || 0}</div>
                 </div>
                 <div className="p-4 rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950/40">
-                  <div className="text-xs text-gray-500 dark:text-gray-400">Total Supervisors</div>
-                  <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{kpis?.supervisor_incentives?.total_supervisors || 0}</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">Active Supervisors</div>
+                  <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{kpis?.supervisor_incentives?.supervisors_count || 0}</div>
                 </div>
                 <div className="p-4 rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950/40">
-                  <div className="text-xs text-gray-500 dark:text-gray-400">YTD Paid</div>
-                  <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">{formatCurrencyMWK(kpis?.supervisor_incentives?.ytd_paid || 0)}</div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="p-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
-                  <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Current Period</h4>
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600 dark:text-gray-400">Period</span>
-                      <span className="font-medium text-gray-900 dark:text-gray-100">{kpis?.supervisor_incentives?.current_period || 'N/A'}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600 dark:text-gray-400">Calculated Amount</span>
-                      <span className="font-medium text-emerald-600 dark:text-emerald-400">{formatCurrencyMWK(kpis?.supervisor_incentives?.current_amount || 0)}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600 dark:text-gray-400">Supervisors Eligible</span>
-                      <span className="font-medium text-blue-600 dark:text-blue-400">{kpis?.supervisor_incentives?.eligible_supervisors || 0}</span>
-                    </div>
-                  </div>
-                </div>
-                <div className="p-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
-                  <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Performance Summary</h4>
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600 dark:text-gray-400">Top Performer</span>
-                      <span className="font-medium text-gray-900 dark:text-gray-100 truncate max-w-[150px]">{kpis?.supervisor_incentives?.top_performer || 'N/A'}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600 dark:text-gray-400">Avg Commission</span>
-                      <span className="font-medium text-gray-900 dark:text-gray-100">{formatCurrencyMWK(kpis?.supervisor_incentives?.avg_commission || 0)}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600 dark:text-gray-400">Completion Rate</span>
-                      <span className="font-medium text-blue-600 dark:text-blue-400">{kpis?.supervisor_incentives?.completion_rate || 0}%</span>
-                    </div>
-                  </div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">Pending Amount</div>
+                  <div className="text-xl font-bold text-purple-600 dark:text-purple-400">{formatCurrencyMWK(kpis?.supervisor_incentives?.pending_amount_total || 0)}</div>
                 </div>
               </div>
             </Card>

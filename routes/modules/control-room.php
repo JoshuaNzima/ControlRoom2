@@ -6,7 +6,7 @@ use App\Http\Controllers\SupervisorQRCodesController;
 
 Route::middleware(['auth'])->group(function () {
     // Allow specific roles or users with permission (include admin role)
-    Route::middleware(['role_or_permission:control_room_operator|operations_officer|supervisor|manager|admin|super_admin|zone_commander|control.dashboard.view'])->prefix('control-room')->name('control-room.')->group(function () {
+    Route::middleware(['role_or_permission:control_room_operator|operations_officer|supervisor|sergeant|manager|admin|super_admin|zone_commander|control.dashboard.view'])->prefix('control-room')->name('control-room.')->group(function () {
 		Route::get('/dashboard', [\App\Http\Controllers\ControlRoomDashboardController::class, 'index'])->name('dashboard');
 		Route::get('/me', [\App\Http\Controllers\Profile\ProfileDashboardController::class, 'index'])->name('profile');
 		Route::get('/monitoring', [\App\Http\Controllers\ControlRoom\MonitoringController::class, 'index'])->name('monitoring');
@@ -72,12 +72,28 @@ Route::middleware(['auth'])->group(function () {
 		Route::post('shifts/{shift}/assign-guard', [\App\Http\Controllers\ControlRoom\ShiftController::class, 'assignGuard'])->name('shifts.assign-guard');
 		Route::delete('shifts/{shift}/unassign-guard/{guard}', [\App\Http\Controllers\ControlRoom\ShiftController::class, 'unassignGuard'])->name('shifts.unassign-guard');
 		Route::get('shifts/{shift}/schedule', [\App\Http\Controllers\ControlRoom\ShiftController::class, 'schedule'])->name('shifts.schedule');
+		Route::prefix('guard-shifts')->name('guard-shifts.')->middleware(['role_or_permission:control_room_operator|operations_officer|supervisor|sergeant|manager|super_admin|zone_commander'])->group(function () {
+			Route::get('/{shift}', [\App\Http\Controllers\ControlRoom\GuardShiftController::class, 'show'])->name('show');
+			Route::put('/{shift}', [\App\Http\Controllers\ControlRoom\GuardShiftController::class, 'update'])->name('update');
+			Route::post('/{shift}/cancel', [\App\Http\Controllers\ControlRoom\GuardShiftController::class, 'cancel'])->name('cancel');
+			Route::post('/bulk', [\App\Http\Controllers\ControlRoom\GuardShiftController::class, 'bulk'])->name('bulk');
+		});
 
 		// Roster (Control Room manages guard off-days; holidays visible via events)
 		Route::prefix('roster')->name('roster.')->group(function () {
 			Route::get('/', [\App\Http\Controllers\ControlRoom\RosterController::class, 'index'])->name('index');
 			Route::get('/weekly', [\App\Http\Controllers\ControlRoom\RosterController::class, 'weekly'])->name('weekly');
 			Route::get('/weekly/data', [\App\Http\Controllers\ControlRoom\RosterController::class, 'weeklyData'])->name('weekly.data');
+			Route::get('/weekly/plan', [\App\Http\Controllers\ControlRoom\RosterController::class, 'weeklyPlan'])->name('weekly.plan');
+			Route::post('/weekly/plan/entry', [\App\Http\Controllers\ControlRoom\RosterController::class, 'upsertWeeklyPlanEntry'])
+				->middleware(['role_or_permission:control_room_operator|operations_officer|manager|super_admin'])
+				->name('weekly.plan.entry');
+			Route::post('/weekly/plan/save', [\App\Http\Controllers\ControlRoom\RosterController::class, 'saveWeeklyPlanDraft'])
+				->middleware(['role_or_permission:control_room_operator|operations_officer|manager|super_admin'])
+				->name('weekly.plan.save');
+			Route::post('/weekly/plan/publish', [\App\Http\Controllers\ControlRoom\RosterController::class, 'publishWeeklyPlan'])
+				->middleware(['role_or_permission:control_room_operator|operations_officer|manager|super_admin'])
+				->name('weekly.plan.publish');
 			Route::post('/manual-shifts/upsert', [\App\Http\Controllers\ControlRoom\RosterController::class, 'upsertManualShift'])
 				->middleware(['role_or_permission:control_room_operator|operations_officer|manager|super_admin'])
 				->name('manual-shifts.upsert');
@@ -114,6 +130,8 @@ Route::middleware(['auth'])->group(function () {
         // Guard management (create/update/delete), assignments and exports in Control Room
         Route::prefix('guards')->name('guards.')->group(function () {
             Route::get('/export', [\App\Http\Controllers\ControlRoom\GuardsController::class, 'export'])->name('export');
+            Route::get('/bulk-import-template', [\App\Http\Controllers\ControlRoom\GuardManageController::class, 'bulkImportTemplate'])->name('bulk-import-template');
+            Route::post('/bulk-import', [\App\Http\Controllers\ControlRoom\GuardManageController::class, 'bulkImport'])->name('bulk-import');
             Route::get('/search', [\App\Http\Controllers\ControlRoom\GuardsController::class, 'search'])->name('search');
             Route::get('/{guard}/json', [\App\Http\Controllers\ControlRoom\GuardsController::class, 'showJson'])->name('json');
             Route::post('/', [\App\Http\Controllers\ControlRoom\GuardManageController::class, 'store'])
@@ -148,6 +166,9 @@ Route::middleware(['auth'])->group(function () {
             Route::post('/{guard}/dismiss', [\App\Http\Controllers\ControlRoom\GuardManageController::class, 'dismiss'])
                 ->middleware(['role_or_permission:operations_officer|manager|hr|hr_manager|super_admin|zone_commander'])
                 ->name('dismiss');
+            Route::post('/{guard}/resign', [\App\Http\Controllers\ControlRoom\GuardManageController::class, 'resign'])
+                ->middleware(['role_or_permission:operations_officer|manager|hr|hr_manager|super_admin|zone_commander'])
+                ->name('resign');
             Route::post('/{guard}/abscond', [\App\Http\Controllers\ControlRoom\GuardManageController::class, 'abscond'])
                 ->middleware(['role_or_permission:operations_officer|manager|hr|hr_manager|super_admin|zone_commander'])
                 ->name('abscond');
@@ -210,7 +231,8 @@ Route::middleware(['auth'])->group(function () {
 		Route::put('/downs/{down}', [\App\Http\Controllers\ControlRoom\DownController::class, 'update'])->name('downs.update');
 		Route::delete('/downs/{down}', [\App\Http\Controllers\ControlRoom\DownController::class, 'destroy'])->name('downs.destroy');
 		Route::post('/downs/{down}/escalate', [\App\Http\Controllers\ControlRoom\DownController::class, 'escalate'])->name('downs.escalate');
-		Route::post('/downs/{down}/resolve', [\App\Http\Controllers\ControlRoom\DownController::class, 'resolve'])->name('downs.resolve');
+		Route::post('/downs/{down}/resolve', [\App\Http\Controllers\ControlRoom\DownController::class, 'resolveWithIncentive'])->name('downs.resolve');
+		Route::post('/downs/{down}/resolve-basic', [\App\Http\Controllers\ControlRoom\DownController::class, 'resolve'])->name('downs.resolve.basic');
 		Route::post('/downs/{down}/abscond', [\App\Http\Controllers\ControlRoom\DownController::class, 'abscond'])->name('downs.abscond');
 
 		// Live Monitoring
@@ -238,6 +260,17 @@ Route::middleware(['auth'])->group(function () {
 			Route::get('/intakes', [\App\Http\Controllers\ControlRoom\PublicIntakeTriageController::class, 'index'])->name('intakes.index');
 			Route::get('/intakes/{intake}', [\App\Http\Controllers\ControlRoom\PublicIntakeTriageController::class, 'show'])->name('intakes.show');
 			Route::post('/intakes/{intake}/convert', [\App\Http\Controllers\ControlRoom\PublicIntakeTriageController::class, 'convert'])->name('intakes.convert');
+		});
+
+		// Incentives - View only access for control room and operations
+		Route::prefix('incentives')->name('incentives.')->middleware(['role_or_permission:control_room_operator|operations_officer|manager|admin|super_admin|zone_commander'])->group(function () {
+			Route::get('/', [\App\Http\Controllers\ControlRoom\IncentiveViewController::class, 'index'])->name('index');
+			Route::get('/entries', [\App\Http\Controllers\ControlRoom\IncentiveViewController::class, 'entries'])->name('entries');
+			Route::get('/supervisor-incentives', [\App\Http\Controllers\ControlRoom\IncentiveViewController::class, 'supervisorIncentives'])->name('supervisor');
+			
+			// Supervisor Balance Tracking
+			Route::get('/my-balance', [\App\Http\Controllers\ControlRoom\SupervisorIncentiveBalanceController::class, 'myBalance'])->name('my-balance');
+			Route::get('/supervisor-balances', [\App\Http\Controllers\ControlRoom\SupervisorIncentiveBalanceController::class, 'index'])->name('supervisor-balances.index');
 		});
 	});
 });

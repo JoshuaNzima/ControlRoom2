@@ -6,6 +6,7 @@ import { User } from '@/types';
 import { useTheme } from '@/Providers/ThemeProvider';
 import QuickRequisitionButton from '@/Components/Requisitions/QuickRequisitionButton';
 import QuickBudgetButton from '@/Components/Budgets/QuickBudgetButton';
+import FloatingNavButton from '@/Components/FloatingNavButton';
 import useCounters from '@/Hooks/useCounters';
 import useGpsAlerts from '@/Hooks/useGpsAlerts';
 
@@ -32,6 +33,7 @@ export default function ControlRoomLayout({ title, children, user }: Props) {
   useGpsAlerts();
   const roles = ((user as any)?.roles ?? (page?.props as any)?.auth?.user?.roles ?? []) as any;
   const isSuperAdmin = Array.isArray(roles) ? roles.includes('super_admin') : roles === 'super_admin';
+  const isAdminUser = Array.isArray(roles) && (roles.includes('admin') || roles.includes('super_admin'));
   const roleDisplay = (() => {
     const r: any = roles;
     if (Array.isArray(r) && r.length) return String(r[0]).replaceAll('_', ' ');
@@ -49,7 +51,7 @@ export default function ControlRoomLayout({ title, children, user }: Props) {
   { name: 'Camera Systems', href: route('control-room.cameras.index'), icon: <IconMapper name="camera" className="h-6 w-6" />, current: false },
   { name: 'Zone Management', href: route('control-room.zones.index'), icon: <IconMapper name="map-pin" className="h-6 w-6" />, current: false },
   { name: 'Shift Management', href: route('control-room.shifts.index'), icon: <IconMapper name="clock" className="h-6 w-6" />, current: false },
-  { name: 'Roster', href: route('control-room.roster.weekly'), icon: <IconMapper name="calendar" className="h-6 w-6" />, current: isCurrent(route('control-room.roster.weekly')) },
+  { name: 'Roster', href: route('control-room.roster.index'), icon: <IconMapper name="calendar" className="h-6 w-6" />, current: isCurrent(route('control-room.roster.index')) },
   { name: 'Attendance History', href: route('control-room.attendance.index'), icon: <IconMapper name="clipboard-list" className="h-6 w-6" />, current: isCurrent(route('control-room.attendance.index')) },
   { name: 'Tickets', href: route('control-room.tickets.index'), icon: <IconMapper name="briefcase" className="h-6 w-6" />, current: false, badge: (()=>{ const n = Number(counters?.control_tickets_open||0); return n>0? String(n): undefined; })() },
   { name: 'Flags', href: route('control-room.flags.index'), icon: <IconMapper name="alert-triangle" className="h-6 w-6" />, current: false, badge: (()=>{ const n = Number(counters?.control_flags_pending||0); return n>0? String(n): undefined; })() },
@@ -69,7 +71,9 @@ export default function ControlRoomLayout({ title, children, user }: Props) {
     { name: 'QR Codes', href: route('control-room.qr-codes.index'), icon: <IconMapper name="qr-code" className="h-6 w-6" />, current: false },
     { name: 'Reports', href: route('control-room.reports'), icon: <IconMapper name="bar-chart-2" className="h-6 w-6" />, current: false },
     { name: 'Settings', href: route('control-room.settings'), icon: <IconMapper name="settings" className="h-6 w-6" />, current: false },
-    { name: 'Requisitions', href: route('requisitions.index'), icon: <IconMapper name="clipboard-list" className="h-6 w-6" />, current: false, badge: (()=>{ const n = Number(counters?.requisitions_my_open||0); return n>0? String(n): undefined; })() },
+    ...(!isAdminUser ? ([
+      { name: 'My Requisitions', href: route('requisitions.index'), icon: <IconMapper name="clipboard-list" className="h-6 w-6" />, current: false, badge: (()=>{ const n = Number(counters?.requisitions_my_open||0); return n>0? String(n): undefined; })() },
+    ] as ModuleNavItem[]) : []),
     { name: 'Budgets', href: route('budgets.index'), icon: <IconMapper name="pie-chart" className="h-6 w-6" />, current: false },
   ];
 
@@ -207,6 +211,7 @@ export default function ControlRoomLayout({ title, children, user }: Props) {
             </div>
           </div>
         </main>
+        <FloatingNavButton />
       </div>
     </div>
   );

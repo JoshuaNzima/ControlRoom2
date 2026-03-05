@@ -45,7 +45,21 @@ class ShiftController extends Controller
         $dateTo = $request->query('date_to');
         $guardType = $request->query('guard_type');
 
+        $user = $request->user();
+        $isZoneCommander = $user && method_exists($user, 'hasRole') ? $user->hasRole('zone_commander') : false;
+        $isGuardManager = $user && method_exists($user, 'hasAnyRole') ? $user->hasAnyRole(['supervisor', 'sergeant']) : false;
+
         $guardShifts = GuardShift::with(['guardRelation', 'clientSite'])
+            ->when($isGuardManager, function ($q) use ($user) {
+                $q->whereHas('guardRelation', function ($g) use ($user) {
+                    $g->where('supervisor_id', $user->id);
+                });
+            })
+            ->when($isZoneCommander, function ($q) use ($user) {
+                $q->whereHas('clientSite', function ($s) use ($user) {
+                    $s->where('zone_id', $user->zone_id);
+                });
+            })
             ->when($zoneId, function ($q) use ($zoneId) {
                 $q->whereHas('clientSite', function ($qq) use ($zoneId) {
                     $qq->where('zone_id', $zoneId);
@@ -86,6 +100,12 @@ class ShiftController extends Controller
             ->select(['id','name'])
             ->orderBy('name')
             ->get();
+        $guards = Guard::query()
+            ->where('status', 'active')
+            ->when($isGuardManager, fn ($q) => $q->where('supervisor_id', $user->id))
+            ->when($isZoneCommander, fn ($q) => $q->where('zone_id', $user->zone_id))
+            ->orderBy('name')
+            ->get(['id', 'name', 'employee_id', 'guard_type', 'zone_id', 'supervisor_id']);
         $sites = ClientSite::select(['id','name'])->orderBy('name')->get();
         $zones = Zone::select(['id','name'])->orderBy('name')->get();
 
@@ -93,6 +113,7 @@ class ShiftController extends Controller
             'guardShifts' => $guardShifts,
             'scheduleShifts' => $scheduleShifts,
             'supervisors' => $supervisors,
+            'guards' => $guards,
             'sites' => $sites,
             'zones' => $zones,
             'filters' => [
@@ -109,20 +130,7 @@ class ShiftController extends Controller
 
     public function create()
     {
-        $guards = Guard::select(['id','name'])->orderBy('name')->get();
-        $supervisors = User::whereHas('roles', function ($q) {
-                $q->where('name', 'supervisor')->where('guard_name', 'web');
-            })
-            ->select(['id','name'])
-            ->orderBy('name')
-            ->get();
-        $sites = ClientSite::select(['id','name'])->orderBy('name')->get();
-
-        return Inertia::render('ControlRoom/Shifts/Create', [
-            'guards' => $guards,
-            'supervisors' => $supervisors,
-            'sites' => $sites,
-        ]);
+        return redirect()->route('control-room.shifts.index', ['create_shift' => 1]);
     }
 
     public function store(Request $request)
@@ -192,30 +200,12 @@ class ShiftController extends Controller
             ]);
         }
 
-        return Inertia::render('ControlRoom/Shifts/Show', [
-            'shift' => $shift,
-            'availableGuards' => $availableGuards,
-            'sitesMap' => $sitesMap,
-        ]);
+        return redirect()->route('control-room.shifts.index', ['view_shift' => $shift->id]);
     }
 
     public function edit(Shift $shift)
     {
-        $guards = Guard::select(['id','name'])->orderBy('name')->get();
-        $supervisors = User::whereHas('roles', function ($q) {
-                $q->where('name', 'supervisor')->where('guard_name', 'web');
-            })
-            ->select(['id','name'])
-            ->orderBy('name')
-            ->get();
-        $sites = ClientSite::select(['id','name'])->orderBy('name')->get();
-
-        return Inertia::render('ControlRoom/Shifts/Edit', [
-            'shift' => $shift,
-            'guards' => $guards,
-            'supervisors' => $supervisors,
-            'sites' => $sites,
-        ]);
+        return redirect()->route('control-room.shifts.index', ['edit_shift' => $shift->id]);
     }
 
     public function update(Request $request, Shift $shift)

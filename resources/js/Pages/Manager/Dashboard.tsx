@@ -5,7 +5,6 @@ import { Card } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import IconMapper from '@/Components/IconMapper';
 import { PageProps, User } from '@/types';
-import QuickRequisitionModal from '@/Components/Requisitions/QuickRequisitionModal';
 
 // Animated Counter Component
 const AnimatedCounter: React.FC<{ value: number; duration?: number }> = ({ value, duration = 1000 }) => {
@@ -155,8 +154,6 @@ export default function ManagerDashboard({ auth }: Props) {
             </div>
           </div>
         </div>
-
-        <QuickRequisitionModal />
 
         {/* Stats Overview */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

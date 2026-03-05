@@ -1,13 +1,15 @@
-import React from 'react';
+import React, { useState, useCallback } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/Components/ui/dialog';
 import { Button } from '@/Components/ui/button';
-import { Card } from '@/Components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card';
+import { Badge } from '@/Components/ui/badge';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/Components/ui/tabs';
 import { useForm } from '@inertiajs/react';
 import axios from 'axios';
 import IconMapper from '@/Components/IconMapper';
-import LocationPicker from '@/Components/Map/LocationPicker';
 import { formatCurrencyMWK } from '@/Components/format';
 import EditSiteModal from '@/Components/Clients/EditSiteModal';
+import AddSiteModal from '@/Components/Clients/AddSiteModal';
 
 interface Site {
   id: number;
@@ -18,6 +20,8 @@ interface Site {
   guard_count?: number;
   zone_id?: number | null;
   site_type?: string | null;
+  contact_person?: string;
+  phone?: string;
 }
 
 interface Service {
@@ -34,6 +38,7 @@ interface Client {
   contact_person?: string;
   phone?: string;
   email?: string;
+  address?: string;
   status?: string;
   sites?: Site[];
   services?: Service[];
@@ -54,38 +59,31 @@ interface ClientDetailsModalProps {
   zones?: Array<{ id: number; name: string }>;
 }
 
-const clientFieldClassName =
-  'mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 px-3 py-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950 sm:text-sm';
-
-const clientInlineFieldClassName =
-  'rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 px-2 py-1 focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950';
-
 export default function ClientDetailsModal({ client, open, onClose, services = [], onClientUpdated, zones = [] }: ClientDetailsModalProps) {
-  // Note: parent can pass services list and onClientUpdated handler
-  const [activeTab, setActiveTab] = React.useState<'overview' | 'sites' | 'services'>('overview');
-  const { data, setData, post, processing } = useForm({
-    name: '',
-    address: '',
-    contact_person: '',
-    phone: '',
-    required_guards: 1,
-    services_requested: '',
-    special_instructions: '',
-    status: 'active',
-    latitude: '',
-    longitude: '',
-    site_type: 'residential',
-    zone_id: '',
+  const [activeTab, setActiveTab] = useState('overview');
+  const [addSiteOpen, setAddSiteOpen] = useState(false);
+  const [editSiteOpen, setEditSiteOpen] = useState(false);
+  const [selectedSiteId, setSelectedSiteId] = useState<number | null>(null);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [deletingSiteId, setDeletingSiteId] = useState<number | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [serviceSelections, setServiceSelections] = useState<Record<number, { selected: boolean; custom_price: number | null; quantity: number }>>(() => {
+    const initial: Record<number, { selected: boolean; custom_price: number | null; quantity: number }> = {};
+    services.forEach(svc => {
+      const attached = client.services?.find(cs => cs.id === svc.id);
+      initial[svc.id] = {
+        selected: !!attached,
+        custom_price: attached?.custom_price ?? null,
+        quantity: attached?.quantity ?? 1,
+      };
+    });
+    return initial;
   });
+  const [savingServices, setSavingServices] = useState(false);
 
-  const [editSiteOpen, setEditSiteOpen] = React.useState(false);
-  const [selectedSiteId, setSelectedSiteId] = React.useState<number | null>(null);
-  const [confirmDeleteOpen, setConfirmDeleteOpen] = React.useState(false);
-  const [deletingSiteId, setDeletingSiteId] = React.useState<number | null>(null);
-  const [deleting, setDeleting] = React.useState(false);
-  const [showAddSiteMap, setShowAddSiteMap] = React.useState(true);
+  const { processing } = useForm();
 
-  const refreshClient = React.useCallback(async () => {
+  const refreshClient = useCallback(async () => {
     try {
       if (onClientUpdated) {
         const showUrl = route('admin.clients.json', { client: client.id });
@@ -94,7 +92,8 @@ export default function ClientDetailsModal({ client, open, onClose, services = [
       }
     } catch (_) {}
   }, [client?.id, onClientUpdated]);
-  const confirmDelete = React.useCallback(async () => {
+
+  const confirmDelete = useCallback(async () => {
     if (!deletingSiteId) return;
     setDeleting(true);
     try {
@@ -110,542 +109,537 @@ export default function ClientDetailsModal({ client, open, onClose, services = [
     }
   }, [client?.id, deletingSiteId, refreshClient]);
 
-  const handleAddSite = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSiteAdded = useCallback(() => {
+    setAddSiteOpen(false);
+    refreshClient();
+  }, [refreshClient]);
+
+  const handleSiteUpdated = useCallback(() => {
+    setEditSiteOpen(false);
+    setSelectedSiteId(null);
+    refreshClient();
+  }, [refreshClient]);
+
+  const handleServiceSelectionChange = (serviceId: number, field: 'selected' | 'custom_price' | 'quantity', value: any) => {
+    setServiceSelections(prev => ({
+      ...prev,
+      [serviceId]: {
+        ...prev[serviceId],
+        [field]: value,
+      },
+    }));
+  };
+
+  const handleSaveServices = async () => {
+    setSavingServices(true);
     try {
-      const url = route('admin.clients.sites.store', { client: client.id });
-      await axios.post(url, data, { headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' } });
-      // reset form
-      setData({
-        name: '',
-        address: '',
-        contact_person: '',
-        phone: '',
-        required_guards: 1,
-        services_requested: '',
-        special_instructions: '',
-        status: 'active',
-        latitude: '',
-        longitude: '',
-        site_type: 'residential',
-        zone_id: '',
-      });
-      // ask parent to refresh client details if callback provided
-      try {
-        if (onClientUpdated) {
-          // fetch fresh client
-          const showUrl = route('admin.clients.json', { client: client.id });
-          const resp = await axios.get(showUrl, { headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' } });
-          onClientUpdated(resp.data);
-        }
-      } catch (err) {
-        // ignore refresh errors
-        console.warn('Failed to refresh client after site add', err);
-      }
+      const servicesPayload = Object.entries(serviceSelections)
+        .filter(([, data]) => data.selected)
+        .map(([id, data]) => ({
+          id: Number(id),
+          custom_price: data.custom_price,
+          quantity: data.quantity,
+        }));
+
+      const url = route('admin.clients.services.update', { client: client.id });
+      await axios.post(url, { services: servicesPayload }, { headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' } });
+      await refreshClient();
     } catch (err) {
-      console.error('Failed to add site', err);
-      alert('Failed to add site. Please try again.');
+      console.error('Failed to update services', err);
+      alert('Failed to update services.');
+    } finally {
+      setSavingServices(false);
     }
   };
 
-  // Using formatCurrencyMWK from Components/format.ts
-
-  const formatDate = (date: string) => {
+  const formatDate = (date?: string) => {
+    if (!date) return 'N/A';
     return new Date(date).toLocaleDateString('en-US', {
       year: 'numeric',
-      month: 'long',
-      day: 'numeric'
+      month: 'short',
+      day: 'numeric',
     });
   };
 
-  return (<>
-    <Dialog open={open} onOpenChange={() => !processing && onClose()}>
-      <DialogContent className="w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-2xl bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 p-6">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <DialogHeader>
-              <DialogTitle>{client.name}</DialogTitle>
-            </DialogHeader>
-            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-              Client since: {client.billing_start_date ? formatDate(client.billing_start_date) : 'N/A'}
-            </p>
-          </div>
-          <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-            client.status === 'active' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-200' : 
-            client.status === 'overdue' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200' :
-            'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200'
-          }`}>
-            {client.status || 'Active'}
-          </span>
-        </div>
+  const getStatusBadgeVariant = (status?: string) => {
+    switch (status) {
+      case 'active': return 'success';
+      case 'overdue': return 'destructive';
+      case 'inactive': return 'default';
+      default: return 'default';
+    }
+  };
 
-        <div className="mb-6">
-          <div className="flex space-x-4 border-b border-gray-200 dark:border-gray-800">
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('overview')}
-                  onKeyDown={(e) => e.key === 'Enter' && setActiveTab('overview')}
-                  className={`px-4 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950 ${
-                    activeTab === 'overview'
-                      ? 'border-b-2 border-coin-500 text-coin-700 dark:text-coin-300'
-                      : 'text-gray-600 dark:text-gray-300 hover:text-coin-700 dark:hover:text-coin-300'
-                  }`}
-                >
-                  Overview
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('sites')}
-                  onKeyDown={(e) => e.key === 'Enter' && setActiveTab('sites')}
-                  className={`px-4 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950 ${
-                    activeTab === 'sites'
-                      ? 'border-b-2 border-coin-500 text-coin-700 dark:text-coin-300'
-                      : 'text-gray-600 dark:text-gray-300 hover:text-coin-700 dark:hover:text-coin-300'
-                  }`}
-                >
-                  Sites
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('services')}
-                  onKeyDown={(e) => e.key === 'Enter' && setActiveTab('services')}
-                  className={`px-4 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950 ${
-                    activeTab === 'services'
-                      ? 'border-b-2 border-coin-500 text-coin-700 dark:text-coin-300'
-                      : 'text-gray-600 dark:text-gray-300 hover:text-coin-700 dark:hover:text-coin-300'
-                  }`}
-                >
-                  Services
-                </button>
+  const getSiteTypeLabel = (type?: string | null) => {
+    if (!type) return 'Site';
+    return type.charAt(0).toUpperCase() + type.slice(1);
+  };
+
+  return (
+    <>
+      <Dialog open={open} onOpenChange={(isOpen) => !isOpen && !processing && onClose()}>
+        <DialogContent className="w-full max-w-4xl max-h-[90vh] overflow-hidden rounded-xl bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 p-0">
+          {/* Header */}
+          <DialogHeader>
+            <div className="px-6 pt-6 pb-4 border-b border-gray-200 dark:border-gray-800">
+              <div className="flex items-start justify-between gap-4">
+                <div className="min-w-0 flex-1">
+                  <DialogTitle>{client.name}</DialogTitle>
+                  <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                    Client since {formatDate(client.billing_start_date)}
+                  </p>
+                </div>
+                <Badge variant={getStatusBadgeVariant(client.status)} className="shrink-0">
+                  {client.status || 'Active'}
+                </Badge>
               </div>
             </div>
+          </DialogHeader>
 
+          {/* Tabs */}
+          <div className="px-6 py-3 border-b border-gray-200 dark:border-gray-800">
+            <Tabs value={activeTab} onValueChange={setActiveTab}>
+              <TabsList className="grid w-full grid-cols-3 sm:w-auto sm:inline-flex bg-gray-100 dark:bg-gray-900">
+                <TabsTrigger value="overview" className="text-xs sm:text-sm">
+                  <IconMapper name="LayoutDashboard" className="w-4 h-4 mr-1.5 hidden sm:inline" />
+                  Overview
+                </TabsTrigger>
+                <TabsTrigger value="sites" className="text-xs sm:text-sm">
+                  <IconMapper name="MapPin" className="w-4 h-4 mr-1.5 hidden sm:inline" />
+                  Sites ({client.sites?.length || 0})
+                </TabsTrigger>
+                <TabsTrigger value="services" className="text-xs sm:text-sm">
+                  <IconMapper name="Briefcase" className="w-4 h-4 mr-1.5 hidden sm:inline" />
+                  Services
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
+
+          {/* Content */}
+          <div className="px-6 py-4 overflow-y-auto max-h-[calc(90vh-200px)]">
+            {/* Overview Tab */}
             {activeTab === 'overview' && (
               <div className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <Card className="p-4">
-                    <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Sites</h3>
-                    <p className="mt-1 text-2xl font-semibold text-gray-900 dark:text-gray-100">{client.sites?.length || 0}</p>
-                  </Card>
-                    <Card className="p-4">
-                      <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Active Services</h3>
-                      <p className="mt-1 text-2xl font-semibold text-gray-900 dark:text-gray-100">{client.services_count || client.services?.length || 0}</p>
-                    </Card>
-                  <Card className="p-4">
-                    <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Monthly Value</h3>
-                    <p className="mt-1 text-2xl font-semibold text-gray-900 dark:text-gray-100">
-                      {formatCurrencyMWK(client.monthly_rate || client.services?.reduce((sum, service) => 
-                        sum + ((service.custom_price ?? service.monthly_price) * (service.quantity || 1)), 0) || 0)}
-                    </p>
-                  </Card>
-                </div>
-
-                <div className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg p-4">
-                  <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-3">Contact Information</h3>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">Contact Person</p>
-                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{client.contact_person || 'N/A'}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">Phone</p>
-                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{client.phone || 'N/A'}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">Email</p>
-                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{client.email || 'N/A'}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">Last Payment</p>
-                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                        {client.last_payment_date ? formatDate(client.last_payment_date) : 'N/A'}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {activeTab === 'sites' && (
-              <div className="space-y-6">
-                <div className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg p-4">
-                  <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-4">Add New Site</h3>
-                  <form onSubmit={handleAddSite} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">Site Name</label>
-                      <input
-                        type="text"
-                        value={data.name}
-                        onChange={e => setData('name', e.target.value)}
-                        className={clientFieldClassName}
-                        placeholder="Enter site name"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">Address</label>
-                      <input
-                        type="text"
-                        value={data.address}
-                        onChange={e => setData('address', e.target.value)}
-                        className={clientFieldClassName}
-                        placeholder="Enter site address"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">Contact Person</label>
-                      <input
-                        type="text"
-                        value={data.contact_person}
-                        onChange={e => setData('contact_person', e.target.value)}
-                        className={clientFieldClassName}
-                        placeholder="Enter contact person name"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">Phone</label>
-                      <input
-                        type="text"
-                        value={data.phone}
-                        onChange={e => setData('phone', e.target.value)}
-                        className={clientFieldClassName}
-                        placeholder="Enter contact phone"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">Required Guards</label>
-                      <input
-                        type="number"
-                        value={data.required_guards}
-                        onChange={e => setData('required_guards', parseInt(e.target.value))}
-                        className={clientFieldClassName}
-                        min="1"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">Site Status</label>
-                      <select
-                        value={data.status}
-                        onChange={e => setData('status', e.target.value)}
-                        className={clientFieldClassName}
-                        required
-                      >
-                        <option value="active">Active</option>
-                        <option value="inactive">Inactive</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">Site Type</label>
-                      <select
-                        value={(data as any).site_type}
-                        onChange={e => setData('site_type' as any, e.target.value)}
-                        className={clientFieldClassName}
-                      >
-                        <option value="residential">Residential</option>
-                        <option value="commercial">Commercial</option>
-                        <option value="office">Office</option>
-                      </select>
-                    </div>
-                    <div className="md:col-span-2">
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">Zone</label>
-                      <select
-                        value={(data as any).zone_id ?? ''}
-                        onChange={e => setData('zone_id' as any, e.target.value)}
-                        className={clientFieldClassName}
-                      >
-                        <option value="">Unassigned</option>
-                        {zones.map(z => (
-                          <option key={z.id} value={z.id}>{z.name}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div className="md:col-span-2">
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">Services Requested</label>
-                      <textarea
-                        value={data.services_requested}
-                        onChange={e => setData('services_requested', e.target.value)}
-                        rows={2}
-                        className={clientFieldClassName}
-                        placeholder="Enter requested services"
-                      />
-                    </div>
-                    <div className="md:col-span-2">
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">Location</label>
-                      <div className="mt-1">
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between text-xs text-gray-600 dark:text-gray-300">
-                            <span>Use the map or enter coordinates manually.</span>
-                            <button
-                              type="button"
-                              onClick={() => setShowAddSiteMap((v) => !v)}
-                              className="px-2 py-1 border border-gray-300 dark:border-gray-700 rounded-md bg-white dark:bg-gray-950 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950"
-                            >
-                              {showAddSiteMap ? 'Hide map' : 'Show map'}
-                            </button>
-                          </div>
-                          {showAddSiteMap && (
-                            <LocationPicker
-                              value={data.latitude && data.longitude ? { lat: Number(data.latitude), lng: Number(data.longitude) } : null}
-                              onChange={(coords) => setData({ ...data, latitude: coords.lat.toFixed(6), longitude: coords.lng.toFixed(6) } as any)}
-                              heightClassName="h-56"
-                            />
-                          )}
+                {/* Stats Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <Card className="bg-gradient-to-br from-coin-50 to-white dark:from-coin-950/20 dark:to-gray-900 border-coin-200 dark:border-coin-800">
+                    <CardContent className="p-4">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-lg bg-coin-100 dark:bg-coin-900/30">
+                          <IconMapper name="MapPin" className="w-5 h-5 text-coin-600 dark:text-coin-400" />
                         </div>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Tap the map to set exact coordinates or enter them manually below.</p>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">Latitude</label>
-                            <input
-                              type="number"
-                              step="0.000001"
-                              min={-90}
-                              max={90}
-                              value={data.latitude}
-                              onChange={(e) => setData('latitude', e.target.value)}
-                              onPaste={(e) => {
-                                const text = e.clipboardData.getData('text') || '';
-                                const matches = text.match(/-?\d+(?:\.\d+)?/g) || [];
-                                if (matches.length >= 2) {
-                                  const lat = Number(matches[0]);
-                                  const lng = Number(matches[1]);
-                                  if (!Number.isNaN(lat) && !Number.isNaN(lng)) {
-                                    e.preventDefault();
-                                    const clampedLat = Math.max(-90, Math.min(90, lat));
-                                    const clampedLng = Math.max(-180, Math.min(180, lng));
-                                    setData('latitude', clampedLat.toFixed(6));
-                                    setData('longitude', clampedLng.toFixed(6));
-                                  }
-                                }
-                              }}
-                              onBlur={(e) => {
-                                const v = e.target.value;
-                                if (v === '') return;
-                                let n = Number(v);
-                                if (isNaN(n)) return;
-                                n = Math.max(-90, Math.min(90, n));
-                                setData('latitude', n.toFixed(6));
-                              }}
-                              className={clientFieldClassName}
-                              placeholder="e.g. -13.962600"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">Longitude</label>
-                            <input
-                              type="number"
-                              step="0.000001"
-                              min={-180}
-                              max={180}
-                              value={data.longitude}
-                              onChange={(e) => setData('longitude', e.target.value)}
-                              onPaste={(e) => {
-                                const text = e.clipboardData.getData('text') || '';
-                                const matches = text.match(/-?\d+(?:\.\d+)?/g) || [];
-                                if (matches.length >= 2) {
-                                  const lat = Number(matches[0]);
-                                  const lng = Number(matches[1]);
-                                  if (!Number.isNaN(lat) && !Number.isNaN(lng)) {
-                                    e.preventDefault();
-                                    const clampedLat = Math.max(-90, Math.min(90, lat));
-                                    const clampedLng = Math.max(-180, Math.min(180, lng));
-                                    setData('latitude', clampedLat.toFixed(6));
-                                    setData('longitude', clampedLng.toFixed(6));
-                                  }
-                                }
-                              }}
-                              onBlur={(e) => {
-                                const v = e.target.value;
-                                if (v === '') return;
-                                let n = Number(v);
-                                if (isNaN(n)) return;
-                                n = Math.max(-180, Math.min(180, n));
-                                setData('longitude', n.toFixed(6));
-                              }}
-                              className={clientFieldClassName}
-                              placeholder="e.g. 33.774100"
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="md:col-span-2">
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">Special Instructions</label>
-                      <textarea
-                        value={data.special_instructions}
-                        onChange={e => setData('special_instructions', e.target.value)}
-                        rows={2}
-                        className={clientFieldClassName}
-                        placeholder="Enter any special instructions or notes"
-                      />
-                    </div>
-                    <div className="md:col-span-2">
-                      <Button type="submit" disabled={processing}>
-                        <IconMapper name="Plus" className="w-4 h-4 mr-2" />
-                        Add Site
-                      </Button>
-                    </div>
-                  </form>
-                </div>
-
-                <div className="divide-y divide-gray-200 dark:divide-gray-800">
-                  {client.sites?.map(site => (
-                    <div key={site.id} className="py-4">
-                      <div className="flex items-center justify-between">
                         <div>
-                          <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100">{site.name}</h4>
-                          <p className="text-sm text-gray-500 dark:text-gray-400">{site.address}</p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="px-2 py-1 text-xs rounded-full bg-coin-600/10 text-coin-800 dark:text-coin-200 dark:bg-coin-900/30">
-                            {site.required_guards ?? 0} required
-                          </span>
-                          <span className={`px-2 py-1 text-xs rounded-full ${
-                            site.status === 'active' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-200' : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200'
-                          }`}>
-                            {site.guard_count ?? 0} assigned
-                          </span>
-                          {site.zone_id ? (
-                            <span className="px-2 py-1 text-xs rounded-full bg-coin-600/10 text-coin-800 dark:text-coin-200 dark:bg-coin-900/30">
-                              {zones.find((z) => z.id === site.zone_id)?.name || `Zone ${site.zone_id}`}
-                            </span>
-                          ) : (
-                            <span className="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-700 dark:bg-gray-900 dark:text-gray-300">
-                              Unassigned
-                            </span>
-                          )}
-                          <Button variant="outline" size="sm" onClick={() => { setSelectedSiteId(site.id); setEditSiteOpen(true); }}>
-                            <IconMapper name="Pencil" className="w-4 h-4" />
-                          </Button>
-                          <Button variant="destructive" size="sm" onClick={() => { setDeletingSiteId(site.id); setConfirmDeleteOpen(true); }}>Delete</Button>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">Sites</p>
+                          <p className="text-xl font-semibold text-gray-900 dark:text-gray-100">{client.sites?.length || 0}</p>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    </CardContent>
+                  </Card>
+
+                  <Card className="bg-gradient-to-br from-emerald-50 to-white dark:from-emerald-950/20 dark:to-gray-900 border-emerald-200 dark:border-emerald-800">
+                    <CardContent className="p-4">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-lg bg-emerald-100 dark:bg-emerald-900/30">
+                          <IconMapper name="Briefcase" className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                        </div>
+                        <div>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">Active Services</p>
+                          <p className="text-xl font-semibold text-gray-900 dark:text-gray-100">
+                            {client.services_count || client.services?.length || 0}
+                          </p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="bg-gradient-to-br from-blue-50 to-white dark:from-blue-950/20 dark:to-gray-900 border-blue-200 dark:border-blue-800">
+                    <CardContent className="p-4">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/30">
+                          <IconMapper name="Banknote" className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                        </div>
+                        <div>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">Monthly Value</p>
+                          <p className="text-xl font-semibold text-gray-900 dark:text-gray-100">
+                            {formatCurrencyMWK(client.monthly_rate || 0)}
+                          </p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
                 </div>
+
+                {/* Contact Info */}
+                <Card className="border-gray-200 dark:border-gray-800">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-medium text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                      <IconMapper name="User" className="w-4 h-4 text-gray-500" />
+                      Contact Information
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-0">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Contact Person</p>
+                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                          {client.contact_person || <span className="text-gray-400 dark:text-gray-600 italic">Not set</span>}
+                        </p>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Phone</p>
+                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                          {client.phone || <span className="text-gray-400 dark:text-gray-600 italic">Not set</span>}
+                        </p>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Email</p>
+                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                          {client.email || <span className="text-gray-400 dark:text-gray-600 italic">Not set</span>}
+                        </p>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Last Payment</p>
+                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                          {client.last_payment_date ? formatDate(client.last_payment_date) : <span className="text-gray-400 dark:text-gray-600 italic">No payments</span>}
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Quick Sites Preview */}
+                {client.sites && client.sites.length > 0 && (
+                  <Card className="border-gray-200 dark:border-gray-800">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm font-medium text-gray-900 dark:text-gray-100 flex items-center justify-between">
+                        <span className="flex items-center gap-2">
+                          <IconMapper name="MapPin" className="w-4 h-4 text-gray-500" />
+                          Recent Sites
+                        </span>
+                        <Button variant="ghost" size="sm" onClick={() => setActiveTab('sites')} className="text-coin-600 hover:text-coin-700">
+                          View all
+                        </Button>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="pt-0">
+                      <div className="space-y-2">
+                        {client.sites.slice(0, 3).map(site => (
+                          <div key={site.id} className="flex items-center justify-between p-2 rounded-lg bg-gray-50 dark:bg-gray-900/50">
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{site.name}</p>
+                              <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{site.address}</p>
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <Badge variant={site.status === 'active' ? 'success' : 'default'} className="text-xs">
+                                {site.status}
+                              </Badge>
+                              <span className="text-xs text-gray-500 dark:text-gray-400">
+                                {site.guard_count || 0}/{site.required_guards || 0} guards
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
               </div>
             )}
 
+            {/* Sites Tab */}
+            {activeTab === 'sites' && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">Sites</h3>
+                  <Button onClick={() => setAddSiteOpen(true)} size="sm">
+                    <IconMapper name="Plus" className="w-4 h-4 mr-1.5" />
+                    Add Site
+                  </Button>
+                </div>
+
+                {client.sites && client.sites.length > 0 ? (
+                  <div className="space-y-3">
+                    {client.sites.map(site => (
+                      <Card key={site.id} className="border-gray-200 dark:border-gray-800 overflow-hidden">
+                        <CardContent className="p-0">
+                          <div className="p-4">
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <h4 className="font-medium text-gray-900 dark:text-gray-100">{site.name}</h4>
+                                  <Badge variant={site.status === 'active' ? 'success' : 'default'} className="text-xs">
+                                    {site.status}
+                                  </Badge>
+                                  {site.site_type && (
+                                    <Badge variant="secondary" className="text-xs">
+                                      {getSiteTypeLabel(site.site_type)}
+                                    </Badge>
+                                  )}
+                                </div>
+                                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{site.address}</p>
+                                {(site.contact_person || site.phone) && (
+                                  <div className="flex items-center gap-3 mt-2 text-xs text-gray-500 dark:text-gray-400">
+                                    {site.contact_person && (
+                                      <span className="flex items-center gap-1">
+                                        <IconMapper name="User" className="w-3 h-3" />
+                                        {site.contact_person}
+                                      </span>
+                                    )}
+                                    {site.phone && (
+                                      <span className="flex items-center gap-1">
+                                        <IconMapper name="Phone" className="w-3 h-3" />
+                                        {site.phone}
+                                      </span>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-1 shrink-0">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => { setSelectedSiteId(site.id); setEditSiteOpen(true); }}
+                                  className="h-8 w-8 p-0"
+                                >
+                                  <IconMapper name="Pencil" className="w-4 h-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => { setDeletingSiteId(site.id); setConfirmDeleteOpen(true); }}
+                                  className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20"
+                                >
+                                  <IconMapper name="Trash2" className="w-4 h-4" />
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="px-4 py-3 bg-gray-50 dark:bg-gray-900/50 border-t border-gray-100 dark:border-gray-800">
+                            <div className="flex items-center justify-between text-sm">
+                              <div className="flex items-center gap-4">
+                                <span className="text-gray-500 dark:text-gray-400">
+                                  Required: <span className="font-medium text-gray-900 dark:text-gray-100">{site.required_guards || 0}</span>
+                                </span>
+                                <span className="text-gray-500 dark:text-gray-400">
+                                  Assigned: <span className="font-medium text-gray-900 dark:text-gray-100">{site.guard_count || 0}</span>
+                                </span>
+                              </div>
+                              {site.zone_id ? (
+                                <Badge variant="outline" className="text-xs">
+                                  {zones.find(z => z.id === site.zone_id)?.name || `Zone ${site.zone_id}`}
+                                </Badge>
+                              ) : (
+                                <Badge variant="outline" className="text-xs text-gray-400">
+                                  Unassigned
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-12 bg-gray-50 dark:bg-gray-900/50 rounded-lg border border-dashed border-gray-300 dark:border-gray-700">
+                    <IconMapper name="MapPin" className="w-12 h-12 mx-auto text-gray-300 dark:text-gray-600 mb-3" />
+                    <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">No sites yet</h3>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Add a site to get started</p>
+                    <Button onClick={() => setAddSiteOpen(true)} className="mt-4" size="sm">
+                      <IconMapper name="Plus" className="w-4 h-4 mr-1.5" />
+                      Add Site
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Services Tab */}
             {activeTab === 'services' && (
               <div className="space-y-4">
-                <div className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg p-4">
-                  <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">Manage Services</h3>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">Toggle services for this client, set custom rates or quantity, then save.</p>
-                  <div className="grid grid-cols-1 gap-2 max-h-64 overflow-y-auto">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">Services</h3>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                      Toggle services and set custom rates
+                    </p>
+                  </div>
+                  <Button 
+                    onClick={handleSaveServices} 
+                    size="sm" 
+                    disabled={savingServices}
+                  >
+                    {savingServices ? (
+                      <>
+                        <IconMapper name="Loader2" className="w-4 h-4 mr-1.5 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <IconMapper name="Save" className="w-4 h-4 mr-1.5" />
+                        Save Changes
+                      </>
+                    )}
+                  </Button>
+                </div>
+
+                {services.length > 0 ? (
+                  <div className="space-y-3">
                     {services.map(svc => {
-                      const attached = (client.services || []).find(cs => cs.id === svc.id);
-                      const selected = !!attached;
-                      const initialCustom = attached?.custom_price ?? null;
-                      const initialQty = attached?.quantity ?? 1;
+                      const selection = serviceSelections[svc.id] || { selected: false, custom_price: null, quantity: 1 };
                       return (
-                        <div key={svc.id} className="p-3 border border-gray-200 dark:border-gray-800 rounded-lg flex items-center gap-4 bg-white dark:bg-gray-950">
-                          <input type="checkbox" defaultChecked={selected} id={`svc_${svc.id}`} className="h-4 w-4 text-coin-600 focus:ring-coin-500 border-gray-300 dark:border-gray-700 rounded" />
-                          <div className="flex-1">
-                            <div className="font-medium text-gray-900 dark:text-gray-100">{svc.name}</div>
-                            <div className="text-sm text-gray-500 dark:text-gray-400">Base: {formatCurrencyMWK(svc.monthly_price)}</div>
-                          </div>
-                          <div className="flex items-center gap-3">
-                            <input type="number" defaultValue={initialCustom ?? ''} placeholder="Custom" data-svcid={svc.id} className={`w-32 ${clientInlineFieldClassName}`} />
-                            <input type="number" defaultValue={initialQty} min={1} data-svcqty={svc.id} className={`w-20 ${clientInlineFieldClassName}`} />
-                          </div>
-                        </div>
+                        <Card 
+                          key={svc.id} 
+                          className={`border-gray-200 dark:border-gray-800 transition-all ${selection.selected ? 'ring-1 ring-coin-500 dark:ring-coin-400' : ''}`}
+                        >
+                          <CardContent className="p-4">
+                            <div className="flex items-start gap-4">
+                              <div className="pt-0.5">
+                                <input
+                                  type="checkbox"
+                                  checked={selection.selected}
+                                  onChange={(e) => handleServiceSelectionChange(svc.id, 'selected', e.target.checked)}
+                                  className="h-4 w-4 rounded border-gray-300 text-coin-600 focus:ring-coin-500 dark:border-gray-600 dark:bg-gray-700"
+                                />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center justify-between gap-2">
+                                  <h4 className={`font-medium ${selection.selected ? 'text-gray-900 dark:text-gray-100' : 'text-gray-500 dark:text-gray-500'}`}>
+                                    {svc.name}
+                                  </h4>
+                                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                                    Base: {formatCurrencyMWK(svc.monthly_price)}
+                                  </p>
+                                </div>
+                                {selection.selected && (
+                                  <div className="flex items-center gap-3 mt-3">
+                                    <div className="flex-1">
+                                      <label className="text-xs text-gray-500 dark:text-gray-400 block mb-1">Custom Price (optional)</label>
+                                      <input
+                                        type="number"
+                                        value={selection.custom_price ?? ''}
+                                        onChange={(e) => handleServiceSelectionChange(svc.id, 'custom_price', e.target.value ? Number(e.target.value) : null)}
+                                        placeholder={svc.monthly_price.toString()}
+                                        className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-coin-500"
+                                      />
+                                    </div>
+                                    <div className="w-24">
+                                      <label className="text-xs text-gray-500 dark:text-gray-400 block mb-1">Qty</label>
+                                      <input
+                                        type="number"
+                                        min={1}
+                                        value={selection.quantity}
+                                        onChange={(e) => handleServiceSelectionChange(svc.id, 'quantity', Math.max(1, parseInt(e.target.value) || 1))}
+                                        className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-coin-500"
+                                      />
+                                    </div>
+                                    <div className="text-right">
+                                      <label className="text-xs text-gray-500 dark:text-gray-400 block mb-1">Total</label>
+                                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                                        {formatCurrencyMWK((selection.custom_price ?? svc.monthly_price) * selection.quantity)}
+                                      </p>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
                       );
                     })}
                   </div>
-                  <div className="mt-4 flex justify-end">
-                    <Button onClick={async () => {
-                      try {
-                        const nodes = Array.from(document.querySelectorAll('[id^="svc_"]')) as HTMLInputElement[];
-                        const servicesPayload: any[] = [];
-                        nodes.forEach((checkbox) => {
-                          const id = checkbox.id.replace('svc_', '');
-                          const checked = checkbox.checked;
-                          if (checked) {
-                            const customInput = document.querySelector(`[data-svcid="${id}"]`) as HTMLInputElement | null;
-                            const qtyInput = document.querySelector(`[data-svcqty="${id}"]`) as HTMLInputElement | null;
-                            servicesPayload.push({ id: Number(id), custom_price: customInput && customInput.value !== '' ? Number(customInput.value) : null, quantity: qtyInput ? Number(qtyInput.value) : 1 });
-                          }
-                        });
-                        const url = route('admin.clients.services.update', { client: client.id });
-                        await axios.post(url, { services: servicesPayload }, { headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' } });
-                        // refresh
-                        if (onClientUpdated) {
-                          const showUrl = route('admin.clients.json', { client: client.id });
-                          const resp = await axios.get(showUrl, { headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' } });
-                          onClientUpdated(resp.data);
-                        }
-                      } catch (err) {
-                        console.error('Failed to update services', err);
-                        alert('Failed to update services.');
-                      }
-                    }}>Save Services</Button>
+                ) : (
+                  <div className="text-center py-12 bg-gray-50 dark:bg-gray-900/50 rounded-lg border border-dashed border-gray-300 dark:border-gray-700">
+                    <IconMapper name="Briefcase" className="w-12 h-12 mx-auto text-gray-300 dark:text-gray-600 mb-3" />
+                    <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">No services available</h3>
                   </div>
-                </div>
-                <div className="space-y-2">
-                  {client.services?.map(service => (
-                    <Card key={service.id} className="p-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1">
-                          <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100">{service.name}</h4>
-                          <p className="text-sm text-gray-500 dark:text-gray-400">Base price: {formatCurrencyMWK(service.monthly_price)}</p>
-                        </div>
-                        <div className="flex items-center gap-6">
-                          <div className="text-sm">
-                            <p className="text-gray-500 dark:text-gray-400">Quantity</p>
-                            <p className="font-medium text-gray-900 dark:text-gray-100">{service.quantity || 1}</p>
+                )}
+
+                {/* Current Services Summary */}
+                {client.services && client.services.length > 0 && (
+                  <Card className="border-gray-200 dark:border-gray-800 mt-6">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                        Current Active Services
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="pt-0">
+                      <div className="space-y-2">
+                        {client.services.map(service => (
+                          <div key={service.id} className="flex items-center justify-between p-2 rounded-lg bg-gray-50 dark:bg-gray-900/50">
+                            <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{service.name}</span>
+                            <div className="flex items-center gap-4 text-sm">
+                              <span className="text-gray-500 dark:text-gray-400">Qty: {service.quantity || 1}</span>
+                              <span className="text-gray-900 dark:text-gray-100 font-medium">
+                                {formatCurrencyMWK((service.custom_price ?? service.monthly_price) * (service.quantity || 1))}
+                              </span>
+                            </div>
                           </div>
-                          <div>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">Rate</p>
-                            <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{formatCurrencyMWK(service.custom_price ?? service.monthly_price)}</p>
-                          </div>
-                          <div>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">Total</p>
-                            <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{formatCurrencyMWK((service.custom_price ?? service.monthly_price) * (service.quantity || 1))}</p>
-                          </div>
-                        </div>
+                        ))}
                       </div>
-                    </Card>
-                  ))}
-                </div>
+                      <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-800 flex items-center justify-between">
+                        <span className="text-sm font-medium text-gray-900 dark:text-gray-100">Total Monthly Value</span>
+                        <span className="text-lg font-semibold text-coin-600 dark:text-coin-400">
+                          {formatCurrencyMWK(client.monthly_rate || 0)}
+                        </span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
               </div>
             )}
-
-        </DialogContent>
-    </Dialog>
-
-    <EditSiteModal
-      open={editSiteOpen}
-      onClose={() => setEditSiteOpen(false)}
-      clientId={client.id}
-      siteId={selectedSiteId}
-      onSaved={refreshClient}
-      zones={zones}
-    />
-    <Dialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
-      <DialogContent className="w-full max-w-md rounded-2xl bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800">
-        <DialogHeader>
-          <DialogTitle>Delete Site</DialogTitle>
-        </DialogHeader>
-        <div className="space-y-3">
-          <div className="text-sm text-gray-600 dark:text-gray-300">
-            Are you sure you want to delete this site? You can restore it later from Deleted Sites.
           </div>
-          <div className="flex justify-end gap-3">
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Site Modal */}
+      <AddSiteModal
+        open={addSiteOpen}
+        onClose={() => setAddSiteOpen(false)}
+        clientId={client.id}
+        onAdded={handleSiteAdded}
+        zones={zones}
+      />
+
+      {/* Edit Site Modal */}
+      <EditSiteModal
+        open={editSiteOpen}
+        onClose={() => { setEditSiteOpen(false); setSelectedSiteId(null); }}
+        clientId={client.id}
+        siteId={selectedSiteId}
+        onSaved={handleSiteUpdated}
+        zones={zones}
+      />
+
+      {/* Delete Confirmation */}
+      <Dialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
+        <DialogContent className="w-full max-w-sm rounded-xl bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800">
+          <DialogHeader>
+            <DialogTitle>Delete Site</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-gray-600 dark:text-gray-300">
+            This site will be moved to deleted items. You can restore it later.
+          </p>
+          <div className="flex justify-end gap-2 mt-4">
             <Button
               variant="outline"
+              size="sm"
               onClick={() => !deleting && setConfirmDeleteOpen(false)}
               disabled={deleting}
             >
               Cancel
             </Button>
-            <Button variant="destructive" onClick={confirmDelete} disabled={deleting}>
+            <Button 
+              variant="destructive" 
+              size="sm" 
+              onClick={confirmDelete} 
+              disabled={deleting}
+            >
               {deleting ? 'Deleting...' : 'Delete'}
             </Button>
           </div>
-        </div>
-      </DialogContent>
-    </Dialog>
-  </>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

@@ -5,7 +5,6 @@ import IconMapper from '@/Components/IconMapper';
 import { Card } from '@/Components/ui/card';
 import EmptyState from '@/Components/ui/empty-state';
 import Modal from '@/Components/Modal';
-import QuickRequisitionModal from '@/Components/Requisitions/QuickRequisitionModal';
 
 // Animated Counter Component
 const AnimatedCounter: React.FC<{ value: number; duration?: number; prefix?: string; suffix?: string }> = ({ 
@@ -156,8 +155,6 @@ export default function HRDashboard() {
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <QuickRequisitionModal />
-
         {activeTab === 'overview' && (
           <div className="space-y-6 animate-slideUp">
             {/* Quick Stats */}
@@ -412,14 +409,7 @@ export default function HRDashboard() {
         {activeTab === 'compliance' && (
           <div className="space-y-6 animate-slideUp">
             {/* Compliance Stats */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-              <StatCard
-                icon={<IconMapper name="mail" className="h-5 w-5" />}
-                title="Missing Email"
-                value={compliance?.missing?.email || 0}
-                subtitle="Incomplete"
-                color="amber"
-              />
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
               <StatCard
                 icon={<IconMapper name="phone" className="h-5 w-5" />}
                 title="Missing Phone"
@@ -504,7 +494,7 @@ export default function HRDashboard() {
             <Card className="p-5 dark:bg-gray-800 dark:border-gray-700">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Top Incomplete Profiles</h3>
-                <Link href={route('hr.dashboard.compliance-export')} className="text-sm px-3 py-1.5 rounded-md bg-gray-100 text-gray-800 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600">Export CSV</Link>
+                <a href={route('hr.dashboard.compliance-export')} className="text-sm px-3 py-1.5 rounded-md bg-gray-100 text-gray-800 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600">Export CSV</a>
               </div>
               <div className="divide-y divide-gray-200 dark:divide-gray-800">
                 {(compliance?.incomplete_profiles || []).length === 0 && (

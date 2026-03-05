@@ -18,7 +18,7 @@ export default function AssignSiteModal({
   zones: Array<{ id: number; name: string }>;
   onClose: () => void;
   onSuccess: () => void;
-  scope?: 'control-room' | 'admin' | 'zone';
+  scope?: 'control-room' | 'admin' | 'zone' | 'superadmin';
   currentAssignment?: { site_id?: number | null; site_name?: string | null; client_name?: string | null } | null;
 }) {
   const [search, setSearch] = React.useState('');
@@ -38,7 +38,9 @@ export default function AssignSiteModal({
         ? 'admin.clients.sites.json'
         : scope === 'zone'
           ? 'zone.sites.json'
-          : 'control-room.clients.sites.json';
+          : scope === 'superadmin'
+            ? 'superadmin.sites.json'
+            : 'control-room.clients.sites.json';
       const qs = params.toString();
       const url = qs ? `${route(listRoute)}?${qs}` : route(listRoute);
       const res = await fetch(url, {
@@ -66,7 +68,9 @@ export default function AssignSiteModal({
       ? 'admin.guards.assign-site'
       : scope === 'zone'
         ? 'zone.guards.assign-site'
-        : 'control-room.guards.assign-site';
+        : scope === 'superadmin'
+          ? 'admin.guards.assign-site'
+          : 'control-room.guards.assign-site';
     router.post(route(assignRoute), {
       guard_id: guardId,
       client_site_id: selectedSite,
@@ -83,7 +87,9 @@ export default function AssignSiteModal({
       ? 'admin.guards.unassign-site'
       : scope === 'zone'
         ? 'zone.guards.unassign-site'
-        : 'control-room.guards.unassign-site';
+        : scope === 'superadmin'
+          ? 'admin.guards.unassign-site'
+          : 'control-room.guards.unassign-site';
     router.post(route(unassignRoute), { guard_id: guardId }, {
       preserveScroll: true,
       onSuccess: () => { onSuccess(); onClose(); },

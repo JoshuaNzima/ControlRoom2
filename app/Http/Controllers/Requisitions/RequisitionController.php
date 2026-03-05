@@ -72,68 +72,86 @@ class RequisitionController extends Controller
     {
         $user = $request->user();
 
-        $data = $request->validate([
-            'title' => ['required', 'string', 'max:255'],
-            'category' => ['nullable', 'string', 'in:general,fuel,vehicle_hire,events,k9,utilities,office_supplies,stationery,cleaning_supplies,security_equipment,uniforms,training_materials,vehicle_maintenance,communications,it_equipment,medical_supplies'],
-            'description' => ['nullable', 'string'],
-            'needed_by' => ['nullable', 'date'],
-            'amount' => ['nullable', 'numeric', 'min:0'],
-            'items' => ['required', 'array', 'min:1'],
-            'items.*.description' => ['required', 'string', 'max:255'],
-            'items.*.category' => ['nullable', 'string', 'in:general,fuel,vehicle_hire,events,k9,utilities,office_supplies,stationery,cleaning_supplies,security_equipment,uniforms,training_materials,vehicle_maintenance,communications,it_equipment,medical_supplies'],
-            'items.*.quantity' => ['required', 'numeric', 'min:0.01'],
-            'items.*.unit_price' => ['nullable', 'numeric', 'min:0'],
-            'items.*.amount' => ['required', 'numeric', 'min:0'],
-            'attachments' => ['sometimes', 'array', 'max:10'],
-            'attachments.*' => ['file', 'max:10240', 'mimes:pdf,jpg,jpeg,png,doc,docx,xls,xlsx'],
-        ]);
+        try {
+            \Log::info('Requisition store started', ['user_id' => $user->id, 'request_data' => $request->except(['attachments'])]);
 
-        $data['requested_by'] = $user->id;
-        $data['status'] = 'pending_admin';
-        $data['category'] = $data['category'] ?? 'general';
+            $data = $request->validate([
+                'title' => ['required', 'string', 'max:255'],
+                'category' => ['nullable', 'string', 'in:general,fuel,vehicle_hire,events,k9,utilities,office_supplies,stationery,cleaning_supplies,security_equipment,uniforms,training_materials,vehicle_maintenance,communications,it_equipment,medical_supplies'],
+                'description' => ['nullable', 'string'],
+                'needed_by' => ['nullable', 'date'],
+                'amount' => ['nullable', 'numeric', 'min:0'],
+                'items' => ['required', 'array', 'min:1'],
+                'items.*.description' => ['required', 'string', 'max:255'],
+                'items.*.category' => ['nullable', 'string', 'in:general,fuel,vehicle_hire,events,k9,utilities,office_supplies,stationery,cleaning_supplies,security_equipment,uniforms,training_materials,vehicle_maintenance,communications,it_equipment,medical_supplies'],
+                'items.*.quantity' => ['required', 'numeric', 'min:0.01'],
+                'items.*.unit_price' => ['nullable', 'numeric', 'min:0'],
+                'items.*.amount' => ['required', 'numeric', 'min:0'],
+                'attachments' => ['sometimes', 'array', 'max:10'],
+                'attachments.*' => ['file', 'max:10240', 'mimes:pdf,jpg,jpeg,png,doc,docx,xls,xlsx'],
+            ]);
 
-        // Calculate total from items if amount not provided
-        if (empty($data['amount'])) {
-            $data['amount'] = collect($data['items'])->sum('amount');
-        }
+            \Log::info('Requisition validation passed', ['data' => $data]);
 
-        $requisition = DB::transaction(function () use ($data, $user, $request) {
-            $requisition = Requisition::create($data);
+            $data['requested_by'] = $user->id;
+            $data['status'] = 'pending_admin';
+            $data['category'] = $data['category'] ?? 'general';
 
-            // Create items
-            foreach ($data['items'] as $itemData) {
-                $requisition->items()->create([
-                    'description' => $itemData['description'],
-                    'category' => $itemData['category'] ?? $requisition->category ?? 'general',
-                    'quantity' => $itemData['quantity'] ?? 1,
-                    'unit_price' => $itemData['unit_price'] ?? null,
-                    'amount' => $itemData['amount'],
-                    'status' => 'pending',
-                ]);
+            // Calculate total from items if amount not provided
+            if (empty($data['amount'])) {
+                $data['amount'] = collect($data['items'])->sum('amount');
             }
 
-            // Handle attachments
-            if ($request->hasFile('attachments')) {
-                foreach ($request->file('attachments') as $file) {
-                    if (!$file) continue;
-                    $disk = 'local';
-                    $path = $file->store('requisitions/'.date('Y/m'), $disk);
-                    RequisitionAttachment::create([
-                        'requisition_id' => $requisition->id,
-                        'uploaded_by' => $user->id,
-                        'disk' => $disk,
-                        'path' => $path,
-                        'original_name' => $file->getClientOriginalName(),
-                        'size' => $file->getSize() ?? 0,
-                        'mime_type' => $file->getClientMimeType(),
+            $requisition = DB::transaction(function () use ($data, $user, $request) {
+                \Log::info('Creating requisition', $data);
+                $requisition = Requisition::create($data);
+                \Log::info('Requisition created', ['id' => $requisition->id]);
+
+                // Create items
+                foreach ($data['items'] as $itemData) {
+                    $requisition->items()->create([
+                        'description' => $itemData['description'],
+                        'category' => $itemData['category'] ?? $requisition->category ?? 'general',
+                        'quantity' => $itemData['quantity'] ?? 1,
+                        'unit_price' => $itemData['unit_price'] ?? null,
+                        'amount' => $itemData['amount'],
+                        'status' => 'pending',
                     ]);
                 }
-            }
+                \Log::info('Requisition items created');
 
-            return $requisition;
-        });
+                // Handle attachments
+                if ($request->hasFile('attachments')) {
+                    foreach ($request->file('attachments') as $file) {
+                        if (!$file) continue;
+                        $disk = 'local';
+                        $path = $file->store('requisitions/'.date('Y/m'), $disk);
+                        RequisitionAttachment::create([
+                            'requisition_id' => $requisition->id,
+                            'uploaded_by' => $user->id,
+                            'disk' => $disk,
+                            'path' => $path,
+                            'original_name' => $file->getClientOriginalName(),
+                            'size' => $file->getSize() ?? 0,
+                            'mime_type' => $file->getClientMimeType(),
+                        ]);
+                    }
+                    \Log::info('Requisition attachments processed');
+                }
 
-        return redirect()->route('requisitions.index');
+                return $requisition;
+            });
+
+            \Log::info('Requisition transaction completed', ['requisition_id' => $requisition->id]);
+
+            return redirect()->route('requisitions.index')->with('success', 'Requisition created successfully.');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            \Log::error('Requisition validation failed', ['errors' => $e->errors()]);
+            return back()->withErrors($e->errors())->withInput();
+        } catch (\Exception $e) {
+            \Log::error('Requisition store failed', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
+            return back()->with('error', 'Failed to create requisition: ' . $e->getMessage())->withInput();
+        }
     }
 
     public function show(Requisition $requisition): Response|JsonResponse

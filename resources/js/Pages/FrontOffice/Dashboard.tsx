@@ -5,117 +5,96 @@ import { Card } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import IconMapper from '@/Components/IconMapper';
 
-// Animated Counter Component
-const AnimatedCounter: React.FC<{ value: number; duration?: number }> = ({ value, duration = 1000 }) => {
-  const [count, setCount] = useState(0);
-  
-  useEffect(() => {
-    let startTime: number;
-    let animationFrame: number;
-    
-    const animate = (timestamp: number) => {
-      if (!startTime) startTime = timestamp;
-      const progress = Math.min((timestamp - startTime) / duration, 1);
-      setCount(Math.floor(progress * value));
-      
-      if (progress < 1) {
-        animationFrame = requestAnimationFrame(animate);
-      }
-    };
-    
-    animationFrame = requestAnimationFrame(animate);
-    return () => cancelAnimationFrame(animationFrame);
-  }, [value, duration]);
-  
-  return <span>{count.toLocaleString()}</span>;
-};
-
-interface Stats {
-  visitors_today: number;
-  deliveries_today: number;
-  appointments_today: number;
-}
-
-type PageProps = {
-  auth?: any;
-  stats?: Stats;
-};
-
-// Modern Stat Card
-interface StatCardProps {
-  icon: React.ReactNode;
+// Role Selection Card
+interface RoleCardProps {
   title: string;
-  value: number;
-  subtitle: string;
-  color: 'red' | 'blue' | 'green' | 'amber' | 'purple' | 'cyan' | 'emerald';
-  onClick?: () => void;
+  description: string;
+  icon: React.ReactNode;
+  href: string;
+  color: string;
+  duties: string[];
 }
 
-const colorMap = {
-  red: { bg: 'bg-red-50 dark:bg-red-950/20', border: 'border-red-200 dark:border-red-800', icon: 'bg-red-600 text-white', text: 'text-red-700 dark:text-red-300' },
-  blue: { bg: 'bg-blue-50 dark:bg-blue-950/20', border: 'border-blue-200 dark:border-blue-800', icon: 'bg-blue-600 text-white', text: 'text-blue-700 dark:text-blue-300' },
-  green: { bg: 'bg-emerald-50 dark:bg-emerald-950/20', border: 'border-emerald-200 dark:border-emerald-800', icon: 'bg-emerald-600 text-white', text: 'text-emerald-700 dark:text-emerald-300' },
-  amber: { bg: 'bg-amber-50 dark:bg-amber-950/20', border: 'border-amber-200 dark:border-amber-800', icon: 'bg-amber-600 text-white', text: 'text-amber-700 dark:text-amber-300' },
-  purple: { bg: 'bg-purple-50 dark:bg-purple-950/20', border: 'border-purple-200 dark:border-purple-800', icon: 'bg-purple-600 text-white', text: 'text-purple-700 dark:text-purple-300' },
-  cyan: { bg: 'bg-cyan-50 dark:bg-cyan-950/20', border: 'border-cyan-200 dark:border-cyan-800', icon: 'bg-cyan-600 text-white', text: 'text-cyan-700 dark:text-cyan-300' },
-  emerald: { bg: 'bg-emerald-50 dark:bg-emerald-950/20', border: 'border-emerald-200 dark:border-emerald-800', icon: 'bg-emerald-600 text-white', text: 'text-emerald-700 dark:text-emerald-300' },
-};
-
-const StatCard: React.FC<StatCardProps> = ({ icon, title, value, subtitle, color, onClick }) => {
-  const colors = colorMap[color];
-  
-  return (
-    <div 
-      onClick={onClick}
-      className={`${colors.bg} ${colors.border} ${onClick ? 'cursor-pointer hover:shadow-lg' : ''} 
-        rounded-xl border p-5 transition-all duration-300 hover:scale-[1.02]`}
-    >
-      <div className="flex items-start justify-between">
-        <div className={`${colors.icon} p-3 rounded-lg shadow-md`}>
-          {icon}
-        </div>
-      </div>
-      <div className="mt-4">
-        <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-          <AnimatedCounter value={value} />
-        </p>
-        <p className={`text-sm font-medium ${colors.text} mt-1`}>{title}</p>
-        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{subtitle}</p>
-      </div>
-    </div>
-  );
-};
-
-// Quick Action Tile
-const ActionTile: React.FC<{ 
-  icon: React.ReactNode; 
-  title: string; 
-  description: string; 
-  href: string; 
-  color: string;
-}> = ({ icon, title, description, href, color }) => {
+const RoleCard: React.FC<RoleCardProps> = ({ title, description, icon, href, color, duties }) => {
   return (
     <Link
       href={href}
-      className="group relative overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700 
-        bg-white dark:bg-gray-800 p-5 transition-all duration-300 hover:shadow-xl hover:-translate-y-1"
+      className="group relative overflow-hidden rounded-2xl border border-gray-200 dark:border-gray-700 
+        bg-white dark:bg-gray-800 p-6 transition-all duration-300 hover:shadow-2xl hover:-translate-y-2"
     >
-      <div className={`absolute top-0 right-0 w-24 h-24 -mr-8 -mt-8 rounded-full opacity-10 ${color}`} />
-      <div className={`inline-flex p-3 rounded-lg ${color} text-white shadow-md group-hover:scale-110 transition-transform`}>
+      <div className={`absolute top-0 right-0 w-32 h-32 -mr-12 -mt-12 rounded-full opacity-10 ${color}`} />
+      <div className={`absolute bottom-0 left-0 w-24 h-24 -ml-8 -mb-8 rounded-full opacity-5 ${color}`} />
+      
+      <div className={`inline-flex p-4 rounded-xl ${color} text-white shadow-lg group-hover:scale-110 transition-transform duration-300`}>
         {icon}
       </div>
-      <h3 className="mt-4 font-semibold text-gray-900 dark:text-gray-100">{title}</h3>
-      <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{description}</p>
-      <div className="mt-4 flex items-center text-sm font-medium text-red-600 dark:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity">
-        <span>Access</span>
-        <IconMapper name="ArrowRight" size={16} className="ml-1" />
+      
+      <h3 className="mt-5 text-xl font-bold text-gray-900 dark:text-gray-100">{title}</h3>
+      <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">{description}</p>
+      
+      <div className="mt-4 space-y-1">
+        {duties.slice(0, 4).map((duty, idx) => (
+          <div key={idx} className="flex items-center text-xs text-gray-500 dark:text-gray-400">
+            <IconMapper name="CheckCircle" size={12} className="mr-2 text-emerald-500" />
+            {duty}
+          </div>
+        ))}
+        {duties.length > 4 && (
+          <p className="text-xs text-red-500 dark:text-red-400">+{duties.length - 4} more duties</p>
+        )}
+      </div>
+      
+      <div className="mt-6 flex items-center text-sm font-medium text-red-600 dark:text-red-400">
+        <span>Enter Module</span>
+        <IconMapper name="ArrowRight" size={16} className="ml-2 group-hover:translate-x-1 transition-transform" />
       </div>
     </Link>
   );
 };
 
+// Quick Task Tile
+const TaskTile: React.FC<{
+  icon: React.ReactNode;
+  title: string;
+  count?: number;
+  color: string;
+}> = ({ icon, title, count = 0, color }) => {
+  return (
+    <div className="flex items-center gap-4 p-4 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:shadow-md transition-all">
+      <div className={`p-3 rounded-lg ${color} text-white shadow-md`}>
+        {icon}
+      </div>
+      <div className="flex-1">
+        <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{title}</p>
+        <p className="text-xs text-gray-500 dark:text-gray-400">{count} pending</p>
+      </div>
+      {count > 0 && (
+        <span className="inline-flex items-center justify-center px-2 py-1 text-xs font-bold rounded-full bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400">
+          {count}
+        </span>
+      )}
+    </div>
+  );
+};
+
+type PageProps = {
+  auth?: any;
+  userRole?: 'executive_assistant' | 'personal_assistant' | null;
+  stats?: {
+    calendar_events_today: number;
+    pending_communications: number;
+    upcoming_meetings: number;
+    pending_tasks: number;
+  };
+};
+
 export default function FrontOfficeDashboard() {
-  const { auth, stats = { visitors_today: 0, deliveries_today: 0, appointments_today: 0 } } = usePage<PageProps>().props as any;
+  const { auth, userRole = null, stats = {
+    calendar_events_today: 0,
+    pending_communications: 0,
+    upcoming_meetings: 0,
+    pending_tasks: 0,
+  } } = usePage<PageProps>().props as any;
   const [currentTime, setCurrentTime] = useState(new Date());
 
   useEffect(() => {
@@ -123,12 +102,27 @@ export default function FrontOfficeDashboard() {
     return () => clearInterval(timer);
   }, []);
 
-  const quickActions = useMemo(() => [
-    { title: 'Log Visitor', description: 'Register a new visitor', href: '#', icon: <IconMapper name="UserPlus" size={20} />, color: 'bg-blue-600' },
-    { title: 'Record Delivery', description: 'Log incoming delivery', href: '#', icon: <IconMapper name="Package" size={20} />, color: 'bg-purple-600' },
-    { title: 'Check Appointments', description: 'View today\'s schedule', href: '#', icon: <IconMapper name="Calendar" size={20} />, color: 'bg-emerald-600' },
-    { title: 'Messages', description: 'Check notifications', href: '#', icon: <IconMapper name="MessageSquare" size={20} />, color: 'bg-cyan-600' },
-  ], []);
+  const assistantDuties = [
+    'Calendar & Schedule Management',
+    'Communication Management',
+    'Meeting Coordination',
+    'Travel Arrangements',
+    'Report Preparation',
+    'Petty Cash Management',
+    'Diary Management',
+    'Calls & Messages',
+    'Personal Errands',
+    'Event Planning',
+    'Reminders & Follow-ups',
+  ];
+
+  // Check if user has assistant access
+  const hasAssistantRole = auth?.user?.roles?.includes('assistant') || 
+    auth?.user?.roles?.includes('executive_assistant') || 
+    auth?.user?.roles?.includes('personal_assistant') ||
+    auth?.user?.roles?.includes('manager') || 
+    auth?.user?.roles?.includes('admin') || 
+    auth?.user?.roles?.includes('super_admin');
 
   return (
     <FrontOfficeLayout title="Front Office" user={auth?.user}>
@@ -144,13 +138,13 @@ export default function FrontOfficeDashboard() {
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
               <div className="flex items-center gap-4">
                 <div className="p-4 bg-white/10 rounded-xl backdrop-blur-sm">
-                  <IconMapper name="Building2" size={32} />
+                  <IconMapper name="Briefcase" size={32} />
                 </div>
                 <div>
                   <h1 className="text-2xl sm:text-3xl font-bold">
                     Welcome{auth?.user?.name ? `, ${auth.user.name}` : ''}
                   </h1>
-                  <p className="text-red-100 mt-1">Front Office Management Dashboard</p>
+                  <p className="text-red-100 mt-1">Front Office Management Portal</p>
                 </div>
               </div>
               
@@ -161,63 +155,76 @@ export default function FrontOfficeDashboard() {
                     {currentTime.toLocaleTimeString('en-US', { hour12: false })}
                   </p>
                 </div>
+                <div className="px-4 py-2 bg-white/10 rounded-lg backdrop-blur-sm">
+                  <p className="text-xs text-red-200">Today</p>
+                  <p className="text-sm font-semibold">
+                    {currentTime.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                  </p>
+                </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Stats Overview */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <StatCard
-            icon={<IconMapper name="Users" size={20} />}
-            title="Visitors Today"
-            value={stats.visitors_today}
-            subtitle="Total visitors"
-            color="blue"
-          />
-          <StatCard
-            icon={<IconMapper name="Package" size={20} />}
-            title="Deliveries Today"
-            value={stats.deliveries_today}
-            subtitle="Incoming packages"
-            color="amber"
-          />
-          <StatCard
-            icon={<IconMapper name="CalendarCheck" size={20} />}
-            title="Appointments Today"
-            value={stats.appointments_today}
-            subtitle="Scheduled meetings"
-            color="green"
-          />
-        </div>
-
-        {/* Quick Actions */}
-        <div>
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Quick Actions</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {quickActions.map((action) => (
-              <ActionTile
-                key={action.title}
-                icon={action.icon}
-                title={action.title}
-                description={action.description}
-                href={action.href}
-                color={action.color}
+        {/* Assistant Access Card */}
+        {hasAssistantRole && (
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Assistant Portal</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <RoleCard
+                title="Assistant Dashboard"
+                description="Unified executive and personal support tasks, calendar, meetings, errands, and coordination"
+                icon={<IconMapper name="Briefcase" size={28} />}
+                href={route('front-office.assistant')}
+                color="bg-gradient-to-br from-blue-600 to-purple-600"
+                duties={assistantDuties}
               />
-            ))}
+            </div>
+          </div>
+        )}
+
+        {/* Today's Overview */}
+        <div>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Today's Overview</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <TaskTile
+              icon={<IconMapper name="Calendar" size={20} />}
+              title="Calendar Events"
+              count={stats.calendar_events_today}
+              color="bg-blue-600"
+            />
+            <TaskTile
+              icon={<IconMapper name="MessageSquare" size={20} />}
+              title="Pending Communications"
+              count={stats.pending_communications}
+              color="bg-amber-600"
+            />
+            <TaskTile
+              icon={<IconMapper name="Users" size={20} />}
+              title="Upcoming Meetings"
+              count={stats.upcoming_meetings}
+              color="bg-emerald-600"
+            />
+            <TaskTile
+              icon={<IconMapper name="ClipboardList" size={20} />}
+              title="Pending Tasks"
+              count={stats.pending_tasks}
+              color="bg-purple-600"
+            />
           </div>
         </div>
 
-        {/* Activity Notice */}
+        {/* Quick Access Info */}
         <Card className="p-6">
-          <div className="flex items-center gap-4">
+          <div className="flex items-start gap-4">
             <div className="p-3 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
               <IconMapper name="Info" size={24} className="text-blue-600 dark:text-blue-400" />
             </div>
             <div>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Daily Activity Summary</h3>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Front Office Hub</h3>
               <p className="text-gray-500 dark:text-gray-400 mt-1">
-                Use the quick actions above to log visitors, record deliveries, and manage appointments efficiently.
+                Access the Assistant Dashboard to manage both executive and personal support tasks 
+                including calendars, meetings, errands, travel arrangements, and more.
               </p>
             </div>
           </div>

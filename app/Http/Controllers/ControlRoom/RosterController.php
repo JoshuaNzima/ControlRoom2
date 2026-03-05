@@ -16,6 +16,8 @@ use App\Models\ReliefBundle;
 use App\Models\ReliefBundleSite;
 use App\Models\Guards\Shift as GuardShift;
 use App\Models\Guards\Attendance;
+use App\Models\WeeklyRosterPlan;
+use App\Models\WeeklyRosterPlanEntry;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -40,11 +42,373 @@ class RosterController extends Controller
             ->orderBy('name')
             ->get(['id','name']);
 
+        $shifts = GuardShift::query()
+            ->where('status', 'active')
+            ->orderBy('name')
+            ->get(['id','name','start_time','end_time','status']);
+
         return Inertia::render('ControlRoom/Roster', [
             'guards' => $guards,
             'sites' => $sites,
+            'shifts' => $shifts,
             'initial_month' => $today->format('Y-m-01'),
         ]);
+    }
+
+    public function weeklyPlan(Request $request)
+    {
+        $validated = $request->validate([
+            'start' => ['required', 'date'],
+            'supervisor_id' => ['required', 'integer', 'exists:users,id'],
+            'shift_type' => ['nullable', 'in:day,night,morning,evening,custom'],
+        ]);
+
+        $weekStart = Carbon::parse($validated['start'])->startOfWeek(Carbon::MONDAY);
+        $weekEnd = $weekStart->copy()->endOfWeek(Carbon::SUNDAY);
+        $shiftType = $validated['shift_type'] ?? 'day';
+
+        $plan = WeeklyRosterPlan::firstOrCreate([
+            'week_start' => $weekStart->toDateString(),
+            'supervisor_id' => (int) $validated['supervisor_id'],
+            'shift_type' => $shiftType,
+        ], [
+            'created_by' => $request->user()?->id,
+            'status' => 'draft',
+        ]);
+
+        $entries = WeeklyRosterPlanEntry::query()
+            ->where('weekly_roster_plan_id', $plan->id)
+            ->whereBetween('date', [$weekStart->toDateString(), $weekEnd->toDateString()])
+            ->get(['id', 'guard_id', 'date', 'client_site_id', 'entry_type', 'notes']);
+
+        $entryMap = [];
+        foreach ($entries as $e) {
+            $d = Carbon::parse($e->date)->toDateString();
+            $entryMap[(int) $e->guard_id][$d] = [
+                'id' => $e->id,
+                'client_site_id' => $e->client_site_id,
+                'entry_type' => $e->entry_type,
+                'notes' => $e->notes,
+            ];
+        }
+
+        return response()->json([
+            'plan' => [
+                'id' => $plan->id,
+                'week_start' => $plan->week_start?->toDateString(),
+                'supervisor_id' => $plan->supervisor_id,
+                'shift_type' => $plan->shift_type,
+                'status' => $plan->status,
+                'published_at' => $plan->published_at?->toDateTimeString(),
+            ],
+            'entries' => $entryMap,
+        ]);
+    }
+
+    public function upsertWeeklyPlanEntry(Request $request)
+    {
+        $data = $request->validate([
+            'start' => ['required', 'date'],
+            'supervisor_id' => ['required', 'integer', 'exists:users,id'],
+            'shift_type' => ['nullable', 'in:day,night,morning,evening,custom'],
+            'guard_id' => ['required', 'integer', 'exists:guards,id'],
+            'date' => ['required', 'date'],
+            'entry_type' => ['required', 'in:site,off'],
+            'client_site_id' => ['nullable', 'integer', 'exists:client_sites,id'],
+            'notes' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $weekStart = Carbon::parse($data['start'])->startOfWeek(Carbon::MONDAY);
+        $weekEnd = $weekStart->copy()->endOfWeek(Carbon::SUNDAY);
+        $date = Carbon::parse($data['date'])->toDateString();
+        if ($date < $weekStart->toDateString() || $date > $weekEnd->toDateString()) {
+            return back()->withErrors(['date' => 'Selected date is not within the target week.']);
+        }
+
+        $shiftType = $data['shift_type'] ?? 'day';
+
+        $plan = WeeklyRosterPlan::firstOrCreate([
+            'week_start' => $weekStart->toDateString(),
+            'supervisor_id' => (int) $data['supervisor_id'],
+            'shift_type' => $shiftType,
+        ], [
+            'created_by' => $request->user()?->id,
+            'status' => 'draft',
+        ]);
+
+        if ($plan->status === 'published') {
+            return back()->withErrors(['start' => 'This week plan is already published and locked.']);
+        }
+
+        if ($data['entry_type'] === 'site' && empty($data['client_site_id'])) {
+            return back()->withErrors(['client_site_id' => 'Site is required for site entries.']);
+        }
+
+        $entry = WeeklyRosterPlanEntry::updateOrCreate([
+            'weekly_roster_plan_id' => $plan->id,
+            'guard_id' => (int) $data['guard_id'],
+            'date' => $date,
+        ], [
+            'client_site_id' => $data['entry_type'] === 'off' ? null : (int) ($data['client_site_id'] ?? 0),
+            'entry_type' => $data['entry_type'],
+            'notes' => $data['notes'] ?? null,
+        ]);
+
+        if ($request->wantsJson() && !$request->header('X-Inertia')) {
+            return response()->json(['saved' => true, 'entry_id' => $entry->id, 'plan_id' => $plan->id]);
+        }
+
+        return back()->with('success', 'Plan entry saved.');
+    }
+
+    public function saveWeeklyPlanDraft(Request $request)
+    {
+        $data = $request->validate([
+            'start' => ['required', 'date'],
+            'supervisor_id' => ['required', 'integer', 'exists:users,id'],
+            'shift_type' => ['nullable', 'in:day,night,morning,evening,custom'],
+            'entries' => ['required', 'array'],
+            'entries.*.guard_id' => ['required', 'integer', 'exists:guards,id'],
+            'entries.*.date' => ['required', 'date'],
+            'entries.*.entry_type' => ['required', 'in:site,off'],
+            'entries.*.client_site_id' => ['nullable', 'integer', 'exists:client_sites,id'],
+            'entries.*.notes' => ['nullable', 'string', 'max:255'],
+            // if true, entry is removed (set back to computed/default)
+            'entries.*.delete' => ['nullable', 'boolean'],
+        ]);
+
+        $weekStart = Carbon::parse($data['start'])->startOfWeek(Carbon::MONDAY);
+        $weekEnd = $weekStart->copy()->endOfWeek(Carbon::SUNDAY);
+        $shiftType = $data['shift_type'] ?? 'day';
+
+        $plan = WeeklyRosterPlan::firstOrCreate([
+            'week_start' => $weekStart->toDateString(),
+            'supervisor_id' => (int) $data['supervisor_id'],
+            'shift_type' => $shiftType,
+        ], [
+            'created_by' => $request->user()?->id,
+            'status' => 'draft',
+        ]);
+
+        if ($plan->status === 'published') {
+            return back()->withErrors(['start' => 'This week plan is already published and locked.']);
+        }
+
+        $saved = 0;
+        $deleted = 0;
+
+        DB::transaction(function () use ($data, $plan, $weekStart, $weekEnd, &$saved, &$deleted) {
+            foreach ($data['entries'] as $row) {
+                $date = Carbon::parse($row['date'])->toDateString();
+                if ($date < $weekStart->toDateString() || $date > $weekEnd->toDateString()) {
+                    continue;
+                }
+
+                $gid = (int) $row['guard_id'];
+                $doDelete = !empty($row['delete']);
+
+                if ($doDelete) {
+                    $deleted += WeeklyRosterPlanEntry::query()
+                        ->where('weekly_roster_plan_id', $plan->id)
+                        ->where('guard_id', $gid)
+                        ->whereDate('date', $date)
+                        ->delete();
+                    continue;
+                }
+
+                $entryType = $row['entry_type'];
+                if ($entryType === 'site' && empty($row['client_site_id'])) {
+                    continue;
+                }
+
+                WeeklyRosterPlanEntry::updateOrCreate([
+                    'weekly_roster_plan_id' => $plan->id,
+                    'guard_id' => $gid,
+                    'date' => $date,
+                ], [
+                    'client_site_id' => $entryType === 'off' ? null : (int) $row['client_site_id'],
+                    'entry_type' => $entryType,
+                    'notes' => $row['notes'] ?? null,
+                ]);
+                $saved++;
+            }
+        });
+
+        if ($request->wantsJson() && !$request->header('X-Inertia')) {
+            return response()->json(['saved' => true, 'plan_id' => $plan->id, 'saved_count' => $saved, 'deleted_count' => $deleted]);
+        }
+
+        return back()->with('success', "Draft saved ({$saved} entries, {$deleted} removed). ");
+    }
+
+    public function publishWeeklyPlan(Request $request)
+    {
+        $data = $request->validate([
+            'start' => ['required', 'date'],
+            'supervisor_id' => ['required', 'integer', 'exists:users,id'],
+            'shift_type' => ['nullable', 'in:day,night,morning,evening,custom'],
+            'start_time' => ['required', 'date_format:H:i'],
+            'end_time' => ['required', 'date_format:H:i'],
+        ]);
+
+        $weekStart = Carbon::parse($data['start'])->startOfWeek(Carbon::MONDAY);
+        $weekEnd = $weekStart->copy()->endOfWeek(Carbon::SUNDAY);
+        $shiftType = $data['shift_type'] ?? 'day';
+
+        $plan = WeeklyRosterPlan::query()
+            ->whereDate('week_start', $weekStart->toDateString())
+            ->where('supervisor_id', (int) $data['supervisor_id'])
+            ->where('shift_type', $shiftType)
+            ->first();
+
+        if (!$plan) {
+            return back()->withErrors(['start' => 'No weekly plan found for this supervisor/week.']);
+        }
+
+        if ($plan->status === 'published') {
+            return back()->withErrors(['start' => 'This weekly plan is already published.']);
+        }
+
+        $guards = Guard::query()
+            ->where('status', 'active')
+            ->where(function ($q) use ($data) {
+                $q->where('supervisor_id', (int) $data['supervisor_id'])
+                  ->orWhereIn('guard_type', ['reliever', 'standby']);
+            })
+            ->get(['id']);
+
+        $guardIds = $guards->pluck('id');
+        if ($guardIds->isEmpty()) {
+            return back()->withErrors(['supervisor_id' => 'No active guards found for this supervisor.']);
+        }
+
+        $entries = WeeklyRosterPlanEntry::query()
+            ->where('weekly_roster_plan_id', $plan->id)
+            ->whereBetween('date', [$weekStart->toDateString(), $weekEnd->toDateString()])
+            ->get();
+
+        $entriesByGuardDay = [];
+        foreach ($entries as $e) {
+            $entriesByGuardDay[(int) $e->guard_id][Carbon::parse($e->date)->toDateString()] = $e;
+        }
+
+        $days = collect(range(0, 6))->map(fn ($i) => $weekStart->copy()->addDays($i)->toDateString());
+
+        $startTime = $data['start_time'];
+        $endTime = $data['end_time'];
+
+        $created = 0;
+        $updated = 0;
+        $deleted = 0;
+        $skippedLocked = 0;
+        $skippedOffday = 0;
+
+        DB::transaction(function () use (
+            $plan,
+            $guardIds,
+            $days,
+            $shiftType,
+            $startTime,
+            $endTime,
+            $request,
+            $entriesByGuardDay,
+            &$created,
+            &$updated,
+            &$deleted,
+            &$skippedLocked,
+            &$skippedOffday
+        ) {
+            // Delete existing scheduled shifts for this supervisor-week-scope (plan wins)
+            // but do NOT delete shifts that are already in progress / completed.
+            $existing = GuardShift::query()
+                ->whereIn('guard_id', $guardIds)
+                ->whereBetween('date', [$days->first(), $days->last()])
+                ->where('shift_type', $shiftType)
+                ->whereNotIn('status', ['in_progress', 'completed'])
+                ->get(['id']);
+
+            if ($existing->isNotEmpty()) {
+                $deleted = GuardShift::whereIn('id', $existing->pluck('id'))->delete();
+            }
+
+            // Re-create based on plan entries (site entries only)
+            foreach ($guardIds as $gid) {
+                foreach ($days as $d) {
+                    $entry = $entriesByGuardDay[$gid][$d] ?? null;
+
+                    // If there is a locked shift (in_progress/completed), don't override.
+                    $locked = GuardShift::query()
+                        ->where('guard_id', $gid)
+                        ->whereDate('date', $d)
+                        ->where('shift_type', $shiftType)
+                        ->whereIn('status', ['in_progress', 'completed'])
+                        ->exists();
+
+                    if ($locked) {
+                        $skippedLocked++;
+                        continue;
+                    }
+
+                    if ($entry && $entry->entry_type === 'off') {
+                        // Create an off-day record (if none exists covering this date)
+                        $offExists = GuardOffDay::query()
+                            ->where('guard_id', $gid)
+                            ->whereDate('start_date', '<=', $d)
+                            ->where(function ($q) use ($d) {
+                                $q->whereNull('end_date')->orWhereDate('end_date', '>=', $d);
+                            })
+                            ->exists();
+
+                        if (!$offExists) {
+                            GuardOffDay::create([
+                                'guard_id' => $gid,
+                                'start_date' => $d,
+                                'end_date' => $d,
+                                'reason' => $entry?->notes ?: 'Weekly plan off-day',
+                            ]);
+                        }
+
+                        $skippedOffday++;
+                        continue;
+                    }
+
+                    $siteId = $entry?->client_site_id;
+                    if (!$siteId) {
+                        continue;
+                    }
+
+                    $startDt = Carbon::parse($d . ' ' . $startTime . ':00');
+                    $endDt = Carbon::parse($d . ' ' . $endTime . ':00');
+                    if ($endDt->lessThanOrEqualTo($startDt)) {
+                        $endDt->addDay();
+                    }
+
+                    $shift = GuardShift::create([
+                        'guard_id' => $gid,
+                        'client_site_id' => (int) $siteId,
+                        'assigned_by' => $request->user()?->id,
+                        'date' => $d,
+                        'start_time' => $startDt,
+                        'end_time' => $endDt,
+                        'shift_type' => $shiftType,
+                        'instructions' => null,
+                        'status' => 'scheduled',
+                        'notes' => $entry?->notes,
+                    ]);
+                    if ($shift) {
+                        $created++;
+                    }
+                }
+            }
+
+            $plan->update([
+                'status' => 'published',
+                'published_by' => $request->user()?->id,
+                'published_at' => now(),
+            ]);
+        });
+
+        return back()->with('success', "Weekly plan published. Shifts created: {$created}, shifts removed: {$deleted}, locked skipped: {$skippedLocked}.");
     }
 
     public function weekly(Request $request)
@@ -79,9 +443,16 @@ class RosterController extends Controller
         $days = collect(range(0,6))->map(fn($i) => $weekStart->copy()->addDays($i)->toDateString());
 
         $guardsQuery = Guard::query()->where('status', 'active');
+        
+        // When filtering by supervisor, include relievers and standby guards regardless of supervisor
+        // because they may not have a supervisor assigned but are needed for relief coverage
         if (!empty($validated['supervisor_id'])) {
-            $guardsQuery->where('supervisor_id', $validated['supervisor_id']);
+            $guardsQuery->where(function ($q) use ($validated) {
+                $q->where('supervisor_id', $validated['supervisor_id'])
+                  ->orWhereIn('guard_type', ['reliever', 'standby']);
+            });
         }
+        
         if (!empty($validated['zone_id'])) {
             $guardsQuery->where('zone_id', $validated['zone_id']);
         }
@@ -628,7 +999,10 @@ class RosterController extends Controller
 
         $guardsQuery = Guard::query()->where('status', 'active');
         if (!empty($data['supervisor_id'])) {
-            $guardsQuery->where('supervisor_id', $data['supervisor_id']);
+            $guardsQuery->where(function ($q) use ($data) {
+                $q->where('supervisor_id', $data['supervisor_id'])
+                  ->orWhereIn('guard_type', ['reliever', 'standby']);
+            });
         }
         if (!empty($data['zone_id'])) {
             $guardsQuery->where('zone_id', $data['zone_id']);

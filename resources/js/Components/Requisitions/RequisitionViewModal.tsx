@@ -74,8 +74,13 @@ export default function RequisitionViewModal({ requisitionId, open, onClose, ini
           amount: data?.amount != null ? String(data.amount) : '',
           category: data?.category ?? 'general',
         });
-        if (initialEdit && userId && data?.requested_by === userId && data?.status === 'pending_admin') {
-          setShowEdit(true);
+        if (initialEdit && userId && data?.requested_by === userId) {
+          if (data?.status === 'pending_admin') {
+            setShowEdit(true);
+          }
+          if (data?.status === 'needs_revision') {
+            setShowResubmit(true);
+          }
         }
       })
       .finally(() => active && setLoading(false));

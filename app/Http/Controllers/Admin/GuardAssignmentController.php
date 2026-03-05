@@ -14,6 +14,7 @@ class GuardAssignmentController extends Controller
     public function index()
     {
         $guards = Guard::with(['supervisor', 'currentAssignment.clientSite.client'])
+            ->where('status', 'active')
             ->orderBy('name')
             ->paginate(20);
 
@@ -75,6 +76,12 @@ class GuardAssignmentController extends Controller
             'assignment_type' => 'nullable|in:permanent,temporary',
             'notes' => 'nullable|string',
         ]);
+
+        // Verify guard is active before assigning
+        $guard = Guard::findOrFail($validated['guard_id']);
+        if ($guard->status !== 'active') {
+            return back()->with('error', 'Cannot assign an inactive guard to a site.');
+        }
 
         $startDate = $validated['start_date'] ?? now()->toDateString();
 

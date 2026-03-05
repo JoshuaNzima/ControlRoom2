@@ -14,7 +14,6 @@ import ZoneCommanderLayout from '@/Layouts/ZoneCommanderLayout';
 import MarketingLayout from '@/Layouts/MarketingLayout';
 import BusinessDevLayout from '@/Layouts/BusinessDevLayout';
 import FrontDeskLayout from '@/Layouts/FrontDeskLayout';
-import QuickRequisitionModal from '@/Components/Requisitions/QuickRequisitionModal';
 import RequisitionSummary from '@/Components/Requisitions/RequisitionSummary';
 import EditProfileModal from '@/Components/Profile/EditProfileModal';
 import ChangePasswordModal from '@/Components/Profile/ChangePasswordModal';
@@ -139,7 +138,6 @@ export default function ProfileDashboard() {
             </button>
           </div>
 
-          <QuickRequisitionModal />
           <RequisitionSummary />
 
           {/* Profile */}

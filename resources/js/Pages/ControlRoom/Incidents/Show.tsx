@@ -4,6 +4,7 @@ import ControlRoomLayout from '@/Layouts/ControlRoomLayout';
 import { Card, CardContent, CardHeader } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import { Badge } from '@/Components/ui/badge';
+import IconMapper from '@/Components/IconMapper';
 
 interface Incident {
   id: number;
@@ -62,13 +63,16 @@ const ShowIncident = ({ auth, incident }: ShowIncidentProps) => {
     <ControlRoomLayout title={`Incident: ${incident.title}`} user={auth?.user as any}>
       <Head title={`Incident: ${incident.title}`} />
 
-      <div className="max-w-4xl mx-auto space-y-6">
-        {/* Incident Header */}
-        <Card className="dark:bg-gray-800 dark:border-gray-700">
-          <CardHeader className="flex flex-row items-center justify-between">
+      <div className="px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+        {/* Hero Header */}
+        <div className="bg-gradient-to-r from-coin-700 via-coin-600 to-coin-500 rounded-2xl shadow-lg p-6 text-white">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{incident.title}</h1>
-              <div className="flex items-center space-x-2 mt-2">
+              <div className="flex items-center gap-2 mb-2">
+                <IconMapper name="ShieldAlert" size={24} />
+                <h1 className="text-xl sm:text-2xl font-bold">{incident.title}</h1>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
                 <Badge className={`text-xs ${getSeverityColor(incident.severity)}`}>
                   {incident.severity}
                 </Badge>
@@ -77,7 +81,8 @@ const ShowIncident = ({ auth, incident }: ShowIncidentProps) => {
                 </Badge>
                 {incident.escalation_level > 0 && (
                   <Badge variant="destructive" className="text-xs">
-                    Escalation Level {incident.escalation_level}
+                    <IconMapper name="TrendingUp" size={12} className="mr-1" />
+                    Level {incident.escalation_level}
                   </Badge>
                 )}
               </div>
@@ -88,7 +93,8 @@ const ShowIncident = ({ auth, incident }: ShowIncidentProps) => {
                 target="_blank"
                 rel="noopener"
               >
-                <Button className="w-full sm:w-auto bg-coin-700 hover:bg-coin-600 text-white">
+                <Button className="w-full sm:w-auto bg-white text-coin-700 hover:bg-coin-50">
+                  <IconMapper name="Printer" size={16} className="mr-2" />
                   Print
                 </Button>
               </Link>
@@ -123,8 +129,8 @@ const ShowIncident = ({ auth, incident }: ShowIncidentProps) => {
                 </>
               )}
             </div>
-          </CardHeader>
-        </Card>
+          </div>
+        </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Incident Details */}

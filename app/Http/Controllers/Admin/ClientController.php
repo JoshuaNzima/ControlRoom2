@@ -99,7 +99,7 @@ class ClientController extends Controller
             ->orderBy('name')
             ->get();
 
-        return Inertia::render('Admin/Clients', [
+        return Inertia::render('Admin/Clients/Index', [
             'clients' => $clients,
             'filters' => array_merge(request()->only(['search']), ['per_page' => $perPage, 'show_add' => $request->input('show_add')]),
             'services' => $services,
@@ -288,14 +288,8 @@ class ClientController extends Controller
 
     public function edit(Client $client)
     {
-        $client->load('services', 'sites');
-        $services = \App\Models\Service::where('active', true)->orderBy('name')->get(['id','name','monthly_price']);
-        $zones = Zone::orderBy('name')->get(['id','name']);
-        return Inertia::render('Admin/Clients/Edit', [
-            'client' => $client,
-            'services' => $services,
-            'zones' => $zones,
-        ]);
+        // Edit page removed - redirect to index with client pre-selected for modal editing
+        return redirect()->route('admin.clients.index');
     }
 
     public function update(Request $request, Client $client)
@@ -424,7 +418,7 @@ class ClientController extends Controller
             return response()->json(['success' => true]);
         }
 
-        return redirect()->route('admin.clients.edit', $client)
+        return redirect()->route('admin.clients.index')
             ->withSuccess('Site removed successfully.');
     }
 
@@ -455,7 +449,7 @@ class ClientController extends Controller
             return response()->json(['success' => true]);
         }
 
-        return redirect()->route('admin.clients.edit', $client)
+        return redirect()->route('admin.clients.index')
             ->withSuccess('Site restored successfully.');
     }
 

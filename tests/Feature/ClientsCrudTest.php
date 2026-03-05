@@ -37,7 +37,7 @@ class ClientsCrudTest extends TestCase
     public function test_super_admin_can_view_client()
     {
     $client = Client::create(['name' => 'Client One', 'address' => 'Address 1']);
-    $response = $this->actingAs($this->user)->get(route('admin.clients.edit', $client));
+    $response = $this->actingAs($this->user)->get(route('admin.clients.json', $client));
         $response->assertStatus(200);
     }
 
@@ -45,7 +45,7 @@ class ClientsCrudTest extends TestCase
     {
     $client = Client::create(['name' => 'Old Name', 'address' => 'Some Address']);
 
-        $response = $this->actingAs($this->user)->get(route('admin.clients.edit', $client));
+        $response = $this->actingAs($this->user)->get(route('admin.clients.json', $client));
         $response->assertStatus(200);
 
         $response2 = $this->actingAs($this->user)->put(route('admin.clients.update', $client), [

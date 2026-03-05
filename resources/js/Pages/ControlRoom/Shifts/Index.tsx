@@ -6,6 +6,7 @@ import { Button } from '@/Components/ui/button';
 import Modal from '@/Components/Modal';
 import PageHeader from '@/Components/ui/page-header';
 import EmptyState from '@/Components/ui/empty-state';
+import IconMapper from '@/Components/IconMapper';
 
 type Shift = {
   id: number;
@@ -23,7 +24,7 @@ type Shift = {
 };
 
 export default function ShiftsIndex() {
-  const { guardShifts = { data: [] }, scheduleShifts = { data: [] }, supervisors = [], sites = [], zones = [], filters = {} } = usePage().props as any;
+  const { guardShifts = { data: [] }, scheduleShifts = { data: [] }, supervisors = [], sites = [], zones = [], guards = [], filters = {} } = usePage().props as any;
 
   const [createOpen, setCreateOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
@@ -32,6 +33,14 @@ export default function ShiftsIndex() {
   const [viewData, setViewData] = useState<any | null>(null);
   const [loadingId, setLoadingId] = useState<number | null>(null);
 
+  const [selectedGuardShiftIds, setSelectedGuardShiftIds] = useState<Record<number, boolean>>({});
+  const selectedGuardShiftIdList = Object.entries(selectedGuardShiftIds).filter(([, v]) => !!v).map(([k]) => Number(k));
+  const [guardShiftViewOpen, setGuardShiftViewOpen] = useState(false);
+  const [guardShiftEditOpen, setGuardShiftEditOpen] = useState(false);
+  const [guardShiftCancelOpen, setGuardShiftCancelOpen] = useState(false);
+  const [activeGuardShift, setActiveGuardShift] = useState<any | null>(null);
+  const [bulkOpen, setBulkOpen] = useState(false);
+
   const [search, setSearch] = useState<string>(filters.search ?? '');
   const [zoneId, setZoneId] = useState<number | ''>(filters.zone_id ?? '');
   const [supervisorId, setSupervisorId] = useState<number | ''>(filters.supervisor_id ?? '');
@@ -39,10 +48,44 @@ export default function ShiftsIndex() {
   const [dateFrom, setDateFrom] = useState<string>(filters.date_from ?? '');
   const [dateTo, setDateTo] = useState<string>(filters.date_to ?? '');
   const [guardType, setGuardType] = useState<string>(filters.guard_type ?? '');
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   const storageKey = 'controlroom_shifts_filters';
 
   const didInitFromStorageRef = useRef(false);
+
+  useEffect(() => {
+    const qp = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
+    const create = qp.get('create_shift');
+    const edit = qp.get('edit_shift');
+    const view = qp.get('view_shift');
+
+    if (create) {
+      setCreateOpen(true);
+      router.get(route('control-room.shifts.index'), {}, { preserveScroll: true, preserveState: true, replace: true });
+      return;
+    }
+
+    if (edit) {
+      const id = Number(edit);
+      const shift = (scheduleShifts?.data || []).find((s: any) => Number(s.id) === id);
+      if (shift) {
+        setEditingShift(shift);
+        setEditOpen(true);
+      }
+      router.get(route('control-room.shifts.index'), {}, { preserveScroll: true, preserveState: true, replace: true });
+      return;
+    }
+
+    if (view) {
+      const id = Number(view);
+      if (id) {
+        openViewModal(id);
+      }
+      router.get(route('control-room.shifts.index'), {}, { preserveScroll: true, preserveState: true, replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (didInitFromStorageRef.current) return;
@@ -129,111 +172,192 @@ export default function ShiftsIndex() {
     setEditOpen(true);
   };
 
+  const openGuardShiftView = async (id: number) => {
+    setLoadingId(id);
+    try {
+      const res = await fetch(route('control-room.guard-shifts.show', id), {
+        headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+      });
+      if (!res.ok) throw new Error('Failed');
+      const json = await res.json();
+      setActiveGuardShift(json?.shift ?? null);
+      setGuardShiftViewOpen(true);
+    } catch {
+      router.visit(route('control-room.guard-shifts.show', id));
+    } finally {
+      setLoadingId(null);
+    }
+  };
+
+  const toggleGuardShiftSel = (id: number) => setSelectedGuardShiftIds((prev) => ({ ...prev, [id]: !prev[id] }));
+  const clearGuardShiftSel = () => setSelectedGuardShiftIds({});
+
   return (
     <ControlRoomLayout title="Shift Management">
       <Head title="Shift Management" />
       <div className="space-y-4">
-        <PageHeader
-          title="Shifts"
-          description="Manage shift templates and view roster-based scheduled shifts."
-          actions={(
+        {/* Hero Header */}
+        <div className="bg-gradient-to-r from-coin-700 via-coin-600 to-coin-500 rounded-2xl shadow-lg p-6 text-white">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-3">
+                <IconMapper name="Clock" size={28} />
+                Shift Management
+              </h1>
+              <p className="mt-1 text-coin-100 text-sm">
+                Manage shift templates and roster-based scheduled shifts
+              </p>
+            </div>
             <Button
               type="button"
               onClick={() => setCreateOpen(true)}
-              className="inline-flex items-center px-3 py-2 rounded-md bg-coin-700 hover:bg-coin-800 text-white text-sm"
+              className="inline-flex items-center px-4 py-2.5 rounded-lg bg-white text-coin-700 hover:bg-coin-50 font-semibold shadow-md transition-all"
             >
+              <IconMapper name="Plus" size={18} className="mr-2" />
               Create Shift
             </Button>
-          )}
-        />
+          </div>
 
-        <Card className="dark:bg-gray-800 dark:border-gray-700">
-          <CardContent>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 pt-4">
-              <div>
-                <label className="block text-sm font-medium">Search</label>
-                <input
-                  className="w-full border rounded-md p-2 bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100"
-                  placeholder="Guard/Site/Shift name"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === 'Enter') applyFilters(); }}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium">Zone</label>
-                <select
-                  className="w-full border rounded-md p-2 bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100"
-                  value={zoneId as any}
-                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setZoneId(e.target.value ? Number(e.target.value) : '')}
-                >
-                  <option value="">All</option>
-                  {zones.map((z: any) => (
-                    <option key={z.id} value={z.id}>{z.name}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium">Supervisor</label>
-                <select
-                  className="w-full border rounded-md p-2 bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100"
-                  value={supervisorId as any}
-                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSupervisorId(e.target.value ? Number(e.target.value) : '')}
-                >
-                  <option value="">All</option>
-                  {supervisors.map((s: any) => (
-                    <option key={s.id} value={s.id}>{s.name}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium">Site</label>
-                <select
-                  className="w-full border rounded-md p-2 bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100"
-                  value={siteId as any}
-                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSiteId(e.target.value ? Number(e.target.value) : '')}
-                >
-                  <option value="">All</option>
-                  {sites.map((s: any) => (
-                    <option key={s.id} value={s.id}>{s.name}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium">Guard Type</label>
-                <select
-                  className="w-full border rounded-md p-2 bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100"
-                  value={guardType}
-                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setGuardType(e.target.value)}
-                >
-                  <option value="">All</option>
-                  <option value="permanent">Standard</option>
-                  <option value="standby">Standby</option>
-                  <option value="reliever">Reliever</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium">Date From</label>
-                <input
-                  type="date"
-                  className="w-full border rounded-md p-2 bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100"
-                  value={dateFrom}
-                  onChange={(e) => setDateFrom(e.target.value)}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium">Date To</label>
-                <input
-                  type="date"
-                  className="w-full border rounded-md p-2 bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100"
-                  value={dateTo}
-                  onChange={(e) => setDateTo(e.target.value)}
-                />
-              </div>
+          {/* Stats Row */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-6">
+            <div className="bg-white/10 backdrop-blur rounded-xl p-3">
+              <div className="text-xs text-coin-100">Total Templates</div>
+              <div className="text-2xl font-bold">{scheduleShifts?.data?.length || 0}</div>
             </div>
-            <div className="flex items-center gap-2 pt-4">
-              <Button type="button" onClick={applyFilters} className="px-3 py-2">Apply</Button>
-              <button type="button" onClick={resetFilters} className="px-3 py-2 text-sm rounded-md bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600">Reset</button>
+            <div className="bg-white/10 backdrop-blur rounded-xl p-3">
+              <div className="text-xs text-coin-100">Scheduled Shifts</div>
+              <div className="text-2xl font-bold">{guardShifts?.data?.length || 0}</div>
+            </div>
+            <div className="bg-white/10 backdrop-blur rounded-xl p-3">
+              <div className="text-xs text-coin-100">Selected</div>
+              <div className="text-2xl font-bold">{selectedGuardShiftIdList.length}</div>
+            </div>
+            <div className="bg-white/10 backdrop-blur rounded-xl p-3">
+              <div className="text-xs text-coin-100">Supervisors</div>
+              <div className="text-2xl font-bold">{supervisors.length}</div>
+            </div>
+          </div>
+        </div>
+
+        <Card className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800">
+          <CardContent className="p-4">
+            {/* Mobile Filter Toggle */}
+            <div className="sm:hidden flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                <IconMapper name="Filter" size={16} />
+                Filters
+                {(search || zoneId || supervisorId || siteId || dateFrom || dateTo || guardType) && (
+                  <span className="bg-coin-700 text-white text-xs px-1.5 py-0.5 rounded-full">
+                    {[search, zoneId, supervisorId, siteId, dateFrom, dateTo, guardType].filter(Boolean).length}
+                  </span>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => setFiltersOpen(!filtersOpen)}
+                className="text-sm text-coin-700 dark:text-coin-300 hover:underline"
+              >
+                {filtersOpen ? 'Hide' : 'Show'}
+              </button>
+            </div>
+
+            <div className={`${filtersOpen ? 'block' : 'hidden'} sm:block`}>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Search</label>
+                  <div className="relative">
+                    <IconMapper name="Search" size={16} className="absolute left-3 top-2.5 text-gray-400" />
+                    <input
+                      className="w-full border border-gray-200 dark:border-gray-700 rounded-md p-2 pl-9 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100"
+                      placeholder="Guard/Site/Shift name"
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') applyFilters(); }}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Zone</label>
+                  <select
+                    className="w-full border border-gray-200 dark:border-gray-700 rounded-md p-2 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100"
+                    value={zoneId as any}
+                    onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setZoneId(e.target.value ? Number(e.target.value) : '')}
+                  >
+                    <option value="">All Zones</option>
+                    {zones.map((z: any) => (
+                      <option key={z.id} value={z.id}>{z.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Supervisor</label>
+                  <select
+                    className="w-full border border-gray-200 dark:border-gray-700 rounded-md p-2 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100"
+                    value={supervisorId as any}
+                    onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSupervisorId(e.target.value ? Number(e.target.value) : '')}
+                  >
+                    <option value="">All Supervisors</option>
+                    {supervisors.map((s: any) => (
+                      <option key={s.id} value={s.id}>{s.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Site</label>
+                  <select
+                    className="w-full border border-gray-200 dark:border-gray-700 rounded-md p-2 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100"
+                    value={siteId as any}
+                    onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSiteId(e.target.value ? Number(e.target.value) : '')}
+                  >
+                    <option value="">All Sites</option>
+                    {sites.map((s: any) => (
+                      <option key={s.id} value={s.id}>{s.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Guard Type</label>
+                  <select
+                    className="w-full border border-gray-200 dark:border-gray-700 rounded-md p-2 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100"
+                    value={guardType}
+                    onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setGuardType(e.target.value)}
+                  >
+                    <option value="">All Types</option>
+                    <option value="permanent">Standard</option>
+                    <option value="standby">Standby</option>
+                    <option value="reliever">Reliever</option>
+                  </select>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Date From</label>
+                    <input
+                      type="date"
+                      className="w-full border border-gray-200 dark:border-gray-700 rounded-md p-2 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100"
+                      value={dateFrom}
+                      onChange={(e) => setDateFrom(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Date To</label>
+                    <input
+                      type="date"
+                      className="w-full border border-gray-200 dark:border-gray-700 rounded-md p-2 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100"
+                      value={dateTo}
+                      onChange={(e) => setDateTo(e.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 pt-4">
+                <Button type="button" onClick={applyFilters} className="px-4 py-2 bg-coin-700 hover:bg-coin-600 text-white">
+                  <IconMapper name="Search" size={16} className="mr-2" />
+                  Apply Filters
+                </Button>
+                <button type="button" onClick={resetFilters} className="px-4 py-2 text-sm rounded-md bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700">
+                  Reset
+                </button>
+              </div>
             </div>
             {Boolean(search || zoneId || supervisorId || siteId || dateFrom || dateTo || guardType) && (
               <div className="flex flex-wrap items-center gap-2 pt-3">
@@ -253,7 +377,7 @@ export default function ShiftsIndex() {
                       try { localStorage.setItem(storageKey, JSON.stringify(params)); } catch {}
                       router.get(route('control-room.shifts.index'), params, { preserveScroll: true, preserveState: true, replace: true });
                     }}
-                    className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-100 text-xs"
+                    className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-100 text-xs"
                   >
                     Search: {search}
                     <span className="text-gray-500 dark:text-gray-300">×</span>
@@ -275,7 +399,7 @@ export default function ShiftsIndex() {
                       try { localStorage.setItem(storageKey, JSON.stringify(params)); } catch {}
                       router.get(route('control-room.shifts.index'), params, { preserveScroll: true, preserveState: true, replace: true });
                     }}
-                    className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-100 text-xs"
+                    className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-100 text-xs"
                   >
                     Type: {guardType === 'permanent' ? 'Standard' : guardType.charAt(0).toUpperCase() + guardType.slice(1)}
                     <span className="text-gray-500 dark:text-gray-300">×</span>
@@ -297,7 +421,7 @@ export default function ShiftsIndex() {
                       try { localStorage.setItem(storageKey, JSON.stringify(params)); } catch {}
                       router.get(route('control-room.shifts.index'), params, { preserveScroll: true, preserveState: true, replace: true });
                     }}
-                    className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-100 text-xs"
+                    className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-100 text-xs"
                   >
                     Zone: {(() => { const z = zones.find((x: any) => x.id === zoneId); return z ? z.name : zoneId; })()}
                     <span className="text-gray-500 dark:text-gray-300">×</span>
@@ -319,7 +443,7 @@ export default function ShiftsIndex() {
                       try { localStorage.setItem(storageKey, JSON.stringify(params)); } catch {}
                       router.get(route('control-room.shifts.index'), params, { preserveScroll: true, preserveState: true, replace: true });
                     }}
-                    className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-100 text-xs"
+                    className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-100 text-xs"
                   >
                     Supervisor: {(() => { const z = supervisors.find((x: any) => x.id === supervisorId); return z ? z.name : supervisorId; })()}
                     <span className="text-gray-500 dark:text-gray-300">×</span>
@@ -341,7 +465,7 @@ export default function ShiftsIndex() {
                       try { localStorage.setItem(storageKey, JSON.stringify(params)); } catch {}
                       router.get(route('control-room.shifts.index'), params, { preserveScroll: true, preserveState: true, replace: true });
                     }}
-                    className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-100 text-xs"
+                    className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-100 text-xs"
                   >
                     Site: {(() => { const z = sites.find((x: any) => x.id === siteId); return z ? z.name : siteId; })()}
                     <span className="text-gray-500 dark:text-gray-300">×</span>
@@ -363,7 +487,7 @@ export default function ShiftsIndex() {
                       try { localStorage.setItem(storageKey, JSON.stringify(params)); } catch {}
                       router.get(route('control-room.shifts.index'), params, { preserveScroll: true, preserveState: true, replace: true });
                     }}
-                    className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-100 text-xs"
+                    className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-100 text-xs"
                   >
                     From: {dateFrom}
                     <span className="text-gray-500 dark:text-gray-300">×</span>
@@ -385,7 +509,7 @@ export default function ShiftsIndex() {
                       try { localStorage.setItem(storageKey, JSON.stringify(params)); } catch {}
                       router.get(route('control-room.shifts.index'), params, { preserveScroll: true, preserveState: true, replace: true });
                     }}
-                    className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-100 text-xs"
+                    className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-100 text-xs"
                   >
                     To: {dateTo}
                     <span className="text-gray-500 dark:text-gray-300">×</span>
@@ -394,7 +518,7 @@ export default function ShiftsIndex() {
                 <button
                   type="button"
                   onClick={resetFilters}
-                  className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-600 dark:text-gray-100 dark:hover:bg-gray-500 text-xs"
+                  className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600 text-xs"
                 >
                   Clear all
                 </button>
@@ -403,26 +527,146 @@ export default function ShiftsIndex() {
           </CardContent>
         </Card>
 
-        <Card className="dark:bg-gray-800 dark:border-gray-700">
-          <CardHeader>
-            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Guard Shifts (Roster)</h3>
+        <Card className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800">
+          <CardHeader className="pb-3">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                  <IconMapper name="Calendar" size={20} className="text-coin-600" />
+                  Guard Shifts (Roster)
+                </h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+                  {selectedGuardShiftIdList.length > 0 
+                    ? `${selectedGuardShiftIdList.length} of ${guardShifts?.data?.length || 0} shifts selected`
+                    : `${guardShifts?.data?.length || 0} scheduled shifts`
+                  }
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="dark:bg-gray-800 dark:hover:bg-gray-700 text-sm"
+                  disabled={!selectedGuardShiftIdList.length}
+                  onClick={() => setBulkOpen(true)}
+                >
+                  <IconMapper name="Layers" size={14} className="mr-1.5" />
+                  Bulk Actions
+                </Button>
+                <button
+                  type="button"
+                  onClick={clearGuardShiftSel}
+                  className="px-3 py-1.5 text-sm rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 transition-colors"
+                  disabled={!selectedGuardShiftIdList.length}
+                >
+                  Clear
+                </button>
+              </div>
+            </div>
           </CardHeader>
-          <CardContent>
-            <div className="divide-y divide-gray-200 dark:divide-gray-700">
+          <CardContent className="pt-0">
+            <div className="space-y-2">
               {guardShifts?.data?.map((s: any) => (
-                <div key={s.id} className="py-3 flex items-center justify-between">
-                  <div>
-                    <div className="font-medium flex items-center gap-2">
-                      <span>{s.guard_relation?.name || 'Guard'} • {s.client_site?.name || 'Site'}</span>
-                      {s.guard_relation?.guard_type && (
-                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${s.guard_relation.guard_type === 'reliever' ? 'bg-coin-700 text-white' : s.guard_relation.guard_type === 'standby' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300' : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-100'}`}>
-                          {s.guard_relation.guard_type === 'permanent' ? 'Standard' : (s.guard_relation.guard_type.charAt(0).toUpperCase() + s.guard_relation.guard_type.slice(1))}
+                <div 
+                  key={s.id} 
+                  className={`group relative rounded-xl border transition-all duration-200 ${
+                    selectedGuardShiftIds[s.id] 
+                      ? 'border-coin-500 bg-coin-50 dark:bg-coin-950/20' 
+                      : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-coin-300 dark:hover:border-coin-700'
+                  }`}
+                >
+                  <div className="p-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                      {/* Checkbox + Main Info */}
+                      <div className="flex items-start gap-3 flex-1 min-w-0">
+                        <input
+                          type="checkbox"
+                          className="mt-1 rounded border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-coin-600 focus:ring-coin-500"
+                          checked={!!selectedGuardShiftIds[s.id]}
+                          onChange={() => toggleGuardShiftSel(s.id)}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex flex-wrap items-center gap-2 mb-1">
+                            <span className="font-semibold text-gray-900 dark:text-gray-100 truncate">
+                              {s.guard_relation?.name || 'Unassigned'}
+                            </span>
+                            <span className="text-gray-400">•</span>
+                            <span className="text-gray-600 dark:text-gray-400 truncate">
+                              {s.client_site?.name || 'No Site'}
+                            </span>
+                            {s.guard_relation?.guard_type && (
+                              <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
+                                s.guard_relation.guard_type === 'reliever' 
+                                  ? 'bg-coin-100 text-coin-700 dark:bg-coin-900/30 dark:text-coin-300' 
+                                  : s.guard_relation.guard_type === 'standby' 
+                                    ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300' 
+                                    : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
+                              }`}>
+                                {s.guard_relation.guard_type === 'permanent' ? 'Standard' : s.guard_relation.guard_type.charAt(0).toUpperCase() + s.guard_relation.guard_type.slice(1)}
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-500 dark:text-gray-400">
+                            <span className="flex items-center gap-1.5">
+                              <IconMapper name="Calendar" size={14} />
+                              {s.date}
+                            </span>
+                            <span className="flex items-center gap-1.5">
+                              <IconMapper name="Clock" size={14} />
+                              {s.start_time} - {s.end_time}
+                            </span>
+                            {s.shift_type && (
+                              <span className="text-xs px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-700">
+                                {s.shift_type}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Status + Actions */}
+                      <div className="flex items-center gap-2 sm:justify-end">
+                        <span className={`text-xs px-2.5 py-1 rounded-full font-medium capitalize ${
+                          s.status === 'completed' 
+                            ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
+                            : s.status === 'in_progress'
+                              ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
+                              : s.status === 'cancelled'
+                                ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'
+                                : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
+                        }`}>
+                          {s.status || 'Scheduled'}
                         </span>
-                      )}
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => openGuardShiftView(s.id)}
+                            className="p-1.5 rounded-md text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:bg-gray-700 transition-colors"
+                            disabled={loadingId === s.id}
+                            title="View"
+                          >
+                            <IconMapper name="Eye" size={16} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => { setActiveGuardShift(s); setGuardShiftEditOpen(true); }}
+                            className="p-1.5 rounded-md text-coin-600 hover:text-coin-700 hover:bg-coin-50 dark:text-coin-400 dark:hover:text-coin-300 dark:hover:bg-coin-950/30 transition-colors"
+                            title="Edit"
+                          >
+                            <IconMapper name="Pencil" size={16} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => { setActiveGuardShift(s); setGuardShiftCancelOpen(true); }}
+                            className="p-1.5 rounded-md text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-red-950/30 transition-colors"
+                            title="Cancel"
+                          >
+                            <IconMapper name="X" size={16} />
+                          </button>
+                        </div>
+                      </div>
                     </div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400">{s.date} • {s.start_time} - {s.end_time} • {s.shift_type}</div>
                   </div>
-                  <div className="flex gap-2 text-xs text-gray-500">Scheduled</div>
                 </div>
               ))}
               {(!guardShifts?.data || guardShifts.data.length === 0) && (
@@ -430,53 +674,130 @@ export default function ShiftsIndex() {
                   title="No guard shifts"
                   description="Shifts generated from the roster will appear here."
                   size="sm"
-                  contentClassName="py-6"
+                  contentClassName="py-8"
                 />
               )}
             </div>
           </CardContent>
         </Card>
 
-        <Card className="dark:bg-gray-800 dark:border-gray-700">
-          <CardHeader>
-            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Shift Templates</h3>
+        <GuardShiftViewModal
+          open={guardShiftViewOpen}
+          onClose={() => { setGuardShiftViewOpen(false); setActiveGuardShift(null); }}
+          shift={activeGuardShift}
+        />
+
+        <GuardShiftEditModal
+          open={guardShiftEditOpen}
+          onClose={() => { setGuardShiftEditOpen(false); setActiveGuardShift(null); }}
+          shift={activeGuardShift}
+          guards={guards}
+          sites={sites}
+          onSuccess={() => router.reload()}
+        />
+
+        <GuardShiftCancelModal
+          open={guardShiftCancelOpen}
+          onClose={() => { setGuardShiftCancelOpen(false); setActiveGuardShift(null); }}
+          shift={activeGuardShift}
+          onSuccess={() => router.reload()}
+        />
+
+        <GuardShiftBulkModal
+          open={bulkOpen}
+          onClose={() => setBulkOpen(false)}
+          shiftIds={selectedGuardShiftIdList}
+          guards={guards}
+          sites={sites}
+          onSuccess={() => { setBulkOpen(false); clearGuardShiftSel(); router.reload(); }}
+        />
+
+        <Card className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800">
+          <CardHeader className="pb-3">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                  <IconMapper name="ClipboardList" size={20} className="text-coin-600" />
+                  Shift Templates
+                </h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+                  {scheduleShifts?.data?.length || 0} shift templates available
+                </p>
+              </div>
+              <Button
+                type="button"
+                onClick={() => setCreateOpen(true)}
+                className="bg-coin-700 hover:bg-coin-600 text-white text-sm"
+              >
+                <IconMapper name="Plus" size={14} className="mr-1.5" />
+                New Template
+              </Button>
+            </div>
           </CardHeader>
-          <CardContent>
-            <div className="divide-y divide-gray-200 dark:divide-gray-700">
+          <CardContent className="pt-0">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {scheduleShifts?.data?.map((s: any) => (
-                <div key={s.id} className="py-3 flex items-center justify-between">
-                  <div>
-                    <div className="font-medium">{s.name}</div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400">{s.start_time} - {s.end_time} • Required guards: {s.required_guards} {s.is_global ? '• General (all zones)' : ''}</div>
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => openViewModal(s.id)}
-                      className="text-sm text-coin-700 hover:text-coin-800 dark:text-coin-300 dark:hover:text-coin-200 disabled:opacity-50"
-                      disabled={loadingId === s.id}
-                    >
-                      {loadingId === s.id ? 'Opening…' : 'View'}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => openEditModal(s)}
-                      className="text-sm text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-gray-100"
-                    >
-                      Edit
-                    </button>
+                <div 
+                  key={s.id} 
+                  className="group rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-coin-300 dark:hover:border-coin-700 hover:shadow-md transition-all duration-200"
+                >
+                  <div className="p-4">
+                    <div className="flex items-start justify-between gap-2 mb-3">
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-semibold text-gray-900 dark:text-gray-100 truncate" title={s.name}>
+                          {s.name}
+                        </h4>
+                        <div className="flex items-center gap-2 mt-1 text-sm text-gray-500 dark:text-gray-400">
+                          <IconMapper name="Clock" size={14} />
+                          <span>{s.start_time} - {s.end_time}</span>
+                        </div>
+                      </div>
+                      {s.is_global && (
+                        <span className="shrink-0 text-[10px] px-2 py-0.5 rounded-full bg-coin-100 text-coin-700 dark:bg-coin-900/30 dark:text-coin-300 font-medium">
+                          Global
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <div className="text-sm text-gray-500 dark:text-gray-400">
+                        <span className="flex items-center gap-1.5">
+                          <IconMapper name="Users" size={14} />
+                          {s.required_guards || 0} guards required
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => openViewModal(s.id)}
+                          className="p-1.5 rounded-md text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:bg-gray-700 transition-colors"
+                          disabled={loadingId === s.id}
+                          title="View"
+                        >
+                          <IconMapper name="Eye" size={16} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => openEditModal(s)}
+                          className="p-1.5 rounded-md text-coin-600 hover:text-coin-700 hover:bg-coin-50 dark:text-coin-400 dark:hover:text-coin-300 dark:hover:bg-coin-950/30 transition-colors"
+                          title="Edit"
+                        >
+                          <IconMapper name="Pencil" size={16} />
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 </div>
               ))}
-              {(!scheduleShifts?.data || scheduleShifts.data.length === 0) && (
-                <EmptyState
-                  title="No shift templates"
-                  description="Create a shift template to start scheduling."
-                  size="sm"
-                  contentClassName="py-6"
-                />
-              )}
             </div>
+            {(!scheduleShifts?.data || scheduleShifts.data.length === 0) && (
+              <EmptyState
+                title="No shift templates"
+                description="Create a shift template to start scheduling."
+                size="sm"
+                contentClassName="py-8"
+              />
+            )}
           </CardContent>
         </Card>
 
@@ -625,7 +946,7 @@ function CreateShiftModal({ open, onClose, supervisors, sites }: { open: boolean
           <div>
             <label className="block text-sm font-medium">Name</label>
             <input
-              className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100"
+              className="w-full border border-gray-200 dark:border-gray-700 rounded-md p-2 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100"
               value={data.name}
               onChange={(e) => setData('name', e.target.value)}
             />
@@ -634,7 +955,7 @@ function CreateShiftModal({ open, onClose, supervisors, sites }: { open: boolean
           <div>
             <label className="block text-sm font-medium">Supervisor</label>
             <select
-              className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100"
+              className="w-full border border-gray-200 dark:border-gray-700 rounded-md p-2 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100"
               value={data.supervisor_id as any}
               onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
                 setData('supervisor_id', e.target.value ? Number(e.target.value) : '')
@@ -653,7 +974,7 @@ function CreateShiftModal({ open, onClose, supervisors, sites }: { open: boolean
             <label className="block text-sm font-medium">Start Time</label>
             <input
               type="time"
-              className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100"
+              className="w-full border border-gray-200 dark:border-gray-700 rounded-md p-2 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100"
               value={data.start_time}
               onChange={(e) => setData('start_time', e.target.value)}
             />
@@ -663,7 +984,7 @@ function CreateShiftModal({ open, onClose, supervisors, sites }: { open: boolean
             <label className="block text-sm font-medium">End Time</label>
             <input
               type="time"
-              className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100"
+              className="w-full border border-gray-200 dark:border-gray-700 rounded-md p-2 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100"
               value={data.end_time}
               onChange={(e) => setData('end_time', e.target.value)}
             />
@@ -674,7 +995,7 @@ function CreateShiftModal({ open, onClose, supervisors, sites }: { open: boolean
             <input
               type="number"
               min={0}
-              className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100"
+              className="w-full border border-gray-200 dark:border-gray-700 rounded-md p-2 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100"
               value={data.required_guards ?? ''}
               onChange={(e) => setData('required_guards', e.target.value === '' ? null : Number(e.target.value))}
             />
@@ -712,7 +1033,7 @@ function CreateShiftModal({ open, onClose, supervisors, sites }: { open: boolean
           </div>
           <div className="sm:col-span-2">
             <label className="block text-sm font-medium">Sites</label>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-64 overflow-auto border rounded p-2 dark:border-gray-800">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-64 overflow-auto border border-gray-200 dark:border-gray-800 rounded p-2 bg-white dark:bg-gray-950">
               {sites.map((s: any) => (
                 <label key={s.id} className="flex items-center gap-2 text-sm">
                   <input
@@ -729,7 +1050,7 @@ function CreateShiftModal({ open, onClose, supervisors, sites }: { open: boolean
           <div className="sm:col-span-2">
             <label className="block text-sm font-medium">Description</label>
             <textarea
-              className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100"
+              className="w-full border border-gray-200 dark:border-gray-700 rounded-md p-2 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100"
               rows={3}
               value={data.description}
               onChange={(e) => setData('description', e.target.value)}
@@ -747,10 +1068,326 @@ function CreateShiftModal({ open, onClose, supervisors, sites }: { open: boolean
             <button
               type="submit"
               disabled={processing}
-              className="px-4 py-2 text-sm rounded-md bg-coin-700 text-white hover:bg-coin-800 disabled:bg-gray-400"
+              className="px-4 py-2 text-sm rounded-md bg-coin-700 text-white hover:bg-coin-600 disabled:bg-gray-400"
             >
               {processing ? 'Creating...' : 'Create'}
             </button>
+          </div>
+        </form>
+      </div>
+    </Modal>
+  );
+}
+
+function GuardShiftViewModal({ open, onClose, shift }: { open: boolean; onClose: () => void; shift: any | null }) {
+  return (
+    <Modal show={open} onClose={onClose} maxWidth="lg">
+      <div className="px-6 py-4 border-b flex items-center justify-between bg-white dark:bg-gray-900 dark:border-gray-800">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Guard Shift</h2>
+        <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:text-gray-300 dark:hover:text-gray-100">✕</button>
+      </div>
+      <div className="px-6 py-4 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+        {!shift ? (
+          <div className="text-sm text-gray-500 dark:text-gray-400">No data.</div>
+        ) : (
+          <div className="space-y-2">
+            <div className="text-sm"><span className="text-gray-500 dark:text-gray-400">Guard:</span> {shift.guard_relation?.name ?? shift.guardRelation?.name ?? '—'}</div>
+            <div className="text-sm"><span className="text-gray-500 dark:text-gray-400">Site:</span> {shift.client_site?.name ?? shift.clientSite?.name ?? '—'}</div>
+            <div className="text-sm"><span className="text-gray-500 dark:text-gray-400">Date:</span> {String(shift.date ?? '').substring(0, 10) || '—'}</div>
+            <div className="text-sm"><span className="text-gray-500 dark:text-gray-400">Time:</span> {String(shift.start_time)} - {String(shift.end_time)}</div>
+            <div className="text-sm"><span className="text-gray-500 dark:text-gray-400">Type:</span> {shift.shift_type}</div>
+            <div className="text-sm"><span className="text-gray-500 dark:text-gray-400">Status:</span> {shift.status}</div>
+            {shift.reason_for_cancellation ? (
+              <div className="text-sm"><span className="text-gray-500 dark:text-gray-400">Cancel reason:</span> {shift.reason_for_cancellation}</div>
+            ) : null}
+            {shift.notes ? (
+              <div className="text-sm"><span className="text-gray-500 dark:text-gray-400">Notes:</span> {shift.notes}</div>
+            ) : null}
+          </div>
+        )}
+      </div>
+    </Modal>
+  );
+}
+
+function GuardShiftEditModal({ open, onClose, shift, guards, sites, onSuccess }: { open: boolean; onClose: () => void; shift: any | null; guards: any[]; sites: any[]; onSuccess: () => void }) {
+  const { data, setData, put, processing, errors, reset } = useForm<{ guard_id: number | ''; client_site_id: number | ''; notes: string }>({
+    guard_id: '',
+    client_site_id: '',
+    notes: '',
+  });
+
+  useEffect(() => {
+    if (!open) return;
+    if (!shift) return;
+    setData({
+      guard_id: shift.guard_id ?? shift.guard_relation?.id ?? '',
+      client_site_id: shift.client_site_id ?? shift.client_site?.id ?? '',
+      notes: shift.notes ?? '',
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, shift?.id]);
+
+  const locked = shift && ['in_progress', 'completed'].includes(String(shift.status));
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!shift?.id) return;
+    put(route('control-room.guard-shifts.update', shift.id), {
+      preserveScroll: true,
+      onSuccess: () => {
+        onSuccess();
+        reset();
+        onClose();
+      },
+    });
+  };
+
+  return (
+    <Modal show={open} onClose={onClose} maxWidth="lg">
+      <div className="px-6 py-4 border-b flex items-center justify-between bg-white dark:bg-gray-900 dark:border-gray-800">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Edit Guard Shift</h2>
+        <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:text-gray-300 dark:hover:text-gray-100">✕</button>
+      </div>
+      <div className="px-6 py-4 bg-white dark:bg-gray-900">
+        {locked ? (
+          <div className="mb-3 text-sm text-red-600">This shift is locked and cannot be edited.</div>
+        ) : null}
+        <form className="grid grid-cols-1 sm:grid-cols-2 gap-4" onSubmit={submit}>
+          <div>
+            <label className="block text-sm font-medium text-gray-900 dark:text-gray-100">Guard</label>
+            <select
+              className="w-full border border-gray-200 dark:border-gray-700 rounded-md p-2 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100"
+              value={data.guard_id as any}
+              onChange={(e) => setData('guard_id', e.target.value ? Number(e.target.value) : '')}
+              disabled={processing || locked}
+            >
+              <option value="">Select guard</option>
+              {guards.map((g: any) => (
+                <option key={g.id} value={g.id}>{g.name}{g.employee_id ? ` (${g.employee_id})` : ''}</option>
+              ))}
+            </select>
+            {errors.guard_id && <p className="text-sm text-red-600">{errors.guard_id as any}</p>}
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-900 dark:text-gray-100">Site</label>
+            <select
+              className="w-full border border-gray-200 dark:border-gray-700 rounded-md p-2 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100"
+              value={data.client_site_id as any}
+              onChange={(e) => setData('client_site_id', e.target.value ? Number(e.target.value) : '')}
+              disabled={processing || locked}
+            >
+              <option value="">Select site</option>
+              {sites.map((s: any) => (
+                <option key={s.id} value={s.id}>{s.name}</option>
+              ))}
+            </select>
+            {errors.client_site_id && <p className="text-sm text-red-600">{errors.client_site_id as any}</p>}
+          </div>
+          <div className="sm:col-span-2">
+            <label className="block text-sm font-medium text-gray-900 dark:text-gray-100">Notes</label>
+            <textarea
+              className="w-full border border-gray-200 dark:border-gray-700 rounded-md p-2 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100"
+              rows={3}
+              value={data.notes}
+              onChange={(e) => setData('notes', e.target.value)}
+              disabled={processing || locked}
+            />
+            {errors.notes && <p className="text-sm text-red-600">{errors.notes as any}</p>}
+          </div>
+          <div className="sm:col-span-2 flex justify-end gap-2 pt-2">
+            <button type="button" onClick={onClose} className="px-4 py-2 text-sm rounded-md bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700" disabled={processing}>Cancel</button>
+            <button type="submit" disabled={processing || locked || !data.guard_id || !data.client_site_id} className="px-4 py-2 text-sm rounded-md bg-coin-700 text-white hover:bg-coin-600 disabled:opacity-50">Save</button>
+          </div>
+        </form>
+      </div>
+    </Modal>
+  );
+}
+
+function GuardShiftCancelModal({ open, onClose, shift, onSuccess }: { open: boolean; onClose: () => void; shift: any | null; onSuccess: () => void }) {
+  const { data, setData, post, processing, errors, reset } = useForm<{ reason: string }>({ reason: '' });
+
+  useEffect(() => {
+    if (!open) return;
+    reset();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, shift?.id]);
+
+  const locked = shift && ['in_progress', 'completed'].includes(String(shift.status));
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!shift?.id) return;
+    post(route('control-room.guard-shifts.cancel', shift.id), {
+      preserveScroll: true,
+      onSuccess: () => {
+        onSuccess();
+        reset();
+        onClose();
+      },
+    });
+  };
+
+  return (
+    <Modal show={open} onClose={onClose} maxWidth="lg">
+      <div className="px-6 py-4 border-b flex items-center justify-between bg-white dark:bg-gray-900 dark:border-gray-800">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Cancel Shift</h2>
+        <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:text-gray-300 dark:hover:text-gray-100">✕</button>
+      </div>
+      <div className="px-6 py-4 bg-white dark:bg-gray-900">
+        {locked ? (
+          <div className="mb-3 text-sm text-red-600">This shift is locked and cannot be cancelled.</div>
+        ) : null}
+        <form className="space-y-3" onSubmit={submit}>
+          <div className="text-sm text-gray-700 dark:text-gray-200">
+            {shift?.guard_relation?.name || 'Guard'} • {shift?.client_site?.name || 'Site'} • {String(shift?.date ?? '').substring(0, 10)}
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-900 dark:text-gray-100">Reason</label>
+            <textarea
+              className="w-full border border-gray-200 dark:border-gray-700 rounded-md p-2 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100"
+              rows={3}
+              value={data.reason}
+              onChange={(e) => setData('reason', e.target.value)}
+              disabled={processing || locked}
+            />
+            {errors.reason && <p className="text-sm text-red-600">{errors.reason as any}</p>}
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <button type="button" onClick={onClose} className="px-4 py-2 text-sm rounded-md bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700" disabled={processing}>Close</button>
+            <button type="submit" disabled={processing || locked || !data.reason.trim()} className="px-4 py-2 text-sm rounded-md bg-red-700 text-white hover:bg-red-600 disabled:opacity-50">Cancel Shift</button>
+          </div>
+        </form>
+      </div>
+    </Modal>
+  );
+}
+
+function GuardShiftBulkModal({ open, onClose, shiftIds, guards, sites, onSuccess }: { open: boolean; onClose: () => void; shiftIds: number[]; guards: any[]; sites: any[]; onSuccess: () => void }) {
+  const { data, setData, post, processing, errors, reset } = useForm<{ action: 'cancel' | 'reassign_guard' | 'reassign_site'; reason: string; guard_id: number | ''; client_site_id: number | '' }>({
+    action: 'cancel',
+    reason: '',
+    guard_id: '',
+    client_site_id: '',
+  });
+
+  useEffect(() => {
+    if (!open) return;
+    reset();
+    setData('action', 'cancel');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    router.post(
+      route('control-room.guard-shifts.bulk'),
+      {
+        shift_ids: shiftIds,
+        action: data.action,
+        reason: data.action === 'cancel' ? data.reason : undefined,
+        guard_id: data.action === 'reassign_guard' ? data.guard_id : undefined,
+        client_site_id: data.action === 'reassign_site' ? data.client_site_id : undefined,
+      },
+      {
+        preserveScroll: true,
+        onSuccess: () => {
+          onSuccess();
+          onClose();
+        },
+      }
+    );
+  };
+
+  const needsReason = data.action === 'cancel';
+  const needsGuard = data.action === 'reassign_guard';
+  const needsSite = data.action === 'reassign_site';
+
+  const disabled =
+    processing ||
+    !shiftIds.length ||
+    (needsReason && !data.reason.trim()) ||
+    (needsGuard && !data.guard_id) ||
+    (needsSite && !data.client_site_id);
+
+  return (
+    <Modal show={open} onClose={onClose} maxWidth="lg">
+      <div className="px-6 py-4 border-b flex items-center justify-between bg-white dark:bg-gray-900 dark:border-gray-800">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Bulk Actions</h2>
+        <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:text-gray-300 dark:hover:text-gray-100">✕</button>
+      </div>
+      <div className="px-6 py-4 bg-white dark:bg-gray-900">
+        <div className="text-sm text-gray-700 dark:text-gray-200">{shiftIds.length} shift(s) selected</div>
+        <form className="mt-3 space-y-4" onSubmit={submit}>
+          <div>
+            <label className="block text-sm font-medium text-gray-900 dark:text-gray-100">Action</label>
+            <select
+              className="w-full border border-gray-200 dark:border-gray-700 rounded-md p-2 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100"
+              value={data.action}
+              onChange={(e) => setData('action', e.target.value as any)}
+              disabled={processing}
+            >
+              <option value="cancel">Cancel</option>
+              <option value="reassign_guard">Reassign Guard</option>
+              <option value="reassign_site">Reassign Site</option>
+            </select>
+            {errors.action && <p className="text-sm text-red-600">{errors.action as any}</p>}
+          </div>
+
+          {needsReason ? (
+            <div>
+              <label className="block text-sm font-medium text-gray-900 dark:text-gray-100">Reason</label>
+              <textarea
+                className="w-full border border-gray-200 dark:border-gray-700 rounded-md p-2 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100"
+                rows={3}
+                value={data.reason}
+                onChange={(e) => setData('reason', e.target.value)}
+                disabled={processing}
+              />
+              {errors.reason && <p className="text-sm text-red-600">{errors.reason as any}</p>}
+            </div>
+          ) : null}
+
+          {needsGuard ? (
+            <div>
+              <label className="block text-sm font-medium text-gray-900 dark:text-gray-100">Guard</label>
+              <select
+                className="w-full border border-gray-200 dark:border-gray-700 rounded-md p-2 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100"
+                value={data.guard_id as any}
+                onChange={(e) => setData('guard_id', e.target.value ? Number(e.target.value) : '')}
+                disabled={processing}
+              >
+                <option value="">Select guard</option>
+                {guards.map((g: any) => (
+                  <option key={g.id} value={g.id}>{g.name}{g.employee_id ? ` (${g.employee_id})` : ''}</option>
+                ))}
+              </select>
+              {errors.guard_id && <p className="text-sm text-red-600">{errors.guard_id as any}</p>}
+            </div>
+          ) : null}
+
+          {needsSite ? (
+            <div>
+              <label className="block text-sm font-medium text-gray-900 dark:text-gray-100">Site</label>
+              <select
+                className="w-full border border-gray-200 dark:border-gray-700 rounded-md p-2 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100"
+                value={data.client_site_id as any}
+                onChange={(e) => setData('client_site_id', e.target.value ? Number(e.target.value) : '')}
+                disabled={processing}
+              >
+                <option value="">Select site</option>
+                {sites.map((s: any) => (
+                  <option key={s.id} value={s.id}>{s.name}</option>
+                ))}
+              </select>
+              {errors.client_site_id && <p className="text-sm text-red-600">{errors.client_site_id as any}</p>}
+            </div>
+          ) : null}
+
+          <div className="flex justify-end gap-2 pt-2">
+            <button type="button" onClick={onClose} className="px-4 py-2 text-sm rounded-md bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700" disabled={processing}>Close</button>
+            <button type="submit" disabled={disabled} className="px-4 py-2 text-sm rounded-md bg-coin-700 text-white hover:bg-coin-600 disabled:opacity-50">Run</button>
           </div>
         </form>
       </div>
@@ -858,7 +1495,7 @@ function EditShiftModal({ open, onClose, shift, supervisors, sites }: EditShiftM
           <div>
             <label className="block text-sm font-medium">Name</label>
             <input
-              className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100"
+              className="w-full border border-gray-200 dark:border-gray-700 rounded-md p-2 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100"
               value={data.name}
               onChange={(e) => setData('name', e.target.value)}
             />
@@ -867,7 +1504,7 @@ function EditShiftModal({ open, onClose, shift, supervisors, sites }: EditShiftM
           <div>
             <label className="block text-sm font-medium">Supervisor</label>
             <select
-              className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100"
+              className="w-full border border-gray-200 dark:border-gray-700 rounded-md p-2 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100"
               value={data.supervisor_id as any}
               onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
                 setData('supervisor_id', e.target.value ? Number(e.target.value) : '')
@@ -886,7 +1523,7 @@ function EditShiftModal({ open, onClose, shift, supervisors, sites }: EditShiftM
             <label className="block text-sm font-medium">Start Time</label>
             <input
               type="time"
-              className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100"
+              className="w-full border border-gray-200 dark:border-gray-700 rounded-md p-2 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100"
               value={data.start_time}
               onChange={(e) => setData('start_time', e.target.value)}
             />
@@ -896,7 +1533,7 @@ function EditShiftModal({ open, onClose, shift, supervisors, sites }: EditShiftM
             <label className="block text-sm font-medium">End Time</label>
             <input
               type="time"
-              className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100"
+              className="w-full border border-gray-200 dark:border-gray-700 rounded-md p-2 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100"
               value={data.end_time}
               onChange={(e) => setData('end_time', e.target.value)}
             />
@@ -923,7 +1560,7 @@ function EditShiftModal({ open, onClose, shift, supervisors, sites }: EditShiftM
             <input
               type="number"
               min={0}
-              className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100"
+              className="w-full border border-gray-200 dark:border-gray-700 rounded-md p-2 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100"
               value={data.required_guards ?? ''}
               onChange={(e) => setData('required_guards', e.target.value === '' ? null : Number(e.target.value))}
             />
@@ -932,7 +1569,7 @@ function EditShiftModal({ open, onClose, shift, supervisors, sites }: EditShiftM
           <div>
             <label className="block text-sm font-medium">Status</label>
             <select
-              className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100"
+              className="w-full border border-gray-200 dark:border-gray-700 rounded-md p-2 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100"
               value={data.status}
               onChange={(e) => setData('status', e.target.value)}
             >
@@ -957,7 +1594,7 @@ function EditShiftModal({ open, onClose, shift, supervisors, sites }: EditShiftM
           </div>
           <div className="sm:col-span-2">
             <label className="block text-sm font-medium">Sites</label>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-64 overflow-auto border rounded p-2 dark:border-gray-800">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-64 overflow-auto border border-gray-200 dark:border-gray-800 rounded p-2 bg-white dark:bg-gray-950">
               {sites.map((s: any) => (
                 <label key={s.id} className="flex items-center gap-2 text-sm">
                   <input
@@ -974,7 +1611,7 @@ function EditShiftModal({ open, onClose, shift, supervisors, sites }: EditShiftM
           <div className="sm:col-span-2">
             <label className="block text-sm font-medium">Description</label>
             <textarea
-              className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100"
+              className="w-full border border-gray-200 dark:border-gray-700 rounded-md p-2 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100"
               rows={3}
               value={data.description}
               onChange={(e) => setData('description', e.target.value)}
@@ -992,7 +1629,7 @@ function EditShiftModal({ open, onClose, shift, supervisors, sites }: EditShiftM
             <button
               type="submit"
               disabled={processing}
-              className="px-4 py-2 text-sm rounded-md bg-coin-700 text-white hover:bg-coin-800 disabled:bg-gray-400"
+              className="px-4 py-2 text-sm rounded-md bg-coin-700 text-white hover:bg-coin-600 disabled:bg-gray-400"
             >
               {processing ? 'Saving...' : 'Save'}
             </button>

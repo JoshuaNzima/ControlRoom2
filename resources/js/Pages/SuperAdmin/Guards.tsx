@@ -10,6 +10,9 @@ import AssignSiteModal from '@/Components/Guards/AssignSiteModal';
 import PromoteGuardModal from '@/Components/HR/PromoteGuardModal';
 import ConfirmModal from '@/Components/ConfirmModal';
 import ReasonModal from '@/Components/ReasonModal';
+import { Card } from '@/Components/ui/card';
+import { Button } from '@/Components/ui/button';
+import { Badge } from '@/Components/ui/badge';
 
 interface Guard {
   id: number;
@@ -19,6 +22,8 @@ interface Guard {
   status?: string;
   supervisor?: { id: number; name: string } | null;
   is_profile_complete?: boolean;
+  site?: { id: number; name: string; client?: { name: string } } | null;
+  notes?: string;
 }
 
 interface Filters {
@@ -35,19 +40,89 @@ interface GuardsPageProps {
     data: Guard[];
     meta?: any;
     links?: any[];
+    stats?: { total: number; active: number; assigned: number; incomplete: number; inactive: number };
   };
-  filters: Filters & { status?: string; profile_status?: string; zone_id?: string; grade_id?: string; sort?: string; dir?: 'asc'|'desc'; per_page?: number|string };
+  inactiveGuards?: {
+    data: Guard[];
+    meta?: any;
+    links?: any[];
+  };
+  filters: Filters & { status?: string; profile_status?: string; zone_id?: string; supervisor_id?: string; sort?: string; dir?: 'asc'|'desc'; per_page?: number|string; view?: string };
   supervisors?: Supervisor[];
-  grades?: GradeOption[];
   zones?: Array<{ id: number; name: string }>;
+  can?: {
+    suspend: boolean;
+    dismiss: boolean;
+    reinstate: boolean;
+  };
 }
 
-export default function SuperAdminGuards({ guards, filters, supervisors = [], grades = [], zones = [] }: GuardsPageProps) {
+// Animated Counter
+const AnimatedCounter: React.FC<{ value: number; duration?: number }> = ({ value, duration = 1000 }) => {
+  const [count, setCount] = React.useState(0);
+  
+  React.useEffect(() => {
+    let startTime: number;
+    let animationFrame: number;
+    
+    const animate = (timestamp: number) => {
+      if (!startTime) startTime = timestamp;
+      const progress = Math.min((timestamp - startTime) / duration, 1);
+      setCount(Math.floor(progress * value));
+      
+      if (progress < 1) animationFrame = requestAnimationFrame(animate);
+    };
+    
+    animationFrame = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(animationFrame);
+  }, [value, duration]);
+  
+  return <span>{count.toLocaleString()}</span>;
+};
+
+// Stat Card Component
+interface StatCardProps {
+  icon: React.ReactNode;
+  title: string;
+  value: number;
+  subtitle: string;
+  color: 'red' | 'blue' | 'green' | 'amber' | 'purple';
+}
+
+const StatCard: React.FC<StatCardProps> = ({ icon, title, value, subtitle, color }) => {
+  const colorMap = {
+    red: { bg: 'bg-red-50 dark:bg-red-950/20', border: 'border-red-200 dark:border-red-800', icon: 'bg-red-600 text-white', text: 'text-red-700 dark:text-red-300' },
+    blue: { bg: 'bg-blue-50 dark:bg-blue-950/20', border: 'border-blue-200 dark:border-blue-800', icon: 'bg-blue-600 text-white', text: 'text-blue-700 dark:text-blue-300' },
+    green: { bg: 'bg-emerald-50 dark:bg-emerald-950/20', border: 'border-emerald-200 dark:border-emerald-800', icon: 'bg-emerald-600 text-white', text: 'text-emerald-700 dark:text-emerald-300' },
+    amber: { bg: 'bg-amber-50 dark:bg-amber-950/20', border: 'border-amber-200 dark:border-amber-800', icon: 'bg-amber-600 text-white', text: 'text-amber-700 dark:text-amber-300' },
+    purple: { bg: 'bg-purple-50 dark:bg-purple-950/20', border: 'border-purple-200 dark:border-purple-800', icon: 'bg-purple-600 text-white', text: 'text-purple-700 dark:text-purple-300' },
+  };
+  
+  const colors = colorMap[color];
+  
+  return (
+    <div className={`${colors.bg} ${colors.border} rounded-xl border p-5 transition-all duration-300 hover:scale-[1.02]`}>
+      <div className={`${colors.icon} p-3 rounded-lg shadow-md w-fit`}>
+        {icon}
+      </div>
+      <div className="mt-4">
+        <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+          <AnimatedCounter value={value} />
+        </p>
+        <p className={`text-sm font-medium ${colors.text} mt-1`}>{title}</p>
+        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{subtitle}</p>
+      </div>
+    </div>
+  );
+};
+
+export default function SuperAdminGuards({ guards, inactiveGuards, filters, supervisors = [], zones = [], can = { suspend: true, dismiss: true, reinstate: true } }: GuardsPageProps) {
   const [search, setSearch] = React.useState(filters.search || '');
   const [status, setStatus] = React.useState<string>(filters.status || '');
   const [profileStatus, setProfileStatus] = React.useState<string>(filters.profile_status || '');
   const [zoneId, setZoneId] = React.useState<string>(filters.zone_id || '');
-  const [gradeId, setGradeId] = React.useState<string>(filters.grade_id || '');
+  const [supervisorId, setSupervisorId] = React.useState<string>(filters.supervisor_id || '');
+  const [view, setView] = React.useState<string>(filters.view || 'active');
   const [sort, setSort] = React.useState<string>(() => {
     if (filters.sort) return String(filters.sort);
     if (typeof window !== 'undefined') return window.localStorage.getItem('superadmin.guards.sort') || 'name';
@@ -79,6 +154,7 @@ export default function SuperAdminGuards({ guards, filters, supervisors = [], gr
   const [selectedGuardIds, setSelectedGuardIds] = React.useState<number[]>([]);
   const [showSupervisor, setShowSupervisor] = React.useState(false);
   const [selectedSupervisorId, setSelectedSupervisorId] = React.useState<string>('');
+  
   // Confirm & Reason modals
   const [confirmOpen, setConfirmOpen] = React.useState(false);
   const [confirmTitle, setConfirmTitle] = React.useState('');
@@ -88,6 +164,12 @@ export default function SuperAdminGuards({ guards, filters, supervisors = [], gr
   const [reasonTitle, setReasonTitle] = React.useState('');
   const [reasonMessage, setReasonMessage] = React.useState('');
   const [reasonSubmit, setReasonSubmit] = React.useState<((reason: string) => void) | null>(null);
+  
+  // Bulk import state
+  const [importOpen, setImportOpen] = React.useState(false);
+  const [importFile, setImportFile] = React.useState<File | null>(null);
+  const [importProcessing, setImportProcessing] = React.useState(false);
+  const [importAllowUpdates, setImportAllowUpdates] = React.useState(false);
 
   const openConfirm = (title: string, message: string, action: () => void) => {
     setConfirmTitle(title); setConfirmMessage(message); setConfirmAction(() => action); setConfirmOpen(true);
@@ -106,33 +188,59 @@ export default function SuperAdminGuards({ guards, filters, supervisors = [], gr
   const applyFilters = () => {
     const query: Record<string, any> = {
       search: search || undefined,
-      status: status || undefined,
+      status: view === 'inactive' ? undefined : (status || undefined),
       profile_status: profileStatus || undefined,
       zone_id: zoneId || undefined,
-      grade_id: gradeId || undefined,
+      supervisor_id: supervisorId || undefined,
       sort,
       dir,
       per_page: perPage,
+      view,
     };
-    router.get(route('superadmin.guards'), query, { preserveState: true, preserveScroll: true });
+    router.get(route('superadmin.guards', query), { preserveState: true, preserveScroll: true });
   };
+  
   const resetFilters = () => {
-    setSearch(''); setStatus(''); setProfileStatus(''); setZoneId(''); setGradeId(''); setSort('name'); setDir('asc'); setPerPage('20');
-    router.get(route('superadmin.guards'), {}, { preserveState: true, preserveScroll: true });
+    setSearch(''); setStatus(''); setProfileStatus(''); setZoneId(''); setSupervisorId(''); setSort('name'); setDir('asc'); setPerPage('20'); setView('active');
+    router.get(route('superadmin.guards'), { preserveState: true, preserveScroll: true });
   };
 
   const handleExport = () => {
     const query: Record<string, any> = {
       search: search || undefined,
-      status: status || undefined,
+      status: view === 'inactive' ? undefined : (status || undefined),
       profile_status: profileStatus || undefined,
       zone_id: zoneId || undefined,
-      grade_id: gradeId || undefined,
+      supervisor_id: supervisorId || undefined,
       sort,
       dir,
     };
     const url = route('admin.guards.export', query);
     window.location.href = url;
+  };
+
+  const handleImport = () => {
+    if (!importFile) return;
+    setImportProcessing(true);
+    const formData = new FormData();
+    formData.append('file', importFile);
+    formData.append('allow_updates', importAllowUpdates ? '1' : '0');
+    router.post(route('superadmin.guards.bulk-import'), formData, {
+      onSuccess: () => {
+        setImportOpen(false);
+        setImportFile(null);
+        setImportAllowUpdates(false);
+        setImportProcessing(false);
+        router.reload();
+      },
+      onError: () => {
+        setImportProcessing(false);
+      },
+    });
+  };
+
+  const downloadTemplate = () => {
+    window.open(route('superadmin.guards.bulk-import-template'), '_blank');
   };
 
   function showToast(message: string) {
@@ -261,338 +369,682 @@ export default function SuperAdminGuards({ guards, filters, supervisors = [], gr
     }
   };
 
+  // Stats calculation from backend
+  const stats = React.useMemo(() => {
+    return {
+      total: guards.stats?.total ?? guards.meta?.total ?? guards.data.length,
+      active: guards.stats?.active ?? guards.data.filter((g: Guard) => g.status === 'active').length,
+      inactive: guards.stats?.inactive ?? guards.data.filter((g: Guard) => ['inactive', 'suspended', 'dismissed', 'absconded'].includes(g.status || '')).length,
+      incomplete: guards.stats?.incomplete ?? guards.data.filter((g: Guard) => g.is_profile_complete === false).length,
+      assigned: guards.stats?.assigned ?? guards.data.filter((g: Guard) => g.site).length,
+    };
+  }, [guards]);
+
+  const getStatusColor = (status?: string) => {
+    switch (status) {
+      case 'active': return 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300';
+      case 'inactive': return 'bg-slate-100 text-slate-800 dark:bg-slate-900/40 dark:text-slate-300';
+      case 'suspended': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300';
+      case 'dismissed': return 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300';
+      case 'resigned': return 'bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-300';
+      case 'retired': return 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300';
+      case 'absconded': return 'bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-300';
+      default: return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300';
+    }
+  };
+
   return (
     <SuperAdminLayout title="Guards Management">
       <Head title="Guards" />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="min-w-0">
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Guards Management</h1>
-            <p className="text-gray-600 dark:text-gray-300">Manage field guards and assignments</p>
-          </div>
-          <div className="flex flex-wrap items-center justify-start sm:justify-end gap-2">
-            <button
-              type="button"
-              onClick={handleExport}
-              className="px-4 py-2 border dark:border-gray-700 rounded bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200"
-              title="Export CSV"
-              aria-label="Export CSV"
-            >
-              <IconMapper name="FileDown" size={18} />
-            </button>
-            <button
-              onClick={openAdd}
-              className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-bold shadow-md transition-all transform hover:scale-105"
-              title="Add Guard"
-              aria-label="Add Guard"
-            >
-              <IconMapper name="Plus" size={20} />
-              <span className="hidden sm:inline">Add Guard</span>
-              <span className="sm:hidden">Add</span>
-            </button>
-          </div>
-        </div>
-        {/* Filters */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-7 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Search</label>
-              <div className="relative">
-                <span className="absolute left-3 top-3 text-gray-400"><IconMapper name="Search" size={20} /></span>
-                <input
-                  type="text"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && applyFilters()}
-                  placeholder="Name or Employee ID..."
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-red-600"
-                />
+      <div className="min-h-screen bg-red-50 dark:bg-gray-900">
+        {/* Hero Header */}
+        <div className="relative overflow-hidden bg-gradient-to-br from-red-800 via-red-700 to-rose-800 text-white">
+          <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg%20width%3D%2260%22%20height%3D%2260%22%20viewBox%3D%220%200%2060%2060%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%3E%3Cg%20fill%3D%22none%22%20fill-rule%3D%22evenodd%22%3E%3Cg%20fill%3D%22%23ffffff%22%20fill-opacity%3D%220.05%22%3E%3Cpath%20d%3D%22M36%2034v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6%2034v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6%204V0H4v4H0v2h4v4h2V6h4V4H6z%22/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] opacity-20" />
+          
+          <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-white/10 rounded-xl backdrop-blur-sm">
+                  <IconMapper name="Shield" size={28} />
+                </div>
+                <div>
+                  <h1 className="text-2xl md:text-3xl font-bold">Guards Management</h1>
+                  <p className="text-red-100 text-sm mt-1">Manage field guards and assignments</p>
+                </div>
               </div>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Status</label>
-              <select value={status} onChange={(e) => setStatus(e.target.value)} className="w-full rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-2 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
-                <option value="">All</option>
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-                <option value="suspended">Suspended</option>
-                <option value="dismissed">Dismissed</option>
-                <option value="absconded">Absconded</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Profile</label>
-              <select value={profileStatus} onChange={(e) => setProfileStatus(e.target.value)} className="w-full rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-2 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
-                <option value="">All</option>
-                <option value="complete">Complete</option>
-                <option value="incomplete">Incomplete</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Zone</label>
-              <select value={zoneId} onChange={(e) => setZoneId(e.target.value)} className="w-full rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-2 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
-                <option value="">All</option>
-                {zones.map((z) => (<option key={z.id} value={z.id}>{z.name}</option>))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Grade</label>
-              <select value={gradeId} onChange={(e) => setGradeId(e.target.value)} className="w-full rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-2 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
-                <option value="">All</option>
-                {grades.map((g) => (<option key={g.id} value={g.id}>{g.code ?? g.name}</option>))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Sort By</label>
               <div className="flex items-center gap-2">
-                <select value={sort} onChange={(e) => setSort(e.target.value)} className="flex-1 rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-2 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
-                  <option value="name">Name</option>
-                  <option value="employee_id">Employee ID</option>
-                  <option value="status">Status</option>
-                  <option value="supervisor_id">Supervisor</option>
-                </select>
-                <button onClick={() => setDir(d => d === 'asc' ? 'desc' : 'asc')} className="px-3 py-2 rounded border dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200">
-                  {dir === 'asc' ? 'Asc' : 'Desc'}
-                </button>
+                <Button
+                  variant="outline"
+                  onClick={handleExport}
+                  className="bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white"
+                >
+                  <IconMapper name="Download" size={18} className="mr-2" />
+                  Export
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setImportOpen(true)}
+                  className="bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white"
+                >
+                  <IconMapper name="Upload" size={18} className="mr-2" />
+                  Bulk Import
+                </Button>
+                <Button 
+                  onClick={openAdd}
+                  className="bg-white text-red-700 hover:bg-red-50"
+                >
+                  <IconMapper name="Plus" size={18} className="mr-2" />
+                  Add Guard
+                </Button>
               </div>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Per Page</label>
-              <select value={perPage} onChange={(e) => setPerPage(e.target.value)} className="w-32 rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-2 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
-                {['10','20','50','100'].map(n => (<option key={n} value={n}>{n}</option>))}
-              </select>
-            </div>
-          </div>
-          <div className="mt-4 flex flex-col md:flex-row gap-2 md:items-center md:justify-between">
-            <div className="text-sm text-gray-600 dark:text-gray-300">Page {guards.meta?.current_page ?? ''} of {guards.meta?.last_page ?? ''}</div>
-            <div className="flex gap-2">
-              <button onClick={applyFilters} className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded">Apply</button>
-              <button onClick={resetFilters} className="px-4 py-2 border dark:border-gray-700 rounded bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200">Reset</button>
             </div>
           </div>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-            <thead className="bg-gray-50 dark:bg-gray-900/50">
-              <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+          {/* Stats Grid */}
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            <StatCard
+              icon={<IconMapper name="Users" size={24} />}
+              title="Total Guards"
+              value={stats.total}
+              subtitle="All personnel"
+              color="red"
+            />
+            <StatCard
+              icon={<IconMapper name="Activity" size={24} />}
+              title="Active Guards"
+              value={stats.active}
+              subtitle="Currently active"
+              color="green"
+            />
+            <StatCard
+              icon={<IconMapper name="MapPin" size={24} />}
+              title="Assigned"
+              value={stats.assigned}
+              subtitle="To sites"
+              color="purple"
+            />
+            <StatCard
+              icon={<IconMapper name="AlertCircle" size={24} />}
+              title="Incomplete"
+              value={stats.incomplete}
+              subtitle="Profiles need attention"
+              color="amber"
+            />
+            <StatCard
+              icon={<IconMapper name="UserX" size={24} />}
+              title="Inactive"
+              value={stats.inactive}
+              subtitle="Suspended/Dismissed/etc"
+              color="red"
+            />
+          </div>
+
+          {/* View Toggle */}
+          <div className="flex items-center gap-2 bg-white dark:bg-gray-900 p-2 rounded-lg border border-gray-200 dark:border-gray-800 w-fit">
+            <button
+              onClick={() => { setView('active'); applyFilters(); }}
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                view === 'active'
+                  ? 'bg-red-600 text-white'
+                  : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
+              }`}
+            >
+              <IconMapper name="Users" size={16} className="inline mr-2" />
+              Active Guards
+            </button>
+            <button
+              onClick={() => { setView('inactive'); applyFilters(); }}
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                view === 'inactive'
+                  ? 'bg-red-600 text-white'
+                  : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
+              }`}
+            >
+              <IconMapper name="UserX" size={16} className="inline mr-2" />
+              Inactive Guards
+            </button>
+          </div>
+
+          {/* Filters */}
+          <Card className="p-4 md:p-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-6 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Search</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-2.5 text-gray-400"><IconMapper name="Search" size={18} /></span>
                   <input
-                    type="checkbox"
-                    className="rounded border-gray-300"
-                    checked={guards.data.length > 0 && guards.data.every((g: Guard) => selectedGuardIds.includes(g.id))}
-                    onChange={toggleSelectAll}
+                    type="text"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && applyFilters()}
+                    placeholder="Name or Employee ID..."
+                    className="w-full pl-9 pr-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-red-500 focus:border-red-500 text-sm"
                   />
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Guard</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Employee ID</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Supervisor</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Phone</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Status</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-              {guards.data.map((guard) => (
-                <tr key={guard.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                  <td className="px-4 py-3 text-sm">
-                    <input
-                      type="checkbox"
-                      className="rounded border-gray-300"
-                      checked={selectedGuardIds.includes(guard.id)}
-                      onChange={() => toggleGuardSelected(guard.id)}
-                    />
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-gradient-to-br from-red-500 to-rose-600 rounded-full flex items-center justify-center text-white font-bold">
-                        {guard.name.charAt(0)}
-                      </div>
-                      <button onClick={() => openDetails(guard.id)} className="text-left">
-                        <div className="font-medium text-gray-900 dark:text-gray-100 hover:underline">{guard.name}</div>
-                        {guard.is_profile_complete === false ? (
-                          <div className="mt-1">
-                            <span className="inline-flex px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200 text-xs">
-                              Profile incomplete
-                            </span>
-                          </div>
-                        ) : null}
-                      </button>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-900 dark:text-gray-100">{guard.employee_id}</td>
-                  <td className="px-6 py-4">
-                    <span className="text-sm text-gray-700 dark:text-gray-300">{guard.supervisor?.name || 'Unassigned'}</span>
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">{guard.phone || 'N/A'}</td>
-                  <td className="px-6 py-4">
-                    <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                      guard.status === 'active'
-                        ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100'
-                        : guard.status === 'suspended'
-                        ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100'
-                        : guard.status === 'absconded'
-                        ? 'bg-rose-100 text-rose-800 dark:bg-rose-900 dark:text-rose-100'
-                        : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-100'
-                    }`}>
-                      {guard.status || 'Active'}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => openEdit(guard.id)}
-                        className="p-2 text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition"
-                        title="Edit"
-                      >
-                        <IconMapper name="Pencil" size={18} />
-                      </button>
-                      <button
-                        onClick={() => openAssign(guard.id)}
-                        className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition"
-                        title="Assign to site"
-                        aria-label="Assign to site"
-                      >
-                        <IconMapper name="MapPin" size={18} />
-                      </button>
-                      <button
-                        onClick={() => { setSelectedSupervisorId(''); setShowSupervisor(true); setSelectedGuardIds([guard.id]); }}
-                        className="p-2 bg-gray-800 hover:bg-gray-900 text-white rounded-lg transition"
-                        title="Assign Supervisor"
-                      >
-                        <IconMapper name="UserPlus" size={18} />
-                      </button>
-                      <button
-                        onClick={() => openPromote(guard.id)}
-                        className="p-2 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-lg transition"
-                        title="Promote"
-                        aria-label="Promote"
-                      >
-                        <IconMapper name="ArrowUpCircle" size={18} />
-                      </button>
-                      <button
-                        onClick={() => openConfirm('Delete guard', `Are you sure you want to delete ${guard.name}?`, () => router.delete(route('admin.guards.destroy', { guard: guard.id })))}
-                        className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition"
-                      >
-                        <IconMapper name="Trash" size={18} />
-                      </button>
-                      <button
-                        onClick={() => {
-                          const isSuspending = guard.status === 'active';
-                          openConfirm(
-                            `${isSuspending ? 'Suspend' : 'Reinstate'} guard`,
-                            `${isSuspending ? 'Suspend' : 'Reinstate'} ${guard.name}?`,
-                            async () => {
-                              setLoadingId(guard.id);
-                              try {
-                                const routeName = isSuspending ? 'admin.guards.suspend' : 'admin.guards.reinstate';
-                                await router.post(route(routeName, { guard: guard.id }), {});
-                                showToast(`Guard ${guard.name} ${isSuspending ? 'suspended' : 'reinstated'}`);
-                              } catch (e) {
-                                showToast('Failed to update status');
-                              } finally {
-                                setLoadingId(null);
-                              }
-                            }
-                          );
-                        }}
-                        className="p-2 text-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 rounded-lg transition"
-                        title={guard.status === 'active' ? 'Suspend guard' : 'Reinstate guard'}
-                        aria-label={guard.status === 'active' ? 'Suspend guard' : 'Reinstate guard'}
-                        disabled={loadingId === guard.id}
-                      >
-                        {loadingId === guard.id ? (
-                          <IconMapper name="Loader2" size={18} />
-                        ) : (
-                          <IconMapper name={guard.status === 'active' ? 'PauseCircle' : 'PlayCircle'} size={18} />
-                        )}
-                      </button>
-                      <button
-                        onClick={() => openReason('Dismiss Guard', `Provide a reason (optional) for dismissing ${guard.name}`, async (reason: string) => {
-                          setLoadingId(guard.id);
-                          try {
-                            await router.post(route('admin.guards.dismiss', { guard: guard.id }), { reason });
-                            showToast(`Guard ${guard.name} dismissed`);
-                          } catch (e) {
-                            showToast('Failed to dismiss guard');
-                          } finally {
-                            setLoadingId(null);
-                          }
-                        })}
-                        className="p-2 text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-800 rounded-lg transition"
-                        title="Dismiss guard"
-                        aria-label="Dismiss guard"
-                        disabled={loadingId === guard.id}
-                      >
-                        Dismiss
-                      </button>
-                      <button
-                        onClick={() => openReason('Mark as Absconded', `Provide a reason (optional) for marking ${guard.name} as absconded`, async (reason: string) => {
-                          setLoadingId(guard.id);
-                          try {
-                            await router.post(route('admin.guards.abscond', { guard: guard.id }), { reason });
-                            showToast(`Guard ${guard.name} marked absconded`);
-                          } catch (e) {
-                            showToast('Failed to mark absconded');
-                          } finally {
-                            setLoadingId(null);
-                          }
-                        })}
-                        className="p-2 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-lg transition"
-                        title="Mark as absconded"
-                        aria-label="Mark as absconded"
-                        disabled={loadingId === guard.id}
-                      >
-                        Abscond
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-              {guards.data.length === 0 && (
-                <tr>
-                  <td colSpan={7} className="px-6 py-8 text-center text-gray-500">No guards found.</td>
-                </tr>
+                </div>
+              </div>
+              {view === 'active' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Status</label>
+                  <select 
+                    value={status} 
+                    onChange={(e) => setStatus(e.target.value)} 
+                    className="w-full rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-2 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-sm focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                  >
+                    <option value="">All Active</option>
+                    <option value="active">Active</option>
+                    <option value="on_leave">On Leave</option>
+                    <option value="training">Training</option>
+                  </select>
+                </div>
               )}
-            </tbody>
-          </table>
-          {/* Footer: selection and pagination */}
-          <div className="p-4 border-t dark:border-gray-700 flex flex-col md:flex-row items-center justify-between gap-3">
-            <div className="text-sm text-gray-600 dark:text-gray-300">Page {guards.meta?.current_page ?? ''} of {guards.meta?.last_page ?? ''}</div>
-            {selectedGuardIds.length > 0 && (
-              <div className="text-xs text-gray-500 dark:text-gray-400">{selectedGuardIds.length} selected</div>
-            )}
-            <div className="flex flex-wrap items-center gap-2">
-              {Array.isArray(guards.links) && guards.links.filter((l: any) => l.url !== null).map((l: any, idx: number) => (
-                <button
-                  key={idx}
-                  className={`px-3 py-1 rounded border dark:border-gray-700 ${l.active ? 'bg-red-600 text-white' : 'bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200'}`}
-                  onClick={() => router.get(l.url, {}, { preserveScroll: true, preserveState: true })}
-                  dangerouslySetInnerHTML={{ __html: l.label }}
-                />
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Profile</label>
+                <select 
+                  value={profileStatus} 
+                  onChange={(e) => setProfileStatus(e.target.value)} 
+                  className="w-full rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-2 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-sm focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                >
+                  <option value="">All</option>
+                  <option value="complete">Complete</option>
+                  <option value="incomplete">Incomplete</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Zone</label>
+                <select 
+                  value={zoneId} 
+                  onChange={(e) => setZoneId(e.target.value)} 
+                  className="w-full rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-2 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-sm focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                >
+                  <option value="">All</option>
+                  {zones.map((z) => (<option key={z.id} value={z.id}>{z.name}</option>))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Supervisor/Sergeant</label>
+                <select 
+                  value={supervisorId} 
+                  onChange={(e) => setSupervisorId(e.target.value)} 
+                  className="w-full rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-2 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-sm focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                >
+                  <option value="">All</option>
+                  <option value="unassigned">Unassigned</option>
+                  {supervisors.map((s) => (<option key={s.id} value={s.id}>{s.name}</option>))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Sort By</label>
+                <div className="flex items-center gap-2">
+                  <select 
+                    value={sort} 
+                    onChange={(e) => setSort(e.target.value)} 
+                    className="flex-1 rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-2 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-sm focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                  >
+                    <option value="name">Name</option>
+                    <option value="employee_id">Employee ID</option>
+                    <option value="status">Status</option>
+                    <option value="supervisor_id">Supervisor</option>
+                  </select>
+                  <button 
+                    onClick={() => setDir(d => d === 'asc' ? 'desc' : 'asc')} 
+                    className="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 text-sm"
+                  >
+                    {dir === 'asc' ? 'Asc' : 'Desc'}
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div className="mt-4 flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-between">
+              <div className="text-sm text-gray-600 dark:text-gray-400">
+                {view === 'inactive' 
+                  ? `Showing ${inactiveGuards?.data?.length || 0} inactive guards`
+                  : `Page ${guards.meta?.current_page ?? '-'} of ${guards.meta?.last_page ?? '-'}`
+                }
+                {selectedGuardIds.length > 0 && (
+                  <span className="ml-2 text-red-600 dark:text-red-400">({selectedGuardIds.length} selected)</span>
+                )}
+              </div>
+              <div className="flex gap-2">
+                {selectedGuardIds.length > 0 && view === 'active' && (
+                  <Button 
+                    variant="outline" 
+                    onClick={() => { setSelectedSupervisorId(''); setShowSupervisor(true); }}
+                    className="text-sm"
+                  >
+                    <IconMapper name="UserPlus" size={16} className="mr-1.5" />
+                    Assign Supervisor
+                  </Button>
+                )}
+                <Button onClick={applyFilters} className="bg-red-600 hover:bg-red-700 text-sm">
+                  Apply Filters
+                </Button>
+                <Button variant="outline" onClick={resetFilters} className="text-sm">
+                  Reset
+                </Button>
+              </div>
+            </div>
+          </Card>
+
+          {/* Mobile Cards - Active Guards */}
+          {view === 'active' && (
+            <div className="lg:hidden space-y-3">
+              {guards.data.map((guard) => (
+                <Card key={guard.id} className="overflow-hidden">
+                  <div className="p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="checkbox"
+                          className="rounded border-gray-300 dark:border-gray-600"
+                          checked={selectedGuardIds.includes(guard.id)}
+                          onChange={() => toggleGuardSelected(guard.id)}
+                        />
+                        <div className="w-10 h-10 bg-gradient-to-br from-red-500 to-rose-600 rounded-full flex items-center justify-center text-white font-bold">
+                          {guard.name.charAt(0)}
+                        </div>
+                        <div>
+                          <button onClick={() => openDetails(guard.id)} className="text-left">
+                            <div className="font-medium text-gray-900 dark:text-gray-100 hover:underline">{guard.name}</div>
+                          </button>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">{guard.employee_id}</div>
+                        </div>
+                      </div>
+                      <Badge className={getStatusColor(guard.status)}>
+                        {guard.status || 'Active'}
+                      </Badge>
+                    </div>
+                    
+                    {guard.is_profile_complete === false && (
+                      <div className="mt-2">
+                        <Badge className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200">
+                          Profile incomplete
+                        </Badge>
+                      </div>
+                    )}
+                    
+                    <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
+                      <div>
+                        <span className="text-gray-500 dark:text-gray-400">Supervisor:</span>
+                        <div className="text-gray-700 dark:text-gray-300">{guard.supervisor?.name || 'Unassigned'}</div>
+                      </div>
+                      <div>
+                        <span className="text-gray-500 dark:text-gray-400">Site:</span>
+                        <div className="text-gray-700 dark:text-gray-300">{guard.site?.name || 'Unassigned'}</div>
+                      </div>
+                    </div>
+                    
+                    <div className="mt-3 flex flex-wrap gap-1">
+                      <Button variant="ghost" size="sm" onClick={() => openEdit(guard.id)}>
+                        <IconMapper name="Pencil" size={16} />
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => openAssign(guard.id)}>
+                        <IconMapper name="MapPin" size={16} />
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => openPromote(guard.id)}>
+                        <IconMapper name="ArrowUpCircle" size={16} />
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => { setSelectedSupervisorId(''); setShowSupervisor(true); setSelectedGuardIds([guard.id]); }}
+                      >
+                        <IconMapper name="UserPlus" size={16} />
+                      </Button>
+                      {can.suspend && (
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={() => openReason('Suspend Guard', `Suspend ${guard.name}? This will prevent them from being assigned to sites.`, (reason) => {
+                            router.post(route('admin.guards.suspend', guard.id), { reason }, { preserveScroll: true });
+                          })}
+                          className="text-yellow-600"
+                        >
+                          <IconMapper name="Pause" size={16} />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </Card>
               ))}
             </div>
-          </div>
+          )}
+
+          {/* Mobile Cards - Inactive Guards */}
+          {view === 'inactive' && inactiveGuards && (
+            <div className="lg:hidden space-y-3">
+              {inactiveGuards.data.map((guard) => (
+                <Card key={guard.id} className="overflow-hidden border-l-4 border-l-red-500">
+                  <div className="p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-gradient-to-br from-gray-500 to-gray-600 rounded-full flex items-center justify-center text-white font-bold">
+                          {guard.name.charAt(0)}
+                        </div>
+                        <div>
+                          <button onClick={() => openDetails(guard.id)} className="text-left">
+                            <div className="font-medium text-gray-900 dark:text-gray-100 hover:underline">{guard.name}</div>
+                          </button>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">{guard.employee_id}</div>
+                        </div>
+                      </div>
+                      <Badge className={getStatusColor(guard.status)}>
+                        {guard.status || 'Inactive'}
+                      </Badge>
+                    </div>
+                    
+                    <div className="mt-3 text-sm">
+                      <div className="text-gray-500 dark:text-gray-400">Reason:</div>
+                      <div className="text-gray-700 dark:text-gray-300 text-xs mt-1 line-clamp-2">{guard.notes || 'No reason recorded'}</div>
+                    </div>
+                    
+                    <div className="mt-3 flex flex-wrap gap-1">
+                      {can.reinstate && (
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={() => openConfirm('Reinstate Guard', `Reinstate ${guard.name}? This will restore them to active duty.`, () => {
+                            router.post(route('admin.guards.reinstate', guard.id), {}, { preserveScroll: true });
+                          })}
+                          className="text-green-600"
+                        >
+                          <IconMapper name="RotateCcw" size={16} />
+                          <span className="ml-1">Reinstate</span>
+                        </Button>
+                      )}
+                      <Button variant="ghost" size="sm" onClick={() => openDetails(guard.id)}>
+                        <IconMapper name="Eye" size={16} />
+                      </Button>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          )}
+
+          {/* Desktop Table - Active Guards */}
+          {view === 'active' && (
+            <Card className="hidden lg:block overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                  <thead className="bg-gray-50 dark:bg-gray-900/50">
+                    <tr>
+                      <th className="px-4 py-3 text-left">
+                        <input
+                          type="checkbox"
+                          className="rounded border-gray-300 dark:border-gray-600"
+                          checked={guards.data.length > 0 && guards.data.every((g: Guard) => selectedGuardIds.includes(g.id))}
+                          onChange={toggleSelectAll}
+                        />
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Guard</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Employee ID</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Status</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Supervisor</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Site</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+                    {guards.data.map((guard) => (
+                      <tr key={guard.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                        <td className="px-4 py-3">
+                          <input
+                            type="checkbox"
+                            className="rounded border-gray-300 dark:border-gray-600"
+                            checked={selectedGuardIds.includes(guard.id)}
+                            onChange={() => toggleGuardSelected(guard.id)}
+                          />
+                        </td>
+                        <td className="px-6 py-3">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 bg-gradient-to-br from-red-500 to-rose-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
+                              {guard.name.charAt(0)}
+                            </div>
+                            <div>
+                              <button onClick={() => openDetails(guard.id)} className="text-left hover:underline">
+                                <div className="font-medium text-gray-900 dark:text-gray-100">{guard.name}</div>
+                              </button>
+                              {guard.is_profile_complete === false && (
+                                <Badge className="mt-1 bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200 text-xs">
+                                  Profile incomplete
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-3 text-sm text-gray-700 dark:text-gray-300">{guard.employee_id}</td>
+                        <td className="px-6 py-3">
+                          <Badge className={getStatusColor(guard.status)}>
+                            {guard.status || 'Active'}
+                          </Badge>
+                        </td>
+                        <td className="px-6 py-3 text-sm text-gray-700 dark:text-gray-300">{guard.supervisor?.name || 'Unassigned'}</td>
+                        <td className="px-6 py-3 text-sm text-gray-700 dark:text-gray-300">
+                          {guard.site ? (
+                            <div>
+                              <div className="font-medium">{guard.site.name}</div>
+                              {guard.site.client && (
+                                <div className="text-xs text-gray-500">{guard.site.client.name}</div>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-gray-400">Unassigned</span>
+                          )}
+                        </td>
+                        <td className="px-6 py-3">
+                          <div className="flex items-center gap-1">
+                            <Button variant="ghost" size="sm" onClick={() => openEdit(guard.id)} title="Edit">
+                              <IconMapper name="Pencil" size={16} />
+                            </Button>
+                            <Button variant="ghost" size="sm" onClick={() => openAssign(guard.id)} title="Assign Site">
+                              <IconMapper name="MapPin" size={16} />
+                            </Button>
+                            <Button variant="ghost" size="sm" onClick={() => openPromote(guard.id)} title="Promote">
+                              <IconMapper name="ArrowUpCircle" size={16} />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              onClick={() => { setSelectedSupervisorId(''); setShowSupervisor(true); setSelectedGuardIds([guard.id]); }}
+                              title="Assign Supervisor"
+                            >
+                              <IconMapper name="UserPlus" size={16} />
+                            </Button>
+                            {/* Action Dropdown */}
+                            <div className="relative group">
+                              <Button variant="ghost" size="sm" className="text-gray-600">
+                                <IconMapper name="MoreVertical" size={16} />
+                              </Button>
+                              <div className="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
+                                {can.suspend && (
+                                  <button
+                                    onClick={() => openReason('Suspend Guard', `Suspend ${guard.name}?`, (reason) => {
+                                      router.post(route('admin.guards.suspend', guard.id), { reason }, { preserveScroll: true });
+                                    })}
+                                    className="w-full px-4 py-2 text-left text-sm text-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 first:rounded-t-lg"
+                                  >
+                                    <IconMapper name="Pause" size={14} className="inline mr-2" />
+                                    Suspend
+                                  </button>
+                                )}
+                                {can.dismiss && (
+                                  <button
+                                    onClick={() => openReason('Dismiss Guard', `Dismiss ${guard.name}? This action cannot be undone.`, (reason) => {
+                                      router.post(route('admin.guards.dismiss', guard.id), { reason }, { preserveScroll: true });
+                                    })}
+                                    className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+                                  >
+                                    <IconMapper name="UserX" size={14} className="inline mr-2" />
+                                    Dismiss
+                                  </button>
+                                )}
+                                <button
+                                  onClick={() => openReason('Mark as Resigned', `${guard.name} has resigned?`, (reason) => {
+                                    router.post(route('admin.guards.resign', guard.id), { reason }, { preserveScroll: true });
+                                  })}
+                                  className="w-full px-4 py-2 text-left text-sm text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900/20"
+                                >
+                                  <IconMapper name="LogOut" size={14} className="inline mr-2" />
+                                  Resigned
+                                </button>
+                                <button
+                                  onClick={() => openReason('Mark as Retired', `${guard.name} has retired?`, (reason) => {
+                                    router.post(route('admin.guards.resign', guard.id), { reason, status: 'retired' }, { preserveScroll: true });
+                                  })}
+                                  className="w-full px-4 py-2 text-left text-sm text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 last:rounded-b-lg"
+                                >
+                                  <IconMapper name="Crown" size={14} className="inline mr-2" />
+                                  Retired
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              
+              {/* Pagination */}
+              <div className="px-4 py-3 border-t border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row items-center justify-between gap-3">
+                <div className="text-sm text-gray-600 dark:text-gray-400">
+                  Page {guards.meta?.current_page ?? '-'} of {guards.meta?.last_page ?? '-'}
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  {Array.isArray(guards.links) && guards.links.filter((l: any) => l.url !== null).map((l: any, idx: number) => (
+                    <button
+                      key={idx}
+                      className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+                        l.active 
+                          ? 'bg-red-600 text-white' 
+                          : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700'
+                      }`}
+                      onClick={() => router.get(l.url, {}, { preserveScroll: true, preserveState: true })}
+                      dangerouslySetInnerHTML={{ __html: l.label }}
+                    />
+                  ))}
+                </div>
+              </div>
+            </Card>
+          )}
+
+          {/* Desktop Table - Inactive Guards */}
+          {view === 'inactive' && inactiveGuards && (
+            <Card className="hidden lg:block overflow-hidden border-t-4 border-t-red-500">
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                  <thead className="bg-gray-100 dark:bg-gray-800">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Guard</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Employee ID</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Status</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Reason / Notes</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+                    {inactiveGuards.data.map((guard) => (
+                      <tr key={guard.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                        <td className="px-6 py-3">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 bg-gradient-to-br from-gray-500 to-gray-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
+                              {guard.name.charAt(0)}
+                            </div>
+                            <div>
+                              <button onClick={() => openDetails(guard.id)} className="text-left hover:underline">
+                                <div className="font-medium text-gray-900 dark:text-gray-100">{guard.name}</div>
+                              </button>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-3 text-sm text-gray-700 dark:text-gray-300">{guard.employee_id}</td>
+                        <td className="px-6 py-3">
+                          <Badge className={getStatusColor(guard.status)}>
+                            {guard.status || 'Inactive'}
+                          </Badge>
+                        </td>
+                        <td className="px-6 py-3 text-sm text-gray-700 dark:text-gray-300 max-w-xs">
+                          <div className="truncate" title={guard.notes || ''}>
+                            {guard.notes || 'No reason recorded'}
+                          </div>
+                        </td>
+                        <td className="px-6 py-3">
+                          <div className="flex items-center gap-1">
+                            {can.reinstate && (
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                onClick={() => openConfirm('Reinstate Guard', `Reinstate ${guard.name}? This will restore them to active duty.`, () => {
+                                  router.post(route('admin.guards.reinstate', guard.id), {}, { preserveScroll: true });
+                                })}
+                                className="text-green-600"
+                              >
+                                <IconMapper name="RotateCcw" size={16} />
+                                <span className="ml-1">Reinstate</span>
+                              </Button>
+                            )}
+                            <Button variant="ghost" size="sm" onClick={() => openDetails(guard.id)} title="View Details">
+                              <IconMapper name="Eye" size={16} />
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              
+              {/* Pagination */}
+              {inactiveGuards.meta && (
+                <div className="px-4 py-3 border-t border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row items-center justify-between gap-3">
+                  <div className="text-sm text-gray-600 dark:text-gray-400">
+                    Page {inactiveGuards.meta?.current_page ?? '-'} of {inactiveGuards.meta?.last_page ?? '-'}
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {Array.isArray(inactiveGuards.links) && inactiveGuards.links.filter((l: any) => l.url !== null).map((l: any, idx: number) => (
+                      <button
+                        key={idx}
+                        className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+                          l.active 
+                            ? 'bg-red-600 text-white' 
+                            : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700'
+                        }`}
+                        onClick={() => router.get(l.url, {}, { preserveScroll: true, preserveState: true })}
+                        dangerouslySetInnerHTML={{ __html: l.label }}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+            </Card>
+          )}
         </div>
 
         {/* Add Guard Modal */}
         <Modal show={showAdd} onClose={() => setShowAdd(false)} maxWidth="2xl">
-          <div className="p-4 sm:p-6 bg-white dark:bg-gray-800">
-            <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">Add Guard</h2>
+          <div className="p-4 sm:p-6 bg-white dark:bg-gray-900">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 bg-red-100 dark:bg-red-900/30 rounded-lg">
+                <IconMapper name="UserPlus" size={20} className="text-red-600 dark:text-red-400" />
+              </div>
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Add Guard</h2>
+            </div>
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Photo</label>
               <input
                 type="file"
                 accept="image/*"
                 onChange={(e) => setPhotoCreate(e.target.files?.[0] || null)}
-                className="w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-red-50 file:text-red-700 hover:file:bg-red-100 dark:file:bg-gray-800 dark:file:text-gray-100"
+                className="w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-red-50 file:text-red-700 hover:file:bg-red-100 dark:file:bg-gray-800 dark:file:text-gray-100"
               />
             </div>
             <GuardForm
               initialData={{ status: 'active', guard_type: 'permanent' } as any}
               supervisors={supervisors}
-              grades={grades}
               onSubmit={submitCreate}
               canAssignSupervisor={true}
               processing={saving}
@@ -605,22 +1057,26 @@ export default function SuperAdminGuards({ guards, filters, supervisors = [], gr
 
         {/* Edit Guard Modal */}
         <Modal show={showEdit} onClose={() => setShowEdit(false)} maxWidth="2xl">
-          <div className="p-4 sm:p-6 bg-white dark:bg-gray-800">
-            <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">Edit Guard</h2>
+          <div className="p-4 sm:p-6 bg-white dark:bg-gray-900">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                <IconMapper name="Pencil" size={20} className="text-blue-600 dark:text-blue-400" />
+              </div>
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Edit Guard</h2>
+            </div>
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Photo</label>
               <input
                 type="file"
                 accept="image/*"
                 onChange={(e) => setPhotoEdit(e.target.files?.[0] || null)}
-                className="w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-red-50 file:text-red-700 hover:file:bg-red-100 dark:file:bg-gray-800 dark:file:text-gray-100"
+                className="w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-gray-800 dark:file:text-gray-100"
               />
             </div>
             {selectedGuard && (
               <GuardForm
                 initialData={selectedGuard}
                 supervisors={supervisors}
-                grades={grades}
                 onSubmit={submitUpdate}
                 canAssignSupervisor={true}
                 processing={saving}
@@ -634,95 +1090,51 @@ export default function SuperAdminGuards({ guards, filters, supervisors = [], gr
 
         {/* Guard Details Modal */}
         <Modal show={showDetails} onClose={() => setShowDetails(false)} maxWidth="xl">
-          <div className="p-4 sm:p-6 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+          <div className="p-4 sm:p-6 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold">Guard Details</h2>
-              <button onClick={printDetails} className="px-3 py-1.5 rounded bg-red-600 text-white hover:bg-red-700">Print</button>
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-gray-100 dark:bg-gray-800 rounded-lg">
+                  <IconMapper name="User" size={20} />
+                </div>
+                <h2 className="text-xl font-semibold">Guard Details</h2>
+              </div>
+              <Button onClick={printDetails} variant="outline" size="sm">
+                <IconMapper name="Printer" size={16} className="mr-1.5" />
+                Print
+              </Button>
             </div>
             {!selectedGuard ? (
               <div className="text-sm text-gray-500">Loading...</div>
             ) : (
               <div className="space-y-4">
-                {/* Photo Preview */}
-                {(() => {
-                  const p = (selectedGuard as any).photo as string | undefined;
-                  if (!p) return null;
-                  const url = p.startsWith('http') || p.startsWith('/storage') ? p : `/storage/${p}`;
-                  return (
-                    <div className="flex items-center gap-3">
-                      <img
-                        src={url}
-                        alt={selectedGuard.name}
-                        className="w-24 h-24 rounded-lg object-cover border border-gray-200 dark:border-gray-700"
-                      />
-                      <div className="text-sm text-gray-600 dark:text-gray-300">Profile photo</div>
-                    </div>
-                  );
-                })()}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <div><span className="text-sm text-gray-500">Name</span><div className="font-medium">{selectedGuard.name}</div></div>
-                  <div><span className="text-sm text-gray-500">Employee ID</span><div className="font-medium">{selectedGuard.employee_id}</div></div>
-                  <div><span className="text-sm text-gray-500">Phone</span><div className="font-medium">{selectedGuard.phone || '—'}</div></div>
-                  <div><span className="text-sm text-gray-500">Email</span><div className="font-medium">{selectedGuard.email || '—'}</div></div>
-                </div>
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Identity</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
-                    <div><span className="text-gray-500">Date of Birth</span><div>{selectedGuard.date_of_birth || '—'}</div></div>
-                    <div><span className="text-gray-500">Gender</span><div>{selectedGuard.gender || '—'}</div></div>
-                    <div><span className="text-gray-500">ID Number</span><div>{selectedGuard.id_number || '—'}</div></div>
-                    <div><span className="text-gray-500">Role</span><div>{selectedGuard.employee_role || 'guard'}</div></div>
-                    <div><span className="text-gray-500">Guard Type</span><div>{selectedGuard.guard_type || '—'}</div></div>
-                    <div><span className="text-gray-500">Supervisor</span><div>{selectedGuard.supervisor?.name || '—'}</div></div>
-                  </div>
-                </div>
-
-                {selectedGuard.attendance_tally ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Attendance (This Month)</h3>
-                    <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
-                      <div className="rounded-md border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 p-3">
-                        <div className="text-xs text-gray-500">Present</div>
-                        <div className="mt-1 text-lg font-semibold text-emerald-700 dark:text-emerald-400">{(selectedGuard.attendance_tally.by_status?.present ?? 0) as any}</div>
-                      </div>
-                      <div className="rounded-md border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 p-3">
-                        <div className="text-xs text-gray-500">Absent</div>
-                        <div className="mt-1 text-lg font-semibold text-red-700 dark:text-red-400">{(selectedGuard.attendance_tally.by_status?.absent ?? 0) as any}</div>
-                      </div>
-                      <div className="rounded-md border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 p-3">
-                        <div className="text-xs text-gray-500">Late</div>
-                        <div className="mt-1 text-lg font-semibold text-yellow-700 dark:text-yellow-400">{(selectedGuard.attendance_tally.by_status?.late ?? 0) as any}</div>
-                      </div>
-                      <div className="rounded-md border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 p-3">
-                        <div className="text-xs text-gray-500">Half Day</div>
-                        <div className="mt-1 text-lg font-semibold text-orange-700 dark:text-orange-400">{(selectedGuard.attendance_tally.by_status?.half_day ?? 0) as any}</div>
-                      </div>
-                      <div className="rounded-md border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 p-3">
-                        <div className="text-xs text-gray-500">Leave</div>
-                        <div className="mt-1 text-lg font-semibold text-sky-700 dark:text-sky-400">{(selectedGuard.attendance_tally.by_status?.leave ?? 0) as any}</div>
-                      </div>
-                      <div className="rounded-md border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 p-3">
-                        <div className="text-xs text-gray-500">Hours</div>
-                        <div className="mt-1 text-lg font-semibold text-gray-900 dark:text-gray-100">
-                          {Number(selectedGuard.attendance_tally.hours_worked ?? 0).toFixed(1)}
-                          {Number(selectedGuard.attendance_tally.overtime_hours ?? 0) > 0 ? (
-                            <span className="ml-2 text-xs text-gray-500">OT {Number(selectedGuard.attendance_tally.overtime_hours ?? 0).toFixed(1)}</span>
-                          ) : null}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                      Range: {selectedGuard.attendance_tally.range?.start} → {selectedGuard.attendance_tally.range?.end}
+                    <span className="text-sm text-gray-500 dark:text-gray-400">Name</span>
+                    <div className="font-medium">{selectedGuard.name}</div>
+                  </div>
+                  <div>
+                    <span className="text-sm text-gray-500 dark:text-gray-400">Employee ID</span>
+                    <div className="font-medium">{selectedGuard.employee_id}</div>
+                  </div>
+                  <div>
+                    <span className="text-sm text-gray-500 dark:text-gray-400">Phone</span>
+                    <div className="font-medium">{selectedGuard.phone || '—'}</div>
+                  </div>
+                  <div>
+                    <span className="text-sm text-gray-500 dark:text-gray-400">Email</span>
+                    <div className="font-medium">{selectedGuard.email || '—'}</div>
+                  </div>
+                  <div>
+                    <span className="text-sm text-gray-500 dark:text-gray-400">Status</span>
+                    <div>
+                      <Badge className={getStatusColor(selectedGuard.status)}>
+                        {selectedGuard.status || 'Active'}
+                      </Badge>
                     </div>
                   </div>
-                ) : null}
-
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Residence</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
-                    <div><span className="text-gray-500">Address</span><div>{selectedGuard.residence_address || selectedGuard.address || '—'}</div></div>
-                    <div><span className="text-gray-500">City</span><div>{selectedGuard.residence_city || '—'}</div></div>
-                    <div><span className="text-gray-500">District</span><div>{selectedGuard.residence_district || '—'}</div></div>
+                  <div>
+                    <span className="text-sm text-gray-500 dark:text-gray-400">Supervisor</span>
+                    <div className="font-medium">{selectedGuard.supervisor?.name || '—'}</div>
                   </div>
                 </div>
               </div>
@@ -736,7 +1148,7 @@ export default function SuperAdminGuards({ guards, filters, supervisors = [], gr
           onClose={() => setShowAssign(false)}
           guardId={selectedGuard?.id ?? null}
           zones={zones}
-          scope="admin"
+          scope="superadmin"
           onSuccess={() => { push('Guard assigned to site', 'success'); router.reload(); }}
         />
 
@@ -764,26 +1176,34 @@ export default function SuperAdminGuards({ guards, filters, supervisors = [], gr
                 onSuccess: () => { setShowSupervisor(false); setSelectedGuardIds([]); router.reload(); },
               });
             }}
-            className="p-4 sm:p-6 space-y-4 bg-white dark:bg-gray-800"
+            className="p-4 sm:p-6 space-y-4 bg-white dark:bg-gray-900"
           >
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Assign Supervisor</h3>
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
+                <IconMapper name="UserPlus" size={20} className="text-purple-600 dark:text-purple-400" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Assign Supervisor</h3>
+            </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Supervisor</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Supervisor</label>
               <select
                 value={selectedSupervisorId}
                 onChange={(e) => setSelectedSupervisorId(e.target.value)}
-                className="w-full rounded-md border border-gray-300 dark:border-gray-700 px-3 py-2 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
+                className="w-full rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-2 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
               >
-                <option value="">Select...</option>
+                <option value="">Select supervisor...</option>
                 {supervisors.map((s) => (
                   <option key={s.id} value={s.id}>{s.name}</option>
                 ))}
               </select>
             </div>
-            <div className="flex items-center justify-end gap-2">
-              <button type="button" onClick={() => setShowSupervisor(false)} className="px-4 py-2 rounded-md border dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-700 dark:text-slate-200">Cancel</button>
-              <button
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <Button type="button" variant="outline" onClick={() => setShowSupervisor(false)}>
+                Cancel
+              </Button>
+              <Button
                 type="button"
+                variant="outline"
                 onClick={() => {
                   const targetIds = selectedGuardIds.length > 0 ? selectedGuardIds : (selectedGuard?.id ? [selectedGuard.id] : []);
                   if (!targetIds.length) return;
@@ -793,11 +1213,13 @@ export default function SuperAdminGuards({ guards, filters, supervisors = [], gr
                     onSuccess: () => { setShowSupervisor(false); setSelectedGuardIds([]); router.reload(); },
                   });
                 }}
-                className="px-4 py-2 rounded-md bg-yellow-600 hover:bg-yellow-700 text-white"
+                className="text-yellow-600 border-yellow-600 hover:bg-yellow-50"
               >
                 Unassign
-              </button>
-              <button type="submit" disabled={!selectedSupervisorId} className="px-4 py-2 rounded-md bg-red-700 hover:bg-red-800 text-white">Assign</button>
+              </Button>
+              <Button type="submit" disabled={!selectedSupervisorId} className="bg-purple-600 hover:bg-purple-700">
+                Assign
+              </Button>
             </div>
           </form>
         </Modal>
@@ -818,6 +1240,82 @@ export default function SuperAdminGuards({ guards, filters, supervisors = [], gr
           onConfirm={(reason) => { setReasonOpen(false); reasonSubmit && reasonSubmit(reason); }}
           onCancel={() => setReasonOpen(false)}
         />
+
+        {/* Bulk Import Modal */}
+        <Modal show={importOpen} onClose={() => setImportOpen(false)} maxWidth="md">
+          <div className="p-4 sm:p-6 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
+                <IconMapper name="Upload" size={20} className="text-purple-600 dark:text-purple-400" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold">Bulk Import Guards</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Upload Excel file to import multiple guards</p>
+              </div>
+            </div>
+            <div className="space-y-4">
+              <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">Template</h4>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                  Download the Excel template with the correct format for bulk importing guards.
+                </p>
+                <Button
+                  variant="outline"
+                  onClick={downloadTemplate}
+                  className="w-full"
+                >
+                  <IconMapper name="Download" size={16} className="mr-2" />
+                  Download Template
+                </Button>
+              </div>
+              <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">Upload File</h4>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                  Select an Excel file (.xlsx or .xls) with guard data.
+                </p>
+                <input
+                  type="file"
+                  accept=".xlsx,.xls"
+                  onChange={(e) => setImportFile(e.target.files?.[0] || null)}
+                  className="w-full text-sm text-gray-700 dark:text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-purple-100 file:text-purple-700 dark:file:bg-purple-900/30 dark:file:text-purple-300 hover:file:bg-purple-200 dark:hover:file:bg-purple-900/50"
+                />
+              </div>
+
+              <label className="flex items-start gap-3 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <input
+                  type="checkbox"
+                  checked={importAllowUpdates}
+                  onChange={(e) => setImportAllowUpdates(e.target.checked)}
+                  className="mt-1 h-4 w-4 rounded border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-purple-600 focus:ring-purple-500"
+                />
+                <div>
+                  <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">Update existing guards when duplicates are found</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">If unchecked, duplicate rows will be skipped.</div>
+                </div>
+              </label>
+              <div className="flex items-center justify-end gap-2">
+                <Button variant="outline" onClick={() => setImportOpen(false)}>Cancel</Button>
+                <Button
+                  onClick={handleImport}
+                  disabled={!importFile || importProcessing}
+                  className="bg-purple-600 hover:bg-purple-700"
+                >
+                  {importProcessing ? (
+                    <>
+                      <IconMapper name="Loader2" size={16} className="mr-2 animate-spin" />
+                      Importing...
+                    </>
+                  ) : (
+                    <>
+                      <IconMapper name="Upload" size={16} className="mr-2" />
+                      Import Guards
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </Modal>
       </div>
     </SuperAdminLayout>
   );

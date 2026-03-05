@@ -37,8 +37,6 @@ interface Zone { id: number; name: string }
 interface CreateUserForm {
   name: string;
   email: string;
-  password: string;
-  password_confirmation: string;
   phone?: string;
   employee_id?: string;
   role?: string;
@@ -87,8 +85,6 @@ export default function UsersIndex({ users, filters, roles, zones }: UsersIndexP
   } = useForm<CreateUserForm>({
     name: '',
     email: '',
-    password: '',
-    password_confirmation: '',
     phone: '',
     employee_id: '',
     role: roles?.[0]?.name || 'admin',
@@ -101,15 +97,14 @@ export default function UsersIndex({ users, filters, roles, zones }: UsersIndexP
     setCreateData('role', roles?.[0]?.name || 'admin');
     setCreateData('status', 'active');
     setCreateData('zone_id', null as any);
+    setCreateData('employee_id', '');
     setShowCreate(true);
   };
 
   const roleNormalized = (createData.role || '').toLowerCase().replace(' ', '_');
-  const passwordsMatch = !!createData.password && createData.password === createData.password_confirmation;
-  const passwordValid = (createData.password || '').length >= 8;
   const zoneRequired = roleNormalized === 'zone_commander';
   const zoneValid = !zoneRequired || !!createData.zone_id;
-  const canCreate = !!createData.name && !!createData.email && !!(createData.role && createData.role.length) && passwordValid && passwordsMatch && zoneValid && !creating;
+  const canCreate = !!createData.name && !!createData.email && !!(createData.role && createData.role.length) && zoneValid && !creating;
 
   useEffect(() => {
     if (roleNormalized !== 'zone_commander' && createData.zone_id !== null) {
@@ -204,21 +199,80 @@ export default function UsersIndex({ users, filters, roles, zones }: UsersIndexP
       <Head title="Users" />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-        {/* Notifications are displayed by the global NotificationProvider */}
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Users Management</h1>
-            <p className="text-gray-600 dark:text-gray-400">Manage system users and permissions</p>
+        {/* Hero Header */}
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-coin-700 via-coin-600 to-coin-500 text-white shadow-2xl">
+          <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg%20width%3D%2260%22%20height%3D%2260%22%20viewBox%3D%220%200%2060%2060%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%3E%3Cg%20fill%3D%22none%22%20fill-rule%3D%22evenodd%22%3E%3Cg%20fill%3D%22%23ffffff%22%20fill-opacity%3D%220.05%22%3E%3Cpath%20d%3D%22M36%2034v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6%2034v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6%204V0H4v4H0v2h4v4h2V6h4V4H6z%22/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] opacity-20" />
+          <div className="relative p-6 sm:p-8">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div className="p-4 bg-white/10 rounded-xl backdrop-blur-sm">
+                  <IconMapper name="Users" size={32} />
+                </div>
+                <div>
+                  <h1 className="text-2xl sm:text-3xl font-bold">Users Management</h1>
+                  <p className="text-coin-100 mt-1">Manage system users and permissions</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={openCreate}
+                className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-white text-coin-700 hover:bg-coin-50 rounded-lg font-bold shadow-lg transition-all transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-coin-600"
+              >
+                <IconMapper name="Plus" size={20} />
+                Add User
+              </button>
+            </div>
           </div>
-          <button
-            type="button"
-            onClick={openCreate}
-            className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-bold shadow-md transition-all transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950"
-          >
-            <IconMapper name="Plus" size={20} />
-            Add User
-          </button>
+        </div>
+
+        {/* Stats Cards */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-100 dark:bg-blue-900/20 rounded-lg text-blue-600">
+                <IconMapper name="Users" size={20} />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{users.meta?.total ?? users.data.length}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Total Users</p>
+              </div>
+            </div>
+          </div>
+          <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-green-100 dark:bg-green-900/20 rounded-lg text-green-600">
+                <IconMapper name="UserCheck" size={20} />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                  {users.data.filter((u: User) => u.status === 'active').length}
+                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Active</p>
+              </div>
+            </div>
+          </div>
+          <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-purple-100 dark:bg-purple-900/20 rounded-lg text-purple-600">
+                <IconMapper name="Shield" size={20} />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{roles.length}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Roles</p>
+              </div>
+            </div>
+          </div>
+          <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-amber-100 dark:bg-amber-900/20 rounded-lg text-amber-600">
+                <IconMapper name="MapPin" size={20} />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{zones.length}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Zones</p>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Search */}
@@ -232,12 +286,12 @@ export default function UsersIndex({ users, filters, roles, zones }: UsersIndexP
                 onChange={(e) => setSearch(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
                 placeholder="Search by name or email..."
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950"
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950"
               />
             </div>
             <button
               onClick={handleSearch}
-              className="w-full sm:w-auto px-6 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950"
+              className="w-full sm:w-auto px-6 py-2 bg-coin-700 hover:bg-coin-600 text-white rounded-lg font-medium focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950"
             >
               Search
             </button>
@@ -251,7 +305,7 @@ export default function UsersIndex({ users, filters, roles, zones }: UsersIndexP
                 setPerPage(v);
                 router.get(route('admin.users.index'), { search, per_page: v, page: 1 }, { preserveState: true });
               }}
-              className="px-3 py-1.5 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+              className="px-3 py-1.5 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-coin-500"
             >
               <option value={10}>10</option>
               <option value={20}>20</option>
@@ -290,7 +344,7 @@ export default function UsersIndex({ users, filters, roles, zones }: UsersIndexP
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-3 flex-wrap">
                           {/* Avatar */}
-                          <div className="w-12 h-12 bg-gradient-to-br from-red-600 to-red-700 rounded-full flex items-center justify-center text-white font-bold text-lg shadow-sm shrink-0">
+                          <div className="w-12 h-12 bg-gradient-to-br from-coin-600 to-coin-700 rounded-full flex items-center justify-center text-white font-bold text-lg shadow-sm shrink-0">
                             {user.name.charAt(0).toUpperCase()}
                           </div>
                           <div>
@@ -309,7 +363,7 @@ export default function UsersIndex({ users, filters, roles, zones }: UsersIndexP
                             <IconMapper name={user.status === 'active' ? 'CheckCircle' : 'XCircle'} size={12} className="mr-1 inline" />
                             {user.status || 'Active'}
                           </Badge>
-                          <Badge className="bg-red-100 text-red-800 dark:bg-red-500/10 dark:text-red-200 text-xs">
+                          <Badge className="bg-coin-100 text-coin-800 dark:bg-coin-500/10 dark:text-coin-200 text-xs">
                             {user.roles[0]?.name?.replace('_', ' ') || 'No Role'}
                           </Badge>
                         </div>
@@ -392,7 +446,7 @@ export default function UsersIndex({ users, filters, roles, zones }: UsersIndexP
                 href={link.url || '#'}
                 className={`px-3 py-2 rounded ${
                   link.active
-                    ? 'bg-red-600 text-white'
+                    ? 'bg-coin-700 text-white'
                     : link.url
                     ? 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 dark:bg-gray-900 dark:text-gray-200 dark:border-gray-700 dark:hover:bg-gray-800'
                     : 'bg-transparent text-gray-400 cursor-default'
@@ -406,8 +460,17 @@ export default function UsersIndex({ users, filters, roles, zones }: UsersIndexP
 
       {/* Create User Modal */}
     <Modal show={showCreate} onClose={handleCreateClose} maxWidth="2xl">
-      <div className="p-4 sm:p-6 bg-white dark:bg-gray-800">
-        <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">Add User</h2>
+      <div className="p-4 sm:p-6 bg-white dark:bg-gray-900">
+        <div className="flex items-center gap-2 mb-4">
+          <IconMapper name="UserPlus" size={20} className="text-coin-600" />
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Add User</h2>
+        </div>
+        <div className="mb-4 p-3 bg-coin-50 dark:bg-coin-950/30 border border-coin-200 dark:border-coin-800 rounded-lg">
+          <p className="text-sm text-coin-800 dark:text-coin-200">
+            <IconMapper name="Info" size={14} className="inline mr-1" />
+            User ID will be auto-generated. A password reset email will be sent to the user.
+          </p>
+        </div>
         <form onSubmit={submitCreate} className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
@@ -422,11 +485,12 @@ export default function UsersIndex({ users, filters, roles, zones }: UsersIndexP
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Employee ID</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Employee ID <span className="text-gray-400">(Auto-generated if empty)</span></label>
               <input
                 className={adminFieldClassName}
                 value={createData.employee_id || ''}
                 onChange={(e) => setCreateData('employee_id', e.target.value)}
+                placeholder="Leave empty to auto-generate"
               />
               {createErrors.employee_id && <p className="text-xs text-red-600 mt-1">{createErrors.employee_id}</p>}
             </div>
@@ -451,36 +515,6 @@ export default function UsersIndex({ users, filters, roles, zones }: UsersIndexP
                 onChange={(e) => setCreateData('phone', e.target.value)}
               />
               {createErrors.phone && <p className="text-xs text-red-600 mt-1">{createErrors.phone}</p>}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Password</label>
-              <input
-                type="password"
-                className={adminFieldClassName}
-                value={createData.password}
-                onChange={(e) => setCreateData('password', e.target.value)}
-                required
-              />
-              {createErrors.password && <p className="text-xs text-red-600 mt-1">{createErrors.password}</p>}
-              {!passwordValid && createData.password && (
-                <p className="text-xs text-red-600 mt-1">Minimum 8 characters.</p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Confirm Password</label>
-              <input
-                type="password"
-                className={adminFieldClassName}
-                value={createData.password_confirmation}
-                onChange={(e) => setCreateData('password_confirmation', e.target.value)}
-                required
-              />
-              {createErrors.password_confirmation && <p className="text-xs text-red-600 mt-1">{createErrors.password_confirmation}</p>}
-              {createData.password_confirmation && !passwordsMatch && (
-                <p className="text-xs text-red-600 mt-1">Passwords must match.</p>
-              )}
             </div>
 
             <div>
@@ -541,7 +575,7 @@ export default function UsersIndex({ users, filters, roles, zones }: UsersIndexP
             <button
               type="button"
               onClick={handleCreateClose}
-              className="px-4 py-2 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950"
+              className="px-4 py-2 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800"
               disabled={creating}
             >
               Cancel
@@ -549,7 +583,7 @@ export default function UsersIndex({ users, filters, roles, zones }: UsersIndexP
             <button
               type="submit"
               disabled={!canCreate}
-              className={`px-4 py-2 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950 ${canCreate ? 'bg-red-600 hover:bg-red-700' : 'bg-red-400 dark:bg-red-700/60 cursor-not-allowed'}`}
+              className={`px-4 py-2 rounded-md text-white ${canCreate ? 'bg-coin-700 hover:bg-coin-600' : 'bg-gray-400 cursor-not-allowed'}`}
             >
               {creating ? 'Creating...' : 'Create User'}
             </button>
@@ -667,7 +701,7 @@ export default function UsersIndex({ users, filters, roles, zones }: UsersIndexP
               <button
                 type="submit"
                 disabled={updating}
-                className="px-4 py-2 rounded-md bg-red-600 text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950 disabled:opacity-60"
+                className="px-4 py-2 rounded-md bg-coin-700 text-white hover:bg-coin-600 focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950 disabled:opacity-60"
               >
                 {updating ? 'Saving...' : 'Save Changes'}
               </button>

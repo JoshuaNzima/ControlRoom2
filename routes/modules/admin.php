@@ -95,7 +95,7 @@ Route::middleware(['auth', 'role:admin,super_admin'])
             Route::get('/sites/{site}/qr-print', [\App\Http\Controllers\ControlRoom\ClientsController::class, 'siteQrPrint'])
                 ->whereNumber('site')
                 ->name('sites.qr-print');
-            Route::get('/{client}/edit', [\App\Http\Controllers\Admin\ClientController::class, 'edit'])->name('edit');
+            // Note: edit page removed - use modal via clients.json + EditClientModal on index
             Route::put('/{client}', [\App\Http\Controllers\Admin\ClientController::class, 'update'])->name('update');
             Route::delete('/{client}', [\App\Http\Controllers\Admin\ClientController::class, 'destroy'])->name('destroy');
             Route::post('/{client}/services', [\App\Http\Controllers\Admin\ClientController::class, 'updateServices'])->name('services.update');
@@ -137,11 +137,15 @@ Route::middleware(['auth', 'role:admin,super_admin'])
         // CSV Export for guards (shared with Control Room export implementation)
         Route::get('/guards/export', [\App\Http\Controllers\ControlRoom\GuardsController::class, 'export'])->name('guards.export');
         Route::resource('guards', \App\Http\Controllers\Admin\GuardController::class)->except(['create','edit','show']);
+        // Bulk import guards
+        Route::get('/guards/bulk-import-template', [\App\Http\Controllers\Admin\GuardController::class, 'bulkImportTemplate'])->name('guards.bulk-import-template');
+        Route::post('/guards/bulk-import', [\App\Http\Controllers\Admin\GuardController::class, 'bulkImport'])->name('guards.bulk-import');
         // Quick status actions for guards
         Route::post('/guards/{guard}/suspend', [\App\Http\Controllers\Admin\GuardController::class, 'suspend'])->name('guards.suspend');
         Route::post('/guards/{guard}/reinstate', [\App\Http\Controllers\Admin\GuardController::class, 'reinstate'])->name('guards.reinstate');
         Route::post('/guards/{guard}/dismiss', [\App\Http\Controllers\Admin\GuardController::class, 'dismiss'])->name('guards.dismiss');
         Route::post('/guards/{guard}/abscond', [\App\Http\Controllers\Admin\GuardController::class, 'abscond'])->name('guards.abscond');
+        Route::post('/guards/{guard}/resign', [\App\Http\Controllers\Admin\GuardController::class, 'resign'])->name('guards.resign');
         // Guard assignment to client site
         Route::post('/guards/assign-site', [\App\Http\Controllers\Admin\GuardAssignmentController::class, 'assignToSite'])->name('guards.assign-site');
         Route::post('/guards/unassign-site', [\App\Http\Controllers\Admin\GuardAssignmentController::class, 'unassignFromSite'])->name('guards.unassign-site');

@@ -6,7 +6,6 @@ import { formatCurrencyMWK } from '@/Components/format';
 import { Card } from '@/Components/ui/card';
 import { ResponsiveContainer, LineChart, Line, CartesianGrid, XAxis, YAxis, Tooltip, AreaChart, Area } from 'recharts';
 import FinanceDrilldownPanel from '@/Components/FinanceDrilldownPanel';
-import QuickRequisitionModal from '@/Components/Requisitions/QuickRequisitionModal';
 import RequisitionSummary from '@/Components/Requisitions/RequisitionSummary';
 
 // Animated Counter Component
@@ -318,7 +317,6 @@ export default function FinanceDashboard(props: Props) {
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <QuickRequisitionModal />
         <RequisitionSummary />
 
         {activeTab === 'overview' && (
@@ -371,7 +369,7 @@ export default function FinanceDashboard(props: Props) {
                 icon={<IconMapper name="trending-down" className="h-6 w-6" />}
                 title="New Requisition"
                 description="Submit expense request"
-                href={route('finance.expenses.create')}
+                href={route('requisitions.index')}
                 color="bg-red-600"
               />
               <ActionTile

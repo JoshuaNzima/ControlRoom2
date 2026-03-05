@@ -160,7 +160,10 @@ Route::middleware(['auth', 'role:super_admin'])->prefix('superadmin')->name('sup
         $perPage = (int) request('per_page', 20);
         $sort = in_array(request('sort'), ['name','employee_id','status','supervisor_id']) ? request('sort') : 'name';
         $dir = request('dir') === 'desc' ? 'desc' : 'asc';
-        $guards = \App\Models\Guards\Guard::with('supervisor')
+        $view = request('view', 'active');
+
+        // Build base query
+        $baseQuery = \App\Models\Guards\Guard::with('supervisor')
             ->where('employee_role', 'guard')
             ->when(request('search'), function($q, $search) {
                 $q->where(function($qq) use ($search) {
@@ -168,16 +171,74 @@ Route::middleware(['auth', 'role:super_admin'])->prefix('superadmin')->name('sup
                        ->orWhere('employee_id', 'like', "%{$search}%");
                 });
             })
-            ->when(request('status'), function($q, $status) {
-                $q->where('status', $status);
-            })
             ->profileStatus(request('profile_status'))
             ->when(request('zone_id'), function($q, $zoneId) {
                 $q->where('zone_id', $zoneId);
+            });
+
+        // Separate active and inactive guards
+        $activeStatuses = ['active', 'on_leave', 'training'];
+        $inactiveStatuses = ['inactive', 'suspended', 'dismissed', 'absconded', 'resigned', 'retired'];
+
+        if ($view === 'inactive') {
+            // Fetch only inactive guards
+            $guards = (clone $baseQuery)
+                ->whereIn('status', $inactiveStatuses)
+                ->orderBy($sort, $dir)
+                ->paginate($perPage)
+                ->withQueryString();
+
+            $activeGuards = (clone $baseQuery)
+                ->whereIn('status', $activeStatuses)
+                ->when(request('status'), function($q, $status) {
+                    $q->where('status', $status);
+                })
+                ->when(request('supervisor_id'), function($q, $supervisorId) {
+                    if ($supervisorId === 'unassigned') {
+                        $q->whereNull('supervisor_id');
+                    } else {
+                        $q->where('supervisor_id', $supervisorId);
+                    }
+                })
+                ->orderBy($sort, $dir)
+                ->paginate($perPage)
+                ->withQueryString();
+
+            return Inertia::render('SuperAdmin/Guards', [
+                'guards' => $activeGuards,
+                'inactiveGuards' => $guards,
+                'filters' => request()->only(['search','status','profile_status','zone_id','supervisor_id','sort','dir','per_page','view']),
+                'supervisors' => $supervisors,
+                'zones' => $zones,
+                'stats' => $stats,
+                'can' => [
+                    'suspend' => true,
+                    'dismiss' => true,
+                    'reinstate' => true,
+                ],
+            ]);
+        }
+
+        // Default: fetch active guards
+        $guards = (clone $baseQuery)
+            ->whereIn('status', $activeStatuses)
+            ->when(request('status'), function($q, $status) {
+                $q->where('status', $status);
             })
-            ->when(request('grade_id'), function($q, $gradeId) {
-                $q->where('guard_grade_id', $gradeId);
+            ->when(request('supervisor_id'), function($q, $supervisorId) {
+                if ($supervisorId === 'unassigned') {
+                    $q->whereNull('supervisor_id');
+                } else {
+                    $q->where('supervisor_id', $supervisorId);
+                }
             })
+            ->orderBy($sort, $dir)
+            ->paginate($perPage)
+            ->withQueryString();
+
+        // Fetch inactive guards (for stats and inactive view)
+        $inactiveGuards = (clone $baseQuery)
+            ->whereIn('status', $inactiveStatuses)
             ->orderBy($sort, $dir)
             ->paginate($perPage)
             ->withQueryString();
@@ -186,6 +247,7 @@ Route::middleware(['auth', 'role:super_admin'])->prefix('superadmin')->name('sup
             $g->is_profile_complete = (bool) $g->is_profile_complete;
             return $g;
         });
+
         $supervisors = \App\Models\User::where('status', 'active')
             ->whereHas('roles', function ($q) {
                 $q->whereIn('name', ['supervisor', 'manager', 'sergeant', 'zone_commander'])
@@ -193,16 +255,56 @@ Route::middleware(['auth', 'role:super_admin'])->prefix('superadmin')->name('sup
             })
             ->orderBy('name')
             ->get(['id','name']);
-        $grades = \App\Models\Guards\GuardGrade::orderBy('name')->get(['id','code','name']);
+
         $zones = \App\Models\Zone::orderBy('name')->get(['id','name']);
+
+        // Calculate stats for ALL guards (not just paginated)
+        $statsQuery = \App\Models\Guards\Guard::query()
+            ->where('employee_role', 'guard')
+            ->when(request('search'), function($q, $search) {
+                $q->where(function($qq) use ($search) {
+                    $qq->where('name', 'like', "%{$search}%")
+                       ->orWhere('employee_id', 'like', "%{$search}%");
+                });
+            })
+            ->profileStatus(request('profile_status'))
+            ->when(request('zone_id'), function($q, $zoneId) {
+                $q->where('zone_id', $zoneId);
+            });
+
+        $stats = [
+            'total' => $statsQuery->count(),
+            'active' => (clone $statsQuery)->whereIn('status', $activeStatuses)->count(),
+            'inactive' => (clone $statsQuery)->whereIn('status', $inactiveStatuses)->count(),
+            'assigned' => (clone $statsQuery)->whereIn('status', $activeStatuses)->whereHas('assignments', fn($q) => $q->where('status', 'active'))->count(),
+            'incomplete' => (clone $statsQuery)->where(function ($q) {
+                $q->whereNull('id_number')->orWhere('id_number', '')
+                  ->orWhereNull('emergency_contact_name')->orWhere('emergency_contact_name', '')
+                  ->orWhereNull('emergency_contact_phone')->orWhere('emergency_contact_phone', '');
+            })->count(),
+        ];
+
         return Inertia::render('SuperAdmin/Guards', [
             'guards' => $guards,
-            'filters' => request()->only(['search','status','profile_status','zone_id','grade_id','sort','dir','per_page']),
+            'inactiveGuards' => $inactiveGuards,
+            'filters' => request()->only(['search','status','profile_status','zone_id','supervisor_id','sort','dir','per_page','view']),
             'supervisors' => $supervisors,
-            'grades' => $grades,
             'zones' => $zones,
+            'stats' => $stats,
+            'can' => [
+                'suspend' => true,
+                'dismiss' => true,
+                'reinstate' => true,
+            ],
         ]);
     })->name('guards');
+
+    // SuperAdmin Guard bulk import routes
+    Route::get('/guards/bulk-import-template', [\App\Http\Controllers\Admin\GuardController::class, 'bulkImportTemplate'])->name('guards.bulk-import-template');
+    Route::post('/guards/bulk-import', [\App\Http\Controllers\Admin\GuardController::class, 'bulkImport'])->name('guards.bulk-import');
+
+    // SuperAdmin sites JSON endpoint for guard assignment
+    Route::get('/sites/json', [\App\Http\Controllers\Admin\ClientController::class, 'sitesJson'])->name('sites.json');
 
     // Drivers Management (subset of Guards with employee_role=driver)
     Route::get('/drivers', function () {
@@ -334,7 +436,7 @@ Route::middleware(['auth'])->group(function () {
         if ($user->hasAnyRole(['finance_officer','accountant','finance','accounting'])) {
             return redirect()->route('finance.dashboard');
         }
-        if ($user->hasAnyRole(['front_office','receptionist','client_service'])) {
+        if ($user->hasAnyRole(['front_office','receptionist','client_service','executive_assistant','personal_assistant','assistant'])) {
             return redirect()->route('front-office.dashboard');
         }
         abort(403, 'Unauthorized. No dashboard is configured for your role.');
@@ -467,16 +569,13 @@ Route::middleware(['auth'])->group(function () {
     
     // Admin User Management routes exist under the admin prefix in routes/modules/admin.php
 
-    // Cross-module: One-time Expense Request (simple alias to Finance expense store)
+    // Cross-module: legacy Expense Request aliases (now forwards to unified requisitions)
     Route::get('/request/expense', function() {
-        $categories = [
-            'general', 'office_supplies', 'travel', 'meals', 'utilities', 'maintenance', 'marketing', 'equipment', 'other'
-        ];
-        return Inertia::render('Finance/Expenses/Request', [
-            'categories' => $categories,
-        ]);
+        return redirect()->route('requisitions.index');
     })->name('expense.request.create');
-    Route::post('/request/expense', [\App\Http\Controllers\Finance\ExpenseController::class, 'store'])->name('expense.request.store');
+    Route::post('/request/expense', function(\Illuminate\Http\Request $request) {
+        return app(\App\Http\Controllers\Requisitions\RequisitionController::class)->store($request);
+    })->name('expense.request.store');
 
     // Profile routes (edit/update/avatar)
     Route::get('/profile', [\App\Http\Controllers\ProfileController::class, 'edit'])->name('profile.edit');

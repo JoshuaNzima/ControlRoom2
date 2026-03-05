@@ -176,6 +176,69 @@ class User extends Authenticatable
     }
 
     /**
+     * Get the clients this user is linked to (for client role users).
+     */
+    public function clients()
+    {
+        return $this->belongsToMany(\App\Models\Guards\Client::class, 'client_user')
+            ->withPivot('role')
+            ->withTimestamps();
+    }
+
+    /**
+     * Check if user is a client.
+     */
+    public function isClient(): bool
+    {
+        return $this->hasRole('client');
+    }
+
+    /**
+     * Check if user is an assistant.
+     */
+    public function isAssistant(): bool
+    {
+        return $this->hasRole('assistant');
+    }
+
+    /**
+     * Get assistant assignments where this user is the assistant.
+     */
+    public function assistantAssignments()
+    {
+        return $this->hasMany(\App\Models\FrontOffice\AssistantAssignment::class, 'assistant_id');
+    }
+
+    /**
+     * Get assistant assignments where this user is assigned to an assistant.
+     */
+    public function assignedAssistants()
+    {
+        return $this->hasMany(\App\Models\FrontOffice\AssistantAssignment::class, 'assigned_to_id');
+    }
+
+    /**
+     * Get the primary assistant for this user.
+     */
+    public function primaryAssistant()
+    {
+        return $this->assignedAssistants()
+            ->where('is_primary', true)
+            ->where('status', 'active')
+            ->first();
+    }
+
+    /**
+     * Get all active assistants for this user.
+     */
+    public function activeAssistants()
+    {
+        return $this->assignedAssistants()
+            ->where('status', 'active')
+            ->with('assistant');
+    }
+
+    /**
      * Send the password reset notification.
      */
     public function sendPasswordResetNotification($token): void

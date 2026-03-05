@@ -7,6 +7,7 @@ import BaseShell from './BaseShell';
 import useCounters from '@/Hooks/useCounters';
 import { useTheme } from '@/Providers/ThemeProvider';
 import useGpsAlerts from '@/Hooks/useGpsAlerts';
+import FloatingNavButton from '@/Components/FloatingNavButton';
 
 interface Props {
     title: string;
@@ -308,6 +309,7 @@ export default function SuperAdminLayout({ title, children, user }: Props) {
                         {children}
                     </div>
                 </BaseShell>
+                <FloatingNavButton />
             </div>
         </div>
     );

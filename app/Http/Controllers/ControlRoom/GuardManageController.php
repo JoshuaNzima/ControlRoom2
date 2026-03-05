@@ -9,7 +9,12 @@ use App\Models\Guards\ClientSite;
 use App\Models\Guards\GuardGrade;
 use App\Models\PayProfile;
 use App\Models\User;
+use App\Services\GuardDuplicateDetectionService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
+use PhpOffice\PhpSpreadsheet\IOFactory;
 
 class GuardManageController extends Controller
 {
@@ -302,6 +307,19 @@ class GuardManageController extends Controller
         return back()->with('success', 'Guard marked as absconded.');
     }
 
+    public function resign(Request $request, Guard $guard)
+    {
+        $this->authorizeOps();
+        $this->ensureInZone($guard);
+        $request->validate(['reason' => 'nullable|string|max:500']);
+        $status = $request->input('status', 'resigned');
+        $guard->update([
+            'status' => $status,
+            'notes' => trim(($guard->notes ? ($guard->notes."\n") : '') . ucfirst($status) . ': ' . ($request->input('reason') ?? '')),
+        ]);
+        return back()->with('success', 'Guard marked as ' . $status . '.');
+    }
+
     protected function authorizeOps(): void
     {
         if (!auth()->check()) abort(403);
@@ -333,5 +351,248 @@ class GuardManageController extends Controller
             $candidate = 'G-'.now()->format('ym').'-'.sprintf('%04d', random_int(0, 9999));
         } while (Guard::where('employee_id', $candidate)->exists());
         return $candidate;
+    }
+
+    public function bulkImportTemplate()
+    {
+        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+
+        // Headers
+        $headers = [
+            'name', 'employee_id', 'phone', 'email', 'id_number', 'date_of_birth',
+            'gender', 'marital_status', 'emergency_contact_name', 'emergency_contact_phone',
+            'address', 'hire_date', 'guard_type', 'position', 'status', 'notes'
+        ];
+
+        foreach ($headers as $index => $header) {
+            $sheet->setCellValue(\PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($index + 1) . '1', $header);
+        }
+
+        // Sample data row
+        $sample = [
+            'John Doe', '', '+265991234567', 'john@example.com', 'MA123456', '1990-05-15',
+            'male', 'single', 'Jane Doe', '+265997654321',
+            'Blantyre', '2024-01-01', 'permanent', 'guard', 'active', 'New guard'
+        ];
+
+        foreach ($sample as $index => $value) {
+            $sheet->setCellValue(\PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($index + 1) . '2', $value);
+        }
+
+        // Auto-size columns
+        foreach (range('A', 'O') as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+
+        $writer = IOFactory::createWriter($spreadsheet, 'Xlsx');
+        $filename = 'guard_import_template.xlsx';
+
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment;filename="' . $filename . '"');
+        header('Cache-Control: max-age=0');
+
+        $writer->save('php://output');
+        exit;
+    }
+
+    public function bulkImport(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'file' => 'required|file|mimes:xlsx,xls|max:10240',
+        ]);
+
+        $allowUpdates = $request->boolean('allow_updates');
+
+        if ($validator->fails()) {
+            return back()->withErrors(['file' => 'Please upload a valid Excel file (.xlsx or .xls)']);
+        }
+
+        try {
+            $file = $request->file('file');
+            $spreadsheet = IOFactory::load($file->getPathname());
+            $sheet = $spreadsheet->getActiveSheet();
+            $rows = $sheet->toArray();
+
+            // Parse header row for flexible column mapping
+            $headerRow = array_shift($rows);
+            $headerMap = [];
+            if (is_array($headerRow)) {
+                foreach ($headerRow as $i => $h) {
+                    $key = strtolower(trim((string) $h));
+                    if ($key !== '') {
+                        $headerMap[$key] = (int) $i;
+                    }
+                }
+            }
+
+            $useFallbackIndexes = empty($headerMap);
+
+            $col = function (array $row, array $keys, ?int $fallbackIndex = null) use ($headerMap, $useFallbackIndexes) {
+                foreach ($keys as $k) {
+                    $kk = strtolower(trim((string) $k));
+                    if (isset($headerMap[$kk])) {
+                        $idx = $headerMap[$kk];
+                        return $row[$idx] ?? null;
+                    }
+                }
+                if ($useFallbackIndexes && $fallbackIndex !== null) {
+                    return $row[$fallbackIndex] ?? null;
+                }
+                return null;
+            };
+
+            $records = [];
+            foreach ($rows as $index => $row) {
+                if (empty($row[0])) continue;
+                $rowNum = $index + 2;
+                $records[] = [
+                    'row_num' => $rowNum,
+                    'data' => [
+                        'name' => $col($row, ['name'], 0),
+                        'employee_id' => $col($row, ['employee id', 'employee_id'], 1),
+                        'phone' => $col($row, ['phone'], 2),
+                        'id_number' => $col($row, ['id number', 'id_number'], 4),
+                        'date_of_birth' => $col($row, ['date of birth', 'date_of_birth', 'dob'], 5),
+                    ],
+                ];
+            }
+
+            $duplicateDetector = new GuardDuplicateDetectionService();
+            $duplicateReport = $duplicateDetector->detect($records);
+            $fileDuplicateReasonsByRow = [];
+            foreach (($duplicateReport['file_duplicate_rows'] ?? []) as $item) {
+                $fileDuplicateReasonsByRow[(int) $item['row_num']] = (array) ($item['reasons'] ?? []);
+            }
+
+            $dbDuplicateReasonsByRow = [];
+            foreach (($duplicateReport['db_duplicate_rows'] ?? []) as $item) {
+                $dbDuplicateReasonsByRow[(int) $item['row_num']] = (array) ($item['reasons'] ?? []);
+            }
+
+            $imported = 0;
+            $errors = [];
+
+            foreach ($rows as $index => $row) {
+                // Skip empty rows
+                if (empty($row[0])) continue;
+
+                $rowNum = $index + 2;
+
+                if (isset($fileDuplicateReasonsByRow[$rowNum]) && count($fileDuplicateReasonsByRow[$rowNum]) > 0) {
+                    $errors[] = "Row {$rowNum}: " . implode(', ', $fileDuplicateReasonsByRow[$rowNum]);
+                    continue;
+                }
+
+                $rowHasDbDuplicate = isset($dbDuplicateReasonsByRow[$rowNum]) && count($dbDuplicateReasonsByRow[$rowNum]) > 0;
+                if ($rowHasDbDuplicate && !$allowUpdates) {
+                    $errors[] = "Row {$rowNum}: " . implode(', ', $dbDuplicateReasonsByRow[$rowNum]);
+                    continue;
+                }
+
+                $existingGuard = null;
+                if ($rowHasDbDuplicate && $allowUpdates) {
+                    $employeeId = trim((string) ($col($row, ['employee id', 'employee_id'], 1) ?? ''));
+                    $idNumber = trim((string) ($col($row, ['id number', 'id_number'], 4) ?? ''));
+                    $phoneRaw = (string) ($col($row, ['phone'], 2) ?? '');
+                    $phoneDigits = preg_replace('/\D+/', '', $phoneRaw);
+                    $name = trim((string) ($col($row, ['name'], 0) ?? ''));
+                    $dob = trim((string) ($col($row, ['date of birth', 'date_of_birth', 'dob'], 5) ?? ''));
+
+                    if ($employeeId !== '') {
+                        $existingGuard = Guard::where('employee_id', $employeeId)->first();
+                    }
+                    if (!$existingGuard && $idNumber !== '') {
+                        $existingGuard = Guard::where('id_number', $idNumber)->first();
+                    }
+                    if (!$existingGuard && $phoneDigits !== '') {
+                        $existingGuard = Guard::where('phone', $phoneDigits)->orWhere('phone', '+' . $phoneDigits)->first();
+                    }
+                    if (!$existingGuard && $name !== '' && $dob !== '') {
+                        $existingGuard = Guard::where('name', $name)->whereDate('date_of_birth', $dob)->first();
+                    }
+
+                    if (!$existingGuard) {
+                        $errors[] = "Row {$rowNum}: Duplicate detected but no matching guard found to update";
+                        continue;
+                    }
+                }
+
+                $data = [
+                    'name' => $col($row, ['name'], 0),
+                    'phone' => $col($row, ['phone'], 2),
+                    'email' => $col($row, ['email'], 3),
+                    'id_number' => $col($row, ['id number', 'id_number'], 4),
+                    'date_of_birth' => $col($row, ['date of birth', 'date_of_birth', 'dob'], 5),
+                    'gender' => $col($row, ['gender'], 6),
+                    'marital_status' => $col($row, ['marital status', 'marital_status'], 7),
+                    'emergency_contact_name' => $col($row, ['emergency contact name', 'emergency_contact_name'], 8),
+                    'emergency_contact_phone' => $col($row, ['emergency contact phone', 'emergency_contact_phone'], 9),
+                    'address' => $col($row, ['address'], 10),
+                    'hire_date' => $col($row, ['hire date', 'hire_date'], 11),
+                    'guard_type' => $col($row, ['guard type', 'guard_type'], 12) ?? 'permanent',
+                    'position' => $col($row, ['position'], 13) ?? 'guard',
+                    'status' => $col($row, ['status'], 14) ?? 'active',
+                    'notes' => $col($row, ['notes'], 15),
+                ];
+
+                // Extract employee_id from file (if column exists and has value)
+                $fileEmployeeId = trim((string) ($col($row, ['employee id', 'employee_id'], 1) ?? ''));
+
+                // Generate employee_id if not provided (never overwrite existing)
+                if (empty($fileEmployeeId)) {
+                    $data['employee_id'] = $existingGuard ? $existingGuard->employee_id : $this->generateGuardEmployeeId();
+                } else {
+                    // Use provided employee_id for new guards, or keep existing for updates
+                    $data['employee_id'] = $existingGuard ? $existingGuard->employee_id : $fileEmployeeId;
+                }
+
+                // Validate required fields
+                if (empty($data['name'])) {
+                    $errors[] = "Row {$rowNum}: Name is required";
+                    continue;
+                }
+
+                if (empty($data['phone'])) {
+                    $errors[] = "Row {$rowNum}: Phone is required";
+                    continue;
+                }
+
+                try {
+                    $validatorRow = Validator::make($data, [
+                        'email' => ['nullable','email', $existingGuard ? Rule::unique('guards', 'email')->ignore($existingGuard->id) : Rule::unique('guards', 'email')],
+                        'id_number' => ['nullable','string', $existingGuard ? Rule::unique('guards', 'id_number')->ignore($existingGuard->id) : Rule::unique('guards', 'id_number')],
+                        'phone' => ['nullable','string','max:20', $existingGuard ? Rule::unique('guards', 'phone')->ignore($existingGuard->id) : Rule::unique('guards', 'phone')],
+                    ]);
+
+                    if ($validatorRow->fails()) {
+                        $errors[] = "Row {$rowNum}: " . implode(', ', $validatorRow->errors()->all());
+                        continue;
+                    }
+
+                    if ($existingGuard) {
+                        $existingGuard->fill($data);
+                        $existingGuard->save();
+                    } else {
+                        Guard::create($data);
+                    }
+                    $imported++;
+                } catch (\Exception $e) {
+                    $errors[] = "Row {$rowNum}: " . $e->getMessage();
+                }
+            }
+
+            $message = "Imported {$imported} guards successfully.";
+            if (!empty($errors)) {
+                $message .= " Errors: " . implode(', ', array_slice($errors, 0, 5));
+                if (count($errors) > 5) {
+                    $message .= " and " . (count($errors) - 5) . " more...";
+                }
+            }
+
+            return back()->with('success', $message);
+        } catch (\Exception $e) {
+            return back()->withErrors(['file' => 'Error processing file: ' . $e->getMessage()]);
+        }
     }
 }

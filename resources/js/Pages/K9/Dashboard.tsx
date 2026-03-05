@@ -4,7 +4,6 @@ import BusinessDevLayout from '@/Layouts/BusinessDevLayout';
 import { Card } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import IconMapper from '@/Components/IconMapper';
-import QuickRequisitionModal from '@/Components/Requisitions/QuickRequisitionModal';
 
 // Animated Counter Component
 const AnimatedCounter: React.FC<{ value: number; duration?: number }> = ({ value, duration = 1000 }) => {
@@ -153,8 +152,6 @@ export default function K9Dashboard() {
             </div>
           </div>
         </div>
-
-        <QuickRequisitionModal />
 
         {/* Stats Overview */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

@@ -8,6 +8,7 @@ import QuickRequisitionButton from '@/Components/Requisitions/QuickRequisitionBu
 import QuickBudgetButton from '@/Components/Budgets/QuickBudgetButton';
 import NotificationBell from '@/Components/Common/NotificationBell';
 import useCounters from '@/Hooks/useCounters';
+import FloatingNavButton from '@/Components/FloatingNavButton';
 
 interface Props {
   title: string;
@@ -29,6 +30,13 @@ export default function HRLayout({ title, children, user }: Props) {
   const isCurrent = (href: string) => typeof window !== 'undefined' && window.location.pathname === href;
   const { theme, toggle } = useTheme();
   const { counters } = useCounters();
+  const roles = (() => {
+    const r: any = (user as any)?.roles;
+    if (Array.isArray(r)) return r.map(String);
+    if (typeof r === 'string' && r.length) return [r];
+    return [] as string[];
+  })();
+  const isAdminUser = roles.includes('admin') || roles.includes('super_admin');
   const roleDisplay = (() => {
     const r: any = (user as any)?.roles;
     if (Array.isArray(r) && r.length) return String(r[0]).replaceAll('_', ' ');
@@ -56,6 +64,7 @@ export default function HRLayout({ title, children, user }: Props) {
 
   // Management & Compliance
   const managementLinks: NavItem[] = [
+    { name: 'Incentive Settings', href: route('hr.incentive-settings.index'), icon: <IconMapper name="settings" className="h-6 w-6" />, current: isCurrent(route('hr.incentive-settings.index')) },
     { name: 'Supervisor Incentives', href: route('hr.supervisor-incentives.index'), icon: <IconMapper name="award" className="h-6 w-6" />, current: isCurrent(route('hr.supervisor-incentives.index')) },
     { name: 'Safety', href: route('hr.safety.index'), icon: <IconMapper name="shield" className="h-6 w-6" />, current: isCurrent(route('hr.safety.index')) },
     { name: 'Policies', href: route('hr.policies.index'), icon: <IconMapper name="file-text" className="h-6 w-6" />, current: isCurrent(route('hr.policies.index')) },
@@ -64,7 +73,9 @@ export default function HRLayout({ title, children, user }: Props) {
 
   // Tools
   const toolsLinks: NavItem[] = [
-    { name: 'Requisitions', href: route('requisitions.index'), icon: <IconMapper name="clipboard-list" className="h-6 w-6" />, current: isCurrent(route('requisitions.index')), badge: (()=>{ const n = Number(counters?.requisitions_my_open||0); return n>0? String(n): undefined; })() },
+    ...(!isAdminUser ? ([
+      { name: 'My Requisitions', href: route('requisitions.index'), icon: <IconMapper name="clipboard-list" className="h-6 w-6" />, current: isCurrent(route('requisitions.index')), badge: (()=>{ const n = Number(counters?.requisitions_my_open||0); return n>0? String(n): undefined; })() },
+    ] as NavItem[]) : []),
     { name: 'Budgets', href: route('budgets.index'), icon: <IconMapper name="pie-chart" className="h-6 w-6" />, current: isCurrent(route('budgets.index')) },
   ];
 
@@ -190,6 +201,7 @@ export default function HRLayout({ title, children, user }: Props) {
             {children}
           </div>
         </BaseShell>
+        <FloatingNavButton />
       </div>
     </div>
   );

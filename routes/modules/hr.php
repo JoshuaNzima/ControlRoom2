@@ -165,7 +165,7 @@ Route::middleware(['auth'])->group(function () {
 		Route::post('/employee-leaves/{leave}/approve', [\App\Http\Controllers\HR\EmployeeLeaveController::class, 'approve'])->name('employee-leaves.approve');
 		Route::post('/employee-leaves/{leave}/reject', [\App\Http\Controllers\HR\EmployeeLeaveController::class, 'reject'])->name('employee-leaves.reject');
 
-		// Supervisor/Sergeant Incentives
+		// Supervisor/Sergeant Incentives (Legacy)
 		Route::get('/supervisor-incentives', [\App\Http\Controllers\HR\SupervisorIncentiveController::class, 'index'])->name('supervisor-incentives.index');
 		Route::post('/supervisor-incentives/profiles', [\App\Http\Controllers\HR\SupervisorIncentiveController::class, 'storeProfile'])->name('supervisor-incentives.profiles.store');
 		Route::put('/supervisor-incentives/profiles/{profile}', [\App\Http\Controllers\HR\SupervisorIncentiveController::class, 'updateProfile'])->name('supervisor-incentives.profiles.update');
@@ -174,6 +174,23 @@ Route::middleware(['auth'])->group(function () {
 		Route::post('/supervisor-incentives/records/{record}/approve', [\App\Http\Controllers\HR\SupervisorIncentiveController::class, 'approveRecord'])->name('supervisor-incentives.records.approve');
 		Route::post('/supervisor-incentives/records/{record}/pay', [\App\Http\Controllers\HR\SupervisorIncentiveController::class, 'markAsPaid'])->name('supervisor-incentives.records.pay');
 		Route::delete('/supervisor-incentives/records/{record}', [\App\Http\Controllers\HR\SupervisorIncentiveController::class, 'deleteRecord'])->name('supervisor-incentives.records.destroy');
+
+		// Incentive Settings Management (New Comprehensive System)
+		Route::get('/incentive-settings', [\App\Http\Controllers\HR\IncentiveSettingsController::class, 'index'])->name('incentive-settings.index');
+		Route::post('/incentive-settings/types', [\App\Http\Controllers\HR\IncentiveSettingsController::class, 'storeType'])->name('incentive-settings.types.store');
+		Route::put('/incentive-settings/types/{type}', [\App\Http\Controllers\HR\IncentiveSettingsController::class, 'updateType'])->name('incentive-settings.types.update');
+		Route::delete('/incentive-settings/types/{type}', [\App\Http\Controllers\HR\IncentiveSettingsController::class, 'destroyType'])->name('incentive-settings.types.destroy');
+		Route::post('/incentive-settings/rules', [\App\Http\Controllers\HR\IncentiveSettingsController::class, 'storeRule'])->name('incentive-settings.rules.store');
+		Route::put('/incentive-settings/rules/{rule}', [\App\Http\Controllers\HR\IncentiveSettingsController::class, 'updateRule'])->name('incentive-settings.rules.update');
+		Route::delete('/incentive-settings/rules/{rule}', [\App\Http\Controllers\HR\IncentiveSettingsController::class, 'destroyRule'])->name('incentive-settings.rules.destroy');
+		Route::post('/incentive-settings/settings', [\App\Http\Controllers\HR\IncentiveSettingsController::class, 'updateSettings'])->name('incentive-settings.settings.update');
+		Route::post('/incentive-settings/calculate', [\App\Http\Controllers\HR\IncentiveSettingsController::class, 'calculate'])->name('incentive-settings.calculate');
+		Route::get('/incentive-settings/entries', [\App\Http\Controllers\HR\IncentiveSettingsController::class, 'getEntries'])->name('incentive-settings.entries');
+		Route::post('/incentive-settings/entries/{entry}/approve', [\App\Http\Controllers\HR\IncentiveSettingsController::class, 'approveEntry'])->name('incentive-settings.entries.approve');
+		Route::post('/incentive-settings/entries/{entry}/pay', [\App\Http\Controllers\HR\IncentiveSettingsController::class, 'markAsPaid'])->name('incentive-settings.entries.pay');
+		Route::post('/incentive-settings/entries/{entry}/reject', [\App\Http\Controllers\HR\IncentiveSettingsController::class, 'rejectEntry'])->name('incentive-settings.entries.reject');
+		Route::post('/incentive-settings/entries/{entry}/adjust', [\App\Http\Controllers\HR\IncentiveSettingsController::class, 'adjustEntry'])->name('incentive-settings.entries.adjust');
+		Route::delete('/incentive-settings/entries/{entry}', [\App\Http\Controllers\HR\IncentiveSettingsController::class, 'destroyEntry'])->name('incentive-settings.entries.destroy');
 
 		// Legacy Guard-only Leave & Roster management (kept for backwards compatibility)
 		Route::post('/leaves/holidays', [\App\Http\Controllers\HR\LeaveController::class, 'storeHoliday'])->name('leaves.holidays.store');

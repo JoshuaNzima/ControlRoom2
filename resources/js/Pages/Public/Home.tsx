@@ -4,6 +4,7 @@ import PublicLayout from '@/Layouts/PublicLayout';
 import IconMapper from '@/Components/IconMapper';
 import Modal from '@/Components/Modal';
 import { motion, AnimatePresence, useScroll, useTransform, useMotionValue, useSpring, useReducedMotion } from 'framer-motion';
+import { Shield, Camera, Zap, MapPin, Users, Clock, ChevronRight, AlertTriangle, Phone, Send, Sun, Moon } from 'lucide-react';
 
 function Starfield({ density = 140, speed = 0.02 }: { density?: number; speed?: number }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -76,9 +77,28 @@ function Starfield({ density = 140, speed = 0.02 }: { density?: number; speed?: 
 export default function Home() {
   const [currentStat, setCurrentStat] = useState(0);
   const [activeIntake, setActiveIntake] = useState<'ticket' | 'down' | 'incident'>('ticket');
+  const [darkMode, setDarkMode] = useState(false);
   const { flash, metrics, team = [] }: any = usePage().props;
   const { scrollYProgress } = useScroll();
   const prefersReduced = useReducedMotion();
+
+  // Initialize dark mode from localStorage or system preference
+  useEffect(() => {
+    const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const savedMode = localStorage.getItem('coinsec-theme');
+    if (savedMode) {
+      setDarkMode(savedMode === 'dark');
+    } else {
+      setDarkMode(prefersDark);
+    }
+  }, []);
+
+  const toggleDarkMode = () => {
+    const newMode = !darkMode;
+    setDarkMode(newMode);
+    localStorage.setItem('coinsec-theme', newMode ? 'dark' : 'light');
+  };
+
   const safeRoute = (name: string, params?: any, fallback: string = '#') => {
     try {
       return route(name, params);
@@ -289,33 +309,47 @@ export default function Home() {
     <PublicLayout title="Coin Security — Advanced Security Solutions">
       <Head title="Home" />
 
+      {/* Dark Mode Toggle */}
+      <motion.button
+        onClick={toggleDarkMode}
+        className={`fixed top-6 right-6 z-50 p-3 rounded-full shadow-lg transition-all ${
+          darkMode
+            ? 'bg-white/10 text-white hover:bg-white/20 backdrop-blur-sm'
+            : 'bg-white text-gray-700 hover:bg-gray-100'
+        }`}
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.95 }}
+      >
+        {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+      </motion.button>
+
       {/* Hero Section */}
-      <section className="relative overflow-hidden text-white">
+      <section className={`relative overflow-hidden transition-colors duration-300 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
         {/* Animated gradient layer with hue shift */}
-        <motion.div aria-hidden className="pointer-events-none absolute inset-0 bg-gradient-to-br from-slate-950 via-red-950 to-slate-900" style={{ filter: heroHue }} />
-        <div className="pointer-events-none absolute inset-0 bg-black/18"></div>
+        <motion.div aria-hidden className={`pointer-events-none absolute inset-0 transition-colors duration-300 ${darkMode ? 'bg-gradient-to-br from-slate-950 via-red-950 to-slate-900' : 'bg-gradient-to-br from-gray-50 via-white to-gray-100'}`} style={{ filter: heroHue }} />
+        <div className={`pointer-events-none absolute inset-0 transition-colors duration-300 ${darkMode ? 'bg-black/18' : 'bg-white/40'}`} />
         <div ref={heroRef} onMouseMove={handleMouseMove} onMouseLeave={handleMouseLeave} className="relative z-10 min-h-[100svh] flex items-center pt-24 pb-16">
-          <motion.img aria-hidden src="/images/compound.png" alt="" className="pointer-events-none absolute inset-0 w-full h-full object-cover opacity-[0.26] blur-[8px] scale-110" style={{ x: bgX, y: bgY, scale: bgScale }} />
-          <motion.div aria-hidden className="pointer-events-none absolute inset-0 opacity-40 [background-image:radial-gradient(rgba(255,255,255,0.07)_1px,transparent_1px)] [background-size:14px_14px]" style={{ x: gridX, y: gridY }} />
-          <div aria-hidden className="pointer-events-none absolute inset-0 opacity-[0.035] [background-image:repeating-linear-gradient(45deg,rgba(255,255,255,0.18)_0px,rgba(255,255,255,0.18)_1px,transparent_1px,transparent_8px)]" />
-          <motion.div aria-hidden className="pointer-events-none absolute -top-24 -left-24 w-[40vw] h-[40vw] rounded-full bg-red-500/15 blur-3xl" style={{ x: glow1X, y: glow1Y }} />
-          <motion.div aria-hidden className="pointer-events-none absolute -bottom-24 -right-24 w-[32vw] h-[32vw] rounded-full bg-purple-500/20 blur-3xl" style={{ x: glow2X, y: glow2Y }} />
-          <motion.div aria-hidden className="pointer-events-none absolute -top-40 left-1/4 w-[60vw] h-[60vw] rounded-full bg-red-500/10 blur-3xl mix-blend-screen"
+          <motion.img aria-hidden src="/images/compound.png" alt="" className={`pointer-events-none absolute inset-0 w-full h-full object-cover blur-[8px] scale-110 transition-opacity duration-300 ${darkMode ? 'opacity-[0.26]' : 'opacity-[0.08]'}`} style={{ x: bgX, y: bgY, scale: bgScale }} />
+          <motion.div aria-hidden className={`pointer-events-none absolute inset-0 opacity-40 [background-image:radial-gradient(${darkMode ? 'rgba(255,255,255' : 'rgba(0,0,0'},0.07)_1px,transparent_1px)] [background-size:14px_14px]`} style={{ x: gridX, y: gridY }} />
+          <div aria-hidden className={`pointer-events-none absolute inset-0 opacity-[0.035] [background-image:repeating-linear-gradient(45deg,${darkMode ? 'rgba(255,255,255' : 'rgba(0,0,0'},0.18)_0px,${darkMode ? 'rgba(255,255,255' : 'rgba(0,0,0'},0.18)_1px,transparent_1px,transparent_8px)]`} />
+          <motion.div aria-hidden className={`pointer-events-none absolute -top-24 -left-24 w-[40vw] h-[40vw] rounded-full blur-3xl transition-colors duration-300 ${darkMode ? 'bg-red-500/15' : 'bg-red-500/10'}`} style={{ x: glow1X, y: glow1Y }} />
+          <motion.div aria-hidden className={`pointer-events-none absolute -bottom-24 -right-24 w-[32vw] h-[32vw] rounded-full blur-3xl transition-colors duration-300 ${darkMode ? 'bg-purple-500/20' : 'bg-purple-500/10'}`} style={{ x: glow2X, y: glow2Y }} />
+          <motion.div aria-hidden className={`pointer-events-none absolute -top-40 left-1/4 w-[60vw] h-[60vw] rounded-full blur-3xl mix-blend-screen transition-colors duration-300 ${darkMode ? 'bg-red-500/10' : 'bg-red-500/5'}`}
             animate={prefersReduced ? { x: 0, y: 0, scale: 1 } : { x: [0, -30, 20, 0], y: [0, 20, -10, 0], scale: [1, 1.06, 1] }}
             transition={{ duration: 22, repeat: prefersReduced ? 0 : Infinity, repeatType: 'mirror', ease: 'easeInOut' }} />
-          <motion.div aria-hidden className="pointer-events-none absolute -bottom-48 right-[-10%] w-[50vw] h-[50vw] rounded-full bg-indigo-500/10 blur-3xl mix-blend-screen"
+          <motion.div aria-hidden className={`pointer-events-none absolute -bottom-48 right-[-10%] w-[50vw] h-[50vw] rounded-full blur-3xl mix-blend-screen transition-colors duration-300 ${darkMode ? 'bg-indigo-500/10' : 'bg-indigo-500/5'}`}
             animate={prefersReduced ? { x: 0, y: 0, scale: 1 } : { x: [0, 25, -15, 0], y: [0, -15, 20, 0], scale: [1, 1.04, 1] }}
             transition={{ duration: 24, repeat: prefersReduced ? 0 : Infinity, repeatType: 'mirror', ease: 'easeInOut' }} />
           {/* Vignette and Noise overlays */}
-          <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(0,0,0,0)_60%,rgba(0,0,0,0.55)_100%)]" />
+          <div aria-hidden className={`pointer-events-none absolute inset-0 transition-opacity duration-300 ${darkMode ? 'bg-[radial-gradient(ellipse_at_center,rgba(0,0,0,0)_60%,rgba(0,0,0,0.55)_100%)]' : 'bg-[radial-gradient(ellipse_at_center,rgba(0,0,0,0)_60%,rgba(0,0,0,0.05)_100%)]'}`} />
           <svg aria-hidden className="pointer-events-none absolute inset-0 w-full h-full opacity-[0.04] mix-blend-overlay" role="presentation">
             <filter id="heroNoise">
               <feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="2" stitchTiles="stitch" />
             </filter>
             <rect width="100%" height="100%" filter="url(#heroNoise)" />
           </svg>
-          {/* Starfield canvas (real 3D feel) */}
-          {!prefersReduced && <Starfield />}
+          {/* Starfield canvas (real 3D feel) - only in dark mode */}
+          {darkMode && !prefersReduced && <Starfield />}
           
           {/* Floating hero chips with inline popovers */}
           <motion.div style={{ x: chip1X, y: chip1Y }}
@@ -324,18 +358,18 @@ export default function Home() {
             className="absolute top-24 left-3 sm:left-6 z-30">
             <motion.button type="button" aria-expanded={activeChip === 'cctv'} onClick={() => setActiveChip(activeChip === 'cctv' ? null : 'cctv')}
               whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.97 }}
-              className="inline-flex items-center gap-2 rounded-full bg-black/40 text-white border border-white/10 px-3 py-1.5 backdrop-blur-md text-xs hover:bg-black/55">
-              <IconMapper name="Camera" className="w-3.5 h-3.5 text-blue-300" />
+              className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 backdrop-blur-md text-xs transition-colors ${darkMode ? 'bg-black/40 text-white border-white/10 hover:bg-black/55' : 'bg-white/70 text-gray-800 border-gray-200 hover:bg-white'}`}>
+              <IconMapper name="Camera" className={`w-3.5 h-3.5 ${darkMode ? 'text-blue-300' : 'text-blue-500'}`} />
               <span>24/7 Monitoring</span>
             </motion.button>
             <AnimatePresence>
               {activeChip === 'cctv' && (
                 <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 6 }}
-                  className="mt-2 w-64 rounded-xl border border-white/10 bg-black/70 text-white text-sm backdrop-blur-md p-3 shadow-xl">
+                  className={`mt-2 w-64 rounded-xl border backdrop-blur-md text-sm p-3 shadow-xl ${darkMode ? 'border-white/10 bg-black/70 text-white' : 'border-gray-200 bg-white text-gray-800'}`}>
                   <div className="font-semibold mb-1">CCTV Surveillance</div>
-                  <div className="text-[12px] text-gray-200/90">24/7 live monitoring, cloud recording and smart analytics for proactive security.</div>
+                  <div className={`text-[12px] ${darkMode ? 'text-gray-200/90' : 'text-gray-600'}`}>24/7 live monitoring, cloud recording and smart analytics for proactive security.</div>
                   <div className="mt-2 flex justify-end">
-                    <a href={safeRoute('public.services.show', 'cctv-surveillance', '/services/cctv-surveillance')} className="text-xs text-blue-300 hover:text-blue-200 underline">Learn more</a>
+                    <a href={safeRoute('public.services.show', 'cctv-surveillance', '/services/cctv-surveillance')} className={`text-xs ${darkMode ? 'text-blue-300 hover:text-blue-200' : 'text-blue-600 hover:text-blue-700'} underline`}>Learn more</a>
                   </div>
                 </motion.div>
               )}
@@ -347,18 +381,18 @@ export default function Home() {
             className="absolute bottom-24 left-4 sm:left-10 z-30">
             <motion.button type="button" aria-expanded={activeChip === 'rapid'} onClick={() => setActiveChip(activeChip === 'rapid' ? null : 'rapid')}
               whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.97 }}
-              className="inline-flex items-center gap-2 rounded-full bg-black/40 text-white border border-white/10 px-3 py-1.5 backdrop-blur-md text-xs hover:bg-black/55">
-              <IconMapper name="Flashlight" className="w-3.5 h-3.5 text-purple-300" />
+              className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 backdrop-blur-md text-xs transition-colors ${darkMode ? 'bg-black/40 text-white border-white/10 hover:bg-black/55' : 'bg-white/70 text-gray-800 border-gray-200 hover:bg-white'}`}>
+              <IconMapper name="Flashlight" className={`w-3.5 h-3.5 ${darkMode ? 'text-purple-300' : 'text-purple-500'}`} />
               <span>Rapid Response</span>
             </motion.button>
             <AnimatePresence>
               {activeChip === 'rapid' && (
                 <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 6 }}
-                  className="mt-2 w-64 rounded-xl border border-white/10 bg-black/70 text-white text-sm backdrop-blur-md p-3 shadow-xl">
+                  className={`mt-2 w-64 rounded-xl border backdrop-blur-md text-sm p-3 shadow-xl ${darkMode ? 'border-white/10 bg-black/70 text-white' : 'border-gray-200 bg-white text-gray-800'}`}>
                   <div className="font-semibold mb-1">Rapid Response</div>
-                  <div className="text-[12px] text-gray-200/90">On‑call response fleet, fast dispatch and on‑scene reporting when it matters.</div>
+                  <div className={`text-[12px] ${darkMode ? 'text-gray-200/90' : 'text-gray-600'}`}>On‑call response fleet, fast dispatch and on‑scene reporting when it matters.</div>
                   <div className="mt-2 flex justify-end">
-                    <a href={safeRoute('public.services.show', 'rapid-response', '/services/rapid-response')} className="text-xs text-blue-300 hover:text-blue-200 underline">Learn more</a>
+                    <a href={safeRoute('public.services.show', 'rapid-response', '/services/rapid-response')} className={`text-xs ${darkMode ? 'text-blue-300 hover:text-blue-200' : 'text-blue-600 hover:text-blue-700'} underline`}>Learn more</a>
                   </div>
                 </motion.div>
               )}
@@ -370,18 +404,18 @@ export default function Home() {
             className="absolute top-1/2 -translate-y-1/2 right-2 sm:right-6 z-30">
             <motion.button type="button" aria-expanded={activeChip === 'guards'} onClick={() => setActiveChip(activeChip === 'guards' ? null : 'guards')}
               whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.97 }}
-              className="inline-flex items-center gap-2 rounded-full bg-black/40 text-white border border-white/10 px-3 py-1.5 backdrop-blur-md text-xs hover:bg-black/55">
-              <IconMapper name="Shield" className="w-3.5 h-3.5 text-emerald-300" />
+              className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 backdrop-blur-md text-xs transition-colors ${darkMode ? 'bg-black/40 text-white border-white/10 hover:bg-black/55' : 'bg-white/70 text-gray-800 border-gray-200 hover:bg-white'}`}>
+              <IconMapper name="Shield" className={`w-3.5 h-3.5 ${darkMode ? 'text-emerald-300' : 'text-emerald-500'}`} />
               <span>On‑site Guards</span>
             </motion.button>
             <AnimatePresence>
               {activeChip === 'guards' && (
                 <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 6 }}
-                  className="mt-2 w-64 rounded-xl border border-white/10 bg-black/70 text-white text-sm backdrop-blur-md p-3 shadow-xl">
+                  className={`mt-2 w-64 rounded-xl border backdrop-blur-md text-sm p-3 shadow-xl ${darkMode ? 'border-white/10 bg-black/70 text-white' : 'border-gray-200 bg-white text-gray-800'}`}>
                   <div className="font-semibold mb-1">Manned Guards</div>
-                  <div className="text-[12px] text-gray-200/90">Trained, vetted personnel with site‑specific SLAs and daily supervision.</div>
+                  <div className={`text-[12px] ${darkMode ? 'text-gray-200/90' : 'text-gray-600'}`}>Trained, vetted personnel with site‑specific SLAs and daily supervision.</div>
                   <div className="mt-2 flex justify-end">
-                    <a href={safeRoute('public.services.show', 'manned-guards', '/services/manned-guards')} className="text-xs text-blue-300 hover:text-blue-200 underline">Learn more</a>
+                    <a href={safeRoute('public.services.show', 'manned-guards', '/services/manned-guards')} className={`text-xs ${darkMode ? 'text-blue-300 hover:text-blue-200' : 'text-blue-600 hover:text-blue-700'} underline`}>Learn more</a>
                   </div>
                 </motion.div>
               )}
@@ -393,18 +427,18 @@ export default function Home() {
             className="absolute bottom-24 right-4 sm:right-10 z-30">
             <motion.button type="button" aria-expanded={activeChip === 'perimeter'} onClick={() => setActiveChip(activeChip === 'perimeter' ? null : 'perimeter')}
               whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.97 }}
-              className="inline-flex items-center gap-2 rounded-full bg-black/40 text-white border border-white/10 px-3 py-1.5 backdrop-blur-md text-xs hover:bg-black/55">
-              <IconMapper name="MapPin" className="w-3.5 h-3.5 text-amber-300" />
+              className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 backdrop-blur-md text-xs transition-colors ${darkMode ? 'bg-black/40 text-white border-white/10 hover:bg-black/55' : 'bg-white/70 text-gray-800 border-gray-200 hover:bg-white'}`}>
+              <IconMapper name="MapPin" className={`w-3.5 h-3.5 ${darkMode ? 'text-amber-300' : 'text-amber-500'}`} />
               <span>Perimeter Protection</span>
             </motion.button>
             <AnimatePresence>
               {activeChip === 'perimeter' && (
                 <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 6 }}
-                  className="mt-2 w-64 rounded-xl border border-white/10 bg-black/70 text-white text-sm backdrop-blur-md p-3 shadow-xl">
+                  className={`mt-2 w-64 rounded-xl border backdrop-blur-md text-sm p-3 shadow-xl ${darkMode ? 'border-white/10 bg-black/70 text-white' : 'border-gray-200 bg-white text-gray-800'}`}>
                   <div className="font-semibold mb-1">Perimeter Protection</div>
-                  <div className="text-[12px] text-gray-200/90">Access control, alarms, and perimeter sensors integrated into operations.</div>
+                  <div className={`text-[12px] ${darkMode ? 'text-gray-200/90' : 'text-gray-600'}`}>Access control, alarms, and perimeter sensors integrated into operations.</div>
                   <div className="mt-2 flex justify-end">
-                    <a href={safeRoute('public.services.show', 'perimeter-protection', '/services/perimeter-protection')} className="text-xs text-blue-300 hover:text-blue-200 underline">Learn more</a>
+                    <a href={safeRoute('public.services.show', 'perimeter-protection', '/services/perimeter-protection')} className={`text-xs ${darkMode ? 'text-blue-300 hover:text-blue-200' : 'text-blue-600 hover:text-blue-700'} underline`}>Learn more</a>
                   </div>
                 </motion.div>
               )}
@@ -415,63 +449,137 @@ export default function Home() {
             <div className="space-y-8">
               <motion.div className="space-y-4" style={{ x: prefersReduced ? 0 : titleX, y: prefersReduced ? 0 : titleY }}>
                 <div className="relative">
-                  {/* Blob mask behind headline */}
                   <motion.div aria-hidden className="pointer-events-none absolute -inset-x-16 -top-10 h-48 rounded-[100%] bg-gradient-to-r from-red-500/25 to-indigo-500/20 blur-2xl"
                     style={{ x: prefersReduced ? 0 : gridX, y: prefersReduced ? 0 : gridY }} />
-                <h1 className="relative text-5xl lg:text-6xl font-bold leading-tight">
-                  Advanced Security
-                  <motion.span
-                    className="block text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400"
-                    animate={prefersReduced ? undefined : { backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'] }}
-                    transition={{ duration: 12, repeat: prefersReduced ? 0 : Infinity, ease: 'linear' }}
-                    style={{ backgroundSize: '200% 200%' }}
+                  <motion.div
+                    initial="hidden"
+                    animate="visible"
+                    variants={{
+                      hidden: {},
+                      visible: { transition: { staggerChildren: 0.08 } }
+                    }}
                   >
-                    Solutions
-                  </motion.span>
-                </h1>
+                    <h1 className="relative text-5xl lg:text-7xl font-bold leading-tight">
+                      <motion.span
+                        className="block overflow-hidden"
+                        variants={{ hidden: { opacity: 0 }, visible: { opacity: 1 } }}
+                      >
+                        <motion.span
+                          className={`block ${darkMode ? 'text-white' : 'text-gray-900'}`}
+                          initial={{ y: 100, opacity: 0 }}
+                          animate={{ y: 0, opacity: 1 }}
+                          transition={{ duration: 0.8, ease: [0.33, 1, 0.68, 1] }}
+                        >
+                          Advanced
+                        </motion.span>
+                      </motion.span>
+                      <motion.span
+                        className="block overflow-hidden"
+                        variants={{ hidden: { opacity: 0 }, visible: { opacity: 1 } }}
+                      >
+                        <motion.span
+                          className="block text-transparent bg-clip-text bg-gradient-to-r from-red-400 via-orange-400 to-red-500"
+                          initial={{ y: 100, opacity: 0 }}
+                          animate={{ y: 0, opacity: 1 }}
+                          transition={{ duration: 0.8, delay: 0.15, ease: [0.33, 1, 0.68, 1] }}
+                        >
+                          Security
+                        </motion.span>
+                      </motion.span>
+                      <motion.span
+                        className="block overflow-hidden"
+                        variants={{ hidden: { opacity: 0 }, visible: { opacity: 1 } }}
+                      >
+                        <motion.span
+                          className={`block ${darkMode ? 'text-white' : 'text-gray-900'}`}
+                          initial={{ y: 100, opacity: 0 }}
+                          animate={{ y: 0, opacity: 1 }}
+                          transition={{ duration: 0.8, delay: 0.3, ease: [0.33, 1, 0.68, 1] }}
+                        >
+                          Command
+                        </motion.span>
+                      </motion.span>
+                    </h1>
+                  </motion.div>
+                  <motion.div
+                    className="absolute -right-4 top-0"
+                    initial={{ scale: 0, rotate: -180 }}
+                    animate={{ scale: 1, rotate: 0 }}
+                    transition={{ duration: 0.6, delay: 1, type: 'spring' }}
+                  >
+                    <div className="w-12 h-12 bg-red-500 rounded-xl flex items-center justify-center shadow-lg shadow-red-500/50">
+                      <Shield className="w-6 h-6 text-white" />
+                    </div>
+                  </motion.div>
                 </div>
-                <p className="text-xl text-gray-300 leading-relaxed">
-                  Professional security services with cutting-edge technology. 
-                  Protect your business with trained guards, live monitoring, and intelligent analytics.
-                </p>
+                <motion.p
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.8, delay: 0.5 }}
+                  className={`text-xl lg:text-2xl leading-relaxed max-w-2xl ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}
+                >
+                  Elite security infrastructure with real-time command capabilities.
+                  <span className="text-red-500"> Protect what matters most.</span>
+                </motion.p>
               </motion.div>
               
               <div className="flex flex-col sm:flex-row gap-4">
                 <motion.a 
                   href="#intake" 
-                  className="inline-flex items-center justify-center gap-3 px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-xl shadow-lg"
-                  whileHover={{ scale: 1.05, boxShadow: '0 10px 30px rgba(59,130,246,0.25)' }}
+                  className="group relative inline-flex items-center justify-center gap-3 px-8 py-4 bg-gradient-to-r from-red-600 to-orange-500 text-white font-bold rounded-xl shadow-lg shadow-red-600/25 overflow-hidden"
+                  whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.98 }}
                 >
-                  <IconMapper name="Send" className="w-[clamp(18px,3vw,22px)] h-[clamp(18px,3vw,22px)]" />
-                  Report an Issue
+                  <div className="absolute inset-0 bg-gradient-to-r from-red-500 to-orange-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <div className="relative flex items-center gap-3">
+                    <AlertTriangle className="w-5 h-5" />
+                    <span>Report Incident</span>
+                    <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                  </div>
                 </motion.a>
                 <motion.button 
                   type="button"
                   onClick={() => setShowQuote(true)}
-                  className="inline-flex items-center justify-center gap-3 px-8 py-4 bg-white/10 backdrop-blur-sm text-white font-semibold rounded-xl border border-white/20"
-                  whileHover={{ scale: 1.04, backgroundColor: 'rgba(255,255,255,0.18)' }}
+                  className={`group inline-flex items-center justify-center gap-3 px-8 py-4 font-semibold rounded-xl border transition-all ${darkMode ? 'bg-white/10 backdrop-blur-sm text-white border-white/20 hover:bg-white/20 hover:border-white/30' : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50 hover:border-gray-300 shadow-lg'}`}
+                  whileHover={{ scale: 1.04 }}
                   whileTap={{ scale: 0.98 }}
                 >
-                  <IconMapper name="Phone" className="w-[clamp(18px,3vw,22px)] h-[clamp(18px,3vw,22px)]" />
-                  Get Quote
+                  <Phone className="w-5 h-5" />
+                  <span>Get Quote</span>
                 </motion.button>
               </div>
 
-              {/* Animated Stats */}
-              <div className="grid grid-cols-2 gap-6 pt-8">
+              {/* Animated Stats - Redesigned */}
+              <motion.div 
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.8 }}
+                className="grid grid-cols-2 gap-4 pt-8"
+              >
                 {metricStats.map((stat, index) => (
-                  <div 
+                  <motion.div 
                     key={index}
-                    className={`text-center p-4 rounded-xl bg-white/10 backdrop-blur-sm border border-white/20 transition-all duration-500 ${
-                      currentStat === index ? 'scale-105 bg-white/20' : ''
-                    }`}
+                    initial={{ scale: 0.8, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ delay: 0.9 + index * 0.1 }}
+                    whileHover={{ scale: 1.05 }}
+                    className={`relative overflow-hidden p-4 rounded-2xl backdrop-blur-md border transition-all duration-500 cursor-pointer group ${
+                      darkMode 
+                        ? 'bg-gradient-to-br from-white/10 to-white/5 border-white/10' 
+                        : 'bg-white border-gray-200 shadow-lg'
+                    } ${currentStat === index ? 'ring-2 ring-red-500/50' : ''}`}
                   >
-                    <div className="text-3xl font-bold text-blue-400">{stat.number}</div>
-                    <div className="text-sm text-gray-300">{stat.label}</div>
-                  </div>
+                    <div className="absolute inset-0 bg-gradient-to-br from-red-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <div className="relative">
+                      <div className={`text-3xl font-black ${darkMode ? 'text-white' : 'text-gray-900'}`}>{stat.number}</div>
+                      <div className={`text-xs uppercase tracking-wider ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{stat.label}</div>
+                    </div>
+                    <div className={`absolute top-2 right-2 opacity-20 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                      <IconMapper name={stat.icon} className="w-8 h-8" />
+                    </div>
+                  </motion.div>
                 ))}
-              </div>
+              </motion.div>
             </div>
 
             {/* Full-bleed mode: remove framed image card */}
@@ -751,32 +859,71 @@ export default function Home() {
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="py-20 bg-gradient-to-r from-red-600 to-red-500 text-white">
-        <div className="max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8">
-          <h2 className="text-4xl font-bold mb-6">
-            Ready to Secure Your Business?
-          </h2>
-          <p className="text-xl text-blue-100 mb-8">
-            Get a free security assessment and customized quote for your business.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <a
-              href="#intake"
-              className="inline-flex items-center justify-center gap-3 px-8 py-4 bg-white text-blue-700 font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
+      {/* CTA Section - Redesigned with bold dark theme */}
+      <section className="relative py-24 overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-red-950 to-black" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(220,38,38,0.15)_0%,transparent_70%)]" />
+        <motion.div
+          className="absolute inset-0"
+          style={{
+            backgroundImage: `linear-gradient(rgba(220,38,38,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(220,38,38,0.03) 1px, transparent 1px)`,
+            backgroundSize: '60px 60px',
+          }}
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          transition={{ duration: 1 }}
+        />
+        <div className="relative max-w-5xl mx-auto text-center px-4 sm:px-6 lg:px-8">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.8 }}
+          >
+            <motion.div
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-red-500/10 border border-red-500/20 mb-8"
+              initial={{ scale: 0.9 }}
+              whileInView={{ scale: 1 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
             >
-              <IconMapper name="Shield" className="w-5 h-5" />
-              Report an Issue
-            </a>
-            <button
-              type="button"
-              onClick={() => setShowQuote(true)}
-              className="inline-flex items-center justify-center gap-3 px-8 py-4 bg-white/20 backdrop-blur-sm text-white font-semibold rounded-xl border border-white/30 hover:bg-white/30 transition-all duration-300"
-            >
-              <IconMapper name="Phone" className="w-5 h-5" />
-              Contact Sales Team
-            </button>
-          </div>
+              <Zap className="w-4 h-4 text-red-400" />
+              <span className="text-sm text-red-300 font-medium">Ready When You Are</span>
+            </motion.div>
+            <h2 className="text-4xl md:text-6xl font-black text-white mb-6 tracking-tight">
+              Secure Your
+              <span className="block text-transparent bg-clip-text bg-gradient-to-r from-red-400 to-orange-400">
+                Operations Today
+              </span>
+            </h2>
+            <p className="text-xl text-gray-400 mb-10 max-w-2xl mx-auto">
+              Join hundreds of businesses that trust CoinSec for their critical security infrastructure.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <motion.a
+                href="#intake"
+                className="group relative inline-flex items-center justify-center gap-3 px-8 py-5 bg-gradient-to-r from-red-600 to-orange-500 text-white font-bold rounded-2xl shadow-xl shadow-red-600/30 overflow-hidden"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <div className="absolute inset-0 bg-gradient-to-r from-red-500 to-orange-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                <div className="relative flex items-center gap-3">
+                  <Shield className="w-6 h-6" />
+                  <span className="text-lg">Start Protection</span>
+                  <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                </div>
+              </motion.a>
+              <motion.button
+                type="button"
+                onClick={() => setShowQuote(true)}
+                className="inline-flex items-center justify-center gap-3 px-8 py-5 bg-white/5 backdrop-blur-sm text-white font-semibold rounded-2xl border border-white/20 hover:bg-white/10 hover:border-white/40 transition-all"
+                whileHover={{ scale: 1.04 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <Users className="w-5 h-5" />
+                <span className="text-lg">Talk to Sales</span>
+              </motion.button>
+            </div>
+          </motion.div>
         </div>
       </section>
 

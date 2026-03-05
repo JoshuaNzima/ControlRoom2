@@ -12,6 +12,8 @@ use App\Models\Zone;
 use App\Notifications\ZoneCommanderUnassigned;
 use Illuminate\Support\Facades\Notification as NotificationFacade;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Str;
 use App\Mail\WelcomeEmail;
 
 class UserController extends Controller
@@ -31,12 +33,35 @@ class UserController extends Controller
     public function index()
     {
         $perPage = request('per_page', 20);
-        $users = User::with('roles')
+        $sortField = request('sort', 'name');
+        $sortDirection = request('direction', 'asc');
+
+        $allowedSorts = ['name', 'email', 'created_at', 'status'];
+        if (!in_array($sortField, $allowedSorts)) {
+            $sortField = 'name';
+        }
+
+        $users = User::with('roles', 'zone')
             ->when(request('search'), function($q, $search) {
-                $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%");
+                $q->where(function($query) use ($search) {
+                    $query->where('name', 'like', "%{$search}%")
+                          ->orWhere('email', 'like', "%{$search}%")
+                          ->orWhere('employee_id', 'like', "%{$search}%")
+                          ->orWhere('phone', 'like', "%{$search}%");
+                });
             })
-            ->orderBy('name')
+            ->when(request('role'), function($q, $role) {
+                $q->whereHas('roles', function($query) use ($role) {
+                    $query->where('name', $role);
+                });
+            })
+            ->when(request('status'), function($q, $status) {
+                $q->where('status', $status);
+            })
+            ->when(request('zone_id'), function($q, $zoneId) {
+                $q->where('zone_id', $zoneId);
+            })
+            ->orderBy($sortField, $sortDirection)
             ->paginate($perPage)
             ->withQueryString();
 
@@ -45,7 +70,7 @@ class UserController extends Controller
 
         return Inertia::render('Admin/Users/Index', [
             'users' => $users,
-            'filters' => request()->only('search', 'per_page'),
+            'filters' => request()->only('search', 'per_page', 'role', 'status', 'zone_id', 'sort', 'direction'),
             'roles' => $roles,
             'zones' => $zones,
         ]);
@@ -79,7 +104,6 @@ class UserController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users',
-            'password' => 'required|string|min:8|confirmed',
             'phone' => 'nullable|string',
             'employee_id' => 'nullable|string|unique:users',
             'role' => 'required|exists:roles,name',
@@ -87,14 +111,18 @@ class UserController extends Controller
             'status' => 'nullable|in:active,inactive',
         ]);
 
+        // Auto-generate employee_id if not provided
         if (empty($validated['employee_id'])) {
             $validated['employee_id'] = $this->generateUserEmployeeId();
         }
 
+        // Generate a random temporary password
+        $tempPassword = Str::random(16);
+
         $user = User::create([
             'name' => $validated['name'],
             'email' => $validated['email'],
-            'password' => Hash::make($validated['password']),
+            'password' => Hash::make($tempPassword),
             'phone' => $validated['phone'] ?? null,
             'employee_id' => $validated['employee_id'] ?? null,
             'status' => $validated['status'] ?? 'active',
@@ -103,13 +131,16 @@ class UserController extends Controller
 
         $user->assignRole($validated['role']);
 
-        // Send welcome email (best-effort)
+        // Send password reset link to user so they can set their own password
         try {
-            Mail::to($user->email)->send(new WelcomeEmail($user));
-        } catch (\Throwable $e) {}
+            Password::sendResetLink(['email' => $user->email]);
+        } catch (\Throwable $e) {
+            // Log error but don't fail user creation
+            \Illuminate\Support\Facades\Log::warning('Failed to send password reset link to new user: ' . $user->email . ' - ' . $e->getMessage());
+        }
 
         return $this->redirectAfterWrite($request)
-            ->with('success', 'User created successfully.');
+            ->with('success', 'User created successfully. A password reset email has been sent to set their password.');
     }
 
     private function generateUserEmployeeId(): string

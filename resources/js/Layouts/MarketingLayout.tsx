@@ -31,12 +31,15 @@ export default function MarketingLayout({ title, children, user }: Props) {
   const page = usePage<any>();
   const roles = ((user as any)?.roles ?? (page?.props as any)?.auth?.user?.roles ?? []) as any;
   const isSuperAdmin = Array.isArray(roles) ? roles.includes('super_admin') : roles === 'super_admin';
+  const isAdminUser = Array.isArray(roles) && (roles.includes('admin') || roles.includes('super_admin'));
 
   const nav: NavItem[] = [
     { name: 'Overview', href: route('admin.marketing'), icon: <IconMapper name="megaphone" className="h-6 w-6" />, current: isCurrent(route('admin.marketing')) },
     { name: 'Leads', href: route('admin.marketing.leads.index'), icon: <IconMapper name="users" className="h-6 w-6" />, current: isCurrent(route('admin.marketing.leads.index')) },
     { name: 'Analytics', href: route('admin.marketing.analytics'), icon: <IconMapper name="bar-chart-2" className="h-6 w-6" />, current: isCurrent(route('admin.marketing.analytics')) },
-    { name: 'My Requisitions', href: route('requisitions.index'), icon: <IconMapper name="clipboard-list" className="h-6 w-6" />, current: isCurrent(route('requisitions.index')), badge: (()=>{ const n = Number(counters?.requisitions_my_open||0); return n>0? String(n): undefined; })() },
+    ...(!isAdminUser ? ([
+      { name: 'My Requisitions', href: route('requisitions.index'), icon: <IconMapper name="clipboard-list" className="h-6 w-6" />, current: isCurrent(route('requisitions.index')), badge: (()=>{ const n = Number(counters?.requisitions_my_open||0); return n>0? String(n): undefined; })() },
+    ] as NavItem[]) : []),
     { name: 'Settings', href: route('admin.marketing.settings'), icon: <IconMapper name="settings" className="h-6 w-6" />, current: isCurrent(route('admin.marketing.settings')) },
   ];
 

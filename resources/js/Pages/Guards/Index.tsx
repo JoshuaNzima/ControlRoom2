@@ -4,6 +4,7 @@ import { Card } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import { Input } from '@/Components/ui/input';
 import { Badge } from '@/Components/ui/badge';
+import { Label } from '@/Components/ui/label';
 import IconMapper from '@/Components/IconMapper';
 import Modal from '@/Components/Modal';
 
@@ -80,6 +81,13 @@ type Guard = {
   name: string;
   employee_id: string;
   status: string;
+  email?: string;
+  phone?: string;
+  nin?: string;
+  grade_id?: number;
+  zone_id?: number;
+  supervisor_id?: number;
+  employee_role?: string;
   supervisor?: { id: number; name: string } | null;
   today_attendance?: { check_in?: string | null; check_out?: string | null } | null;
   active_assignment?: { site_id?: number | null; site_name?: string | null; client_name?: string | null } | null;
@@ -90,10 +98,11 @@ type PageProps = {
   filters?: Record<string, any>;
   grades?: Array<{ id: number; code: string; name: string }>;
   zones?: Array<{ id: number; name: string }>;
+  stats?: { total: number; active: number; on_duty: number; off_duty: number };
 };
 
 export default function GuardsDirectory() {
-  const { guards: guardsProp = { data: [], links: [], meta: {} }, filters = {}, grades = [], zones = [] } = usePage<PageProps>().props as any;
+  const { guards: guardsProp = { data: [], links: [], meta: {} }, filters = {}, grades = [], zones = [], stats } = usePage<PageProps>().props as any;
 
   const [search, setSearch] = useState(filters.search || '');
   const [status, setStatus] = useState<string>(filters.status || '');
@@ -109,6 +118,49 @@ export default function GuardsDirectory() {
   const [viewOpen, setViewOpen] = useState(false);
   const [viewData, setViewData] = useState<any | null>(null);
   const [viewLoading, setViewLoading] = useState<number | null>(null);
+
+  // Form modals state
+  const [formOpen, setFormOpen] = useState(false);
+  const [editingGuard, setEditingGuard] = useState<Guard | null>(null);
+  const [formProcessing, setFormProcessing] = useState(false);
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+
+  // Delete confirmation state
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteGuard, setDeleteGuard] = useState<Guard | null>(null);
+  const [deleteProcessing, setDeleteProcessing] = useState(false);
+
+  // QR Scan state
+  const [scanOpen, setScanOpen] = useState(false);
+  const [scanResult, setScanResult] = useState<string | null>(null);
+
+  // Attendance marking state
+  const [markGuard, setMarkGuard] = useState<Guard | null>(null);
+  const [markPresentOpen, setMarkPresentOpen] = useState(false);
+  const [markAbsentOpen, setMarkAbsentOpen] = useState(false);
+  const [markNotes, setMarkNotes] = useState('');
+  const [markProcessing, setMarkProcessing] = useState(false);
+
+  // Bulk import state
+  const [importOpen, setImportOpen] = useState(false);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importProcessing, setImportProcessing] = useState(false);
+  const [importAllowUpdates, setImportAllowUpdates] = useState(false);
+  const [importPreview, setImportPreview] = useState<any[] | null>(null);
+
+  // Form data state
+  const [formData, setFormData] = useState({
+    name: '',
+    employee_id: '',
+    email: '',
+    phone: '',
+    nin: '',
+    grade_id: '',
+    zone_id: '',
+    supervisor_id: '',
+    status: 'active',
+    employee_role: 'guard',
+  });
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
@@ -149,21 +201,200 @@ export default function GuardsDirectory() {
     }
   };
 
+  const openAddForm = () => {
+    setEditingGuard(null);
+    setFormData({
+      name: '',
+      employee_id: '',
+      email: '',
+      phone: '',
+      nin: '',
+      grade_id: '',
+      zone_id: '',
+      supervisor_id: '',
+      status: 'active',
+      employee_role: 'guard',
+    });
+    setFormErrors({});
+    setFormOpen(true);
+  };
+
+  const openEditForm = async (guard: Guard) => {
+    setEditingGuard(guard);
+    setFormData({
+      name: guard.name || '',
+      employee_id: guard.employee_id || '',
+      email: guard.email || '',
+      phone: guard.phone || '',
+      nin: guard.nin || '',
+      grade_id: guard.grade_id ? String(guard.grade_id) : '',
+      zone_id: guard.zone_id ? String(guard.zone_id) : '',
+      supervisor_id: guard.supervisor_id ? String(guard.supervisor_id) : '',
+      status: guard.status || 'active',
+      employee_role: guard.employee_role || 'guard',
+    });
+    setFormErrors({});
+    setFormOpen(true);
+  };
+
+  const handleFormSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setFormProcessing(true);
+    setFormErrors({});
+
+    const payload = {
+      ...formData,
+      grade_id: formData.grade_id ? Number(formData.grade_id) : null,
+      zone_id: formData.zone_id ? Number(formData.zone_id) : null,
+      supervisor_id: formData.supervisor_id ? Number(formData.supervisor_id) : null,
+    };
+
+    if (editingGuard) {
+      router.put(route('admin.guards.update', { guard: editingGuard.id }), payload, {
+        onSuccess: () => {
+          setFormOpen(false);
+          setEditingGuard(null);
+          setFormProcessing(false);
+        },
+        onError: (errors) => {
+          setFormErrors(errors as Record<string, string>);
+          setFormProcessing(false);
+        },
+      });
+    } else {
+      router.post(route('admin.guards.store'), payload, {
+        onSuccess: () => {
+          setFormOpen(false);
+          setFormProcessing(false);
+        },
+        onError: (errors) => {
+          setFormErrors(errors as Record<string, string>);
+          setFormProcessing(false);
+        },
+      });
+    }
+  };
+
+  const confirmDelete = (guard: Guard) => {
+    setDeleteGuard(guard);
+    setDeleteOpen(true);
+  };
+
+  const handleDelete = () => {
+    if (!deleteGuard) return;
+    setDeleteProcessing(true);
+    router.delete(route('admin.guards.destroy', { guard: deleteGuard.id }), {
+      onSuccess: () => {
+        setDeleteOpen(false);
+        setDeleteGuard(null);
+        setDeleteProcessing(false);
+      },
+      onError: () => {
+        setDeleteProcessing(false);
+      },
+    });
+  };
+
+  const handleMarkPresent = () => {
+    if (!markGuard) return;
+    setMarkProcessing(true);
+    router.post(route('control-room.attendance.mark-present'), {
+      guard_id: markGuard.id,
+      notes: markNotes,
+    }, {
+      onSuccess: () => {
+        setMarkPresentOpen(false);
+        setMarkGuard(null);
+        setMarkNotes('');
+        setMarkProcessing(false);
+      },
+      onError: () => {
+        setMarkProcessing(false);
+      },
+    });
+  };
+
+  const handleMarkAbsent = () => {
+    if (!markGuard) return;
+    setMarkProcessing(true);
+    router.post(route('control-room.attendance.mark-absent'), {
+      guard_id: markGuard.id,
+      notes: markNotes,
+    }, {
+      onSuccess: () => {
+        setMarkAbsentOpen(false);
+        setMarkGuard(null);
+        setMarkNotes('');
+        setMarkProcessing(false);
+      },
+      onError: () => {
+        setMarkProcessing(false);
+      },
+    });
+  };
+
+  const openMarkPresent = (guard: Guard) => {
+    setMarkGuard(guard);
+    setMarkNotes('');
+    setMarkPresentOpen(true);
+  };
+
+  const openMarkAbsent = (guard: Guard) => {
+    setMarkGuard(guard);
+    setMarkNotes('');
+    setMarkAbsentOpen(true);
+  };
+
+  const handleExport = () => {
+    const params = new URLSearchParams({
+      search: search || '',
+      status: status || '',
+      zone_id: zoneId || '',
+      grade_id: gradeId || '',
+      on_duty: onDuty ? '1' : '',
+      export: '1',
+    });
+    window.open(`${route('guards.index')}?${params.toString()}`, '_blank');
+  };
+
   const guards = guardsProp?.data || [];
   const meta = guardsProp?.meta || {};
 
   const statCards = useMemo(() => [
-    { icon: <IconMapper name="Users" size={20} />, title: 'Total Guards', value: meta?.total || guards.length, subtitle: 'Registered personnel', color: 'blue' as const },
-    { icon: <IconMapper name="UserCheck" size={20} />, title: 'Active', value: guards.filter((g: Guard) => g.status === 'active').length, subtitle: 'Currently employed', color: 'green' as const },
-    { icon: <IconMapper name="Shield" size={20} />, title: 'On Duty', value: guards.filter((g: Guard) => g.today_attendance?.check_in && !g.today_attendance?.check_out).length, subtitle: 'Working now', color: 'cyan' as const },
-    { icon: <IconMapper name="Clock" size={20} />, title: 'Off Duty', value: guards.filter((g: Guard) => !g.today_attendance?.check_in).length, subtitle: 'Not on shift', color: 'amber' as const },
-  ], [guards, meta]);
+    { icon: <IconMapper name="Users" size={20} />, title: 'Total Guards', value: stats?.total || meta?.total || guards.length, subtitle: 'Registered personnel', color: 'blue' as const },
+    { icon: <IconMapper name="UserCheck" size={20} />, title: 'Active', value: stats?.active || 0, subtitle: 'Currently employed', color: 'green' as const },
+    { icon: <IconMapper name="Shield" size={20} />, title: 'On Duty', value: stats?.on_duty || 0, subtitle: 'Working now', color: 'cyan' as const },
+    { icon: <IconMapper name="Clock" size={20} />, title: 'Off Duty', value: stats?.off_duty || 0, subtitle: 'Not on shift', color: 'amber' as const },
+  ], [guards, meta, stats]);
+
+  const handleImport = () => {
+    if (!importFile) return;
+    setImportProcessing(true);
+    const formData = new FormData();
+    formData.append('file', importFile);
+    formData.append('allow_updates', importAllowUpdates ? '1' : '0');
+    router.post(route('admin.guards.bulk-import'), formData, {
+      onSuccess: () => {
+        setImportOpen(false);
+        setImportFile(null);
+        setImportPreview(null);
+        setImportAllowUpdates(false);
+        setImportProcessing(false);
+      },
+      onError: () => {
+        setImportProcessing(false);
+      },
+    });
+  };
+
+  const downloadTemplate = () => {
+    window.open(route('admin.guards.bulk-import-template'), '_blank');
+  };
 
   const quickActions = [
-    { icon: <IconMapper name="UserPlus" size={18} />, title: 'Add Guard', description: 'Register new personnel', color: 'bg-blue-600', onClick: () => router.get(route('guards.create')) },
-    { icon: <IconMapper name="FileSpreadsheet" size={18} />, title: 'Export', description: 'Download guard list', color: 'bg-emerald-600', onClick: () => {} },
-    { icon: <IconMapper name="Scan" size={18} />, title: 'Quick Scan', description: 'Scan guard QR code', color: 'bg-purple-600', onClick: () => {} },
-    { icon: <IconMapper name="BarChart3" size={18} />, title: 'Reports', description: 'View analytics', color: 'bg-amber-600', onClick: () => {} },
+    { icon: <IconMapper name="UserPlus" size={18} />, title: 'Add Guard', description: 'Register new personnel', color: 'bg-blue-600', onClick: openAddForm },
+    { icon: <IconMapper name="FileSpreadsheet" size={18} />, title: 'Export', description: 'Download guard list', color: 'bg-emerald-600', onClick: handleExport },
+    { icon: <IconMapper name="Scan" size={18} />, title: 'Quick Scan', description: 'Scan guard QR code', color: 'bg-amber-600', onClick: () => setScanOpen(true) },
   ];
 
   return (
@@ -276,7 +507,7 @@ export default function GuardsDirectory() {
                 className="h-10 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 text-sm"
               >
                 <option value="">All Zones</option>
-                {zones.map((z: any) => (
+                {(zones || []).map((z: any) => (
                   <option key={z.id} value={z.id}>{z.name}</option>
                 ))}
               </select>
@@ -287,7 +518,7 @@ export default function GuardsDirectory() {
                 className="h-10 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 text-sm"
               >
                 <option value="">All Grades</option>
-                {grades.map((g: any) => (
+                {(grades || []).map((g: any) => (
                   <option key={g.id} value={g.id}>{g.code} - {g.name}</option>
                 ))}
               </select>
@@ -363,7 +594,7 @@ export default function GuardsDirectory() {
                           )}
                         </div>
                       </div>
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2">
                         <Badge className={guard.status === 'active' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300' : guard.status === 'inactive' ? 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300' : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'}>
                           {guard.status}
                         </Badge>
@@ -373,19 +604,53 @@ export default function GuardsDirectory() {
                             On Duty
                           </Badge>
                         )}
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => openView(guard.id)}
-                          disabled={viewLoading === guard.id}
-                          className="opacity-0 group-hover:opacity-100 transition-opacity"
-                        >
-                          {viewLoading === guard.id ? (
-                            <IconMapper name="Loader2" size={16} className="animate-spin" />
-                          ) : (
-                            <IconMapper name="Eye" size={16} />
-                          )}
-                        </Button>
+                        <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => openMarkPresent(guard)}
+                            className="text-emerald-600 hover:text-emerald-700"
+                            title="Mark Present"
+                          >
+                            <IconMapper name="CheckCircle" size={16} />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => openMarkAbsent(guard)}
+                            className="text-red-600 hover:text-red-700"
+                            title="Mark Absent"
+                          >
+                            <IconMapper name="XCircle" size={16} />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => openView(guard.id)}
+                            disabled={viewLoading === guard.id}
+                          >
+                            {viewLoading === guard.id ? (
+                              <IconMapper name="Loader2" size={16} className="animate-spin" />
+                            ) : (
+                              <IconMapper name="Eye" size={16} />
+                            )}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => openEditForm(guard)}
+                          >
+                            <IconMapper name="Pencil" size={16} />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => confirmDelete(guard)}
+                            className="text-red-600 hover:text-red-700"
+                          >
+                            <IconMapper name="Trash2" size={16} />
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -401,7 +666,7 @@ export default function GuardsDirectory() {
                     Showing {meta?.from || 1} to {meta?.to || guards.length} of {meta?.total} results
                   </p>
                   <div className="flex items-center gap-2">
-                    {meta?.links?.map((link: any, idx: number) => (
+                    {(meta?.links || []).map((link: any, idx: number) => (
                       <button
                         key={idx}
                         onClick={() => link.url && router.get(link.url)}
@@ -437,44 +702,214 @@ export default function GuardsDirectory() {
             </button>
           </div>
           {viewData ? (
-            <div className="space-y-4">
+            <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
+              {/* Header Card */}
               <div className="flex items-center gap-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
                 <div className="p-3 bg-red-100 dark:bg-red-900/20 rounded-full">
                   <IconMapper name="User" size={24} className="text-red-600 dark:text-red-400" />
                 </div>
-                <div>
+                <div className="flex-1 min-w-0">
                   <h3 className="font-semibold text-lg text-gray-900 dark:text-gray-100">{viewData.name}</h3>
                   <p className="text-sm text-gray-500 dark:text-gray-400">{viewData.employee_id}</p>
+                  {viewData.position && (
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{viewData.position}</p>
+                  )}
                 </div>
                 <Badge className={`ml-auto ${viewData.status === 'active' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300' : viewData.status === 'inactive' ? 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300' : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'}`}>
                   {viewData.status}
                 </Badge>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {viewData.email && (
-                  <div className="p-3 border border-gray-200 dark:border-gray-700 rounded-lg">
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Email</p>
-                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{viewData.email}</p>
+
+              {/* Attendance Summary */}
+              {viewData.attendance_tally && (
+                <div className="p-4 bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-200 dark:border-emerald-900/20 rounded-lg">
+                  <h4 className="text-sm font-semibold text-emerald-800 dark:text-emerald-300 mb-3 flex items-center gap-2">
+                    <IconMapper name="ClipboardCheck" size={16} />
+                    This Month's Attendance
+                  </h4>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div className="text-center p-2 bg-white dark:bg-gray-800 rounded">
+                      <p className="text-lg font-bold text-emerald-600">{viewData.attendance_tally.by_status?.present || 0}</p>
+                      <p className="text-xs text-gray-500">Present</p>
+                    </div>
+                    <div className="text-center p-2 bg-white dark:bg-gray-800 rounded">
+                      <p className="text-lg font-bold text-amber-600">{viewData.attendance_tally.by_status?.late || 0}</p>
+                      <p className="text-xs text-gray-500">Late</p>
+                    </div>
+                    <div className="text-center p-2 bg-white dark:bg-gray-800 rounded">
+                      <p className="text-lg font-bold text-red-600">{viewData.attendance_tally.by_status?.absent || 0}</p>
+                      <p className="text-xs text-gray-500">Absent</p>
+                    </div>
+                    <div className="text-center p-2 bg-white dark:bg-gray-800 rounded">
+                      <p className="text-lg font-bold text-blue-600">{viewData.attendance_tally.total || 0}</p>
+                      <p className="text-xs text-gray-500">Total</p>
+                    </div>
                   </div>
-                )}
-                {viewData.phone && (
-                  <div className="p-3 border border-gray-200 dark:border-gray-700 rounded-lg">
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Phone</p>
-                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{viewData.phone}</p>
+                  <div className="mt-3 pt-3 border-t border-emerald-200 dark:border-emerald-900/20 grid grid-cols-2 gap-3">
+                    <div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Hours Worked</p>
+                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{viewData.attendance_tally.hours_worked?.toFixed(1) || 0} hrs</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Overtime</p>
+                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{viewData.attendance_tally.overtime_hours?.toFixed(1) || 0} hrs</p>
+                    </div>
                   </div>
-                )}
-                {viewData.supervisor && (
-                  <div className="p-3 border border-gray-200 dark:border-gray-700 rounded-lg">
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Supervisor</p>
-                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{viewData.supervisor.name}</p>
+                </div>
+              )}
+
+              {/* Contact Information */}
+              <div>
+                <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2 flex items-center gap-2">
+                  <IconMapper name="Phone" size={16} />
+                  Contact Information
+                </h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {viewData.phone && (
+                    <div className="p-3 border border-gray-200 dark:border-gray-700 rounded-lg">
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Phone</p>
+                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{viewData.phone}</p>
+                    </div>
+                  )}
+                  {viewData.email && (
+                    <div className="p-3 border border-gray-200 dark:border-gray-700 rounded-lg">
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Email</p>
+                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{viewData.email}</p>
+                    </div>
+                  )}
+                  {viewData.address && (
+                    <div className="p-3 border border-gray-200 dark:border-gray-700 rounded-lg sm:col-span-2">
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Address</p>
+                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{viewData.address}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Employment Details */}
+              <div>
+                <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2 flex items-center gap-2">
+                  <IconMapper name="Briefcase" size={16} />
+                  Employment Details
+                </h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {viewData.grade && (
+                    <div className="p-3 border border-gray-200 dark:border-gray-700 rounded-lg">
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Grade</p>
+                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{viewData.grade.code} - {viewData.grade.name}</p>
+                    </div>
+                  )}
+                  {viewData.supervisor && (
+                    <div className="p-3 border border-gray-200 dark:border-gray-700 rounded-lg">
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Supervisor</p>
+                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{viewData.supervisor.name}</p>
+                    </div>
+                  )}
+                  {viewData.employee_role && (
+                    <div className="p-3 border border-gray-200 dark:border-gray-700 rounded-lg">
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Role</p>
+                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100 capitalize">{viewData.employee_role}</p>
+                    </div>
+                  )}
+                  {viewData.hire_date && (
+                    <div className="p-3 border border-gray-200 dark:border-gray-700 rounded-lg">
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Hire Date</p>
+                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{new Date(viewData.hire_date).toLocaleDateString()}</p>
+                    </div>
+                  )}
+                  {viewData.guard_type && (
+                    <div className="p-3 border border-gray-200 dark:border-gray-700 rounded-lg">
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Guard Type</p>
+                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100 capitalize">{viewData.guard_type}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Personal Information */}
+              {(viewData.date_of_birth || viewData.gender || viewData.id_number) && (
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2 flex items-center gap-2">
+                    <IconMapper name="UserCircle" size={16} />
+                    Personal Information
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {viewData.id_number && (
+                      <div className="p-3 border border-gray-200 dark:border-gray-700 rounded-lg">
+                        <p className="text-xs text-gray-500 dark:text-gray-400">ID Number</p>
+                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{viewData.id_number}</p>
+                      </div>
+                    )}
+                    {viewData.date_of_birth && (
+                      <div className="p-3 border border-gray-200 dark:border-gray-700 rounded-lg">
+                        <p className="text-xs text-gray-500 dark:text-gray-400">Date of Birth</p>
+                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{new Date(viewData.date_of_birth).toLocaleDateString()}</p>
+                      </div>
+                    )}
+                    {viewData.gender && (
+                      <div className="p-3 border border-gray-200 dark:border-gray-700 rounded-lg">
+                        <p className="text-xs text-gray-500 dark:text-gray-400">Gender</p>
+                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100 capitalize">{viewData.gender}</p>
+                      </div>
+                    )}
+                    {viewData.marital_status && (
+                      <div className="p-3 border border-gray-200 dark:border-gray-700 rounded-lg">
+                        <p className="text-xs text-gray-500 dark:text-gray-400">Marital Status</p>
+                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100 capitalize">{viewData.marital_status}</p>
+                      </div>
+                    )}
                   </div>
-                )}
-                {viewData.grade && (
-                  <div className="p-3 border border-gray-200 dark:border-gray-700 rounded-lg">
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Grade</p>
-                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{viewData.grade.code} - {viewData.grade.name}</p>
+                </div>
+              )}
+
+              {/* Emergency Contact */}
+              {(viewData.emergency_contact_name || viewData.emergency_contact_phone) && (
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2 flex items-center gap-2">
+                    <IconMapper name="AlertCircle" size={16} />
+                    Emergency Contact
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {viewData.emergency_contact_name && (
+                      <div className="p-3 border border-gray-200 dark:border-gray-700 rounded-lg">
+                        <p className="text-xs text-gray-500 dark:text-gray-400">Name</p>
+                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{viewData.emergency_contact_name}</p>
+                      </div>
+                    )}
+                    {viewData.emergency_contact_phone && (
+                      <div className="p-3 border border-gray-200 dark:border-gray-700 rounded-lg">
+                        <p className="text-xs text-gray-500 dark:text-gray-400">Phone</p>
+                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{viewData.emergency_contact_phone}</p>
+                      </div>
+                    )}
                   </div>
-                )}
+                </div>
+              )}
+
+              {/* Quick Actions in Modal */}
+              <div className="flex gap-2 pt-2">
+                <Button
+                  onClick={() => {
+                    setViewOpen(false);
+                    openMarkPresent(viewData);
+                  }}
+                  className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white"
+                  size="sm"
+                >
+                  <IconMapper name="CheckCircle" size={16} className="mr-1" />
+                  Mark Present
+                </Button>
+                <Button
+                  onClick={() => {
+                    setViewOpen(false);
+                    openMarkAbsent(viewData);
+                  }}
+                  className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+                  size="sm"
+                >
+                  <IconMapper name="XCircle" size={16} className="mr-1" />
+                  Mark Absent
+                </Button>
               </div>
             </div>
           ) : (
@@ -482,6 +917,224 @@ export default function GuardsDirectory() {
               <IconMapper name="Loader2" size={32} className="animate-spin text-red-600" />
             </div>
           )}
+        </div>
+      </Modal>
+
+      {/* Mark Present Modal */}
+      <Modal show={markPresentOpen} onClose={() => setMarkPresentOpen(false)} maxWidth="md">
+        <div className="p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="p-2 bg-emerald-100 dark:bg-emerald-900/20 rounded-full">
+              <IconMapper name="CheckCircle" size={24} className="text-emerald-600 dark:text-emerald-400" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Mark Present</h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400">{markGuard?.name}</p>
+            </div>
+          </div>
+          <div className="space-y-4">
+            <p className="text-sm text-gray-600 dark:text-gray-300">
+              This will mark <strong>{markGuard?.name}</strong> as present for today.
+            </p>
+            <div>
+              <Label className="text-sm text-gray-700 dark:text-gray-300">Notes (optional)</Label>
+              <textarea
+                value={markNotes}
+                onChange={(e) => setMarkNotes(e.target.value)}
+                placeholder="Add any notes about this attendance..."
+                rows={3}
+                className="w-full mt-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-emerald-500"
+              />
+            </div>
+            <div className="flex gap-3 pt-2">
+              <Button
+                onClick={handleMarkPresent}
+                disabled={markProcessing}
+                className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white"
+              >
+                {markProcessing ? (
+                  <>
+                    <IconMapper name="Loader2" size={16} className="animate-spin mr-2" />
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    <IconMapper name="CheckCircle" size={16} className="mr-2" />
+                    Confirm Present
+                  </>
+                )}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setMarkPresentOpen(false)}
+                disabled={markProcessing}
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Mark Absent Modal */}
+      <Modal show={markAbsentOpen} onClose={() => setMarkAbsentOpen(false)} maxWidth="md">
+        <div className="p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="p-2 bg-red-100 dark:bg-red-900/20 rounded-full">
+              <IconMapper name="XCircle" size={24} className="text-red-600 dark:text-red-400" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Mark Absent</h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400">{markGuard?.name}</p>
+            </div>
+          </div>
+          <div className="space-y-4">
+            <p className="text-sm text-gray-600 dark:text-gray-300">
+              This will mark <strong>{markGuard?.name}</strong> as absent for today.
+            </p>
+            <div>
+              <Label className="text-sm text-gray-700 dark:text-gray-300">Reason (optional)</Label>
+              <textarea
+                value={markNotes}
+                onChange={(e) => setMarkNotes(e.target.value)}
+                placeholder="Add reason for absence..."
+                rows={3}
+                className="w-full mt-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-red-500"
+              />
+            </div>
+            <div className="flex gap-3 pt-2">
+              <Button
+                onClick={handleMarkAbsent}
+                disabled={markProcessing}
+                className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+              >
+                {markProcessing ? (
+                  <>
+                    <IconMapper name="Loader2" size={16} className="animate-spin mr-2" />
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    <IconMapper name="XCircle" size={16} className="mr-2" />
+                    Confirm Absent
+                  </>
+                )}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setMarkAbsentOpen(false)}
+                disabled={markProcessing}
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Bulk Import Modal */}
+      <Modal show={importOpen} onClose={() => setImportOpen(false)} maxWidth="md">
+        <div className="p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="p-2 bg-purple-100 dark:bg-purple-900/20 rounded-full">
+              <IconMapper name="Upload" size={24} className="text-purple-600 dark:text-purple-400" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Bulk Import Guards</h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Upload Excel file to import multiple guards</p>
+            </div>
+          </div>
+          <div className="space-y-4">
+            <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+              <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">Template</h4>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                Download the Excel template with the correct format for bulk importing guards.
+              </p>
+              <Button
+                variant="outline"
+                onClick={downloadTemplate}
+                className="w-full"
+              >
+                <IconMapper name="Download" size={16} className="mr-2" />
+                Download Template
+              </Button>
+            </div>
+
+            <div>
+              <Label className="text-sm text-gray-700 dark:text-gray-300">Upload Excel File</Label>
+              <div className="mt-2">
+                <input
+                  type="file"
+                  accept=".xlsx,.xls"
+                  onChange={(e) => setImportFile(e.target.files?.[0] || null)}
+                  className="hidden"
+                  id="excel-upload"
+                />
+                <label
+                  htmlFor="excel-upload"
+                  className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                >
+                  <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                    <IconMapper name="FileUp" size={24} className="text-gray-400 mb-2" />
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      {importFile ? importFile.name : 'Click to upload Excel file'}
+                    </p>
+                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                      Excel files only (.xlsx, .xls) max 5MB
+                    </p>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            <label className="flex items-start gap-3 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+              <input
+                type="checkbox"
+                checked={importAllowUpdates}
+                onChange={(e) => setImportAllowUpdates(e.target.checked)}
+                className="mt-1 h-4 w-4 rounded border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-purple-600 focus:ring-purple-500"
+              />
+              <div>
+                <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">Update existing guards when duplicates are found</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">If unchecked, duplicate rows will be skipped.</div>
+              </div>
+            </label>
+
+            <div className="flex gap-3 pt-2">
+              <Button
+                onClick={handleImport}
+                disabled={!importFile || importProcessing}
+                className="flex-1 bg-purple-600 hover:bg-purple-700 text-white"
+              >
+                {importProcessing ? (
+                  <>
+                    <IconMapper name="Loader2" size={16} className="animate-spin mr-2" />
+                    Importing...
+                  </>
+                ) : (
+                  <>
+                    <IconMapper name="Upload" size={16} className="mr-2" />
+                    Import Guards
+                  </>
+                )}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setImportOpen(false);
+                  setImportFile(null);
+                  setImportPreview(null);
+                  setImportAllowUpdates(false);
+                }}
+                disabled={importProcessing}
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
         </div>
       </Modal>
     </>

@@ -28,9 +28,19 @@ class GuardsController extends Controller
         }
         $dir = strtolower((string) $request->input('dir', 'asc')) === 'desc' ? 'desc' : 'asc';
 
+        // Determine view mode (active or inactive)
+        $view = $request->input('view', 'active');
+        $activeStatuses = ['active', 'on_leave', 'training'];
+        $inactiveStatuses = ['inactive', 'suspended', 'dismissed', 'absconded', 'resigned', 'retired'];
+
         $guards = Guard::with(['supervisor', 'todayAttendance', 'activeAssignments.clientSite.client'])
             ->where('employee_role', 'guard')
-            ->whereNotIn('status', ['dismissed', 'absconded'])
+            ->when($view === 'active', function ($q) use ($activeStatuses) {
+                $q->whereIn('status', $activeStatuses);
+            })
+            ->when($view === 'inactive', function ($q) use ($inactiveStatuses) {
+                $q->whereIn('status', $inactiveStatuses);
+            })
             ->when($request->input('search'), function ($q, $search) {
                 $q->where(function ($qq) use ($search) {
                     $qq->where('name', 'like', "%{$search}%")
@@ -49,8 +59,12 @@ class GuardsController extends Controller
                     $qq->where('client_id', (int) $clientId);
                 });
             })
-            ->when($request->input('grade_id'), function ($q, $gradeId) {
-                $q->where('guard_grade_id', (int) $gradeId);
+            ->when($request->input('supervisor_id'), function ($q, $supervisorId) {
+                if ($supervisorId === 'unassigned') {
+                    $q->whereNull('supervisor_id');
+                } else {
+                    $q->where('supervisor_id', (int) $supervisorId);
+                }
             })
             ->when(in_array($request->input('on_duty'), ['1', 1, true, 'true'], true), function ($q) {
                 $q->whereHas('todayAttendance', function ($qa) {
@@ -61,7 +75,7 @@ class GuardsController extends Controller
             ->paginate($perPage)
             ->withQueryString()
             ->through(function ($g) {
-				$today = $g->todayAttendance?->first();
+                $today = $g->todayAttendance?->first();
                 return [
                     'id' => $g->id,
                     'name' => $g->name,
@@ -70,12 +84,12 @@ class GuardsController extends Controller
                     'is_profile_complete' => (bool) $g->is_profile_complete,
                     'profile_missing_fields' => $g->profile_missing_fields,
                     'supervisor' => $g->supervisor ? ['id' => $g->supervisor->id, 'name' => $g->supervisor->name] : null,
-					'today_attendance' => $today ? [
-						'check_in' => optional($today->check_in_time)->format('H:i'),
-						'check_out' => optional($today->check_out_time)->format('H:i'),
-						'status' => $today->status,
-						'source' => $today->source,
-					] : null,
+                    'today_attendance' => $today ? [
+                        'check_in' => optional($today->check_in_time)->format('H:i'),
+                        'check_out' => optional($today->check_out_time)->format('H:i'),
+                        'status' => $today->status,
+                        'source' => $today->source,
+                    ] : null,
                     'active_assignment' => (function() use ($g) {
                         $a = $g->activeAssignments->first();
                         if (!$a || !$a->clientSite) return null;
@@ -88,14 +102,61 @@ class GuardsController extends Controller
                 ];
             });
 
+        // Calculate stats for ALL guards (not just paginated)
+        $statsQuery = Guard::query()
+            ->where('employee_role', 'guard')
+            ->when($request->input('search'), function ($q, $search) {
+                $q->where(function ($qq) use ($search) {
+                    $qq->where('name', 'like', "%{$search}%")
+                       ->orWhere('employee_id', 'like', "%{$search}%");
+                });
+            })
+            ->when($request->input('status'), function ($q, $status) {
+                $q->where('status', $status);
+            })
+            ->profileStatus($request->input('profile_status'))
+            ->when($request->input('zone_id'), function ($q, $zoneId) {
+                $q->where('zone_id', (int) $zoneId);
+            })
+            ->when($request->input('client_id'), function ($q, $clientId) {
+                $q->whereHas('activeAssignments.clientSite', function ($qq) use ($clientId) {
+                    $qq->where('client_id', (int) $clientId);
+                });
+            })
+            ->when($request->input('supervisor_id'), function ($q, $supervisorId) {
+                if ($supervisorId === 'unassigned') {
+                    $q->whereNull('supervisor_id');
+                } else {
+                    $q->where('supervisor_id', (int) $supervisorId);
+                }
+            });
+
+        $stats = [
+            'total' => $statsQuery->count(),
+            'active' => (clone $statsQuery)->where('status', 'active')->count(),
+            'inactive' => (clone $statsQuery)->whereIn('status', $inactiveStatuses)->count(),
+            'assigned' => (clone $statsQuery)->whereHas('activeAssignments')->count(),
+            'incomplete' => (clone $statsQuery)->where(function ($q) {
+                $q->whereNull('id_number')->orWhere('id_number', '')
+                  ->orWhereNull('emergency_contact_name')->orWhere('emergency_contact_name', '')
+                  ->orWhereNull('emergency_contact_phone')->orWhere('emergency_contact_phone', '');
+            })->count(),
+        ];
+
         return Inertia::render('ControlRoom/Guards/Index', [
             'guards' => $guards,
-            'filters' => $request->only(['search','status','profile_status','zone_id','client_id','grade_id','on_duty','sort','dir','per_page']),
-            'supervisors' => User::role(['supervisor','manager','operations_officer'])->orderBy('name')->get(['id','name']),
+            'inactiveGuards' => $view === 'inactive' ? $guards : null,
+            'filters' => $request->only(['search','status','profile_status','zone_id','client_id','supervisor_id','on_duty','sort','dir','per_page','view']),
+            'supervisors' => User::role(['supervisor','manager','operations_officer','sergeant'])->where('status', 'active')->orderBy('name')->get(['id','name']),
             'leaders' => Guard::leaders()->where('status', 'active')->orderBy('name')->get(['id','name','position']),
             'clients' => Client::orderBy('name')->get(['id','name']),
-            'grades' => GuardGrade::orderBy('name')->get(['id','code','name']),
             'zones' => Zone::orderBy('name')->get(['id','name']),
+            'stats' => $stats,
+            'can' => [
+                'suspend' => auth()->user()?->hasAnyRole(['operations_officer','manager','super_admin','control_room_operator','hr_manager']),
+                'dismiss' => auth()->user()?->hasAnyRole(['operations_officer','manager','super_admin','hr_manager']),
+                'reinstate' => auth()->user()?->hasAnyRole(['operations_officer','manager','super_admin','hr_manager']),
+            ],
             'canAssignSupervisor' => (function(){
                 $u = auth()->user();
                 if (!$u) return false;

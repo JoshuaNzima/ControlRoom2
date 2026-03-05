@@ -7,6 +7,7 @@ import useCounters from '@/Hooks/useCounters';
 import { motion } from 'framer-motion';
 import { useTheme } from '@/Providers/ThemeProvider';
 import QuickBudgetButton from '@/Components/Budgets/QuickBudgetButton';
+import FloatingNavButton from '@/Components/FloatingNavButton';
 
 type Props = {
 	title: string;
@@ -328,6 +329,8 @@ export default function ZoneCommanderLayout({ title, children }: Props) {
 					</div>
 				</>
 			)}
+
+			<FloatingNavButton />
 		</div>
 	);
 }

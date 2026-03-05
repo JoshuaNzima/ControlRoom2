@@ -82,7 +82,7 @@ class Shift extends Model
 
     public function attendance(): HasMany
     {
-        return $this->hasMany(Attendance::class);
+        return $this->hasMany(Attendance::class, 'guard_id', 'guard_id');
     }
 
     // Scopes
@@ -188,30 +188,43 @@ class Shift extends Model
     {
         if (!Auth::check()) return false;
 
-        return $this->status === 'scheduled' &&
-            $this->date->isToday() &&
-            Carbon::now()->between(
-                Carbon::parse($this->start_time)->subHours(1),
-                Carbon::parse($this->end_time)
-            );
+        if ($this->status !== 'scheduled') return false;
+        if (!$this->date || !method_exists($this->date, 'isToday') || !$this->date->isToday()) return false;
+        if (!$this->start_time || !$this->end_time) return false;
+
+        return Carbon::now()->between(
+            Carbon::parse($this->start_time)->subHours(1),
+            Carbon::parse($this->end_time)
+        );
     }
 
     public function getCanEndAttribute(): bool
     {
         if (!Auth::check()) return false;
 
-        return $this->status === 'in_progress' &&
-            $this->date->isToday() &&
-            !is_null($this->actual_start_time);
+        if ($this->status !== 'in_progress') return false;
+        if (!$this->date || !method_exists($this->date, 'isToday') || !$this->date->isToday()) return false;
+        return !is_null($this->actual_start_time);
     }
 
     public function getCanCancelAttribute(): bool
     {
         if (!Auth::check()) return false;
 
-        return in_array($this->status, ['scheduled', 'in_progress']) &&
-            (Auth::user()->hasRole('admin') || 
-             (Auth::user()->hasRole('supervisor') && $this->guardRelation->supervisor_id === Auth::id()));
+        if (!in_array($this->status, ['scheduled', 'in_progress'], true)) return false;
+
+        $user = Auth::user();
+        if (!$user) return false;
+
+        if (method_exists($user, 'hasRole') && $user->hasRole('admin')) {
+            return true;
+        }
+
+        $isSupervisor = method_exists($user, 'hasRole') ? $user->hasRole('supervisor') : false;
+        if (!$isSupervisor) return false;
+
+        $guardSupervisorId = $this->guardRelation?->supervisor_id;
+        return $guardSupervisorId !== null && (int) $guardSupervisorId === (int) Auth::id();
     }
 
     // Methods
@@ -256,11 +269,14 @@ class Shift extends Model
         $this->save();
 
         // Update attendance record
-        $this->attendance()->latest()->first()->update([
-            'check_out_time' => now(),
-            'hours_worked' => $this->actual_duration,
-            'overtime_hours' => $this->overtime_hours,
-        ]);
+        $attendance = $this->attendance()->latest()->first();
+        if ($attendance) {
+            $attendance->update([
+                'check_out_time' => now(),
+                'hours_worked' => $this->actual_duration,
+                'overtime_hours' => $this->overtime_hours,
+            ]);
+        }
 
         return true;
     }

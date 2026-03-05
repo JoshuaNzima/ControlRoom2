@@ -7,6 +7,7 @@ import { Badge } from '@/Components/ui/badge';
 import { User } from '@/types';
 import GuardLocationMap from '@/Components/Map/GuardLocationMap';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/Components/ui/dialog';
+import IconMapper from '@/Components/IconMapper';
 
 interface Location {
   lat: number;
@@ -102,10 +103,14 @@ const Monitoring = ({ auth, metrics, liveStatus: initialLiveStatus = [], recentA
   const [showCountsOverlay, setShowCountsOverlay] = React.useState<boolean>(settings?.showCountsOverlay ?? true);
   const [scaleByRequired, setScaleByRequired] = React.useState<boolean>(settings?.scaleByRequired ?? true);
 
+  const [error, setError] = React.useState<string | null>(null);
+  const [retryCount, setRetryCount] = React.useState(0);
+
   const abortRef = React.useRef<AbortController | null>(null);
 
   const fetchSnapshot = React.useCallback(async (withRange: string) => {
     try {
+      setError(null);
       abortRef.current?.abort();
       const controller = new AbortController();
       abortRef.current = controller;
@@ -116,7 +121,9 @@ const Monitoring = ({ auth, metrics, liveStatus: initialLiveStatus = [], recentA
         signal: controller.signal,
       });
 
-      if (!res.ok) return;
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+      }
 
       const data = await res.json();
       setCurrentMetrics(data.metrics || {});
@@ -126,8 +133,12 @@ const Monitoring = ({ auth, metrics, liveStatus: initialLiveStatus = [], recentA
       setGuards(data.guards || []);
       setEvents(data.events || []);
       setLastUpdated(new Date());
-    } catch (_) {
-      // no-op
+      setRetryCount(0);
+    } catch (err: any) {
+      if (err.name === 'AbortError') return;
+      console.error('Monitoring fetch error:', err);
+      setError(err.message || 'Failed to fetch monitoring data');
+      setRetryCount(c => c + 1);
     }
   }, []);
 
@@ -230,6 +241,22 @@ const Monitoring = ({ auth, metrics, liveStatus: initialLiveStatus = [], recentA
             </div>
           </DialogContent>
         </Dialog>
+
+        {/* Error Banner */}
+        {error && retryCount > 2 && (
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+            <div className="flex items-center gap-3">
+              <IconMapper name="AlertCircle" size={20} className="text-red-600 dark:text-red-400" />
+              <div className="flex-1">
+                <p className="text-sm font-medium text-red-800 dark:text-red-200">Connection Issue</p>
+                <p className="text-xs text-red-600 dark:text-red-300">{error}</p>
+              </div>
+              <Button size="sm" variant="outline" onClick={() => { setRetryCount(0); fetchSnapshot(range); }}>
+                Retry
+              </Button>
+            </div>
+          </div>
+        )}
 
           <div className="flex flex-wrap items-center gap-3 justify-between md:justify-end">
             <div className="flex items-center gap-2">

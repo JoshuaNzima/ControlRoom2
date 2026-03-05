@@ -19,6 +19,9 @@ use Illuminate\Support\Facades\Storage;
 use App\Services\OperationalAnalyticsService;
 use App\Models\SupervisorIncentiveProfile;
 use App\Models\SupervisorIncentiveRecord;
+use App\Models\IncentiveType;
+use App\Models\IncentiveRule;
+use App\Models\IncentiveEntry;
 
 class DashboardController extends Controller
 {
@@ -277,6 +280,17 @@ class DashboardController extends Controller
                 'pending_amount_total' => SupervisorIncentiveRecord::whereIn('status', ['pending', 'approved'])
                     ->sum('net_amount') ?? 0,
                 'supervisors_count' => Guard::whereIn('position', ['supervisor', 'sergeant'])->where('status', 'active')->count(),
+            ],
+            'incentive_system' => [
+                'total_types' => IncentiveType::where('is_active', true)->count(),
+                'total_rules' => IncentiveRule::where('is_active', true)->count(),
+                'pending_entries' => IncentiveEntry::where('status', 'pending')->count(),
+                'approved_entries' => IncentiveEntry::where('status', 'approved')->count(),
+                'paid_entries' => IncentiveEntry::where('status', 'paid')->count(),
+                'pending_amount' => IncentiveEntry::whereIn('status', ['pending', 'approved'])->sum('final_amount') ?? 0,
+                'paid_amount_mtd' => IncentiveEntry::where('status', 'paid')
+                    ->whereMonth('paid_at', now()->month)
+                    ->sum('final_amount') ?? 0,
             ],
             'cross_module' => [
                 'critical_alerts_today' => 0,

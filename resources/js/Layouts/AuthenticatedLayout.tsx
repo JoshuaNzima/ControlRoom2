@@ -8,6 +8,7 @@ import { PropsWithChildren, ReactNode, useState } from 'react';
 import NotificationBell from '@/Components/Common/NotificationBell';
 import QuickRequisitionButton from '@/Components/Requisitions/QuickRequisitionButton';
 import QuickBudgetButton from '@/Components/Budgets/QuickBudgetButton';
+import FloatingNavButton from '@/Components/FloatingNavButton';
 
 export default function Authenticated({
     user,
@@ -15,6 +16,9 @@ export default function Authenticated({
     children,
 }: PropsWithChildren<{ user?: User; header?: ReactNode }>) {
     const pageUser = user || usePage<PageProps>().props.auth.user;
+
+    const roles = (((pageUser as any)?.roles ?? []) as any[]).map(String);
+    const isAdminUser = roles.includes('admin') || roles.includes('super_admin');
 
     const profileHref = (() => {
         try {
@@ -66,12 +70,14 @@ export default function Authenticated({
                                 >
                                     Messaging
                                 </NavLink>
-                                <NavLink
-                                    href={route('requisitions.index')}
-                                    active={window.location.pathname.startsWith(route('requisitions.index'))}
-                                >
-                                    Requisitions
-                                </NavLink>
+                                {!isAdminUser && (
+                                    <NavLink
+                                        href={route('requisitions.index')}
+                                        active={window.location.pathname.startsWith(route('requisitions.index'))}
+                                    >
+                                        Requisitions
+                                    </NavLink>
+                                )}
                                 <NavLink
                                     href={route('guards.index')}
                                     active={window.location.pathname.startsWith(route('guards.index'))}
@@ -83,6 +89,15 @@ export default function Authenticated({
 
                         <div className="hidden sm:ms-6 sm:flex sm:items-center gap-4">
                             <NotificationBell />
+                            <Link
+                                href={route('emergency-contacts.index')}
+                                className="p-2 rounded-full bg-red-600 hover:bg-red-700 text-white transition-colors shadow-lg shadow-red-900/30"
+                                title="Emergency Contacts"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                                </svg>
+                            </Link>
                             <QuickBudgetButton />
                             <QuickRequisitionButton />
                             <div className="relative ms-3">
@@ -131,6 +146,15 @@ export default function Authenticated({
 
                         <div className="-me-2 flex items-center gap-2 sm:hidden">
                             <NotificationBell />
+                            <Link
+                                href={route('emergency-contacts.index')}
+                                className="p-2 rounded-full bg-red-600 hover:bg-red-700 text-white transition-colors"
+                                title="Emergency Contacts"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                                </svg>
+                            </Link>
                             <button
                                 onClick={() =>
                                     setShowingNavigationDropdown(
@@ -192,12 +216,14 @@ export default function Authenticated({
                         >
                             Messaging
                         </ResponsiveNavLink>
-                        <ResponsiveNavLink
-                            href={route('requisitions.index')}
-                            active={window.location.pathname.startsWith(route('requisitions.index'))}
-                        >
-                            Requisitions
-                        </ResponsiveNavLink>
+                        {!isAdminUser && (
+                            <ResponsiveNavLink
+                                href={route('requisitions.index')}
+                                active={window.location.pathname.startsWith(route('requisitions.index'))}
+                            >
+                                Requisitions
+                            </ResponsiveNavLink>
+                        )}
                         <ResponsiveNavLink
                             href={route('guards.index')}
                             active={window.location.pathname.startsWith(route('guards.index'))}
@@ -249,6 +275,7 @@ export default function Authenticated({
                     </div>
                 </main>
             </main>
+            <FloatingNavButton />
         </div>
     );
 }

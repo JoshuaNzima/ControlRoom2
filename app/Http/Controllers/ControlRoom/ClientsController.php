@@ -442,6 +442,7 @@ HTML;
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>{$site->name} - QR Code</title>
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 	<style>
 		* { margin: 0; padding: 0; box-sizing: border-box; }
 		body {
@@ -471,36 +472,42 @@ HTML;
 			border-bottom: 3px solid #c41e3a;
 		}
 		.logo {
-			width: 160px;
+			width: 180px;
 			height: auto;
 		}
 		.emergency-banner {
 			background: #c41e3a;
 			color: white;
-			padding: 20px 30px;
+			padding: 25px 35px;
 			border-radius: 12px;
 			border: 4px solid #8b1428;
 			text-align: center;
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			gap: 8px;
 		}
 		.emergency-icon {
-			font-size: 32px;
+			font-size: 40px;
 			margin-bottom: 5px;
 		}
 		.emergency-label {
-			font-size: 14px;
+			font-size: 16px;
 			text-transform: uppercase;
 			letter-spacing: 2px;
 			font-weight: bold;
-			margin-bottom: 5px;
+			display: flex;
+			align-items: center;
+			gap: 8px;
 		}
 		.emergency-number {
-			font-size: 42px;
+			font-size: 52px;
 			font-weight: bold;
 			text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
 		}
 		.landscape-content {
 			display: flex;
-			gap: 40px;
+			gap: 50px;
 			align-items: flex-start;
 			justify-content: center;
 			flex-wrap: wrap;
@@ -516,8 +523,8 @@ HTML;
 			margin: 10px 0;
 		}
 		.qr-code {
-			width: 300px;
-			height: 300px;
+			width: 240px;
+			height: 240px;
 			border-radius: 12px;
 			box-shadow: 0 2px 10px rgba(0,0,0,0.1);
 		}
@@ -526,8 +533,8 @@ HTML;
 			top: 50%;
 			left: 50%;
 			transform: translate(-50%, -50%);
-			width: 70px;
-			height: 70px;
+			width: 60px;
+			height: 60px;
 			background: white;
 			border-radius: 50%;
 			padding: 6px;
@@ -541,41 +548,68 @@ HTML;
 		}
 		.site-info {
 			flex: 1;
-			min-width: 300px;
+			min-width: 320px;
 			text-align: left;
+			display: flex;
+			flex-direction: column;
+			justify-content: center;
 		}
 		.site-name {
-			font-size: 32px;
+			font-size: 42px;
 			font-weight: bold;
 			color: #1a1a1a;
-			margin-bottom: 10px;
+			margin-bottom: 12px;
+			line-height: 1.2;
 		}
 		.client-name {
-			font-size: 20px;
+			font-size: 26px;
 			color: #666;
-			margin-bottom: 25px;
+			margin-bottom: 30px;
+			display: flex;
+			align-items: center;
+			gap: 10px;
+		}
+		.client-name i {
+			color: #c41e3a;
 		}
 		.instructions {
-			padding: 20px;
+			padding: 25px;
 			background: #f9f9f9;
 			border-radius: 8px;
-			font-size: 16px;
+			font-size: 18px;
 			color: #555;
 			line-height: 1.6;
-			margin-bottom: 20px;
+			margin-bottom: 25px;
+		}
+		.instructions strong {
+			display: flex;
+			align-items: center;
+			gap: 10px;
+			font-size: 20px;
+			color: #1a1a1a;
+			margin-bottom: 8px;
+		}
+		.instructions strong i {
+			color: #c41e3a;
 		}
 		.qr-id {
 			font-family: monospace;
-			font-size: 14px;
-			color: #999;
+			font-size: 16px;
+			color: #666;
 			word-break: break-all;
-			padding: 10px;
+			padding: 12px;
 			background: #f5f5f5;
 			border-radius: 6px;
+			display: flex;
+			align-items: center;
+			gap: 8px;
+		}
+		.qr-id i {
+			color: #c41e3a;
 		}
 		.emergency-footer {
 			margin-top: 30px;
-			padding: 20px;
+			padding: 25px;
 			background: linear-gradient(135deg, #c41e3a 0%, #8b1428 100%);
 			color: white;
 			border-radius: 12px;
@@ -586,12 +620,18 @@ HTML;
 			gap: 15px;
 		}
 		.emergency-footer-text {
-			font-size: 18px;
+			font-size: 22px;
 			font-weight: bold;
+			display: flex;
+			align-items: center;
+			gap: 12px;
 		}
 		.emergency-footer-number {
-			font-size: 28px;
+			font-size: 38px;
 			font-weight: bold;
+			display: flex;
+			align-items: center;
+			gap: 10px;
 		}
 		@media print {
 			body { background: white; }
@@ -602,25 +642,31 @@ HTML;
 			background: #c41e3a;
 			color: white;
 			border: none;
-			padding: 12px 30px;
-			font-size: 16px;
+			padding: 14px 35px;
+			font-size: 18px;
 			border-radius: 8px;
 			cursor: pointer;
-			margin-top: 20px;
+			margin-top: 25px;
 			transition: background 0.2s;
+			display: inline-flex;
+			align-items: center;
+			gap: 10px;
 		}
 		.print-btn:hover { background: #a01830; }
 		.layout-toggle {
 			background: #666;
 			color: white;
 			border: none;
-			padding: 10px 20px;
-			font-size: 14px;
+			padding: 12px 25px;
+			font-size: 15px;
 			border-radius: 8px;
 			cursor: pointer;
-			margin-top: 10px;
+			margin-top: 25px;
 			margin-right: 10px;
 			transition: background 0.2s;
+			display: inline-flex;
+			align-items: center;
+			gap: 8px;
 		}
 		.layout-toggle:hover { background: #555; }
 	</style>
@@ -630,8 +676,8 @@ HTML;
 		<div class="landscape-header">
 			<img src="{$logoUrl}" alt="Coin Security Logo" class="logo">
 			<div class="emergency-banner">
-				<div class="emergency-icon">&#128222;</div>
-				<div class="emergency-label">Emergency Hotline</div>
+				<div class="emergency-icon"><i class="fas fa-phone-volume"></i></div>
+				<div class="emergency-label"><i class="fas fa-exclamation-circle"></i> Emergency Hotline</div>
 				<div class="emergency-number">{$emergencyHotline}</div>
 			</div>
 		</div>
@@ -648,26 +694,26 @@ HTML;
 			
 			<div class="site-info">
 				<h1 class="site-name">{$site->name}</h1>
-				<p class="client-name">{$clientName}</p>
+				<p class="client-name"><i class="fas fa-building"></i> {$clientName}</p>
 				
 				<div class="instructions">
-					<strong>Scan to Check In</strong><br>
+					<strong><i class="fas fa-qrcode"></i> Scan to Check In</strong>
 					Please scan this QR code when you arrive at the site. <br>
-					GPS verification required within 10 meters radius.
+					<i class="fas fa-map-marker-alt" style="color: #c41e3a;"></i> GPS verification required within 10 meters radius.
 				</div>
 				
-				<div class="qr-id">QR ID: {$site->qr_code}</div>
+				<div class="qr-id"><i class="fas fa-fingerprint"></i> QR ID: {$site->qr_code}</div>
 			</div>
 		</div>
 		
 		<div class="emergency-footer">
-			<div class="emergency-footer-text">&#128222; For Emergencies Call Now</div>
-			<div class="emergency-footer-number">{$emergencyHotline}</div>
+			<div class="emergency-footer-text"><i class="fas fa-phone-alt"></i> For Emergencies Call Now</div>
+			<div class="emergency-footer-number"><i class="fas fa-headset"></i> {$emergencyHotline}</div>
 		</div>
 		
 		<div class="no-print">
-			<button class="layout-toggle" onclick="window.location.href='{$alternateLayoutUrl}'">{$alternateLayoutLabel}</button>
-			<button class="print-btn" onclick="window.print()">Print QR Code</button>
+			<button class="layout-toggle" onclick="window.location.href='{$alternateLayoutUrl}'"><i class="fas fa-sync-alt"></i> {$alternateLayoutLabel}</button>
+			<button class="print-btn" onclick="window.print()"><i class="fas fa-print"></i> Print QR Code</button>
 		</div>
 	</div>
 </body>
