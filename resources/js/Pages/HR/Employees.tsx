@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import HRLayout from '@/Layouts/HRLayout';
 import PromoteGuardModal from '@/Components/HR/PromoteGuardModal';
+import GuardDetailsModal from '@/Components/Guards/GuardDetailsModal';
 import ConfirmModal from '@/Components/ConfirmModal';
 import ReasonModal from '@/Components/ReasonModal';
 
@@ -39,6 +40,18 @@ export default function HREmployees() {
   const [perPage, setPerPage] = useState<number>(initialPerPage);
   const [promoteOpen, setPromoteOpen] = useState(false);
   const [currentGuard, setCurrentGuard] = useState<any | null>(null);
+  const [selectedGuardDetails, setSelectedGuardDetails] = useState<any | null>(null);
+
+  const openDetails = async (guardId: number) => {
+    try {
+      const res = await fetch(route('admin.guards.json', guardId), {
+        headers: { 'Accept': 'application/json' },
+        credentials: 'same-origin',
+      });
+      const data = await res.json();
+      setSelectedGuardDetails(data);
+    } catch {}
+  };
 
   // Confirm & Reason Modals
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -177,7 +190,11 @@ export default function HREmployees() {
               <tbody className="bg-white dark:bg-slate-900 divide-y divide-gray-200 dark:divide-slate-700">
                 {guards?.data?.map((g: any) => (
                   <tr key={g.id}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-slate-100">{g.name}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-slate-100">
+                      <button onClick={() => openDetails(g.id)} className="hover:underline text-left">
+                        {g.name}
+                      </button>
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-slate-100">{g.email || '-'}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-slate-100">{g.phone || '-'}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
@@ -273,6 +290,13 @@ export default function HREmployees() {
         zones={zones || []}
         onClose={() => { setPromoteOpen(false); setCurrentGuard(null); }}
         onSuccess={() => router.reload()}
+      />
+      {/* Guard Details Modal */}
+      <GuardDetailsModal
+        open={!!selectedGuardDetails}
+        onClose={() => setSelectedGuardDetails(null)}
+        guard={selectedGuardDetails}
+        scope="hr"
       />
       {/* Confirm & Reason Modals */}
       <ConfirmModal

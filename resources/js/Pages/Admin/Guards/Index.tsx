@@ -1,7 +1,8 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Head, Link, router } from '@inertiajs/react';
 import AdminLayout from '@/Layouts/AdminLayout';
 import IconMapper from '@/Components/IconMapper';
+import GuardDetailsModal from '@/Components/Guards/GuardDetailsModal';
 import { Card } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 
@@ -116,8 +117,20 @@ const StatCard: React.FC<StatCardProps> = ({ icon, title, value, subtitle, color
 
 export default function GuardsIndex({ guards, filters, stats }: GuardsIndexProps) {
   const [search, setSearch] = React.useState(filters.search || '');
+  const [selectedGuardDetails, setSelectedGuardDetails] = useState<any | null>(null);
   const initialPerPage = Number(filters?.per_page ?? guards.meta?.per_page ?? 20);
   const [perPage] = React.useState<number>(initialPerPage);
+
+  const openDetails = async (guardId: number) => {
+    try {
+      const res = await fetch(route('admin.guards.json', guardId), {
+        headers: { 'Accept': 'application/json' },
+        credentials: 'same-origin',
+      });
+      const data = await res.json();
+      setSelectedGuardDetails(data);
+    } catch {}
+  };
 
   const handleSearch = () => {
     router.get(
@@ -248,7 +261,9 @@ export default function GuardsIndex({ guards, filters, stats }: GuardsIndexProps
                     {guard.name?.charAt(0) || '?'}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-gray-900 dark:text-gray-100 truncate">{guard.name}</p>
+                    <button onClick={() => openDetails(guard.id)} className="text-left">
+                      <p className="font-medium text-gray-900 dark:text-gray-100 truncate hover:underline">{guard.name}</p>
+                    </button>
                     <p className="text-sm text-gray-500 dark:text-gray-400">{guard.employee_id}</p>
                   </div>
                 </div>
@@ -308,7 +323,9 @@ export default function GuardsIndex({ guards, filters, stats }: GuardsIndexProps
                           {guard.name?.charAt(0) || '?'}
                         </div>
                         <div>
-                          <div className="font-medium text-gray-900 dark:text-gray-100">{guard.name}</div>
+                          <button onClick={() => openDetails(guard.id)} className="text-left">
+                            <div className="font-medium text-gray-900 dark:text-gray-100 hover:underline">{guard.name}</div>
+                          </button>
                           <div className="text-xs text-gray-500 dark:text-gray-400">{guard.phone || 'No phone'}</div>
                         </div>
                       </div>
@@ -374,6 +391,13 @@ export default function GuardsIndex({ guards, filters, stats }: GuardsIndexProps
             </div>
           )}
         </div>
+        {/* Guard Details Modal */}
+        <GuardDetailsModal
+          open={!!selectedGuardDetails}
+          onClose={() => setSelectedGuardDetails(null)}
+          guard={selectedGuardDetails}
+          scope="admin"
+        />
       </div>
     </AdminLayout>
   );

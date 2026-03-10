@@ -31,6 +31,17 @@ const AnimatedCounter: React.FC<{ value: number; duration?: number }> = ({ value
   return <span>{count.toLocaleString()}</span>;
 };
 
+// Action Tile Component
+const ActionTile: React.FC<{ icon: React.ReactNode; title: string; description: string; color: string; onClick?: () => void }> = ({ icon, title, description, color, onClick }) => (
+  <button onClick={onClick} className="flex items-center gap-3 p-3 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:shadow-md transition-all text-left">
+    <div className={`${color} p-2.5 rounded-lg text-white shadow-md shrink-0`}>{icon}</div>
+    <div className="min-w-0">
+      <p className="font-medium text-sm text-gray-900 dark:text-gray-100 truncate">{title}</p>
+      <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{description}</p>
+    </div>
+  </button>
+);
+
 // StatCard Component
 const StatCard: React.FC<{
   icon: React.ReactNode;
@@ -62,16 +73,216 @@ const StatCard: React.FC<{
   );
 };
 
-// Action Tile Component
-const ActionTile: React.FC<{ icon: React.ReactNode; title: string; description: string; color: string; onClick?: () => void }> = ({ icon, title, description, color, onClick }) => (
-  <button onClick={onClick} className="flex items-center gap-3 p-3 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:shadow-md transition-all text-left">
-    <div className={`${color} p-2.5 rounded-lg text-white shadow-md shrink-0`}>{icon}</div>
-    <div className="min-w-0">
-      <p className="font-medium text-sm text-gray-900 dark:text-gray-100 truncate">{title}</p>
-      <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{description}</p>
-    </div>
-  </button>
-);
+// Client Card Component
+const ClientCard: React.FC<{
+  client: Client;
+  onView: (id: number) => void;
+  onEdit: (id: number) => void;
+  onToggleStatus: (client: Client) => void;
+  onDelete: (client: Client) => void;
+  loadingId: number | null;
+}> = ({ client, onView, onEdit, onToggleStatus, onDelete, loadingId }) => {
+  const status = statusConfig[client.status || 'active'] || statusConfig.active;
+  const balance = (client.outstanding_amount || 0);
+  const isLoading = loadingId === client.id;
+
+  return (
+    <Card className="group overflow-hidden hover:shadow-xl transition-all duration-300 border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950">
+      <div className="flex flex-col md:flex-row">
+        {/* Status Indicator Bar */}
+        <div className={`w-full md:w-1.5 ${
+          client.status === 'overdue' ? 'bg-rose-500' :
+          client.status === 'inactive' ? 'bg-gray-500' : 'bg-emerald-500'
+        }`} />
+
+        <div className="flex-1 p-4 md:p-5">
+          {/* Header Row */}
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              {/* Avatar */}
+              <div className="w-12 h-12 bg-gradient-to-br from-red-600 to-red-700 rounded-xl flex items-center justify-center text-white font-bold text-lg shadow-md shrink-0">
+                {client.name.charAt(0).toUpperCase()}
+              </div>
+              <div className="min-w-0">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 truncate">
+                  {client.name}
+                </h3>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <Badge className={`${status.color} text-xs`}>
+                    <IconMapper name={status.icon} size={12} className="mr-1 inline" />
+                    {status.label}
+                  </Badge>
+                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                    Since {client.billing_start_date ? new Date(client.billing_start_date).toLocaleDateString() : 'Not set'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Balance Badge */}
+            <div className="text-right shrink-0">
+              {balance > 0 ? (
+                <div className="bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800 rounded-lg px-3 py-2">
+                  <div className="text-xs text-rose-600 dark:text-rose-400 font-medium">Outstanding</div>
+                  <div className="text-lg font-bold text-rose-700 dark:text-rose-400">{formatCurrencyMWK(balance)}</div>
+                </div>
+              ) : balance < 0 ? (
+                <div className="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded-lg px-3 py-2">
+                  <div className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">Credit</div>
+                  <div className="text-lg font-bold text-emerald-700 dark:text-emerald-400">{formatCurrencyMWK(Math.abs(balance))}</div>
+                </div>
+              ) : (
+                <div className="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded-lg px-3 py-2">
+                  <div className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">Balance</div>
+                  <div className="text-sm font-bold text-emerald-700 dark:text-emerald-400">Paid Up</div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Contact & Stats Grid */}
+          <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-3">
+            {/* Sites */}
+            <div className="flex items-center gap-2 p-2.5 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
+              <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
+                <IconMapper name="MapPin" size={14} className="text-blue-600 dark:text-blue-400" />
+              </div>
+              <div>
+                <div className="text-lg font-bold text-gray-900 dark:text-gray-100 leading-none">{client.sites_count || 0}</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">Sites</div>
+              </div>
+            </div>
+
+            {/* Services */}
+            <div className="flex items-center gap-2 p-2.5 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
+              <div className="w-8 h-8 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center">
+                <IconMapper name="ShieldCheck" size={14} className="text-purple-600 dark:text-purple-400" />
+              </div>
+              <div>
+                <div className="text-lg font-bold text-gray-900 dark:text-gray-100 leading-none">{client.services_count || 0}</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">Services</div>
+              </div>
+            </div>
+
+            {/* Monthly Rate */}
+            <div className="flex items-center gap-2 p-2.5 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
+              <div className="w-8 h-8 bg-amber-100 dark:bg-amber-900/30 rounded-lg flex items-center justify-center">
+                <IconMapper name="DollarSign" size={14} className="text-amber-600 dark:text-amber-400" />
+              </div>
+              <div className="min-w-0">
+                <div className="text-sm font-bold text-gray-900 dark:text-gray-100 leading-none truncate">
+                  {client.monthly_rate ? formatCurrencyMWK(client.monthly_rate) : '—'}
+                </div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">/month</div>
+              </div>
+            </div>
+
+            {/* Year Total */}
+            <div className="flex items-center gap-2 p-2.5 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
+              <div className="w-8 h-8 bg-cyan-100 dark:bg-cyan-900/30 rounded-lg flex items-center justify-center">
+                <IconMapper name="Wallet" size={14} className="text-cyan-600 dark:text-cyan-400" />
+              </div>
+              <div className="min-w-0">
+                <div className="text-sm font-bold text-gray-900 dark:text-gray-100 leading-none truncate">
+                  {formatCurrencyMWK(client.total_paid || 0)}
+                </div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">Paid {new Date().getFullYear()}</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Contact Info */}
+          {(client.contact_person || client.phone || client.email) && (
+            <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-sm text-gray-600 dark:text-gray-400">
+              {client.contact_person && (
+                <span className="flex items-center gap-1.5">
+                  <IconMapper name="User" size={14} className="text-gray-400" />
+                  {client.contact_person}
+                </span>
+              )}
+              {client.phone && (
+                <span className="flex items-center gap-1.5">
+                  <IconMapper name="Phone" size={14} className="text-gray-400" />
+                  {client.phone}
+                </span>
+              )}
+              {client.email && (
+                <span className="flex items-center gap-1.5">
+                  <IconMapper name="Mail" size={14} className="text-gray-400" />
+                  <span className="truncate max-w-[200px]">{client.email}</span>
+                </span>
+              )}
+            </div>
+          )}
+
+          {/* Last Payment */}
+          {client.last_payment_date && (
+            <div className="mt-2 text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1.5">
+              <IconMapper name="Clock" size={12} />
+              Last payment {formatDistanceToNow(client.last_payment_date)}
+            </div>
+          )}
+
+          {/* Action Bar */}
+          <div className="mt-4 pt-3 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onView(client.id)}
+              disabled={isLoading}
+              className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
+            >
+              <IconMapper name="Eye" size={16} className="mr-1.5" />
+              View Details
+            </Button>
+
+            <div className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEdit(client.id);
+                }}
+                disabled={isLoading}
+                className="text-blue-600 hover:text-blue-700"
+              >
+                {isLoading ? (
+                  <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path></svg>
+                ) : (
+                  <IconMapper name="Pencil" size={16} />
+                )}
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onToggleStatus(client);
+                }}
+                className={client.status === 'active' ? 'text-amber-600 hover:text-amber-700' : 'text-emerald-600 hover:text-emerald-700'}
+                title={client.status === 'active' ? 'Deactivate' : 'Activate'}
+              >
+                <IconMapper name={client.status === 'active' ? 'PauseCircle' : 'PlayCircle'} size={16} />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete(client);
+                }}
+                className="text-red-500 hover:text-red-600"
+              >
+                <IconMapper name="Trash" size={16} />
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Card>
+  );
+};
 
 interface Client {
   id: number;
@@ -83,6 +294,7 @@ interface Client {
   sites_count?: number;
   total_due?: number;
   total_paid?: number;
+  outstanding_amount?: number;
   services_count?: number;
   monthly_rate?: number;
   last_payment_date?: string;
@@ -99,6 +311,8 @@ interface Filters {
   search?: string;
   per_page?: number | string;
   show_add?: number | string;
+  status?: string;
+  has_sites?: string;
 }
 
 interface ClientsIndexProps {
@@ -116,6 +330,7 @@ export default function ClientsIndex({ clients, filters, services = [], zones = 
   const [search, setSearch] = React.useState(filters.search || '');
   const initialPerPage = Number(filters?.per_page ?? clients.meta?.per_page ?? 20);
   const [perPage, setPerPage] = React.useState<number>(initialPerPage);
+  const [hasSites, setHasSites] = React.useState<string>(filters.has_sites || '');
   const [editingClient, setEditingClient] = React.useState<Client | null>(null);
   const [loadingClientId, setLoadingClientId] = React.useState<number | null>(null);
   const [viewingClient, setViewingClient] = React.useState<Client | null>(null);
@@ -129,7 +344,7 @@ export default function ClientsIndex({ clients, filters, services = [], zones = 
   }, []);
 
   const handleSearch = () => {
-    router.get(route('admin.clients.index'), { search, per_page: perPage }, { preserveState: true });
+    router.get(route('admin.clients.index'), { search, per_page: perPage, has_sites: hasSites }, { preserveState: true });
   };
 
   const fetchClientAndView = async (id: number) => {
@@ -230,7 +445,7 @@ export default function ClientsIndex({ clients, filters, services = [], zones = 
     { icon: <IconMapper name="Users" size={20} />, title: 'Total Clients', value: clients.meta?.total || clients.data.length, subtitle: 'Registered clients', color: 'blue' as const },
     { icon: <IconMapper name="MapPin" size={20} />, title: 'Total Sites', value: totalSites, subtitle: 'Managed locations', color: 'green' as const },
     { icon: <IconMapper name="ShieldCheck" size={20} />, title: 'Active Services', value: totalServices, subtitle: 'Services provided', color: 'purple' as const },
-    { icon: <IconMapper name="DollarSign" size={20} />, title: 'Revenue', value: clients.data.reduce((sum, c) => sum + (c.total_due || 0), 0), subtitle: 'Total due', color: 'amber' as const },
+    { icon: <IconMapper name="DollarSign" size={20} />, title: 'Outstanding', value: clients.data.reduce((sum, c) => sum + (c.outstanding_amount || 0), 0), subtitle: 'Total due', color: 'amber' as const },
   ], [clients, totalSites, totalServices]);
 
   const quickActions = [
@@ -331,17 +546,17 @@ export default function ClientsIndex({ clients, filters, services = [], zones = 
             </div>
 
             <div className="flex flex-wrap gap-2 mt-4">
-              <Button variant="outline" size="sm" onClick={() => handleSearch()}>All</Button>
-              <Button variant="outline" size="sm" onClick={() => router.get(route('admin.clients.index'), { status: 'active', per_page: perPage })}>Active</Button>
-              <Button variant="outline" size="sm" onClick={() => router.get(route('admin.clients.index'), { status: 'overdue', per_page: perPage })}>Overdue</Button>
-              <Button variant="outline" size="sm" onClick={() => router.get(route('admin.clients.index'), { status: 'inactive', per_page: perPage })}>Inactive</Button>
+              <Button variant="outline" size="sm" onClick={() => { setHasSites(''); router.get(route('admin.clients.index'), { search, per_page: perPage, status: '', has_sites: '' }); }}>All</Button>
+              <Button variant="outline" size="sm" onClick={() => router.get(route('admin.clients.index'), { status: 'active', per_page: perPage, search, has_sites: hasSites })}>Active</Button>
+              <Button variant="outline" size="sm" onClick={() => router.get(route('admin.clients.index'), { status: 'overdue', per_page: perPage, search, has_sites: hasSites })}>Overdue</Button>
+              <Button variant="outline" size="sm" onClick={() => router.get(route('admin.clients.index'), { status: 'inactive', per_page: perPage, search, has_sites: hasSites })}>Inactive</Button>
               <select
                 className="h-9 px-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm"
                 value={String(perPage)}
                 onChange={(e) => {
                   const v = Number(e.target.value);
                   setPerPage(v);
-                  router.get(route('admin.clients.index'), { per_page: v, page: 1 }, { preserveState: true });
+                  router.get(route('admin.clients.index'), { per_page: v, page: 1, search, has_sites: hasSites }, { preserveState: true });
                 }}
               >
                 <option value={10}>10/page</option>
@@ -349,10 +564,23 @@ export default function ClientsIndex({ clients, filters, services = [], zones = 
                 <option value={50}>50/page</option>
                 <option value={100}>100/page</option>
               </select>
+              <select
+                className="h-9 px-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm"
+                value={hasSites}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setHasSites(v);
+                  router.get(route('admin.clients.index'), { has_sites: v, per_page: perPage, search, page: 1 }, { preserveState: true });
+                }}
+              >
+                <option value="">All Clients</option>
+                <option value="1">With Sites</option>
+                <option value="0">Without Sites</option>
+              </select>
             </div>
           </Card>
 
-          {/* Clients List - Card Based */}
+          {/* Clients List */}
           {clients.data.length === 0 ? (
             <EmptyState
               title="No clients found"
@@ -360,183 +588,18 @@ export default function ClientsIndex({ clients, filters, services = [], zones = 
               icon="Users"
             />
           ) : (
-            <div className="space-y-3">
-              {clients.data.map((client) => {
-                const status = statusConfig[client.status || 'active'] || statusConfig.active;
-                const balance = (client.total_due || 0) - (client.total_paid || 0);
-
-                return (
-                  <Card
-                    key={client.id}
-                    className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer"
-                    onClick={() => fetchClientAndView(client.id)}
-                  >
-                    <div className="flex flex-col sm:flex-row">
-                      {/* Left accent bar based on status */}
-                      <div className={`w-full sm:w-1.5 ${
-                        client.status === 'overdue' ? 'bg-rose-500' :
-                        client.status === 'inactive' ? 'bg-gray-500' : 'bg-emerald-500'
-                      }`} />
-
-                      <div className="flex-1 p-4 sm:p-5">
-                        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              {/* Avatar */}
-                              <div className="w-10 h-10 bg-gradient-to-br from-red-600 to-red-700 rounded-lg flex items-center justify-center text-white font-bold shadow-sm shrink-0">
-                                {client.name.charAt(0).toUpperCase()}
-                              </div>
-                              <div>
-                                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                                  {client.name}
-                                </h3>
-                                <span className="text-xs text-gray-500 dark:text-gray-400">
-                                  Since {client.billing_start_date || 'Not set'}
-                                </span>
-                              </div>
-                              <Badge className={`${status.color} text-xs ml-2`}>
-                                <IconMapper name={status.icon} size={12} className="mr-1 inline" />
-                                {status.label}
-                              </Badge>
-                            </div>
-
-                            {/* Contact Info */}
-                            <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-600 dark:text-gray-400">
-                              {client.contact_person && (
-                                <span className="flex items-center gap-1">
-                                  <IconMapper name="User" size={14} />
-                                  {client.contact_person}
-                                </span>
-                              )}
-                              {client.phone && (
-                                <span className="flex items-center gap-1">
-                                  <IconMapper name="Phone" size={14} />
-                                  {client.phone}
-                                </span>
-                              )}
-                              {client.email && (
-                                <span className="flex items-center gap-1">
-                                  <IconMapper name="Mail" size={14} />
-                                  {client.email}
-                                </span>
-                              )}
-                            </div>
-
-                            {/* Stats Row */}
-                            <div className="mt-3 flex flex-wrap items-center gap-4">
-                              <span className="inline-flex items-center gap-1.5 text-sm">
-                                <IconMapper name="MapPin" size={14} className="text-blue-500" />
-                                <span className="font-medium text-gray-900 dark:text-gray-100">{client.sites_count || 0}</span>
-                                <span className="text-gray-500 dark:text-gray-400">Sites</span>
-                              </span>
-                              <span className="inline-flex items-center gap-1.5 text-sm">
-                                <IconMapper name="ShieldCheck" size={14} className="text-purple-500" />
-                                <span className="font-medium text-gray-900 dark:text-gray-100">{client.services_count || 0}</span>
-                                <span className="text-gray-500 dark:text-gray-400">Services</span>
-                              </span>
-                              {client.monthly_rate ? (
-                                <span className="inline-flex items-center gap-1.5 text-sm">
-                                  <IconMapper name="DollarSign" size={14} className="text-amber-500" />
-                                  <span className="font-medium text-gray-900 dark:text-gray-100">
-                                    {formatCurrencyMWK(client.monthly_rate)}
-                                  </span>
-                                  <span className="text-gray-500 dark:text-gray-400">/month</span>
-                                </span>
-                              ) : null}
-                              {client.last_payment_date && (
-                                <span className="inline-flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400">
-                                  <IconMapper name="Clock" size={14} />
-                                  Paid {formatDistanceToNow(client.last_payment_date)}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-
-                          {/* Right side: Balance & Actions */}
-                          <div className="flex flex-col items-end gap-3">
-                            {/* Balance Indicator */}
-                            {balance > 0 ? (
-                              <div className="text-right">
-                                <div className="text-xs text-gray-500 dark:text-gray-400">Outstanding</div>
-                                <div className="text-lg font-bold text-rose-600 dark:text-rose-400">
-                                  {formatCurrencyMWK(balance)}
-                                </div>
-                              </div>
-                            ) : balance < 0 ? (
-                              <div className="text-right">
-                                <div className="text-xs text-gray-500 dark:text-gray-400">Credit</div>
-                                <div className="text-lg font-bold text-emerald-600 dark:text-emerald-400">
-                                  {formatCurrencyMWK(Math.abs(balance))}
-                                </div>
-                              </div>
-                            ) : (
-                              <div className="text-right">
-                                <div className="text-xs text-gray-500 dark:text-gray-400">Balance</div>
-                                <div className="text-lg font-bold text-emerald-600 dark:text-emerald-400">
-                                  Paid Up
-                                </div>
-                              </div>
-                            )}
-
-                            {/* Action Buttons */}
-                            <div className="flex items-center gap-1">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  fetchClientAndView(client.id);
-                                }}
-                                disabled={loadingClientId === client.id}
-                              >
-                                <IconMapper name="Eye" size={16} />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  fetchClientAndEdit(client.id);
-                                }}
-                                disabled={loadingClientId === client.id}
-                              >
-                                {loadingClientId === client.id ? (
-                                  <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path></svg>
-                                ) : (
-                                  <IconMapper name="Pencil" size={16} />
-                                )}
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  toggleClientStatus(client);
-                                }}
-                                className={client.status === 'active' ? 'text-amber-600' : 'text-emerald-600'}
-                                title={client.status === 'active' ? 'Deactivate' : 'Activate'}
-                              >
-                                <IconMapper name={client.status === 'active' ? 'PauseCircle' : 'PlayCircle'} size={16} />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  deleteClient(client);
-                                }}
-                                className="text-red-500"
-                              >
-                                <IconMapper name="Trash" size={16} />
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </Card>
-                );
-              })}
+            <div className="space-y-4">
+              {clients.data.map((client) => (
+                <ClientCard
+                  key={client.id}
+                  client={client}
+                  onView={fetchClientAndView}
+                  onEdit={fetchClientAndEdit}
+                  onToggleStatus={toggleClientStatus}
+                  onDelete={deleteClient}
+                  loadingId={loadingClientId}
+                />
+              ))}
             </div>
           )}
 

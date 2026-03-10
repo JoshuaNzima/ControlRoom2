@@ -163,6 +163,20 @@ class RolesAndPermissionsSeeder extends Seeder
             'requisitions.create', 'requisitions.view_own',
         ]);
 
+        // Sergeant role - supervisory position for guards
+        $sergeantRole = Role::firstOrCreate(['name' => 'sergeant']);
+        $sergeantRole->givePermissionTo([
+            'guards.view',
+            'guards.sergeants.view',
+            'attendance.view',
+            'shifts.view',
+            'incidents.view',
+            'reports.view',
+            'clients.view',
+            // Requisitions
+            'requisitions.create', 'requisitions.view_own',
+        ]);
+
         // Zone Commander role - manages a specific zone
         $zoneCommanderRole = Role::firstOrCreate(['name' => 'zone_commander']);
         $zoneCommanderRole->givePermissionTo([

@@ -6,6 +6,7 @@ import useNotification from '@/Providers/useNotifications';
 import Modal from '@/Components/Modal';
 import ConfirmModal from '@/Components/ConfirmModal';
 import ReasonModal from '@/Components/ReasonModal';
+import GuardDetailsModal from '@/Components/Guards/GuardDetailsModal';
 import GuardForm from '@/Components/Guards/GuardForm';
 import { GuardFormData } from '@/types/guards';
 import AssignSiteModal from '@/Components/Guards/AssignSiteModal';
@@ -207,8 +208,7 @@ export default function ControlRoomGuardsIndex({
   const [currentGuardData, setCurrentGuardData] = React.useState<any>(null);
   const [editLoading, setEditLoading] = React.useState<number | null>(null);
   const [viewLoading, setViewLoading] = React.useState<number | null>(null);
-  const [viewOpen, setViewOpen] = React.useState(false);
-  const [viewData, setViewData] = React.useState<any>(null);
+  const [selectedGuardDetails, setSelectedGuardDetails] = React.useState<any | null>(null);
   const [bulkCoverOpen, setBulkCoverOpen] = React.useState(false);
   const [bulkCoverNotes, setBulkCoverNotes] = React.useState('');
   const [importOpen, setImportOpen] = React.useState(false);
@@ -352,8 +352,7 @@ export default function ControlRoomGuardsIndex({
       const res = await fetch(route('control-room.guards.json', { guard: id }), { headers: { Accept: 'application/json' } });
       if (!res.ok) throw new Error('Failed');
       const json = await res.json();
-      setViewData(json);
-      setViewOpen(true);
+      setSelectedGuardDetails(json);
     } catch (e) {
       // no-op
     } finally {
@@ -1194,53 +1193,13 @@ export default function ControlRoomGuardsIndex({
           </form>
         </Modal>
 
-        {/* View Details Modal */}
-        <Modal show={viewOpen} onClose={() => setViewOpen(false)} maxWidth="xl">
-          <div className="p-4 sm:p-6 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-2 bg-gray-100 dark:bg-gray-800 rounded-lg">
-                <IconMapper name="User" size={20} />
-              </div>
-              <h2 className="text-xl font-semibold">Guard Details</h2>
-            </div>
-            {!viewData ? (
-              <div className="text-sm text-gray-500">Loading...</div>
-            ) : (
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <span className="text-sm text-gray-500 dark:text-gray-400">Name</span>
-                    <div className="font-medium">{viewData.name}</div>
-                  </div>
-                  <div>
-                    <span className="text-sm text-gray-500 dark:text-gray-400">Employee ID</span>
-                    <div className="font-medium">{viewData.employee_id}</div>
-                  </div>
-                  <div>
-                    <span className="text-sm text-gray-500 dark:text-gray-400">Phone</span>
-                    <div className="font-medium">{viewData.phone || '—'}</div>
-                  </div>
-                  <div>
-                    <span className="text-sm text-gray-500 dark:text-gray-400">Email</span>
-                    <div className="font-medium">{viewData.email || '—'}</div>
-                  </div>
-                  <div>
-                    <span className="text-sm text-gray-500 dark:text-gray-400">Status</span>
-                    <div>
-                      <Badge className={getStatusColor(viewData.status)}>
-                        {viewData.status || 'Active'}
-                      </Badge>
-                    </div>
-                  </div>
-                  <div>
-                    <span className="text-sm text-gray-500 dark:text-gray-400">Supervisor</span>
-                    <div className="font-medium">{viewData.supervisor?.name || '—'}</div>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        </Modal>
+        {/* Guard Details Modal */}
+        <GuardDetailsModal
+          open={!!selectedGuardDetails}
+          onClose={() => setSelectedGuardDetails(null)}
+          guard={selectedGuardDetails}
+          scope="control-room"
+        />
 
         {/* Bulk Cover Modal */}
         <Modal show={bulkCoverOpen} onClose={() => setBulkCoverOpen(false)} maxWidth="md">

@@ -37,8 +37,14 @@ export function DialogContent({ className = '', children }: { className?: string
   const ctx = React.useContext(DialogContext);
   if (!ctx) return null;
   return (
-    <Modal show={ctx.open} onClose={() => ctx.setOpen(false)}>
-      <div className={`p-4 ${className}`}>{children}</div>
+    <Modal show={ctx.open} onClose={() => ctx.setOpen(false)} closeable={true}>
+      <div 
+        className={`p-4 ${className}`}
+        onClick={(e) => e.stopPropagation()}
+        onMouseDown={(e) => e.stopPropagation()}
+      >
+        {children}
+      </div>
     </Modal>
   );
 }

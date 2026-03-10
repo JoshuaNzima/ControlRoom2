@@ -442,11 +442,18 @@ class GuardController extends Controller
 
     public function apiShow(Guard $guard)
     {
-        $guard->load(['supervisor']);
+        $guard->load([
+            'supervisor',
+            'zone',
+            'grade',
+            'currentAssignmentRelation.site.client',
+            'assignments' => fn ($q) => $q->where('is_active', true)->with('site.client')->limit(5),
+        ]);
 
         $monthStart = now()->startOfMonth()->toDateString();
         $monthEnd = now()->endOfMonth()->toDateString();
 
+        // Attendance tally for current month
         $byStatus = Attendance::query()
             ->where('guard_id', $guard->id)
             ->whereBetween('date', [$monthStart, $monthEnd])
@@ -465,14 +472,94 @@ class GuardController extends Controller
             )
             ->first();
 
+        // Recent attendance (last 7 days)
+        $recentAttendance = Attendance::query()
+            ->where('guard_id', $guard->id)
+            ->whereDate('date', '>=', now()->subDays(7))
+            ->orderBy('date', 'desc')
+            ->limit(7)
+            ->get(['date', 'status', 'check_in_time', 'check_out_time', 'hours_worked', 'site_id'])
+            ->map(fn ($a) => [
+                'date' => $a->date?->format('Y-m-d'),
+                'status' => $a->status,
+                'check_in' => $a->check_in_time?->format('H:i'),
+                'check_out' => $a->check_out_time?->format('H:i'),
+                'hours' => $a->hours_worked,
+            ])->toArray();
+
+        // Recent infractions (last 3 months)
+        $recentInfractions = $guard->infractions()
+            ->where('created_at', '>=', now()->subMonths(3))
+            ->orderBy('created_at', 'desc')
+            ->limit(5)
+            ->get(['id', 'type', 'severity', 'description', 'status', 'created_at'])
+            ->map(fn ($i) => [
+                'id' => $i->id,
+                'type' => $i->type,
+                'severity' => $i->severity,
+                'description' => $i->description,
+                'status' => $i->status,
+                'date' => $i->created_at?->format('Y-m-d'),
+            ])->toArray();
+
+        // Documents (if GuardDocuments model exists)
+        $documents = [];
+        if (class_exists(\App\Models\GuardDocuments::class)) {
+            $documents = \App\Models\GuardDocuments::where('guard_id', $guard->id)
+                ->orderBy('created_at', 'desc')
+                ->limit(10)
+                ->get(['id', 'document_type', 'document_name', 'file_path', 'is_verified', 'created_at'])
+                ->map(fn ($d) => [
+                    'id' => $d->id,
+                    'type' => $d->document_type,
+                    'name' => $d->document_name,
+                    'verified' => $d->is_verified,
+                    'date' => $d->created_at?->format('Y-m-d'),
+                ])->toArray();
+        }
+
+        // Calculate attendance rate
+        $totalAttendance = array_sum($byStatus);
+        $presentDays = $byStatus['present'] ?? 0;
+        $attendanceRate = $totalAttendance > 0 ? round(($presentDays / $totalAttendance) * 100) : null;
+
+        // Get current assignment details
+        $currentAssignment = $guard->currentAssignmentRelation;
+
         return response()->json(array_merge($guard->toArray(), [
             'attendance_tally' => [
                 'range' => ['start' => $monthStart, 'end' => $monthEnd],
                 'by_status' => $byStatus,
-                'total' => array_sum($byStatus),
+                'total' => $totalAttendance,
                 'hours_worked' => (float) ($hoursRow->hours_worked ?? 0),
                 'overtime_hours' => (float) ($hoursRow->overtime_hours ?? 0),
+                'rate_percent' => $attendanceRate,
             ],
+            'recent_attendance' => $recentAttendance,
+            'recent_infractions' => $recentInfractions,
+            'documents' => $documents,
+            'current_assignment' => $currentAssignment ? [
+                'site' => $currentAssignment->site ? [
+                    'id' => $currentAssignment->site->id,
+                    'name' => $currentAssignment->site->name,
+                    'client' => $currentAssignment->site->client ? [
+                        'id' => $currentAssignment->site->client->id,
+                        'name' => $currentAssignment->site->client->name,
+                    ] : null,
+                ] : null,
+                'start_date' => $currentAssignment->start_date,
+                'end_date' => $currentAssignment->end_date,
+                'assignment_type' => $currentAssignment->assignment_type,
+            ] : null,
+            'zone' => $guard->zone ? [
+                'id' => $guard->zone->id,
+                'name' => $guard->zone->name,
+            ] : null,
+            'grade' => $guard->grade ? [
+                'id' => $guard->grade->id,
+                'code' => $guard->grade->code,
+                'name' => $guard->grade->name,
+            ] : null,
         ]));
     }
 

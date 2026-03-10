@@ -109,6 +109,11 @@ class ClientSite extends Model
         return $this->belongsTo(Client::class);
     }
 
+    public function zone(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\Zone::class);
+    }
+
     public function shifts(): HasMany
     {
         return $this->hasMany(Shift::class);

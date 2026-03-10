@@ -9,6 +9,7 @@ import { GuardFormData } from '@/types/guards';
 import AssignSiteModal from '@/Components/Guards/AssignSiteModal';
 import PromoteGuardModal from '@/Components/HR/PromoteGuardModal';
 import ConfirmModal from '@/Components/ConfirmModal';
+import GuardDetailsModal from '@/Components/Guards/GuardDetailsModal';
 import ReasonModal from '@/Components/ReasonModal';
 import { Card } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
@@ -144,7 +145,7 @@ export default function SuperAdminGuards({ guards, inactiveGuards, filters, supe
   // Modals
   const [showAdd, setShowAdd] = React.useState(false);
   const [showEdit, setShowEdit] = React.useState(false);
-  const [showDetails, setShowDetails] = React.useState(false);
+  const [selectedGuardDetails, setSelectedGuardDetails] = React.useState<any | null>(null);
   const [showAssign, setShowAssign] = React.useState(false);
   const [showPromote, setShowPromote] = React.useState(false);
   const [selectedGuard, setSelectedGuard] = React.useState<any | null>(null);
@@ -185,24 +186,31 @@ export default function SuperAdminGuards({ guards, inactiveGuards, filters, supe
     window.localStorage.setItem('superadmin.guards.perPage', perPage);
   }, [sort, dir, perPage]);
 
-  const applyFilters = () => {
+  React.useEffect(() => {
+    if (filters.view && filters.view !== view) {
+      setView(filters.view);
+    }
+  }, [filters.view]);
+
+  const applyFilters = (viewOverride?: string) => {
+    const currentView = viewOverride || view;
     const query: Record<string, any> = {
       search: search || undefined,
-      status: view === 'inactive' ? undefined : (status || undefined),
+      status: currentView === 'inactive' ? undefined : (status || undefined),
       profile_status: profileStatus || undefined,
       zone_id: zoneId || undefined,
       supervisor_id: supervisorId || undefined,
       sort,
       dir,
       per_page: perPage,
-      view,
+      view: currentView,
     };
-    router.get(route('superadmin.guards', query), { preserveState: true, preserveScroll: true });
+    router.get(route('superadmin.guards'), query, { preserveState: false, preserveScroll: true });
   };
   
   const resetFilters = () => {
     setSearch(''); setStatus(''); setProfileStatus(''); setZoneId(''); setSupervisorId(''); setSort('name'); setDir('asc'); setPerPage('20'); setView('active');
-    router.get(route('superadmin.guards'), { preserveState: true, preserveScroll: true });
+    router.get(route('superadmin.guards'), {}, { preserveState: false, preserveScroll: true });
   };
 
   const handleExport = () => {
@@ -250,38 +258,67 @@ export default function SuperAdminGuards({ guards, inactiveGuards, filters, supe
   const openAdd = () => { setSelectedGuard(null); setShowAdd(true); };
   const openEdit = async (guardId: number) => {
     try {
-      const res = await fetch(route('admin.guards.json', guardId), {
+      const url = route('admin.guards.json', guardId);
+      const res = await fetch(url, {
         headers: { 'Accept': 'application/json' },
         credentials: 'same-origin',
       });
+      if (!res.ok) {
+        console.error('Failed to fetch guard details:', res.status, res.statusText);
+        push('Failed to load guard details. Please try again.', 'error');
+        return;
+      }
       const data = await res.json();
       setSelectedGuard(data);
       setShowEdit(true);
-    } catch {}
+    } catch (e) {
+      console.error('Error fetching guard details:', e);
+      push('Failed to load guard details. Please try again.', 'error');
+    }
   };
   const openDetails = async (guardId: number) => {
     try {
-      const res = await fetch(route('admin.guards.json', guardId), {
+      setLoadingId(guardId);
+      const url = route('admin.guards.json', guardId);
+      const res = await fetch(url, {
         headers: { 'Accept': 'application/json' },
         credentials: 'same-origin',
       });
+      if (!res.ok) {
+        console.error('Failed to fetch guard details:', res.status, res.statusText);
+        push('Failed to load guard details. Please try again.', 'error');
+        return;
+      }
       const data = await res.json();
-      setSelectedGuard(data);
-      setShowDetails(true);
-    } catch {}
+      setSelectedGuardDetails(data);
+    } catch (e) {
+      console.error('Error fetching guard details:', e);
+      push('Failed to load guard details. Please try again.', 'error');
+    } finally {
+      setLoadingId(null);
+    }
   };
-  const openAssign = (guardId: number) => { setSelectedGuard({ id: guardId }); setShowAssign(true); };
   const openPromote = async (guardId: number) => {
     try {
-      const res = await fetch(route('admin.guards.json', guardId), {
+      const url = route('admin.guards.json', guardId);
+      const res = await fetch(url, {
         headers: { 'Accept': 'application/json' },
         credentials: 'same-origin',
       });
+      if (!res.ok) {
+        console.error('Failed to fetch guard details:', res.status, res.statusText);
+        push('Failed to load guard details. Please try again.', 'error');
+        return;
+      }
       const data = await res.json();
       setSelectedGuard(data);
       setShowPromote(true);
-    } catch {}
+    } catch (e) {
+      console.error('Error fetching guard details:', e);
+      push('Failed to load guard details. Please try again.', 'error');
+    }
   };
+  const openAssign = (guardId: number) => { setSelectedGuard({ id: guardId }); setShowAssign(true); };
 
   const submitCreate = async (form: GuardFormData) => {
     setSaving(true);
@@ -329,31 +366,6 @@ export default function SuperAdminGuards({ guards, inactiveGuards, filters, supe
       onFinish: () => setSaving(false),
       onSuccess: () => { setShowEdit(false); setPhotoEdit(null); },
     });
-  };
-
-  const printDetails = () => {
-    if (!selectedGuard) return;
-    const w = window.open('', 'PRINT', 'height=650,width=900');
-    if (!w) return;
-    const g = selectedGuard;
-    w.document.write(`<!doctype html><html><head><title>Guard ${g.employee_id || ''} - ${g.name}</title>
-    <style>
-      body{font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu;}
-      h1{font-size:20px;margin:0 0 8px 0}
-      .section{margin:12px 0}
-      .grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-      .row{display:flex;justify-content:space-between;border-bottom:1px dashed #ccc;padding:4px 0}
-      .label{color:#555}
-    </style>
-    </head><body>`);
-    w.document.write(`<h1>Guard Profile</h1>`);
-    const row = (label: string, val: any) => `<div class="row"><span class="label">${label}</span><span>${val ?? ''}</span></div>`;
-    w.document.write(`<div class="section">${row('Name', g.name)}${row('Employee ID', g.employee_id)}${row('Phone', g.phone)}${row('Email', g.email)}</div>`);
-    w.document.write('</body></html>');
-    w.document.close();
-    w.focus();
-    w.print();
-    w.close();
   };
 
   const toggleGuardSelected = (id: number) => {
@@ -485,7 +497,7 @@ export default function SuperAdminGuards({ guards, inactiveGuards, filters, supe
           {/* View Toggle */}
           <div className="flex items-center gap-2 bg-white dark:bg-gray-900 p-2 rounded-lg border border-gray-200 dark:border-gray-800 w-fit">
             <button
-              onClick={() => { setView('active'); applyFilters(); }}
+              onClick={() => { setView('active'); applyFilters('active'); }}
               className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                 view === 'active'
                   ? 'bg-red-600 text-white'
@@ -496,7 +508,7 @@ export default function SuperAdminGuards({ guards, inactiveGuards, filters, supe
               Active Guards
             </button>
             <button
-              onClick={() => { setView('inactive'); applyFilters(); }}
+              onClick={() => { setView('inactive'); applyFilters('inactive'); }}
               className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                 view === 'inactive'
                   ? 'bg-red-600 text-white'
@@ -603,27 +615,6 @@ export default function SuperAdminGuards({ guards, inactiveGuards, filters, supe
                   ? `Showing ${inactiveGuards?.data?.length || 0} inactive guards`
                   : `Page ${guards.meta?.current_page ?? '-'} of ${guards.meta?.last_page ?? '-'}`
                 }
-                {selectedGuardIds.length > 0 && (
-                  <span className="ml-2 text-red-600 dark:text-red-400">({selectedGuardIds.length} selected)</span>
-                )}
-              </div>
-              <div className="flex gap-2">
-                {selectedGuardIds.length > 0 && view === 'active' && (
-                  <Button 
-                    variant="outline" 
-                    onClick={() => { setSelectedSupervisorId(''); setShowSupervisor(true); }}
-                    className="text-sm"
-                  >
-                    <IconMapper name="UserPlus" size={16} className="mr-1.5" />
-                    Assign Supervisor
-                  </Button>
-                )}
-                <Button onClick={applyFilters} className="bg-red-600 hover:bg-red-700 text-sm">
-                  Apply Filters
-                </Button>
-                <Button variant="outline" onClick={resetFilters} className="text-sm">
-                  Reset
-                </Button>
               </div>
             </div>
           </Card>
@@ -1089,58 +1080,14 @@ export default function SuperAdminGuards({ guards, inactiveGuards, filters, supe
         </Modal>
 
         {/* Guard Details Modal */}
-        <Modal show={showDetails} onClose={() => setShowDetails(false)} maxWidth="xl">
-          <div className="p-4 sm:p-6 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-gray-100 dark:bg-gray-800 rounded-lg">
-                  <IconMapper name="User" size={20} />
-                </div>
-                <h2 className="text-xl font-semibold">Guard Details</h2>
-              </div>
-              <Button onClick={printDetails} variant="outline" size="sm">
-                <IconMapper name="Printer" size={16} className="mr-1.5" />
-                Print
-              </Button>
-            </div>
-            {!selectedGuard ? (
-              <div className="text-sm text-gray-500">Loading...</div>
-            ) : (
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <span className="text-sm text-gray-500 dark:text-gray-400">Name</span>
-                    <div className="font-medium">{selectedGuard.name}</div>
-                  </div>
-                  <div>
-                    <span className="text-sm text-gray-500 dark:text-gray-400">Employee ID</span>
-                    <div className="font-medium">{selectedGuard.employee_id}</div>
-                  </div>
-                  <div>
-                    <span className="text-sm text-gray-500 dark:text-gray-400">Phone</span>
-                    <div className="font-medium">{selectedGuard.phone || '—'}</div>
-                  </div>
-                  <div>
-                    <span className="text-sm text-gray-500 dark:text-gray-400">Email</span>
-                    <div className="font-medium">{selectedGuard.email || '—'}</div>
-                  </div>
-                  <div>
-                    <span className="text-sm text-gray-500 dark:text-gray-400">Status</span>
-                    <div>
-                      <Badge className={getStatusColor(selectedGuard.status)}>
-                        {selectedGuard.status || 'Active'}
-                      </Badge>
-                    </div>
-                  </div>
-                  <div>
-                    <span className="text-sm text-gray-500 dark:text-gray-400">Supervisor</span>
-                    <div className="font-medium">{selectedGuard.supervisor?.name || '—'}</div>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        </Modal>
+        <GuardDetailsModal
+          open={!!selectedGuardDetails}
+          onClose={() => setSelectedGuardDetails(null)}
+          guard={selectedGuardDetails}
+          onEdit={selectedGuardDetails ? () => { setSelectedGuard(selectedGuardDetails); setSelectedGuardDetails(null); setShowEdit(true); } : undefined}
+          onAssign={selectedGuardDetails ? () => { setSelectedGuard(selectedGuardDetails); setSelectedGuardDetails(null); setShowAssign(true); } : undefined}
+          scope="superadmin"
+        />
 
         {/* Assign to Site Modal */}
         <AssignSiteModal

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Guards\Client;
 use App\Models\Guards\ClientSite;
 use App\Models\Guards\Guard;
+use App\Models\Zone;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -231,17 +232,73 @@ class ClientsController extends Controller
 			: url()->current() . '?layout=portrait';
 		$alternateLayoutLabel = $layout === 'portrait' ? 'Switch to Landscape' : 'Switch to Portrait';
 
+		// Get supervisor/sergeant for this site, fallback to zone commander
+		$leaderInfo = $this->getSiteLeaderInfo($site);
+
 		if ($layout === 'landscape') {
-			$html = $this->getLandscapeLayout($site, $qrUrl, $logoUrl, $emergencyHotline, $clientName, $alternateLayoutUrl, $alternateLayoutLabel);
+			$html = $this->getLandscapeLayout($site, $qrUrl, $logoUrl, $emergencyHotline, $clientName, $alternateLayoutUrl, $alternateLayoutLabel, $leaderInfo);
 		} else {
-			$html = $this->getPortraitLayout($site, $qrUrl, $logoUrl, $emergencyHotline, $clientName, $alternateLayoutUrl, $alternateLayoutLabel);
+			$html = $this->getPortraitLayout($site, $qrUrl, $logoUrl, $emergencyHotline, $clientName, $alternateLayoutUrl, $alternateLayoutLabel, $leaderInfo);
 		}
 
 		return response($html, 200, ['Content-Type' => 'text/html']);
 	}
 
-	private function getPortraitLayout($site, $qrUrl, $logoUrl, $emergencyHotline, $clientName, $alternateLayoutUrl, $alternateLayoutLabel)
+	/**
+	 * Get supervisor/sergeant assigned to site, or zone commander as fallback
+	 */
+	private function getSiteLeaderInfo(ClientSite $site): array
 	{
+		// Try to find an active supervisor or sergeant assigned to this site
+		$supervisor = Guard::query()
+			->whereIn('position', ['supervisor', 'sergeant'])
+			->where('status', 'active')
+			->whereHas('assignments', function ($q) use ($site) {
+				$q->where('client_site_id', $site->id)
+				  ->where('is_active', true)
+				  ->where('start_date', '<=', today())
+				  ->where(function ($sq) {
+					  $sq->whereNull('end_date')->orWhere('end_date', '>=', today());
+				  });
+			})
+			->first();
+
+		if ($supervisor) {
+			return [
+				'type' => $supervisor->position === 'sergeant' ? 'Sergeant' : 'Supervisor',
+				'name' => $supervisor->name,
+				'phone' => $supervisor->phone ?? null,
+				'has_leader' => true,
+			];
+		}
+
+		// Fallback to zone commander (avoid relying on ClientSite::zone relationship)
+		$zone = $site->zone_id ? Zone::query()->with(['commander:id,name,phone,zone_id'])->find($site->zone_id) : null;
+		$commander = $zone?->commander;
+		if ($commander) {
+			return [
+				'type' => 'Zone Commander',
+				'name' => $commander->name,
+				'phone' => $commander->phone ?? null,
+				'has_leader' => true,
+			];
+		}
+
+		return [
+			'type' => 'Zone Commander',
+			'name' => 'Not Assigned',
+			'phone' => null,
+			'has_leader' => false,
+		];
+	}
+
+	private function getPortraitLayout($site, $qrUrl, $logoUrl, $emergencyHotline, $clientName, $alternateLayoutUrl, $alternateLayoutLabel, array $leaderInfo)
+	{
+		$leaderType = $leaderInfo['type'];
+		$leaderName = $leaderInfo['name'];
+		$leaderPhone = $leaderInfo['phone'] ?? '';
+		$leaderPhoneHtml = $leaderPhone ? "<div class='leader-phone'>{$leaderPhone}</div>" : '';
+		
 		return <<<HTML
 <!DOCTYPE html>
 <html lang="en">
@@ -309,11 +366,7 @@ class ClientsController extends Controller
 			color: #1a1a1a;
 			margin: 25px 0 10px;
 		}
-		.client-name {
-			font-size: 18px;
-			color: #666;
-			margin-bottom: 25px;
-		}
+	
 		.divider {
 			width: 60%;
 			height: 2px;
@@ -344,6 +397,34 @@ class ClientsController extends Controller
 		.emergency-icon {
 			font-size: 24px;
 			margin-bottom: 8px;
+		}
+		.leader-banner {
+			background: linear-gradient(135deg, #1a1a1a 0%, #333333 100%);
+			color: white;
+			padding: 20px;
+			border-radius: 12px;
+			margin-top: 20px;
+			border: 3px solid #c41e3a;
+			text-align: center;
+		}
+		.leader-type {
+			font-size: 14px;
+			text-transform: uppercase;
+			letter-spacing: 2px;
+			opacity: 0.9;
+			margin-bottom: 8px;
+			color: #c41e3a;
+			font-weight: bold;
+		}
+		.leader-name {
+			font-size: 24px;
+			font-weight: bold;
+			margin-bottom: 6px;
+		}
+		.leader-phone {
+			font-size: 18px;
+			opacity: 0.9;
+			font-family: monospace;
 		}
 		.instructions {
 			margin-top: 20px;
@@ -405,7 +486,6 @@ class ClientsController extends Controller
 		</div>
 		
 		<h1 class="site-name">{$site->name}</h1>
-		<p class="client-name">{$clientName}</p>
 		
 		<div class="divider"></div>
 		
@@ -413,6 +493,12 @@ class ClientsController extends Controller
 			<div class="emergency-icon">&#128222;</div>
 			<div class="emergency-label">Emergency Hotline</div>
 			<div class="emergency-number">{$emergencyHotline}</div>
+		</div>
+		
+		<div class="leader-banner">
+			<div class="leader-type">{$leaderType}</div>
+			<div class="leader-name">{$leaderName}</div>
+			{$leaderPhoneHtml}
 		</div>
 		
 		<div class="instructions">
@@ -433,8 +519,13 @@ class ClientsController extends Controller
 HTML;
 	}
 
-	private function getLandscapeLayout($site, $qrUrl, $logoUrl, $emergencyHotline, $clientName, $alternateLayoutUrl, $alternateLayoutLabel)
+	private function getLandscapeLayout($site, $qrUrl, $logoUrl, $emergencyHotline, $clientName, $alternateLayoutUrl, $alternateLayoutLabel, array $leaderInfo)
 	{
+		$leaderType = $leaderInfo['type'];
+		$leaderName = $leaderInfo['name'];
+		$leaderPhone = $leaderInfo['phone'] ?? '';
+		$leaderPhoneHtml = $leaderPhone ? "<div class='leader-phone'><i class='fas fa-phone'></i> {$leaderPhone}</div>" : '';
+		
 		return <<<HTML
 <!DOCTYPE html>
 <html lang="en">
@@ -607,10 +698,10 @@ HTML;
 		.qr-id i {
 			color: #c41e3a;
 		}
-		.emergency-footer {
+		.leader-banner {
 			margin-top: 30px;
 			padding: 25px;
-			background: linear-gradient(135deg, #c41e3a 0%, #8b1428 100%);
+			background: linear-gradient(135deg, #1a1a1a 0%, #333333 100%);
 			color: white;
 			border-radius: 12px;
 			display: flex;
@@ -618,20 +709,35 @@ HTML;
 			align-items: center;
 			flex-wrap: wrap;
 			gap: 15px;
+			border: 3px solid #c41e3a;
 		}
-		.emergency-footer-text {
-			font-size: 22px;
-			font-weight: bold;
+		.leader-section {
 			display: flex;
-			align-items: center;
-			gap: 12px;
+			flex-direction: column;
+			align-items: flex-start;
 		}
-		.emergency-footer-number {
-			font-size: 38px;
+		.leader-type {
+			font-size: 14px;
+			text-transform: uppercase;
+			letter-spacing: 2px;
+			color: #c41e3a;
 			font-weight: bold;
+			margin-bottom: 6px;
+		}
+		.leader-name {
+			font-size: 28px;
+			font-weight: bold;
+		}
+		.leader-phone {
+			font-size: 20px;
+			opacity: 0.9;
+			font-family: monospace;
 			display: flex;
 			align-items: center;
 			gap: 10px;
+		}
+		.leader-phone i {
+			color: #c41e3a;
 		}
 		@media print {
 			body { background: white; }
@@ -694,7 +800,7 @@ HTML;
 			
 			<div class="site-info">
 				<h1 class="site-name">{$site->name}</h1>
-				<p class="client-name"><i class="fas fa-building"></i> {$clientName}</p>
+				<!-- <p class="client-name"><i class="fas fa-building"></i> {$clientName}</p> -->
 				
 				<div class="instructions">
 					<strong><i class="fas fa-qrcode"></i> Scan to Check In</strong>
@@ -706,9 +812,12 @@ HTML;
 			</div>
 		</div>
 		
-		<div class="emergency-footer">
-			<div class="emergency-footer-text"><i class="fas fa-phone-alt"></i> For Emergencies Call Now</div>
-			<div class="emergency-footer-number"><i class="fas fa-headset"></i> {$emergencyHotline}</div>
+		<div class="leader-banner">
+			<div class="leader-section">
+				<div class="leader-type">{$leaderType}</div>
+				<div class="leader-name">{$leaderName}</div>
+			</div>
+			{$leaderPhoneHtml}
 		</div>
 		
 		<div class="no-print">

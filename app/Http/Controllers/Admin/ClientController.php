@@ -71,13 +71,36 @@ class ClientController extends Controller
             ->when(request('search'), function($q, $search) {
                 $q->where('name', 'like', "%{$search}%");
             })
+            ->when(request('status'), function($q, $status) {
+                $q->where('status', $status);
+            })
+            ->when(request('has_sites') !== null && request('has_sites') !== '', function($q) {
+                $hasSites = request('has_sites') === '1' || request('has_sites') === 'true';
+                if ($hasSites) {
+                    $q->has('sites');
+                } else {
+                    $q->doesntHave('sites');
+                }
+            })
             ->orderBy('name')
             ->paginate($perPage)
             ->withQueryString();
 
-        // Calculate monthly rates for each client
-        $clients->through(function ($client) {
+        // Calculate monthly rates and payment summaries for each client
+        $currentYear = now()->year;
+        $clients->through(function ($client) use ($currentYear) {
             $client->monthly_rate = $client->getMonthlyDueAmount();
+            
+            // Get payment summary for current year
+            $paymentSummary = $client->getPaymentSummary($currentYear);
+            $client->total_due = $paymentSummary['total_due'];
+            $client->total_paid = $paymentSummary['total_paid'];
+            $client->outstanding_amount = $paymentSummary['outstanding_amount'];
+            $client->last_payment_date = $client->payments()
+                ->where('paid', true)
+                ->orderByDesc('created_at')
+                ->value('created_at');
+            
             return $client;
         });
 
