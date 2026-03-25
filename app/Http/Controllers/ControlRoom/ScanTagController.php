@@ -27,6 +27,16 @@ class ScanTagController extends Controller
 
         $tags = $query->orderBy('created_at', 'desc')->paginate(20)->withQueryString();
 
+        // Backfill supervisor_name for older tags that don't have it
+        $tags->getCollection()->transform(function ($tag) {
+            $tagData = $tag->tags;
+            if (empty($tagData['supervisor_name']) && !empty($tagData['supervisor_id'])) {
+                $tagData['supervisor_name'] = $tag->checkpointScan?->supervisor?->name ?? 'Unknown';
+                $tag->tags = $tagData;
+            }
+            return $tag;
+        });
+
         return Inertia::render('ControlRoom/ScanTags', [
             'tags' => $tags,
             'filters' => $request->only(['site', 'supervisor', 'location_quality']),

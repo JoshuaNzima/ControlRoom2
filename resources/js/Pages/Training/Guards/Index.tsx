@@ -10,9 +10,10 @@ interface Guard {
   phone: string | null;
   email: string | null;
   status: string;
-  grade: { code: string; name: string } | null;
+  grade?: { code?: string; name?: string } | null;
   supervisor: { name: string } | null;
-  sites: { site_name: string; client: { name: string } }[];
+  // Directory endpoint doesn't include sites; keep optional to avoid runtime errors
+  sites?: { site_name?: string; client?: { name?: string } }[];
 }
 
 interface PageProps {
@@ -67,7 +68,7 @@ export default function GuardsIndex() {
               />
             </div>
             <button
-              onClick={() => window.location.href = route('training.guards.index', { search })}
+              onClick={() => window.location.href = route('training.guards.index', { search: search || undefined })}
               className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
             >
               Search
@@ -189,11 +190,11 @@ export default function GuardsIndex() {
               </div>
               <div>
                 <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Assigned Sites</label>
-                {selectedGuard.sites && selectedGuard.sites.length > 0 ? (
+                {Array.isArray(selectedGuard.sites) && selectedGuard.sites.length > 0 ? (
                   <ul className="mt-1 space-y-1">
                     {selectedGuard.sites.map((site, idx) => (
                       <li key={idx} className="text-sm text-gray-900 dark:text-gray-100">
-                        {site.site_name} ({site.client.name})
+                        {site.site_name || '—'} {site.client?.name ? `(${site.client.name})` : ''}
                       </li>
                     ))}
                   </ul>

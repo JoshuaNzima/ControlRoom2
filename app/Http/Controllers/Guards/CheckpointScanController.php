@@ -4,8 +4,10 @@ namespace App\Http\Controllers\Guards;
 
 use App\Http\Controllers\Controller;
 use App\Models\Guards\{Checkpoint, CheckpointScan};
+use App\Events\QRScanned;
 use App\Jobs\TagScanJob;
-use App\Models\GPSMismatchIncident;
+use App\Notifications\GenericDbNotification;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
@@ -140,8 +142,14 @@ class CheckpointScanController extends Controller
 
         session(['active_checkpoint_scan' => $scanData]);
 
-        // Dispatch tagging job (async) - job will persist scan tags to DB
-        TagScanJob::dispatch($scan->id)->onQueue('default');
+        // Tag the scan — runs synchronously if queue is 'sync', otherwise queued
+        // This ensures the scan always appears in the control-room dashboard
+        if (config('queue.default') === 'sync') {
+            // Run immediately (no queue worker needed)
+            TagScanJob::dispatchSync($scan->id);
+        } else {
+            TagScanJob::dispatch($scan->id)->onQueue('default');
+        }
 
         // Dispatch event for real-time notifications (comprehensive payload)
         event(new \App\Events\QRScanned(
@@ -158,6 +166,20 @@ class CheckpointScanController extends Controller
                 'longitude' => $validated['longitude'] ?? null,
             ]
         ));
+
+        // Send push notification to control room operators
+        try {
+            $controlRoomUsers = \App\Models\User::role(['control_room_operator', 'operations_officer', 'admin', 'super_admin'])->get();
+            if ($controlRoomUsers->isNotEmpty()) {
+                Notification::send($controlRoomUsers, new GenericDbNotification([
+                    'title' => 'Checkpoint QR Scanned',
+                    'message' => sprintf('%s scanned checkpoint at %s', auth()->user()->name, $checkpoint->clientSite->name),
+                    'url' => route('control-room.dashboard'),
+                ]));
+            }
+        } catch (\Throwable $e) {
+            // swallow notification errors
+        }
 
         // Get role-based redirect route
         $roleName = (string) (auth()->user()?->role ?? (auth()->user()?->getRoleNames()?->first() ?? ''));

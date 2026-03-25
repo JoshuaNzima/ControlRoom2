@@ -42,8 +42,18 @@ class DownController extends Controller
             ->latest()
             ->paginate(10);
 
+        // Compute stats from all downs (not just current page)
+        $stats = [
+            'total' => Down::count(),
+            'open' => Down::where('status', 'open')->count(),
+            'escalated' => Down::where('status', 'escalated')->count(),
+            'resolved' => Down::where('status', 'resolved')->count(),
+            'absconding' => Down::where('status', 'absconding')->count(),
+        ];
+
         return Inertia::render($this->indexComponent($request), [
             'downs' => $downs,
+            'stats' => $stats,
         ]);
     }
 

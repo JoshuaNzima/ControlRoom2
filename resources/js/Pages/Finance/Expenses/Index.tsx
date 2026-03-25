@@ -32,6 +32,9 @@ interface Props {
     total: number;
     approved: number;
     pending: number;
+    petty_cash: number;
+    requisitions_total: number;
+    requisitions_count: number;
     by_category: Array<{ category: string; total: number }>;
   };
   filters: {
@@ -190,22 +193,29 @@ export default function ExpenseIndex({ expenses, totals, filters }: Props) {
           </div>
 
           {/* Summary Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg shadow p-6">
-              <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Total Requisitions</p>
-              <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Total Expenses</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                 {formatCurrency(totals.total)}
               </p>
             </div>
             <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg shadow p-6">
-              <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Approved</p>
-              <p className="text-3xl font-bold text-green-600 dark:text-green-400">
-                {formatCurrency(totals.approved)}
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Petty Cash</p>
+              <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                {formatCurrency(totals.petty_cash)}
               </p>
             </div>
             <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg shadow p-6">
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Requisitions</p>
+              <p className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">
+                {formatCurrency(totals.requisitions_total)}
+              </p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{totals.requisitions_count} items</p>
+            </div>
+            <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg shadow p-6">
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Pending Approval</p>
-              <p className="text-3xl font-bold text-yellow-600 dark:text-yellow-400">
+              <p className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">
                 {formatCurrency(totals.pending)}
               </p>
             </div>

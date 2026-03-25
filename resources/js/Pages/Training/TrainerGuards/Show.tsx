@@ -109,7 +109,7 @@ export default function TrainerGuardShow() {
               href={route('training.trainer-guards.index')}
               className="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400"
             >
-              ← Back to Trainer Guards
+              ← Back to Refresher Guards
             </a>
           </div>
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">

@@ -13,14 +13,23 @@ class ScanTagger
      */
     public function tag(CheckpointScan $scan): array
     {
+        // Ensure relationships are loaded
+        if (!$scan->relationLoaded('checkpoint')) {
+            $scan->load('checkpoint.clientSite.client');
+        }
+        if (!$scan->relationLoaded('supervisor')) {
+            $scan->load('supervisor');
+        }
+
         // Basic tags: supervisor, site, client, time, location accuracy
         $tags = [];
 
         $tags['scan_id'] = $scan->id;
         $tags['supervisor_id'] = $scan->supervisor_id;
+        $tags['supervisor_name'] = optional($scan->supervisor)->name ?? 'Unknown';
         $tags['checkpoint_id'] = $scan->checkpoint_id;
 
-        $clientSite = optional($scan->checkpoint->clientSite);
+        $clientSite = optional($scan->checkpoint?->clientSite);
         $tags['site_id'] = $clientSite->id ?? null;
         $tags['site_name'] = $clientSite->name ?? null;
         $tags['client_name'] = optional($clientSite->client)->name ?? null;

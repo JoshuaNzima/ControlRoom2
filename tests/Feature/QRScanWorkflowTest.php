@@ -202,6 +202,7 @@ class QRScanWorkflowTest extends TestCase
         $user = User::factory()->create();
         $user->assignRole('supervisor');
 
+        // Non-Inertia request returns JSON with redirect to attendance (no attendance yet today)
         $response = $this
             ->actingAs($user)
             ->from(route('scan.scanner', absolute: false))
@@ -216,12 +217,59 @@ class QRScanWorkflowTest extends TestCase
         $payload = $response->json();
         $this->assertIsArray($payload);
         $this->assertArrayHasKey('redirect', $payload);
-        $this->assertStringContainsString('/supervisor/attendance?site=' . $site->id, (string) $payload['redirect']);
+        $this->assertStringContainsString('/supervisor/attendance', (string) $payload['redirect']);
 
         $this->assertDatabaseHas('checkpoint_scans', [
             'supervisor_id' => $user->id,
             'latitude' => 0,
             'longitude' => 0,
         ]);
+    }
+
+    public function test_site_scan_with_existing_attendance_stores_session(): void
+    {
+        config(['scanner.require_gps' => true]);
+
+        $site = $this->makeClientSite([
+            'qr_code' => 'SITE-QR-SESSION',
+            'latitude' => 0,
+            'longitude' => 0,
+        ]);
+
+        $user = User::factory()->create();
+        $user->assignRole('supervisor');
+
+        // Create a guard for attendance record
+        $guard = \App\Models\Guards\Guard::create([
+            'user_id' => $user->id,
+            'name' => 'Test Guard',
+            'id_number' => 'G-TEST-001',
+            'status' => 'active',
+        ]);
+
+        // Pre-create attendance for today so the scan stores session instead of redirecting
+        \App\Models\Guards\Attendance::create([
+            'guard_id' => $guard->id,
+            'supervisor_id' => $user->id,
+            'client_site_id' => $site->id,
+            'date' => today(),
+            'status' => 'present',
+            'check_in_time' => now()->subHours(2),
+        ]);
+
+        $response = $this
+            ->actingAs($user)
+            ->from(route('scan.scanner', absolute: false))
+            ->get(route('scan.site', absolute: false) . '?site=' . $site->id . '&latitude=0&longitude=0');
+
+        $response->assertOk();
+        $response->assertJson(['success' => true]);
+
+        // Verify session has the expected keys including client_name and expires_at
+        $scanSession = session('active_checkpoint_scan');
+        $this->assertNotNull($scanSession);
+        $this->assertEquals($site->id, $scanSession['site_id']);
+        $this->assertArrayHasKey('client_name', $scanSession);
+        $this->assertArrayHasKey('expires_at', $scanSession);
     }
 }

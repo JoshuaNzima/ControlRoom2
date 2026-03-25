@@ -153,9 +153,10 @@ class GuardsController extends Controller
             'zones' => Zone::orderBy('name')->get(['id','name']),
             'stats' => $stats,
             'can' => [
-                'suspend' => auth()->user()?->hasAnyRole(['operations_officer','manager','super_admin','control_room_operator','hr_manager']),
-                'dismiss' => auth()->user()?->hasAnyRole(['operations_officer','manager','super_admin','hr_manager']),
-                'reinstate' => auth()->user()?->hasAnyRole(['operations_officer','manager','super_admin','hr_manager']),
+                // Control room operators, managers, HR and super admins can perform status actions
+                'suspend' => auth()->user()?->hasAnyRole(['operations_officer','manager','super_admin','control_room_operator','hr','hr_manager']),
+                'dismiss' => auth()->user()?->hasAnyRole(['operations_officer','manager','super_admin','control_room_operator','hr','hr_manager']),
+                'reinstate' => auth()->user()?->hasAnyRole(['operations_officer','manager','super_admin','control_room_operator','hr','hr_manager']),
             ],
             'canAssignSupervisor' => (function(){
                 $u = auth()->user();

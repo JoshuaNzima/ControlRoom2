@@ -4,20 +4,7 @@ import SuperAdminLayout from '@/Layouts/SuperAdminLayout';
 import IconMapper from '@/Components/IconMapper';
 
 export default function Modules() {
-  const { category, modules = [] } = usePage<{ 
-    category?: string;
-    modules?: Array<{
-      id: number;
-      name: string;
-      display_name: string;
-      description: string;
-      version: string;
-      is_active: boolean;
-      is_core: boolean;
-      icon: string;
-      category: string;
-    }>;
-  }>().props as any;
+  const { category, modules } = usePage().props as any;
 
   const moduleCategories = [
     { key: 'finance', title: 'Finance', description: 'Requisitions, spending, payroll oversight', icon: 'DollarSign', color: 'from-emerald-500 to-teal-600', bgColor: 'bg-emerald-50 dark:bg-emerald-900/20', textColor: 'text-emerald-600 dark:text-emerald-400', href: route('superadmin.finance.index'), stats: 'Payroll, Expenses, Reports' },

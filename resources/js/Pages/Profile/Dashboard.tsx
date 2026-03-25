@@ -45,7 +45,7 @@ function currency(n: number | string) {
 }
 
 export default function ProfileDashboard() {
-  const { user, commissions, payroll, mustVerifyEmail = false, status } = usePage<PageProps>().props as any;
+  const { user, commissions, payroll, mustVerifyEmail = false, status } = usePage().props as any;
   const [tab, setTab] = React.useState<'profile' | 'commissions' | 'payroll'>('profile');
   const [showEdit, setShowEdit] = React.useState(false);
   const [showPassword, setShowPassword] = React.useState(false);

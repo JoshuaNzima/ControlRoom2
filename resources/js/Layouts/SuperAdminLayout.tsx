@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link, Head } from '@inertiajs/react';
+import { Link, Head, usePage } from '@inertiajs/react';
 import IconMapper from '@/Components/IconMapper';
 import { User } from '@/types';
 import NotificationBell from '@/Components/Common/NotificationBell';
@@ -8,6 +8,8 @@ import useCounters from '@/Hooks/useCounters';
 import { useTheme } from '@/Providers/ThemeProvider';
 import useGpsAlerts from '@/Hooks/useGpsAlerts';
 import FloatingNavButton from '@/Components/FloatingNavButton';
+import WeeklyTasks from '@/Components/WeeklyTasks';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface Props {
     title: string;
@@ -46,9 +48,12 @@ const QuickStats: React.FC = () => {
 
 export default function SuperAdminLayout({ title, children, user }: Props) {
     const [sidebarOpen, setSidebarOpen] = React.useState(false);
+    const [tasksOpen, setTasksOpen] = React.useState(false);
     const [logoOk, setLogoOk] = React.useState<boolean>(true);
     const { counters } = useCounters();
     const { theme, toggle } = useTheme();
+    const page = usePage<any>();
+    const { weeklyTasks, isExecutiveAssistant } = page.props;
     useGpsAlerts();
 
     const isCurrent = (href: string) => {
@@ -279,6 +284,14 @@ export default function SuperAdminLayout({ title, children, user }: Props) {
                             <div className="flex items-center justify-end gap-2 sm:gap-3">
                                 <QuickStats />
                                 <NotificationBell />
+                                <button
+                                    onClick={() => setTasksOpen(!tasksOpen)}
+                                    className="inline-flex items-center gap-1.5 rounded-md bg-coin-100 text-coin-700 hover:bg-coin-200 px-3 py-1.5 text-sm dark:bg-coin-900/30 dark:text-coin-200 transition-colors"
+                                    title="Toggle Tasks Panel"
+                                >
+                                    <IconMapper name="CheckSquare" size={16} />
+                                    <span className="hidden sm:inline">Tasks</span>
+                                </button>
                                 <button 
                                     onClick={toggle} 
                                     className="text-sm px-3 py-1.5 rounded-md bg-red-100 text-red-800 hover:bg-red-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700 transition-colors"
@@ -286,18 +299,6 @@ export default function SuperAdminLayout({ title, children, user }: Props) {
                                     <span className="hidden sm:inline">{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>
                                     <span className="sm:hidden">{theme === 'dark' ? 'Light' : 'Dark'}</span>
                                 </button>
-                                <div className="hidden sm:block text-sm text-red-700 dark:text-gray-300 max-w-[10rem] truncate">
-                                    {user?.name}
-                                </div>
-                                <Link
-                                    href={route('logout')}
-                                    method="post"
-                                    as="button"
-                                    className="inline-flex items-center justify-center rounded-md bg-white text-red-700 hover:bg-red-50 border border-red-200 px-2 py-2 sm:px-3 sm:py-1.5 text-sm dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700 transition-colors"
-                                >
-                                    <IconMapper name="LogOut" size={18} className="sm:hidden" />
-                                    <span className="hidden sm:inline">Logout</span>
-                                </Link>
                             </div>
                         </div>
                     </div>
@@ -305,8 +306,29 @@ export default function SuperAdminLayout({ title, children, user }: Props) {
 
                 {/* Page Content */}
                 <BaseShell noHeader fullScreen={false}>
-                    <div className="animate-slideUp transition-all-smooth">
-                        {children}
+                    <div className="transition-all ease-out duration-500">
+                        <div className={`grid gap-4 ${tasksOpen ? 'grid-cols-1 xl:grid-cols-4' : 'grid-cols-1'}`}>
+                            <div className={tasksOpen ? 'xl:col-span-3' : ''}>
+                                {children}
+                            </div>
+                            <AnimatePresence>
+                                {tasksOpen && (
+                                    <motion.div
+                                        initial={{ opacity: 0, x: 50, scale: 0.95 }}
+                                        animate={{ opacity: 1, x: 0, scale: 1 }}
+                                        exit={{ opacity: 0, x: 50, scale: 0.95 }}
+                                        transition={{ duration: 0.35, ease: [0.25, 0.46, 0.45, 0.94] }}
+                                        className="xl:col-span-1"
+                                    >
+                                        <WeeklyTasks
+                                            tasks={weeklyTasks || []}
+                                            showModule={true}
+                                            isExecutiveAssistant={isExecutiveAssistant}
+                                        />
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+                        </div>
                     </div>
                 </BaseShell>
                 <FloatingNavButton />

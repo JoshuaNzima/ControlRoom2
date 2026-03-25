@@ -3,13 +3,14 @@ import IconMapper from '@/Components/IconMapper';
 import BaseShell from './BaseShell';
 import { Link, usePage, router } from "@inertiajs/react";
 import { PageProps } from '@/types';
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from '@/Providers/ThemeProvider';
 import useNotifications from '@/Hooks/useNotifications';
 import { Toaster } from 'react-hot-toast';
 import NotificationBell from '@/Components/Common/NotificationBell';
 import QuickBudgetButton from '@/Components/Budgets/QuickBudgetButton';
 import FloatingNavButton from '@/Components/FloatingNavButton';
+import WeeklyTasks from '@/Components/WeeklyTasks';
 
 const navLinks = [
   { href: "/supervisor/overview", label: "Overview", icon: <IconMapper name="LayoutDashboard" size={22} /> },
@@ -48,6 +49,7 @@ export default function SupervisorLayout({ children, title }: SupervisorLayoutPr
   
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [tasksOpen, setTasksOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>(serverNotifications || [
@@ -163,9 +165,15 @@ export default function SupervisorLayout({ children, title }: SupervisorLayoutPr
         </nav>
 
         {/* Logout */}
-        <div className="p-4 border-t border-red-800 dark:border-gray-800">
-          <button onClick={handleLogout} className="w-full flex items-center justify-center gap-2 bg-white text-red-900 hover:bg-red-50 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700 py-3 px-4 rounded-lg shadow-md transition-all font-semibold">
-            <IconMapper name="LogOut" size={18} /> Logout
+        <div className="p-4 border-t border-red-800 dark:border-gray-800 space-y-2">
+          <Link
+            href={route('supervisor.profile')}
+            className="w-full flex items-center justify-center gap-2 bg-gray-800 text-white hover:bg-gray-700 dark:bg-gray-700 dark:hover:bg-gray-600 py-2 px-4 rounded-lg transition-all text-sm font-medium"
+          >
+            <IconMapper name="User" size={16} /> Profile
+          </Link>
+          <button onClick={handleLogout} className="w-full flex items-center justify-center gap-2 bg-white text-red-900 hover:bg-red-50 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700 py-2 px-4 rounded-lg shadow-md transition-all font-semibold text-sm">
+            <IconMapper name="LogOut" size={16} /> Logout
           </button>
         </div>
       </motion.aside>
@@ -180,9 +188,14 @@ export default function SupervisorLayout({ children, title }: SupervisorLayoutPr
           <div className="flex items-center gap-3">
             <QuickBudgetButton />
             <NotificationBell />
-            <Link href={route('supervisor.profile')} className="inline-flex items-center px-3 py-1.5 rounded-md bg-gray-800 text-white hover:bg-gray-700 text-sm">
-              My Profile
-            </Link>
+            <button
+              onClick={() => setTasksOpen(!tasksOpen)}
+              className="inline-flex items-center gap-1.5 rounded-md bg-coin-100 text-coin-700 hover:bg-coin-200 px-3 py-1.5 text-sm dark:bg-coin-900/30 dark:text-coin-200 transition-colors"
+              title="Toggle Tasks Panel"
+            >
+              <IconMapper name="CheckSquare" size={16} />
+              Tasks
+            </button>
             {isSuperAdmin && (
               <Link href={route('superadmin.dashboard')} className="inline-flex items-center gap-2 rounded-md bg-red-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-600">
                 <IconMapper name="Shield" size={16} />
@@ -192,10 +205,6 @@ export default function SupervisorLayout({ children, title }: SupervisorLayoutPr
             <button className="p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800" onClick={() => setSettingsOpen(!settingsOpen)}>
               <IconMapper name="Settings" size={22} />
             </button>
-            <div className="flex items-center gap-2 ml-2 pl-2 border-l">
-              <div className="w-8 h-8 bg-white/10 rounded-full flex items-center justify-center text-white font-bold text-sm">{auth.user.name.charAt(0)}</div>
-              <span className="text-sm font-medium text-red-900 dark:text-gray-100">{auth.user.name}</span>
-            </div>
             <button onClick={toggle} className="ml-2 text-sm px-3 py-1 rounded-md bg-red-100 text-red-800 hover:bg-red-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700">{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</button>
           </div>
         </header>
@@ -203,7 +212,26 @@ export default function SupervisorLayout({ children, title }: SupervisorLayoutPr
         {/* Page Content */}
         <div className="flex-1 bg-red-50 dark:bg-gray-900 overflow-y-auto">
           <BaseShell noHeader fullScreen={false}>
-            {children}
+            <div className="transition-all ease-out duration-500">
+              <div className={`grid gap-4 ${tasksOpen ? 'grid-cols-1 xl:grid-cols-4' : 'grid-cols-1'}`}>
+                <div className={tasksOpen ? 'xl:col-span-3' : ''}>
+                  {children}
+                </div>
+                <AnimatePresence>
+                  {tasksOpen && (
+                    <motion.div
+                      initial={{ opacity: 0, x: 50, scale: 0.95 }}
+                      animate={{ opacity: 1, x: 0, scale: 1 }}
+                      exit={{ opacity: 0, x: 50, scale: 0.95 }}
+                      transition={{ duration: 0.35, ease: [0.25, 0.46, 0.45, 0.94] }}
+                      className="xl:col-span-1"
+                    >
+                      <WeeklyTasks tasks={[]} showModule={false} isExecutiveAssistant={false} />
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            </div>
           </BaseShell>
         </div>
       </div>

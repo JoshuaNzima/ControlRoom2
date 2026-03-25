@@ -20,7 +20,7 @@ type PageProps = {
 };
 
 export default function Calendar() {
-  const { month, year, days, summary } = usePage<PageProps>().props as any;
+  const { month, year, days, summary } = usePage().props as any;
 
   const current = new Date(year, month - 1, 1);
 

@@ -28,6 +28,8 @@ export type Counters = {
   deployments_today?: number;
 
   assets_handovers_outstanding?: number;
+  tasks_my_open?: number;
+  tasks_my_overdue?: number;
 };
 
 let sharedCounters: Counters = {};

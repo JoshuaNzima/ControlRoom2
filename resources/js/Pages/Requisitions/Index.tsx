@@ -176,10 +176,10 @@ export default function RequisitionsIndex({ requisitions, auth, mode: initialMod
           </div>
 
           {/* Requisitions List */}
-          <div className="bg-gray-900/70 border border-gray-700/70 rounded-xl shadow-sm overflow-hidden">
-            <div className="p-3 sm:p-4 flex items-center justify-between border-b border-gray-800/80">
-              <h2 className="text-sm font-medium text-gray-200">All requisitions</h2>
-              <span className="text-xs text-gray-500">
+          <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden">
+            <div className="p-3 sm:p-4 flex items-center justify-between border-b border-border">
+              <h2 className="text-sm font-medium text-foreground">All requisitions</h2>
+              <span className="text-xs text-muted-foreground">
                 {requisitions.data.length} record{requisitions.data.length === 1 ? '' : 's'}
               </span>
             </div>
@@ -320,7 +320,7 @@ export default function RequisitionsIndex({ requisitions, auth, mode: initialMod
             )}
 
             {requisitions.meta && requisitions.links && requisitions.meta.last_page > 1 && (
-              <div className="px-3 sm:px-4 py-3 flex flex-wrap items-center justify-center gap-1 border-t border-gray-800/80 bg-gray-950/60">
+              <div className="px-3 sm:px-4 py-3 flex flex-wrap items-center justify-center gap-1 border-t border-border bg-muted/50">
                 {requisitions.links.map((link, index) => (
                   <button
                     key={index}
@@ -328,10 +328,10 @@ export default function RequisitionsIndex({ requisitions, auth, mode: initialMod
                     onClick={() => { if (link.url) { window.location.href = link.url; } }}
                     className={`px-2.5 py-1 rounded-md text-xs font-medium transition ${
                       link.active
-                        ? 'bg-red-600 text-white shadow-sm'
+                        ? 'bg-coin-600 text-white shadow-sm'
                         : link.url
-                        ? 'bg-gray-800/80 text-gray-300 hover:bg-gray-700'
-                        : 'bg-transparent text-gray-600 cursor-default'
+                        ? 'bg-muted text-foreground hover:bg-muted/80'
+                        : 'bg-transparent text-muted-foreground cursor-default'
                     }`}
                     dangerouslySetInnerHTML={{ __html: link.label }}
                   />

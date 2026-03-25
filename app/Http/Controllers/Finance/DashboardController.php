@@ -7,6 +7,9 @@ use App\Models\Invoice;
 use App\Models\Expense;
 use App\Models\Budget;
 use App\Models\ClientPayment;
+use App\Models\IncentiveProfile;
+use App\Models\IncentiveRecord;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Gate;
@@ -168,6 +171,7 @@ class DashboardController extends Controller
                         ->sum('amount'),
                     'pending_count' => (int) Expense::where('user_id', $me->id)->pending()->count(),
                     'approved_count' => (int) Expense::where('user_id', $me->id)->approved()->count(),
+                    'rejected_count' => (int) Expense::where('user_id', $me->id)->rejected()->count(),
                 ];
             }
         } catch (\Throwable $e) {
@@ -192,6 +196,28 @@ class DashboardController extends Controller
             $lastPayroll = null;
         }
 
+        // Incentive summary for current month
+        $year = now()->year;
+        $month = now()->month;
+        $incentiveSummary = [
+            'total_supervisors' => User::role('supervisor')->count(),
+            'total_sergeants' => User::role('sergeant')->count(),
+            'active_profiles' => IncentiveProfile::where('is_active', true)->count(),
+            'pending_count' => IncentiveRecord::forPeriod($year, $month)->where('status', 'pending')->count(),
+            'approved_count' => IncentiveRecord::forPeriod($year, $month)->where('status', 'approved')->count(),
+            'paid_count' => IncentiveRecord::forPeriod($year, $month)->where('status', 'paid')->count(),
+            'total_paid_amount' => IncentiveRecord::forPeriod($year, $month)->where('status', 'paid')->sum('final_amount'),
+            'pending_amount' => IncentiveRecord::forPeriod($year, $month)->where('status', 'pending')->sum('final_amount'),
+            'by_role' => [
+                'supervisor' => IncentiveRecord::forPeriod($year, $month)
+                    ->whereHas('user.roles', fn($q) => $q->where('name', 'supervisor'))
+                    ->sum('final_amount'),
+                'sergeant' => IncentiveRecord::forPeriod($year, $month)
+                    ->whereHas('user.roles', fn($q) => $q->where('name', 'sergeant'))
+                    ->sum('final_amount'),
+            ],
+        ];
+
         return Inertia::render('Finance/Dashboard', [
             'invoicesSummary' => $invoicesSummary,
             'expensesSummary' => $expensesSummary,
@@ -214,6 +240,7 @@ class DashboardController extends Controller
             'topCategories' => $topCategories,
             'myRequisitions' => $myRequisitions,
             'lastPayroll' => $lastPayroll,
+            'incentiveSummary' => $incentiveSummary,
             'auth' => [
                 'user' => [
                     'name' => auth()->user()->name,

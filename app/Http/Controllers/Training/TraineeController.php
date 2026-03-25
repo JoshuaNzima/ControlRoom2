@@ -91,7 +91,7 @@ class TraineeController extends Controller
             'gender' => ['nullable', 'in:male,female,other'],
             'notes' => ['nullable', 'string'],
             'training_track' => ['nullable', 'in:standard,rapid_response'],
-            'training_days' => ['nullable', 'integer', 'min:10', 'max:365'],
+            'training_days' => ['nullable', 'integer', 'min:5', 'max:365'],
             'regimen_id' => ['nullable', 'exists:training_regimens,id'],
             'primary_trainer_id' => ['nullable', 'exists:users,id'],
             'trainer_ids' => ['nullable', 'array'],
@@ -113,8 +113,8 @@ class TraineeController extends Controller
             return back()->withError('Primary trainer is required.');
         }
 
-        $trainingDays = (int) ($data['training_days'] ?? 10);
-        $trainingDays = max(10, $trainingDays);
+        $trainingDays = (int) ($data['training_days'] ?? 5);
+        $trainingDays = max(5, $trainingDays);
 
         $trainee = Trainee::create([
             'name' => $data['name'],
@@ -202,12 +202,12 @@ class TraineeController extends Controller
 
         $data = $request->validate([
             'training_start_date' => ['nullable', 'date'],
-            'training_days' => ['nullable', 'integer', 'min:10', 'max:365'],
+            'training_days' => ['nullable', 'integer', 'min:5', 'max:365'],
         ]);
 
         $start = isset($data['training_start_date']) ? Carbon::parse($data['training_start_date'])->startOfDay() : Carbon::now()->startOfDay();
-        $days = (int) ($data['training_days'] ?? $trainee->training_days ?? 10);
-        $days = max(10, $days);
+        $days = (int) ($data['training_days'] ?? $trainee->training_days ?? 5);
+        $days = max(5, $days);
 
         $trainee->training_days = $days;
         $trainee->training_start_date = $start;
@@ -368,7 +368,7 @@ class TraineeController extends Controller
             return Carbon::now()->startOfDay()->greaterThanOrEqualTo(Carbon::parse($end)->startOfDay());
         }
 
-        $days = max(10, (int) ($trainee->training_days ?? 10));
+        $days = max(5, (int) ($trainee->training_days ?? 5));
         return Carbon::parse($trainee->training_start_date)->addDays($days)->startOfDay()->lte(Carbon::now()->startOfDay());
     }
 

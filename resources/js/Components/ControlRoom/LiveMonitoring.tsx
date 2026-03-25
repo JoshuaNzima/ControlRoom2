@@ -60,12 +60,12 @@ export default function LiveMonitoring({ className = '' }: LiveMonitoringProps) 
 
       if (scansResponse.ok) {
         const scansData = await scansResponse.json();
-        setQrScans(scansData.slice(0, 10)); // Show last 10 scans
+        setQrScans(Array.isArray(scansData) ? scansData.slice(0, 10) : []);
       }
 
       if (attendanceResponse.ok) {
         const attendanceData = await attendanceResponse.json();
-        setAttendanceUpdates(attendanceData.slice(0, 10)); // Show last 10 updates
+        setAttendanceUpdates(Array.isArray(attendanceData) ? attendanceData.slice(0, 10) : []);
       }
       if (scansResponse.ok || attendanceResponse.ok) {
         setIsConnected(true);
@@ -88,31 +88,34 @@ export default function LiveMonitoring({ className = '' }: LiveMonitoringProps) 
       // Listen for QR scan events
       echo.private('control-room')
         .listen('QRScanned', (e: any) => {
-          const scanData = {
-            id: e.data.id,
-            supervisor_name: e.data.supervisor_name,
-            site_name: e.data.site_name,
-            client_name: e.data.client_name,
-            scanned_at: e.data.scanned_at,
-            location_verified: e.data.location_verified,
+          const d = e?.data ?? {};
+          const scanData: QRScan = {
+            id: d.id ?? Date.now(),
+            supervisor_name: d.supervisor_name ?? 'Unknown',
+            site_name: d.site_name ?? 'Unknown',
+            client_name: d.client_name ?? '',
+            scanned_at: d.scanned_at ?? new Date().toISOString(),
+            location_verified: d.location_verified ?? false,
           };
           
           setQrScans(prev => [scanData, ...prev].slice(0, 10));
-          toast.success(`QR Scan: ${e.data.supervisor_name} at ${e.data.site_name}`);
+          toast.success(`QR Scan: ${scanData.supervisor_name} at ${scanData.site_name}`);
         })
         .listen('AttendanceUpdated', (e: any) => {
-          const attendanceData = {
-            id: e.data.id,
-            guard_name: e.data.guard_name,
-            site_name: e.data.site_name,
-            client_name: e.data.client_name,
-            action: e.data.action,
-            timestamp: e.data.timestamp,
-            status: e.data.status,
+          const data = e?.data ?? {};
+          const attendanceData: AttendanceUpdate = {
+            id: data.id ?? Date.now(),
+            guard_name: data.guard_name ?? 'Unknown',
+            site_name: data.site_name ?? 'Unknown',
+            client_name: data.client_name ?? '',
+            action: data.action ?? 'check_in',
+            timestamp: data.timestamp ?? data.time ?? new Date().toISOString(),
+            status: data.status ?? 'present',
           };
           
           setAttendanceUpdates(prev => [attendanceData, ...prev].slice(0, 10));
-          toast.success(`Attendance: ${e.data.guard_name} ${e.data.action.replace('_', ' ')}`);
+          const actionLabel = (data.action || data.status || 'updated').replace('_', ' ');
+          toast.success(`Attendance: ${attendanceData.guard_name} ${actionLabel}`);
         });
 
       setIsConnected(true);
@@ -243,11 +246,11 @@ export default function LiveMonitoring({ className = '' }: LiveMonitoringProps) 
                           <span className="font-medium text-gray-900 dark:text-gray-100">
                             {update.guard_name}
                           </span>
-                          <Badge className={`text-xs ${getActionBadgeColor(update.action)}`}>
-                            {update.action.replace('_', ' ')}
+                          <Badge className={`text-xs ${getActionBadgeColor(update.action || '')}`}>
+                            {(update.action || 'update').replace('_', ' ')}
                           </Badge>
-                          <Badge className={`text-xs ${getStatusBadgeColor(update.status)}`}>
-                            {update.status}
+                          <Badge className={`text-xs ${getStatusBadgeColor(update.status || '')}`}>
+                            {(update.status || 'unknown').replace('_', ' ')}
                           </Badge>
                         </div>
                         <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">

@@ -134,7 +134,7 @@ export default function MessagesLayout({ title, children }: Props) {
     return (
       <>
         <Head title={title} />
-        <FrontOfficeLayout title={title} user={user}>{content}</FrontOfficeLayout>
+        <FrontOfficeLayout title={title}>{content}</FrontOfficeLayout>
       </>
     );
   }

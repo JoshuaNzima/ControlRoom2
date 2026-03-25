@@ -12,14 +12,18 @@ import 'leaflet/dist/leaflet.css';
 interface ScanTag {
   id: number;
   tags: {
+    scan_id?: number;
     scanned_at: string;
     site_name: string;
     client_name: string;
-    supervisor_id: string;
-    latitude: number;
-    longitude: number;
+    supervisor_id: number;
+    supervisor_name?: string;
+    latitude: number | null;
+    longitude: number | null;
     location_quality: string;
-    geohash: string;
+    location_verified?: boolean;
+    geohash: string | null;
+    zone_id?: number | null;
   };
 }
 
@@ -50,7 +54,7 @@ export default function ScanTags() {
     return tags.filter(tag => {
       if (filters.site && tag.tags.site_name !== filters.site) return false;
       if (filters.client && tag.tags.client_name !== filters.client) return false;
-      if (filters.supervisor && tag.tags.supervisor_id !== filters.supervisor) return false;
+      if (filters.supervisor && (tag.tags.supervisor_name || String(tag.tags.supervisor_id)) !== filters.supervisor) return false;
       
       if (filters.dateRange) {
         const scanDate = new Date(tag.tags.scanned_at);
@@ -59,6 +63,7 @@ export default function ScanTags() {
       }
 
       if (filters.locationRadius) {
+        if (tag.tags.latitude == null || tag.tags.longitude == null) return false;
         const distance = getDistance(
           filters.locationRadius.lat,
           filters.locationRadius.lng,
@@ -132,9 +137,9 @@ export default function ScanTags() {
 
         <ScanTagFilters
           onFilterChange={setFilters}
-          sites={[...new Set(tags.map(t => t.tags.site_name))]}
-          clients={[...new Set(tags.map(t => t.tags.client_name))]}
-          supervisors={[...new Set(tags.map(t => t.tags.supervisor_id))]}
+          sites={[...new Set(tags.map(t => t.tags.site_name).filter(Boolean))]}
+          clients={[...new Set(tags.map(t => t.tags.client_name).filter(Boolean))]}
+          supervisors={[...new Set(tags.map(t => t.tags.supervisor_name || String(t.tags.supervisor_id)).filter(Boolean))]}
         />
 
         {viewMode === 'table' ? (
@@ -156,9 +161,23 @@ export default function ScanTags() {
                     <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-200 whitespace-nowrap">{format(new Date(t.tags.scanned_at), 'PPp')}</td>
                     <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-200 whitespace-nowrap">{t.tags.site_name}</td>
                     <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-200 whitespace-nowrap">{t.tags.client_name}</td>
-                    <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-200 whitespace-nowrap">{t.tags.supervisor_id || 'N/A'}</td>
-                    <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-200 whitespace-nowrap">{t.tags.latitude.toFixed(6)}, {t.tags.longitude.toFixed(6)}</td>
-                    <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-200 whitespace-nowrap">{t.tags.location_quality}</td>
+                    <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-200 whitespace-nowrap">{t.tags.supervisor_name || `ID: ${t.tags.supervisor_id}` || 'N/A'}</td>
+                    <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-200 whitespace-nowrap">
+                      {t.tags.latitude != null && t.tags.longitude != null
+                        ? `${Number(t.tags.latitude).toFixed(6)}, ${Number(t.tags.longitude).toFixed(6)}`
+                        : <span className="text-gray-400 italic">No GPS</span>}
+                    </td>
+                    <td className="px-4 py-3 text-sm whitespace-nowrap">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                        t.tags.location_quality === 'high'
+                          ? 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300'
+                          : t.tags.location_quality === 'medium'
+                          ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300'
+                          : 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300'
+                      }`}>
+                        {t.tags.location_verified && '✓ '}{t.tags.location_quality}
+                      </span>
+                    </td>
                   </tr>
                 ))}
               </tbody>

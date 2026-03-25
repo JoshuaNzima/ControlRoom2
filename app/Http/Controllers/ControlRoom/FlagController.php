@@ -29,10 +29,19 @@ class FlagController extends Controller
                 ]));
         }
 
+        // Compute stats from all flags (not just current page)
+        $stats = [
+            'total' => Flag::count(),
+            'pending_review' => Flag::where('status', 'pending_review')->count(),
+            'under_review' => Flag::where('status', 'under_review')->count(),
+            'resolved' => Flag::where('status', 'resolved')->count(),
+        ];
+
         return Inertia::render('ControlRoom/Flags/Index', [
             'flags' => $flags,
             'statuses' => Flag::STATUSES,
             'canReview' => $canReview,
+            'stats' => $stats,
         ]);
     }
 

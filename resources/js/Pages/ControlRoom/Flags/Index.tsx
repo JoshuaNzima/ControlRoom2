@@ -20,7 +20,7 @@ import {
 	SelectValue,
 } from '@/Components/ui/select';
 import { Badge } from '@/Components/ui/badge';
-import { Dialog, DialogTrigger } from '@/Components/ui/dialog';
+import { Dialog } from '@/Components/ui/dialog';
 import CreateFlagForm from './CreateFlagForm';
 import IconMapper from '@/Components/IconMapper';
 import { StatCard } from '@/Components/StatCard';
@@ -37,6 +37,7 @@ type Flag = {
 };
 
 interface Props {
+	auth?: { user?: { name?: string } };
 	flags?: { 
 		data: Flag[]; 
 		links?: Array<{ url: string | null; label: string; active: boolean }>;
@@ -46,7 +47,7 @@ interface Props {
 	stats?: { total?: number; pending_review?: number; under_review?: number; resolved?: number };
 }
 
-const FlagList: React.FC<Props> = ({ flags = { data: [] }, statuses = [], stats = {} }) => {
+const FlagList: React.FC<Props> = ({ auth, flags = { data: [] }, statuses = [], stats = {} }) => {
 	const [filterStatus, setFilterStatus] = useState<string>('');
 	const [filterType, setFilterType] = useState<string>('');
 	const [search, setSearch] = useState('');
@@ -54,7 +55,7 @@ const FlagList: React.FC<Props> = ({ flags = { data: [] }, statuses = [], stats 
 
 	const statusColors: Record<string, string> = {
 		pending_review: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200',
-		under_review: 'bg-coin-100 text-coin-800 dark:bg-coin-900/30 dark:text-coin-200',
+		under_review: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200',
 		resolved: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200',
 		dismissed: 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-100',
 	};
@@ -111,7 +112,7 @@ const FlagList: React.FC<Props> = ({ flags = { data: [] }, statuses = [], stats 
 	};
 
 	return (
-		<ControlRoomLayout title="Review Flags">
+		<ControlRoomLayout title="Review Flags" user={auth?.user as any}>
 			<Head title="Review Flags" />
 
 			<div className="py-6 space-y-6">
@@ -290,13 +291,8 @@ const FlagList: React.FC<Props> = ({ flags = { data: [] }, statuses = [], stats 
 							)}
 						</CardContent>
 					</Card>
+					{/* Create Flag Dialog - controlled by Quick Actions "New Flag" tile */}
 					<Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-						<DialogTrigger asChild>
-							<Button className="bg-red-600 hover:bg-red-700">
-								<IconMapper name="Plus" size={18} className="mr-2" />
-								New Flag
-							</Button>
-						</DialogTrigger>
 						<CreateFlagForm onClose={() => setShowCreateDialog(false)} />
 					</Dialog>
 				</div>

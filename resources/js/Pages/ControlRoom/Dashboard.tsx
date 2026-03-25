@@ -7,6 +7,7 @@ import EmptyState from '@/Components/ui/empty-state';
 import IconMapper from '@/Components/IconMapper';
 import LiveMonitoring from '@/Components/ControlRoom/LiveMonitoring';
 import RequisitionSummary from '@/Components/Requisitions/RequisitionSummary';
+import IncentiveSummary from '@/Components/IncentiveSummary';
 import useControlRoomEcho from '@/Hooks/useControlRoomEcho';
 import { User } from '@/types';
 
@@ -92,6 +93,9 @@ const ActionTile: React.FC<{
   href: string; 
   color: string;
 }> = ({ icon, title, description, href, color }) => {
+  // Don't render broken links
+  if (!href || href === '#') return null;
+
   return (
     <Link
       href={href}
@@ -132,6 +136,17 @@ interface DashboardStats {
   todayAttendance: number;
   pendingIncidents: number;
   resolvedIncidents: number;
+  todayScans: number;
+}
+
+interface RecentScan {
+  id: number;
+  supervisor_name: string;
+  site_name: string;
+  client_name: string;
+  scanned_at: string;
+  location_quality: string;
+  location_verified: boolean;
 }
 
 interface RecentIncident {
@@ -181,6 +196,8 @@ interface DashboardProps {
   coverageData: CoverageDataPoint[];
   attendanceData: AttendanceDataPoint[];
   zones: Zone[];
+  recentScans?: RecentScan[];
+  incentiveSummary?: any;
   auth?: { user?: { name?: string } };
 }
 
@@ -191,6 +208,8 @@ export default function ControlRoomDashboard({
   coverageData,
   attendanceData,
   zones,
+  recentScans,
+  incentiveSummary,
   auth,
 }: DashboardProps) {
   // Initialize control room echo
@@ -218,7 +237,10 @@ export default function ControlRoomDashboard({
     todayAttendance: stats?.todayAttendance ?? 0,
     pendingIncidents: stats?.pendingIncidents ?? 0,
     resolvedIncidents: stats?.resolvedIncidents ?? 0,
+    todayScans: stats?.todayScans ?? 0,
   };
+
+  const safeRecentScans: RecentScan[] = recentScans || [];
 
   const safeRecentIncidents = recentIncidents || [];
   const safeActiveAlerts = activeAlerts || {
@@ -238,14 +260,16 @@ export default function ControlRoomDashboard({
     }
   }, []);
 
-  // Quick actions
+  // Quick actions — only routes that actually exist
   const quickActions = useMemo(() => [
-    { title: 'Create Ticket', description: 'Log a new incident or request', route: 'control-room.tickets.create', icon: <IconMapper name="Ticket" size={20} />, color: 'bg-blue-600' },
-    { title: 'Report Issue', description: 'Flag guards or report problems', route: 'control-room.flags.create', icon: <IconMapper name="Flag" size={20} />, color: 'bg-amber-600' },
-    { title: 'View Cameras', description: 'Monitor camera feeds', route: 'control-room.cameras.index', icon: <IconMapper name="Video" size={20} />, color: 'bg-purple-600' },
-    { title: 'Generate Report', description: 'Create operational reports', route: 'control-room.reports', icon: <IconMapper name="FileText" size={20} />, color: 'bg-emerald-600' },
-    { title: 'Manage Sites', description: 'View and manage all sites', route: 'control-room.sites.index', icon: <IconMapper name="Building" size={20} />, color: 'bg-cyan-600' },
-    { title: 'Guard Roster', description: 'View guard assignments', route: 'control-room.guards.index', icon: <IconMapper name="Shield" size={20} />, color: 'bg-red-600' },
+    { title: 'Tickets', description: 'View and manage tickets', route: 'control-room.tickets.index', icon: <IconMapper name="Ticket" size={20} />, color: 'bg-blue-600' },
+    { title: 'Flags', description: 'Guard flags and reports', route: 'control-room.flags.index', icon: <IconMapper name="Flag" size={20} />, color: 'bg-amber-600' },
+    { title: 'Cameras', description: 'Monitor camera feeds', route: 'control-room.cameras.index', icon: <IconMapper name="Video" size={20} />, color: 'bg-purple-600' },
+    { title: 'Incidents', description: 'Manage incidents', route: 'control-room.incidents.index', icon: <IconMapper name="AlertTriangle" size={20} />, color: 'bg-red-600' },
+    { title: 'Scan Tags', description: 'QR scan activity feed', route: 'control-room.scan-tags', icon: <IconMapper name="ScanLine" size={20} />, color: 'bg-emerald-600' },
+    { title: 'Guards', description: 'View guard roster', route: 'control-room.guards.index', icon: <IconMapper name="Shield" size={20} />, color: 'bg-cyan-600' },
+    { title: 'Attendance', description: 'Daily attendance records', route: 'control-room.attendance.index', icon: <IconMapper name="CalendarCheck" size={20} />, color: 'bg-indigo-600' },
+    { title: 'Downs', description: 'Down reports', route: 'control-room.downs.index', icon: <IconMapper name="ArrowDown" size={20} />, color: 'bg-rose-600' },
   ], []);
 
   const getSeverityColor = (severity: string) => {
@@ -390,17 +414,90 @@ export default function ControlRoomDashboard({
             {/* Live Monitoring */}
             <LiveMonitoring />
 
+            {/* Incentive Summary */}
+            {incentiveSummary && (
+              <IncentiveSummary
+                stats={incentiveSummary}
+                period={{ year: new Date().getFullYear(), month: new Date().getMonth() + 1 }}
+                canCalculate={false}
+              />
+            )}
+
             {/* Secondary Stats */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
               <MiniStat label="Total Sites" value={safeStats.totalSites} />
               <MiniStat label="Total Clients" value={safeStats.totalClients} />
               <MiniStat label="Total Cameras" value={safeStats.totalCameras} />
+              <MiniStat 
+                label="Today's Scans" 
+                value={safeStats.todayScans}
+                color="text-emerald-600 dark:text-emerald-400"
+              />
               <MiniStat 
                 label="Pending Incidents" 
                 value={safeStats.pendingIncidents} 
                 color={safeStats.pendingIncidents > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-green-600 dark:text-green-400'}
               />
             </div>
+
+            {/* Recent Scan Feed */}
+            {safeRecentScans.length > 0 && (
+              <Card className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <IconMapper name="ScanLine" size={20} className="text-emerald-600 dark:text-emerald-400" />
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Recent QR Scans</h3>
+                    <span className="ml-2 px-2 py-0.5 text-xs font-medium rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">
+                      {safeRecentScans.length}
+                    </span>
+                  </div>
+                  {safeRoute('control-room.scan-tags') !== '#' && (
+                    <Link href={safeRoute('control-room.scan-tags')} className="text-sm text-red-600 hover:text-red-700 dark:text-red-400 font-medium">
+                      View All →
+                    </Link>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  {safeRecentScans.map((scan) => {
+                    const scannedAt = scan.scanned_at ? new Date(scan.scanned_at) : null;
+                    const timeAgo = scannedAt ? (() => {
+                      const diff = Date.now() - scannedAt.getTime();
+                      const mins = Math.floor(diff / 60000);
+                      if (mins < 1) return 'just now';
+                      if (mins < 60) return `${mins}m ago`;
+                      const hrs = Math.floor(mins / 60);
+                      if (hrs < 24) return `${hrs}h ago`;
+                      return `${Math.floor(hrs / 24)}d ago`;
+                    })() : '';
+                    return (
+                      <div key={scan.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                        <div className="flex items-center gap-3">
+                          <div className={`p-1.5 rounded-full ${scan.location_verified ? 'bg-emerald-100 dark:bg-emerald-900/30' : 'bg-amber-100 dark:bg-amber-900/30'}`}>
+                            <IconMapper name={scan.location_verified ? 'CheckCircle' : 'MapPin'} size={14} className={scan.location_verified ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'} />
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{scan.supervisor_name}</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">{scan.site_name}{scan.client_name ? ` • ${scan.client_name}` : ''}</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xs text-gray-500 dark:text-gray-400">{timeAgo}</p>
+                          {scan.location_quality && scan.location_quality !== 'unknown' && (
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
+                              scan.location_quality === 'high' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300' :
+                              scan.location_quality === 'medium' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300' :
+                              'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'
+                            }`}>
+                              {scan.location_quality} GPS
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </Card>
+            )}
 
             {/* Quick Actions */}
             <div>

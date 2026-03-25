@@ -177,7 +177,7 @@ export default function MarketingSettings({ auth = {}, settings, options, users 
                       type="checkbox"
                       checked={!!data.show_social_on_public}
                       onChange={(e) => setData('show_social_on_public', e.target.checked)}
-                      className="h-4 w-4 rounded border-gray-300 text-red-600 focus:ring-red-500"
+                      className="h-4 w-4 rounded border-gray-300 text-coin-600 focus:ring-coin-500"
                     />
                     <span>Show icons on public site footer</span>
                   </label>
@@ -186,7 +186,7 @@ export default function MarketingSettings({ auth = {}, settings, options, users 
                       type="checkbox"
                       checked={!!data.show_social_in_email_footer}
                       onChange={(e) => setData('show_social_in_email_footer', e.target.checked)}
-                      className="h-4 w-4 rounded border-gray-300 text-red-600 focus:ring-red-500"
+                      className="h-4 w-4 rounded border-gray-300 text-coin-600 focus:ring-coin-500"
                     />
                     <span>Show icons in email footers</span>
                   </label>
@@ -195,7 +195,7 @@ export default function MarketingSettings({ auth = {}, settings, options, users 
             </div>
 
             <div className="flex justify-end gap-3">
-              <button type="submit" disabled={processing} className="px-4 py-2 rounded-md bg-red-600 text-white hover:bg-red-700 disabled:opacity-50">Save Settings</button>
+              <button type="submit" disabled={processing} className="px-4 py-2 rounded-md bg-coin-700 text-white hover:bg-coin-600 disabled:opacity-50">Save Settings</button>
             </div>
           </form>
         </div>

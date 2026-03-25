@@ -6,14 +6,18 @@ import 'leaflet/dist/leaflet.css';
 interface ScanTag {
   id: number;
   tags: {
+    scan_id?: number;
     scanned_at: string;
     site_name: string;
     client_name: string;
-    supervisor_id: string;
-    latitude: number;
-    longitude: number;
+    supervisor_id: number | string;
+    supervisor_name?: string;
+    latitude: number | null;
+    longitude: number | null;
     location_quality: string;
-    geohash: string;
+    location_verified?: boolean;
+    geohash: string | null;
+    zone_id?: number | null;
   };
 }
 
@@ -42,7 +46,7 @@ export default function MapView({
   return (
     <MapContainer {...containerProps}>
       <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-      {tags.map((tag) => (
+      {tags.filter((tag) => tag.tags.latitude != null && tag.tags.longitude != null).map((tag) => (
         // Marker props typing can be strict; cast to any when spreading
         <Marker
           key={tag.id}

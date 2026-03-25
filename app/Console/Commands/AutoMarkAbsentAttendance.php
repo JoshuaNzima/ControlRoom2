@@ -28,8 +28,14 @@ class AutoMarkAbsentAttendance extends Command
             'auto_present' => false,
         ]);
 
-        if (empty($methods['auto_absent'])) {
-            $this->info('Auto-absent is disabled.');
+        // Strict check: only proceed if auto_absent is explicitly truthy
+        $autoAbsent = false;
+        if (is_array($methods) && array_key_exists('auto_absent', $methods)) {
+            $autoAbsent = filter_var($methods['auto_absent'], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) ?? false;
+        }
+
+        if (!$autoAbsent) {
+            $this->info('Auto-absent is disabled (setting value: '.json_encode($methods['auto_absent'] ?? null).').');
             return self::SUCCESS;
         }
 

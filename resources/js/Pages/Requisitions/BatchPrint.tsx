@@ -33,7 +33,7 @@ type PagePropsT = {
 };
 
 export default function BatchPrintPage() {
-  const { props } = usePage<{ batch: Batch | null; requisitions: Item[] }>();
+  const { props } = usePage().props as any;
   const batch = props.batch;
   const items = props.requisitions || [];
 
@@ -100,7 +100,7 @@ export default function BatchPrintPage() {
                   <div className="p-4 text-center text-sm text-gray-500">No items.</div>
                 ) : (
                   <div className="divide-y divide-gray-200 dark:divide-gray-800">
-                    {items.map((r) => (
+                    {items.map((r: any) => (
                       <div key={r.id} className="px-4 py-3 flex items-center justify-between gap-3">
                         <div className="min-w-0">
                           <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{r.title}</p>

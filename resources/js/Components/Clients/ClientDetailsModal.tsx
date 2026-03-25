@@ -1,4 +1,5 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/Components/ui/dialog';
 import { Button } from '@/Components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card';
@@ -10,6 +11,58 @@ import IconMapper from '@/Components/IconMapper';
 import { formatCurrencyMWK } from '@/Components/format';
 import EditSiteModal from '@/Components/Clients/EditSiteModal';
 import AddSiteModal from '@/Components/Clients/AddSiteModal';
+
+/**
+ * Portal-based confirmation dialog to avoid nesting HeadlessUI Dialogs
+ * (nested HeadlessUI Dialogs crash due to focus-trap conflicts).
+ */
+function ConfirmDeletePortal({ open, onClose, onConfirm, deleting }: { open: boolean; onClose: () => void; onConfirm: () => void; deleting: boolean }) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); return () => setMounted(false); }, []);
+
+  if (!open || !mounted) return null;
+
+  const content = (
+    <div
+      className="fixed inset-0 z-[110] flex items-center justify-center px-4"
+      onClick={() => !deleting && onClose()}
+    >
+      <div className="absolute inset-0 bg-gray-500/75 dark:bg-gray-950/80" />
+      <div
+        className="relative w-full max-w-sm rounded-xl bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 shadow-2xl p-6"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Delete Site</h3>
+        <p className="text-sm text-gray-600 dark:text-gray-300">
+          This site will be moved to deleted items. You can restore it later.
+        </p>
+        <div className="flex justify-end gap-2 mt-4">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => !deleting && onClose()}
+            disabled={deleting}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={onConfirm}
+            disabled={deleting}
+          >
+            {deleting ? 'Deleting...' : 'Delete'}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+
+  if (typeof document !== 'undefined') {
+    return createPortal(content, document.body);
+  }
+  return null;
+}
 
 interface Site {
   id: number;
@@ -611,35 +664,13 @@ export default function ClientDetailsModal({ client, open, onClose, services = [
         zones={zones}
       />
 
-      {/* Delete Confirmation */}
-      <Dialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
-        <DialogContent className="w-full max-w-sm rounded-xl bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800">
-          <DialogHeader>
-            <DialogTitle>Delete Site</DialogTitle>
-          </DialogHeader>
-          <p className="text-sm text-gray-600 dark:text-gray-300">
-            This site will be moved to deleted items. You can restore it later.
-          </p>
-          <div className="flex justify-end gap-2 mt-4">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => !deleting && setConfirmDeleteOpen(false)}
-              disabled={deleting}
-            >
-              Cancel
-            </Button>
-            <Button 
-              variant="destructive" 
-              size="sm" 
-              onClick={confirmDelete} 
-              disabled={deleting}
-            >
-              {deleting ? 'Deleting...' : 'Delete'}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* Delete Confirmation - uses portal to avoid nested HeadlessUI Dialog crash */}
+      <ConfirmDeletePortal
+        open={confirmDeleteOpen}
+        onClose={() => { setConfirmDeleteOpen(false); setDeletingSiteId(null); }}
+        onConfirm={confirmDelete}
+        deleting={deleting}
+      />
     </>
   );
 }

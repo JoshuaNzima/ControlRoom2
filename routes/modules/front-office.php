@@ -1,59 +1,79 @@
 <?php
 
+use App\Http\Controllers\FrontOffice\DashboardController;
+use App\Http\Controllers\FrontOffice\CalendarController;
+use App\Http\Controllers\FrontOffice\VisitorController;
+use App\Http\Controllers\FrontOffice\MessageController;
+use App\Http\Controllers\FrontOffice\ProfileController;
+use App\Http\Controllers\FrontOffice\RequisitionController;
 use Illuminate\Support\Facades\Route;
+
+// Front Office module - 3 roles with permission-based access:
+// - Executive Assistant: Full access (calendar, visitors, tasks, messages, reports)
+// - Receptionist: Visitors, messages, basic calendar view
+// - Personal Assistant: Calendar, tasks, messages for assigned executives
 
 Route::middleware(['auth'])
     ->prefix('front-office')
     ->name('front-office.')
     ->group(function () {
 
-        // Dashboard - accessible to all authenticated users with front office access
-        Route::middleware(['role_or_permission:front_office|receptionist|client_service|manager|super_admin|executive_assistant|personal_assistant|assistant|front-office.dashboard.view'])
+        // All front office roles can access dashboard
+        Route::middleware(['role:executive_assistant|receptionist|personal_assistant|admin|super_admin'])
             ->group(function () {
-                Route::get('/', [\App\Http\Controllers\FrontOffice\DashboardController::class, 'index'])->name('dashboard');
-                Route::get('/dashboard', [\App\Http\Controllers\FrontOffice\DashboardController::class, 'index']);
-                Route::get('/me', [\App\Http\Controllers\Profile\ProfileDashboardController::class, 'index'])->name('profile');
-            });
-
-        // Unified Assistant Dashboard - combines Executive & Personal duties
-        Route::middleware(['role_or_permission:assistant|executive_assistant|personal_assistant|manager|super_admin|admin'])
-            ->group(function () {
-                Route::get('/assistant', [\App\Http\Controllers\FrontOffice\AssistantController::class, 'index'])->name('assistant');
-                Route::get('/executive', [\App\Http\Controllers\FrontOffice\AssistantController::class, 'index'])->name('executive');
-            });
-
-        // API Routes for Duty Management
-        Route::prefix('api')->name('api.')
-            ->middleware(['role_or_permission:assistant|executive_assistant|personal_assistant|manager|super_admin|admin'])
-            ->group(function () {
-                // Stats
-                Route::get('/stats', [\App\Http\Controllers\FrontOffice\DutyController::class, 'getStats'])->name('stats');
-
-                // Office Duties
-                Route::get('/office-duties', [\App\Http\Controllers\FrontOffice\DutyController::class, 'getOfficeDuties'])->name('office-duties.index');
-                Route::post('/office-duties', [\App\Http\Controllers\FrontOffice\DutyController::class, 'storeOfficeDuty'])->name('office-duties.store');
-                Route::put('/office-duties/{id}', [\App\Http\Controllers\FrontOffice\DutyController::class, 'updateOfficeDuty'])->name('office-duties.update');
-                Route::delete('/office-duties/{id}', [\App\Http\Controllers\FrontOffice\DutyController::class, 'deleteOfficeDuty'])->name('office-duties.destroy');
-
-                // Personal Duties
-                Route::get('/personal-duties', [\App\Http\Controllers\FrontOffice\DutyController::class, 'getPersonalDuties'])->name('personal-duties.index');
-                Route::post('/personal-duties', [\App\Http\Controllers\FrontOffice\DutyController::class, 'storePersonalDuty'])->name('personal-duties.store');
-                Route::put('/personal-duties/{id}', [\App\Http\Controllers\FrontOffice\DutyController::class, 'updatePersonalDuty'])->name('personal-duties.update');
-                Route::delete('/personal-duties/{id}', [\App\Http\Controllers\FrontOffice\DutyController::class, 'deletePersonalDuty'])->name('personal-duties.destroy');
-            });
-
-        // Assistant Assignment Management
-        Route::middleware(['role_or_permission:super_admin|admin|manager|assistant'])
-            ->prefix('assignments')
-            ->name('assignments.')
-            ->group(function () {
-                Route::get('/', [\App\Http\Controllers\FrontOffice\AssistantAssignmentController::class, 'index'])->name('index');
-                Route::post('/', [\App\Http\Controllers\FrontOffice\AssistantAssignmentController::class, 'store'])->name('store');
-                Route::put('/{assignment}', [\App\Http\Controllers\FrontOffice\AssistantAssignmentController::class, 'update'])->name('update');
-                Route::delete('/{assignment}', [\App\Http\Controllers\FrontOffice\AssistantAssignmentController::class, 'destroy'])->name('destroy');
+                Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
+                Route::get('/dashboard', [DashboardController::class, 'index']);
                 
-                // API endpoints for fetching assignments
-                Route::get('/api/assistant/{assistant}', [\App\Http\Controllers\FrontOffice\AssistantAssignmentController::class, 'assistantAssignments'])->name('api.assistant');
-                Route::get('/api/user/{user}', [\App\Http\Controllers\FrontOffice\AssistantAssignmentController::class, 'userAssistants'])->name('api.user');
+                // Profile
+                Route::get('/me', [ProfileController::class, 'index'])->name('profile');
+                Route::put('/me', [ProfileController::class, 'update'])->name('profile.update');
+                Route::post('/me/password', [ProfileController::class, 'updatePassword'])->name('password.update');
+                
+                // Requisitions - All users can view and create
+                Route::get('/requisitions', [RequisitionController::class, 'index'])->name('requisitions.index');
+                Route::post('/requisitions', [RequisitionController::class, 'store'])->name('requisitions.store');
+                Route::get('/requisitions/{requisition}', [RequisitionController::class, 'show'])->name('requisitions.show');
+            });
+
+        // Calendar Management (Executive Assistant, Personal Assistant, Admin)
+        Route::middleware(['role:executive_assistant|personal_assistant|admin|super_admin'])
+            ->prefix('calendar')
+            ->name('calendar.')
+            ->group(function () {
+                Route::get('/', [CalendarController::class, 'index'])->name('index');
+                Route::get('/events', [CalendarController::class, 'events'])->name('events');
+                Route::post('/events', [CalendarController::class, 'store'])->name('store');
+                Route::put('/events/{event}', [CalendarController::class, 'update'])->name('update');
+                Route::delete('/events/{event}', [CalendarController::class, 'destroy'])->name('destroy');
+            });
+
+        // Visitor Management (All front office roles)
+        Route::middleware(['role:executive_assistant|receptionist|personal_assistant|admin|super_admin'])
+            ->prefix('visitors')
+            ->name('visitors.')
+            ->group(function () {
+                Route::get('/', [VisitorController::class, 'index'])->name('index');
+                Route::post('/', [VisitorController::class, 'store'])->name('store');
+                Route::put('/{visitor}/badge', [VisitorController::class, 'badge'])->name('badge');
+            });
+
+        // Messages/Communications (All front office roles)
+        Route::middleware(['role:executive_assistant|receptionist|personal_assistant|admin|super_admin'])
+            ->prefix('messages')
+            ->name('messages.')
+            ->group(function () {
+                Route::get('/', [MessageController::class, 'index'])->name('index');
+                Route::post('/', [MessageController::class, 'store'])->name('store');
+                Route::put('/{message}/read', [MessageController::class, 'markRead'])->name('read');
+            });
+
+        // Reports & Analytics (Executive Assistant only)
+        Route::middleware(['role:executive_assistant|admin|super_admin'])
+            ->prefix('reports')
+            ->name('reports.')
+            ->group(function () {
+                Route::get('/', [DashboardController::class, 'reports'])->name('index');
+                Route::get('/visitors', [DashboardController::class, 'visitorReports'])->name('visitors');
+                Route::get('/export', [DashboardController::class, 'export'])->name('export');
             });
     });

@@ -410,12 +410,13 @@ export default function ControlRoomGuardsIndex({
 
   // Stats calculation from backend
   const stats = React.useMemo(() => {
+    const data = guardsProp?.data || [];
     return {
-      total: guardsProp.stats?.total ?? guardsProp.meta?.total ?? guardsProp.data.length,
-      active: guardsProp.stats?.active ?? guardsProp.data.filter((g: Guard) => g.status === 'active').length,
-      inactive: guardsProp.stats?.inactive ?? guardsProp.data.filter((g: Guard) => ['inactive', 'suspended', 'dismissed', 'absconded'].includes(g.status || '')).length,
-      assigned: guardsProp.stats?.assigned ?? guardsProp.data.filter((g: Guard) => g.active_assignment).length,
-      incomplete: guardsProp.stats?.incomplete ?? guardsProp.data.filter((g: Guard) => g.is_profile_complete === false).length,
+      total: guardsProp.stats?.total ?? guardsProp.meta?.total ?? data.length,
+      active: guardsProp.stats?.active ?? data.filter((g: Guard) => g.status === 'active').length,
+      inactive: guardsProp.stats?.inactive ?? data.filter((g: Guard) => ['inactive', 'suspended', 'dismissed', 'absconded'].includes(g.status || '')).length,
+      assigned: guardsProp.stats?.assigned ?? data.filter((g: Guard) => g.active_assignment).length,
+      incomplete: guardsProp.stats?.incomplete ?? data.filter((g: Guard) => g.is_profile_complete === false).length,
     };
   }, [guardsProp]);
 
@@ -732,7 +733,7 @@ export default function ControlRoomGuardsIndex({
 
           {/* Mobile Cards */}
           <div className="lg:hidden space-y-3">
-            {guardsProp.data.map((guard) => (
+            {(guardsProp?.data || []).map((guard) => (
               <Card key={guard.id} className="overflow-hidden">
                 <div className="p-4">
                   <div className="flex items-start justify-between gap-3">
@@ -859,7 +860,7 @@ export default function ControlRoomGuardsIndex({
                       <input
                         type="checkbox"
                         className="rounded border-gray-300 dark:border-gray-600"
-                        checked={guardsProp.data.length > 0 && guardsProp.data.every((g: Guard) => selectedGuardIds.includes(g.id))}
+                        checked={(guardsProp?.data || []).length > 0 && (guardsProp?.data || []).every((g: Guard) => selectedGuardIds.includes(g.id))}
                         onChange={toggleSelectAll}
                       />
                     </th>
@@ -873,7 +874,7 @@ export default function ControlRoomGuardsIndex({
                   </tr>
                 </thead>
                 <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
-                  {guardsProp.data.map((guard) => (
+                  {(guardsProp?.data || []).map((guard) => (
                     <tr key={guard.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
                       <td className="px-4 py-3">
                         <input
@@ -1071,7 +1072,7 @@ export default function ControlRoomGuardsIndex({
           </Card>
 
           {/* Empty State */}
-          {guardsProp.data.length === 0 && (
+          {(guardsProp?.data || []).length === 0 && (
             <div className="text-center py-12">
               <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-800 mb-4">
                 <IconMapper name="Search" size={24} className="text-gray-400" />

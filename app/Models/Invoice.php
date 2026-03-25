@@ -6,9 +6,11 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use App\Models\Guards\Client as GuardClient;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Invoice extends Model
 {
+    use SoftDeletes;
     protected $fillable = [
         'invoice_number',
         'user_id',
@@ -65,6 +67,22 @@ class Invoice extends Model
     public function lineItems(): HasMany
     {
         return $this->hasMany(InvoiceLineItem::class);
+    }
+
+    /**
+     * Get payments recorded for this invoice
+     */
+    public function payments(): HasMany
+    {
+        return $this->hasMany(InvoicePayment::class)->orderBy('payment_date', 'desc');
+    }
+
+    /**
+     * Get audit logs for this invoice
+     */
+    public function auditLogs(): HasMany
+    {
+        return $this->hasMany(InvoiceAuditLog::class)->orderBy('created_at', 'desc');
     }
 
     /**

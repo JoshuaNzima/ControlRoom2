@@ -9,6 +9,7 @@ import QuickBudgetButton from '@/Components/Budgets/QuickBudgetButton';
 import FloatingNavButton from '@/Components/FloatingNavButton';
 import useCounters from '@/Hooks/useCounters';
 import useGpsAlerts from '@/Hooks/useGpsAlerts';
+import WeeklyTasks from '@/Components/WeeklyTasks';
 
 interface Props {
   title: string;
@@ -26,10 +27,21 @@ interface ModuleNavItem {
 
 export default function ControlRoomLayout({ title, children, user }: Props) {
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
+  const [tasksOpen, setTasksOpen] = React.useState(false);
+  const [isMobile, setIsMobile] = React.useState(false);
   const [logoOk, setLogoOk] = React.useState<boolean>(true);
   const { theme, toggle } = useTheme();
   const { counters } = useCounters();
   const page = usePage<any>();
+  const { weeklyTasks, isExecutiveAssistant } = page.props;
+
+  React.useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 1024);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
   useGpsAlerts();
   const roles = ((user as any)?.roles ?? (page?.props as any)?.auth?.user?.roles ?? []) as any;
   const isSuperAdmin = Array.isArray(roles) ? roles.includes('super_admin') : roles === 'super_admin';
@@ -139,17 +151,34 @@ export default function ControlRoomLayout({ title, children, user }: Props) {
             </div>
           </nav>
         </div>
-        <div className="flex-shrink-0 flex items-center justify-between border-t border-red-800 dark:border-gray-800 p-4">
-          <div>
-            <div className="text-base font-medium text-white">{user?.name}</div>
-            <div className="text-sm font-medium text-red-200 dark:text-gray-400">{roleDisplay}</div>
+        <div className="flex-shrink-0 border-t border-red-800 dark:border-gray-800 p-4">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-9 h-9 rounded-full bg-red-800 dark:bg-gray-800 flex items-center justify-center text-white font-semibold text-sm">
+              {user?.name?.charAt(0) || 'C'}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-white truncate">{user?.name}</p>
+              <p className="text-xs text-red-200 dark:text-gray-400 truncate">{roleDisplay}</p>
+            </div>
           </div>
-          <Link
-            href={route('control-room.profile')}
-            className="inline-flex items-center gap-2 rounded-md bg-gray-800 px-3 py-2 text-sm font-medium text-white hover:bg-gray-700"
-          >
-            My Profile
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link
+              href={route('control-room.profile')}
+              className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-md bg-gray-800 px-3 py-2 text-xs font-medium text-white hover:bg-gray-700 transition-colors"
+            >
+              <IconMapper name="User" size={14} />
+              Profile
+            </Link>
+            <Link
+              href={route('logout')}
+              method="post"
+              as="button"
+              className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-md bg-red-700 px-3 py-2 text-xs font-medium text-white hover:bg-red-600 transition-colors"
+            >
+              <IconMapper name="LogOut" size={14} />
+              Logout
+            </Link>
+          </div>
         </div>
       </div>
 
@@ -170,6 +199,14 @@ export default function ControlRoomLayout({ title, children, user }: Props) {
               </div>
               <div className="flex items-center justify-end gap-2 sm:gap-4 shrink-0">
                 <NotificationBell />
+                <button
+                  onClick={() => setTasksOpen(!tasksOpen)}
+                  className="inline-flex items-center gap-1.5 rounded-md bg-red-100 text-red-700 hover:bg-red-200 px-3 py-1.5 text-sm dark:bg-red-900/30 dark:text-red-200 transition-colors"
+                  title="Toggle Tasks Panel"
+                >
+                  <IconMapper name="CheckSquare" size={16} />
+                  <span className="hidden sm:inline">Tasks</span>
+                </button>
                 <div className="hidden sm:flex items-center gap-4">
                   <QuickBudgetButton />
                   <QuickRequisitionButton />
@@ -188,16 +225,6 @@ export default function ControlRoomLayout({ title, children, user }: Props) {
                   <span className="hidden sm:inline">{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>
                   <span className="sm:hidden">{theme === 'dark' ? 'Light' : 'Dark'}</span>
                 </button>
-                <div className="hidden sm:block text-sm text-red-700 dark:text-gray-300 max-w-[10rem] truncate">{user?.name}</div>
-                <Link
-                  href={route('logout')}
-                  method="post"
-                  as="button"
-                  className="inline-flex items-center justify-center rounded-md bg-white text-red-700 hover:bg-red-50 border border-red-200 px-2 py-2 sm:px-3 sm:py-1 text-sm dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700"
-                >
-                  <IconMapper name="log-out" className="h-5 w-5 sm:hidden" />
-                  <span className="hidden sm:inline">Logout</span>
-                </Link>
               </div>
             </div>
           </div>
@@ -205,12 +232,34 @@ export default function ControlRoomLayout({ title, children, user }: Props) {
         <main className="flex-1">
           <div className="py-6">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 text-gray-900 dark:text-gray-100">
-              <div className="animate-slideUp transition-all-smooth">
-                {children}
+              <div className={`grid gap-4 ${tasksOpen ? 'grid-cols-1 xl:grid-cols-4' : 'grid-cols-1'}`}>
+                <div className={tasksOpen ? 'xl:col-span-3' : ''}>
+                  <div className="animate-slideUp transition-all-smooth">
+                    {children}
+                  </div>
+                </div>
+                {tasksOpen && !isMobile && (
+                  <div className="xl:col-span-1 hidden xl:block">
+                    <WeeklyTasks
+                      tasks={weeklyTasks || []}
+                      showModule={true}
+                      isExecutiveAssistant={isExecutiveAssistant}
+                    />
+                  </div>
+                )}
               </div>
             </div>
           </div>
         </main>
+        {tasksOpen && isMobile && (
+          <WeeklyTasks
+            tasks={weeklyTasks || []}
+            showModule={true}
+            isExecutiveAssistant={isExecutiveAssistant}
+            isOpen={tasksOpen}
+            onClose={() => setTasksOpen(false)}
+          />
+        )}
         <FloatingNavButton />
       </div>
     </div>

@@ -8,6 +8,8 @@ import QuickRequisitionButton from '@/Components/Requisitions/QuickRequisitionBu
 import QuickBudgetButton from '@/Components/Budgets/QuickBudgetButton';
 import NotificationBell from '@/Components/Common/NotificationBell';
 import useCounters from '@/Hooks/useCounters';
+import FloatingNavButton from '@/Components/FloatingNavButton';
+import WeeklyTasks from '@/Components/WeeklyTasks';
 
 interface Props {
   title: string;
@@ -25,11 +27,21 @@ interface NavItem {
 
 export default function TrainingLayout({ title, children, user }: Props) {
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
+  const [tasksOpen, setTasksOpen] = React.useState(false);
+  const [isMobile, setIsMobile] = React.useState(false);
   const [logoOk, setLogoOk] = React.useState<boolean>(true);
   const isCurrent = (href: string) => typeof window !== 'undefined' && window.location.pathname === href;
   const { theme, toggle } = useTheme();
   const { counters } = useCounters();
   const page = usePage<any>();
+  const { weeklyTasks, isExecutiveAssistant } = page.props;
+
+  React.useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 1024);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
   const roles = ((user as any)?.roles ?? (page?.props as any)?.auth?.user?.roles ?? []) as any;
   const isSuperAdmin = Array.isArray(roles) ? roles.includes('super_admin') : roles === 'super_admin';
   const isAdminUser = Array.isArray(roles) && (roles.includes('admin') || roles.includes('super_admin'));
@@ -46,7 +58,8 @@ export default function TrainingLayout({ title, children, user }: Props) {
     { name: 'Crash Courses', href: route('training.crash-courses.index'), icon: <IconMapper name="Zap" className="h-6 w-6" />, current: isCurrent(route('training.crash-courses.index')) },
     { name: 'Refreshers', href: route('training.refreshers.index'), icon: <IconMapper name="RefreshCw" className="h-6 w-6" />, current: isCurrent(route('training.refreshers.index')) },
     { name: 'Regimens', href: route('training.regimens.index'), icon: <IconMapper name="ClipboardList" className="h-6 w-6" />, current: isCurrent(route('training.regimens.index')) },
-    { name: 'Trainer Guards', href: route('training.trainer-guards.index'), icon: <IconMapper name="UserCheck" className="h-6 w-6" />, current: isCurrent(route('training.trainer-guards.index')) },
+    { name: 'Refresher Guards', href: route('training.trainer-guards.index'), icon: <IconMapper name="UserCheck" className="h-6 w-6" />, current: isCurrent(route('training.trainer-guards.index')) },
+    { name: 'Guards Directory', href: route('training.guards.index'), icon: <IconMapper name="Shield" className="h-6 w-6" />, current: isCurrent(route('training.guards.index')) },
   ];
 
   // Tools
@@ -146,6 +159,14 @@ export default function TrainingLayout({ title, children, user }: Props) {
               </div>
               <div className="flex items-center justify-end gap-2 sm:gap-4 shrink-0">
                 <NotificationBell />
+                <button
+                  onClick={() => setTasksOpen(!tasksOpen)}
+                  className="inline-flex items-center gap-1.5 rounded-md bg-red-100 text-red-700 hover:bg-red-200 px-3 py-1.5 text-sm dark:bg-red-900/30 dark:text-red-200 transition-colors"
+                  title="Toggle Tasks Panel"
+                >
+                  <IconMapper name="CheckSquare" size={16} />
+                  <span className="hidden sm:inline">Tasks</span>
+                </button>
                 <div className="hidden sm:flex items-center gap-4">
                   <QuickBudgetButton />
                   <QuickRequisitionButton />
@@ -180,8 +201,32 @@ export default function TrainingLayout({ title, children, user }: Props) {
           </div>
         </div>
         <BaseShell noHeader fullScreen={false}>
-          <div className="animate-slideUp transition-all-smooth">{children}</div>
+          <div className="animate-slideUp transition-all-smooth">
+            <div className={`grid gap-4 ${tasksOpen ? 'grid-cols-1 xl:grid-cols-4' : 'grid-cols-1'}`}>
+              <div className={tasksOpen ? 'xl:col-span-3' : ''}>
+                {children}
+              </div>
+              {tasksOpen && !isMobile && (
+                <div className="xl:col-span-1 hidden xl:block">
+                  <WeeklyTasks
+                    tasks={weeklyTasks || []}
+                    showModule={true}
+                    isExecutiveAssistant={isExecutiveAssistant}
+                  />
+                </div>
+              )}
+            </div>
+          </div>
         </BaseShell>
+        {tasksOpen && isMobile && (
+          <WeeklyTasks
+            tasks={weeklyTasks || []}
+            showModule={true}
+            isExecutiveAssistant={isExecutiveAssistant}
+            isOpen={tasksOpen}
+            onClose={() => setTasksOpen(false)}
+          />
+        )}
       </div>
     </div>
   );

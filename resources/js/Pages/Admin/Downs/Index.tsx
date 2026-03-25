@@ -21,7 +21,7 @@ type Down = {
   guard_relation?: { id: number; name: string; employee_id?: string; status?: string };
 };
 
-type PageProps = {
+type DownsPageProps = {
   auth: { user?: { name?: string } };
   downs: {
     data: Down[];
@@ -31,7 +31,7 @@ type PageProps = {
 };
 
 export default function DownsIndex() {
-  const { auth, downs } = usePage<PageProps>().props;
+  const { auth, downs } = usePage().props as any;
   const { data, setData, post, processing, reset } = useForm({
     title: '',
     type: 'site_unmanned' as 'guard_absent' | 'site_unmanned' | 'other',

@@ -5,6 +5,8 @@ import IconMapper from '@/Components/IconMapper';
 import GuardDetailsModal from '@/Components/Guards/GuardDetailsModal';
 import { Card } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
+import { Pagination } from '@/Components/ui/Pagination';
+import { normalizePagination } from '@/utils/pagination';
 
 interface Guard {
   id: number;
@@ -118,8 +120,8 @@ const StatCard: React.FC<StatCardProps> = ({ icon, title, value, subtitle, color
 export default function GuardsIndex({ guards, filters, stats }: GuardsIndexProps) {
   const [search, setSearch] = React.useState(filters.search || '');
   const [selectedGuardDetails, setSelectedGuardDetails] = useState<any | null>(null);
-  const initialPerPage = Number(filters?.per_page ?? guards.meta?.per_page ?? 20);
-  const [perPage] = React.useState<number>(initialPerPage);
+  const { meta } = normalizePagination(guards, Number(filters?.per_page ?? 20));
+  const [perPage] = React.useState<number>(meta.per_page);
 
   const openDetails = async (guardId: number) => {
     try {
@@ -375,21 +377,16 @@ export default function GuardsIndex({ guards, filters, stats }: GuardsIndexProps
           </Card>
 
           {/* Pagination */}
-          {guards.meta && guards.meta.last_page > 1 && (
-            <div className="mt-6 flex flex-wrap justify-center gap-2">
-              {guards.links?.map((link, idx) => (
-                <Button
-                  key={idx}
-                  variant={link.active ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => link.url && router.get(link.url, {}, { preserveState: true })}
-                  disabled={!link.url}
-                  className={link.active ? 'bg-red-600 hover:bg-red-700' : ''}
-                  dangerouslySetInnerHTML={{ __html: link.label }}
-                />
-              ))}
-            </div>
-          )}
+          <Pagination
+            currentPage={meta.current_page}
+            lastPage={meta.last_page}
+            total={meta.total}
+            perPage={meta.per_page}
+            from={meta.from}
+            to={meta.to}
+            baseUrl={route('admin.guards.index')}
+            filters={{ search, per_page: perPage }}
+          />
         </div>
         {/* Guard Details Modal */}
         <GuardDetailsModal

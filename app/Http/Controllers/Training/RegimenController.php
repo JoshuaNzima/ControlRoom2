@@ -45,14 +45,14 @@ class RegimenController extends Controller
         $data = $request->validate([
             'title' => ['required', 'string', 'max:255'],
             'track' => ['required', 'in:standard,rapid_response'],
-            'default_days' => ['nullable', 'integer', 'min:10', 'max:365'],
+            'default_days' => ['nullable', 'integer', 'min:5', 'max:365'],
             'description' => ['nullable', 'string'],
         ]);
 
         Regimen::create([
             'title' => $data['title'],
             'track' => $data['track'],
-            'default_days' => max(10, (int) ($data['default_days'] ?? 10)),
+            'default_days' => max(5, (int) ($data['default_days'] ?? 5)),
             'description' => $data['description'] ?? null,
             'created_by' => optional($request->user())->id,
         ]);
@@ -65,14 +65,14 @@ class RegimenController extends Controller
         $data = $request->validate([
             'title' => ['required', 'string', 'max:255'],
             'track' => ['required', 'in:standard,rapid_response'],
-            'default_days' => ['nullable', 'integer', 'min:10', 'max:365'],
+            'default_days' => ['nullable', 'integer', 'min:5', 'max:365'],
             'description' => ['nullable', 'string'],
         ]);
 
         $regimen->update([
             'title' => $data['title'],
             'track' => $data['track'],
-            'default_days' => max(10, (int) ($data['default_days'] ?? 10)),
+            'default_days' => max(5, (int) ($data['default_days'] ?? 5)),
             'description' => $data['description'] ?? null,
         ]);
 

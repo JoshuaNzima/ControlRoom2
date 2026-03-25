@@ -26,12 +26,21 @@ class TicketController extends Controller
 
         $tickets = $query->paginate(20)->withQueryString();
 
+        // Compute stats from all tickets (not just current page)
+        $stats = [
+            'total' => Ticket::count(),
+            'open' => Ticket::where('status', 'open')->count(),
+            'in_progress' => Ticket::where('status', 'in_progress')->count(),
+            'resolved' => Ticket::where('status', 'resolved')->count(),
+        ];
+
         return Inertia::render('ControlRoom/Tickets/Index', [
             'tickets' => $tickets,
             'filters' => [
                 'statuses' => Ticket::STATUSES,
                 'priorities' => Ticket::PRIORITIES,
             ],
+            'stats' => $stats,
         ]);
     }
 

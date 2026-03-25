@@ -101,4 +101,12 @@ class Expense extends Model
     {
         return $query->where('status', 'pending');
     }
+
+    /**
+     * Scope to filter rejected expenses
+     */
+    public function scopeRejected($query)
+    {
+        return $query->where('status', 'rejected');
+    }
 }

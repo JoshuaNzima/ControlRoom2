@@ -14,6 +14,7 @@ use App\Models\Down;
 use App\Models\Alert;
 use App\Models\AssetHandover;
 use App\Models\BudgetRequest;
+use App\Models\Task;
 use App\Models\RequisitionBatch;
 use App\Models\Guards\Attendance;
 use App\Models\Guards\GuardAssignment;
@@ -81,6 +82,16 @@ class CounterController extends Controller
 
         $assetsHandoversOutstanding = AssetHandover::whereNull('returned_at')->count();
 
+        // Task counters
+        $tasksMyOpen = Task::where('assigned_to', $user->id)
+            ->whereIn('status', ['pending', 'in_progress'])
+            ->count();
+        $tasksMyOverdue = Task::where('assigned_to', $user->id)
+            ->whereIn('status', ['pending', 'in_progress'])
+            ->whereNotNull('due_date')
+            ->where('due_date', '<', now()->toDateString())
+            ->count();
+
         return response()->json([
             'notifications_unread' => $notificationsUnread,
             'requisitions_my_open' => $requisitionsMyOpen,
@@ -107,6 +118,8 @@ class CounterController extends Controller
             'attendance_checked_in_today' => $attendanceCheckedInToday,
             'deployments_today' => $deploymentsToday,
             'assets_handovers_outstanding' => $assetsHandoversOutstanding,
+            'tasks_my_open' => $tasksMyOpen,
+            'tasks_my_overdue' => $tasksMyOverdue,
         ]);
     }
 }

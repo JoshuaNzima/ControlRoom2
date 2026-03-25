@@ -1,15 +1,12 @@
 <?php
 
 use App\Http\Controllers\InstallController;
-
-use Illuminate\Support\Facades\Route;
-use Inertia\Inertia;
-use Illuminate\Support\Facades\Auth;
-use App\Http\Controllers\Guards\SupervisorController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\CounterController;
 use App\Http\Controllers\SuperAdmin\SystemController;
-use App\Models\Role;
+use Illuminate\Support\Facades\Route;
+use Inertia\Inertia;
+
 // Installer routes
 Route::middleware('web')->group(function () {
     Route::get('/install', [InstallController::class, 'welcome'])->name('install.welcome');
@@ -180,6 +177,43 @@ Route::middleware(['auth', 'role:super_admin'])->prefix('superadmin')->name('sup
         $activeStatuses = ['active', 'on_leave', 'training'];
         $inactiveStatuses = ['inactive', 'suspended', 'dismissed', 'absconded', 'resigned', 'retired'];
 
+        // Fetch supervisors and zones early (needed by both views)
+        $supervisors = \App\Models\User::where('status', 'active')
+            ->whereHas('roles', function ($q) {
+                $q->whereIn('name', ['supervisor', 'manager', 'sergeant', 'zone_commander'])
+                  ->where('guard_name', 'web');
+            })
+            ->orderBy('name')
+            ->get(['id','name']);
+
+        $zones = \App\Models\Zone::orderBy('name')->get(['id','name']);
+
+        // Calculate stats for ALL guards (not just paginated)
+        $statsQuery = \App\Models\Guards\Guard::query()
+            ->where('employee_role', 'guard')
+            ->when(request('search'), function($q, $search) {
+                $q->where(function($qq) use ($search) {
+                    $qq->where('name', 'like', "%{$search}%")
+                       ->orWhere('employee_id', 'like', "%{$search}%");
+                });
+            })
+            ->profileStatus(request('profile_status'))
+            ->when(request('zone_id'), function($q, $zoneId) {
+                $q->where('zone_id', $zoneId);
+            });
+
+        $stats = [
+            'total' => $statsQuery->count(),
+            'active' => (clone $statsQuery)->whereIn('status', $activeStatuses)->count(),
+            'inactive' => (clone $statsQuery)->whereIn('status', $inactiveStatuses)->count(),
+            'assigned' => (clone $statsQuery)->whereIn('status', $activeStatuses)->whereHas('assignments', fn($q) => $q->where('status', 'active'))->count(),
+            'incomplete' => (clone $statsQuery)->where(function ($q) {
+                $q->whereNull('id_number')->orWhere('id_number', '')
+                  ->orWhereNull('emergency_contact_name')->orWhere('emergency_contact_name', '')
+                  ->orWhereNull('emergency_contact_phone')->orWhere('emergency_contact_phone', '');
+            })->count(),
+        ];
+
         if ($view === 'inactive') {
             // Fetch only inactive guards
             $guards = (clone $baseQuery)
@@ -247,42 +281,6 @@ Route::middleware(['auth', 'role:super_admin'])->prefix('superadmin')->name('sup
             $g->is_profile_complete = (bool) $g->is_profile_complete;
             return $g;
         });
-
-        $supervisors = \App\Models\User::where('status', 'active')
-            ->whereHas('roles', function ($q) {
-                $q->whereIn('name', ['supervisor', 'manager', 'sergeant', 'zone_commander'])
-                  ->where('guard_name', 'web');
-            })
-            ->orderBy('name')
-            ->get(['id','name']);
-
-        $zones = \App\Models\Zone::orderBy('name')->get(['id','name']);
-
-        // Calculate stats for ALL guards (not just paginated)
-        $statsQuery = \App\Models\Guards\Guard::query()
-            ->where('employee_role', 'guard')
-            ->when(request('search'), function($q, $search) {
-                $q->where(function($qq) use ($search) {
-                    $qq->where('name', 'like', "%{$search}%")
-                       ->orWhere('employee_id', 'like', "%{$search}%");
-                });
-            })
-            ->profileStatus(request('profile_status'))
-            ->when(request('zone_id'), function($q, $zoneId) {
-                $q->where('zone_id', $zoneId);
-            });
-
-        $stats = [
-            'total' => $statsQuery->count(),
-            'active' => (clone $statsQuery)->whereIn('status', $activeStatuses)->count(),
-            'inactive' => (clone $statsQuery)->whereIn('status', $inactiveStatuses)->count(),
-            'assigned' => (clone $statsQuery)->whereIn('status', $activeStatuses)->whereHas('assignments', fn($q) => $q->where('status', 'active'))->count(),
-            'incomplete' => (clone $statsQuery)->where(function ($q) {
-                $q->whereNull('id_number')->orWhere('id_number', '')
-                  ->orWhereNull('emergency_contact_name')->orWhere('emergency_contact_name', '')
-                  ->orWhereNull('emergency_contact_phone')->orWhere('emergency_contact_phone', '');
-            })->count(),
-        ];
 
         return Inertia::render('SuperAdmin/Guards', [
             'guards' => $guards,
@@ -433,10 +431,10 @@ Route::middleware(['auth'])->group(function () {
         if ($user->hasRole('client')) {
             return redirect()->route('client.dashboard');
         }
-        if ($user->hasAnyRole(['finance_officer','accountant','finance','accounting'])) {
+        if ($user->hasAnyRole(['finance_officer','accountant','finance','accounting','guard'])) {
             return redirect()->route('finance.dashboard');
         }
-        if ($user->hasAnyRole(['front_office','receptionist','client_service','executive_assistant','personal_assistant','assistant'])) {
+        if ($user->hasAnyRole(['executive_assistant','receptionist','personal_assistant'])) {
             return redirect()->route('front-office.dashboard');
         }
         abort(403, 'Unauthorized. No dashboard is configured for your role.');
@@ -444,14 +442,12 @@ Route::middleware(['auth'])->group(function () {
     })->name('dashboard');
 
     // Infractions routes - accessible by admin, zone commander, and supervisor
-    Route::middleware(['auth'])->group(function () {
-        Route::resource('infractions', \App\Http\Controllers\Guards\InfractionController::class)->except(['edit', 'update', 'destroy']);
-        Route::get('infractions/{infraction}/review', [\App\Http\Controllers\Guards\InfractionController::class, 'review'])->name('infractions.review');
-        Route::put('infractions/{infraction}/status', [\App\Http\Controllers\Guards\InfractionController::class, 'updateStatus'])->name('infractions.update-status');
-    });
+    Route::resource('infractions', \App\Http\Controllers\Guards\InfractionController::class)->except(['edit', 'update', 'destroy']);
+    Route::get('infractions/{infraction}/review', [\App\Http\Controllers\Guards\InfractionController::class, 'review'])->name('infractions.review');
+    Route::put('infractions/{infraction}/status', [\App\Http\Controllers\Guards\InfractionController::class, 'updateStatus'])->name('infractions.update-status');
 
     // Zone Commander routes
-    Route::middleware(['auth', 'role:zone_commander'])->prefix('zone')->name('zone.')->group(function () {
+    Route::middleware(['role:zone_commander'])->prefix('zone')->name('zone.')->group(function () {
         Route::get('/dashboard', [\App\Http\Controllers\ZoneCommander\DashboardController::class, 'index'])
             ->middleware('permission:zone.view.dashboard')
             ->name('dashboard');
@@ -587,4 +583,29 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/me', [\App\Http\Controllers\Profile\ProfileDashboardController::class, 'index'])->name('profile.dashboard');
     Route::post('/me/commissions/{commission}/claim', [\App\Http\Controllers\Profile\ProfileDashboardController::class, 'claim'])->name('profile.commissions.claim');
 
+    // Tasks - View and completion accessible to all authenticated users
+    Route::middleware(['auth'])->group(function () {
+        Route::get('/tasks', [\App\Http\Controllers\TaskController::class, 'dashboard'])->name('tasks.dashboard');
+        Route::get('/tasks/my-tasks', [\App\Http\Controllers\TaskController::class, 'myTasks'])->name('tasks.my');
+        Route::post('/tasks/{task}/complete', [\App\Http\Controllers\TaskController::class, 'complete'])->name('tasks.complete');
+    });
+
+    // Tasks - Management restricted to front-office roles only
+    Route::middleware(['auth', 'role:executive_assistant|receptionist|personal_assistant|admin|super_admin'])->group(function () {
+        Route::post('/tasks', [\App\Http\Controllers\TaskController::class, 'store'])->name('tasks.store');
+        Route::put('/tasks/{task}', [\App\Http\Controllers\TaskController::class, 'update'])->name('tasks.update');
+        Route::post('/tasks/bulk-update', [\App\Http\Controllers\TaskController::class, 'bulkUpdate'])->name('tasks.bulk.update');
+        Route::post('/tasks/{task}/comment', [\App\Http\Controllers\TaskController::class, 'addComment'])->name('tasks.comment.add');
+        Route::post('/tasks/{task}/time', [\App\Http\Controllers\TaskController::class, 'logTime'])->name('tasks.time.log');
+        Route::get('/tasks/templates', [\App\Http\Controllers\TaskController::class, 'templates'])->name('tasks.templates');
+        Route::post('/tasks/templates', [\App\Http\Controllers\TaskController::class, 'storeTemplate'])->name('tasks.templates.store');
+        Route::delete('/tasks/{task}', [\App\Http\Controllers\TaskController::class, 'destroy'])->name('tasks.destroy');
+    });
+
+});
+
+// Incentive Dashboard API Routes
+Route::middleware(['auth'])->prefix('api/incentives')->name('api.incentives.')->group(function () {
+    Route::get('/summary', [\App\Http\Controllers\IncentiveDashboardController::class, 'summary'])->name('summary');
+    Route::post('/calculate', [\App\Http\Controllers\IncentiveDashboardController::class, 'quickCalculate'])->name('calculate');
 });

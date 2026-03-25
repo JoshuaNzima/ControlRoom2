@@ -52,7 +52,7 @@ export default function FrontDeskLayout({ title, children, user }: Props) {
       <div className={`fixed top-0 left-0 bottom-0 flex flex-col w-64 bg-red-900 dark:bg-gray-950 text-white transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 transition-transform duration-300 ease-in-out z-50`}>
         <div className="flex-1 flex flex-col pt-5 pb-4 overflow-y-auto">
           <div className="flex items-center flex-shrink-0 px-4">
-            <span className="ml-2 text-2xl font-bold text-white">Front Desk</span>
+            <span className="ml-2 text-2xl font-bold text-white">Assistant</span>
           </div>
           <nav className="mt-8 flex-1 px-2 space-y-1">
             {nav.map((item) => (
@@ -66,12 +66,33 @@ export default function FrontDeskLayout({ title, children, user }: Props) {
             ))}
           </nav>
         </div>
-        <div className="flex-shrink-0 flex border-t border-red-800 dark:border-gray-800 p-4">
-          <div className="flex items-center">
-            <div>
-              <div className="text-base font-medium text-white">{user?.name}</div>
-              <div className="text-sm font-medium text-red-200 dark:text-gray-400">Front Desk</div>
+        <div className="flex-shrink-0 border-t border-red-800 dark:border-gray-800 p-4">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-9 h-9 rounded-full bg-red-800 dark:bg-gray-800 flex items-center justify-center text-white font-semibold text-sm">
+              {user?.name?.charAt(0) || 'A'}
             </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-white truncate">{user?.name}</p>
+              <p className="text-xs text-red-200 dark:text-gray-400 truncate">Assistant</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Link
+              href={route('admin.front-desk.profile')}
+              className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-md bg-gray-800 px-3 py-2 text-xs font-medium text-white hover:bg-gray-700 transition-colors"
+            >
+              <IconMapper name="User" size={14} />
+              Profile
+            </Link>
+            <Link
+              href={route('logout')}
+              method="post"
+              as="button"
+              className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-md bg-red-700 px-3 py-2 text-xs font-medium text-white hover:bg-red-600 transition-colors"
+            >
+              <IconMapper name="LogOut" size={14} />
+              Logout
+            </Link>
           </div>
         </div>
       </div>
@@ -105,15 +126,6 @@ export default function FrontDeskLayout({ title, children, user }: Props) {
                   <span className="hidden sm:inline">{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>
                   <span className="sm:hidden">{theme === 'dark' ? 'Light' : 'Dark'}</span>
                 </button>
-                <div className="hidden sm:block text-sm text-red-700 dark:text-gray-300 max-w-[10rem] truncate">{user?.name}</div>
-                <Link href={route('admin.front-desk.profile')} className="inline-flex items-center justify-center rounded-md bg-gray-800 text-white hover:bg-gray-700 px-2 py-2 sm:px-3 sm:py-1 text-sm">
-                  <IconMapper name="user" className="h-5 w-5 sm:hidden" />
-                  <span className="hidden sm:inline">My Profile</span>
-                </Link>
-                <Link href={route('logout')} method="post" as="button" className="inline-flex items-center justify-center rounded-md bg-white text-red-700 hover:bg-red-50 border border-red-200 px-2 py-2 sm:px-3 sm:py-1 text-sm dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700">
-                  <IconMapper name="log-out" className="h-5 w-5 sm:hidden" />
-                  <span className="hidden sm:inline">Logout</span>
-                </Link>
               </div>
             </div>
           </div>

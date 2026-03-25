@@ -74,7 +74,7 @@ const statusColors: Record<string, string> = {
 };
 
 export default function AttendanceIndex() {
-  const { attendance, filters, sites, isTuesday, isSuperAdmin, lastWeekRange, canEdit } = usePage<PageProps>().props;
+  const { attendance, filters, sites, isTuesday, isSuperAdmin, lastWeekRange, canEdit } = usePage().props as any;
 
   const [search, setSearch] = useState(filters.search || '');
   const [status, setStatus] = useState(filters.status || '');
@@ -226,7 +226,7 @@ export default function AttendanceIndex() {
                 className="w-full rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-2 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
               >
                 <option value="">All Sites</option>
-                {sites.map((site) => (
+                {sites.map((site: any) => (
                   <option key={site.id} value={site.id}>
                     {site.name} {site.client ? `(${site.client.name})` : ''}
                   </option>
@@ -289,7 +289,7 @@ export default function AttendanceIndex() {
                   </tr>
                 </thead>
                 <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
-                  {attendance.data.map((record) => (
+                  {attendance.data.map((record: any) => (
                     <tr key={record.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/60">
                       <td className="px-4 py-3 text-sm text-gray-900 dark:text-gray-100">
                         {record.date}

@@ -315,12 +315,28 @@ interface Filters {
   has_sites?: string;
 }
 
-interface ClientsIndexProps {
-  clients: {
-    data: Client[];
-    meta?: any;
-    links?: Array<{ url: string | null; label: string; active: boolean }>;
+interface PaginatedClients {
+  data: Client[];
+  current_page?: number;
+  last_page?: number;
+  per_page?: number;
+  total?: number;
+  from?: number;
+  to?: number;
+  links?: Array<{ url: string | null; label: string; active: boolean }>;
+  // Inertia may also nest under meta
+  meta?: {
+    current_page?: number;
+    last_page?: number;
+    per_page?: number;
+    total?: number;
+    from?: number;
+    to?: number;
   };
+}
+
+interface ClientsIndexProps {
+  clients: PaginatedClients;
   filters: Filters;
   services?: Array<{ id: number; name: string; monthly_price: number; required_guards?: number }>;
   zones?: Array<{ id: number; name: string }>;
@@ -442,11 +458,11 @@ export default function ClientsIndex({ clients, filters, services = [], zones = 
   const totalServices = clients.data.reduce((sum, client) => sum + (client.services_count || 0), 0);
 
   const statCards = useMemo(() => [
-    { icon: <IconMapper name="Users" size={20} />, title: 'Total Clients', value: clients.meta?.total || clients.data.length, subtitle: 'Registered clients', color: 'blue' as const },
+    { icon: <IconMapper name="Users" size={20} />, title: 'Total Clients', value: meta.total || clients.data.length, subtitle: 'Registered clients', color: 'blue' as const },
     { icon: <IconMapper name="MapPin" size={20} />, title: 'Total Sites', value: totalSites, subtitle: 'Managed locations', color: 'green' as const },
     { icon: <IconMapper name="ShieldCheck" size={20} />, title: 'Active Services', value: totalServices, subtitle: 'Services provided', color: 'purple' as const },
     { icon: <IconMapper name="DollarSign" size={20} />, title: 'Outstanding', value: clients.data.reduce((sum, c) => sum + (c.outstanding_amount || 0), 0), subtitle: 'Total due', color: 'amber' as const },
-  ], [clients, totalSites, totalServices]);
+  ], [clients, meta, totalSites, totalServices]);
 
   const quickActions = [
     { icon: <IconMapper name="Plus" size={18} />, title: 'Add Client', description: 'Register new client', color: 'bg-red-600', onClick: () => setShowAddClient(true) },
@@ -604,19 +620,67 @@ export default function ClientsIndex({ clients, filters, services = [], zones = 
           )}
 
           {/* Pagination */}
-          {clients.meta && clients.meta.last_page > 1 && (
-            <div className="mt-6 flex flex-wrap justify-center gap-2">
-              {clients.links?.map((link: any, idx: number) => (
+          {meta.last_page > 1 && (
+            <div className="mt-6">
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Showing {meta.from || 1} to {meta.to || clients.data.length} of {meta.total} clients
+                </p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Page {meta.current_page} of {meta.last_page}
+                </p>
+              </div>
+              <div className="flex flex-wrap justify-center gap-2">
+                {/* Previous button */}
                 <Button
-                  key={idx}
-                  variant={link.active ? 'default' : 'outline'}
+                  variant="outline"
                   size="sm"
-                  onClick={() => link.url && router.get(link.url, {}, { preserveState: true })}
-                  disabled={!link.url}
-                  className={link.active ? 'bg-red-600 hover:bg-red-700' : ''}
-                  dangerouslySetInnerHTML={{ __html: link.label }}
-                />
-              ))}
+                  onClick={() => meta.current_page > 1 && router.get(route('admin.clients.index'), { ...urlParams, page: meta.current_page - 1 }, { preserveState: true })}
+                  disabled={meta.current_page <= 1}
+                >
+                  ← Previous
+                </Button>
+
+                {/* Page numbers */}
+                {Array.from({ length: meta.last_page }, (_, i) => i + 1)
+                  .filter((page) => {
+                    // Show first, last, current, and pages near current
+                    return page === 1 || page === meta.last_page || Math.abs(page - meta.current_page) <= 2;
+                  })
+                  .reduce((acc: (number | string)[], page, idx, arr) => {
+                    // Insert ellipsis between non-consecutive pages
+                    if (idx > 0 && typeof arr[idx - 1] === 'number' && page - (arr[idx - 1] as number) > 1) {
+                      acc.push('...');
+                    }
+                    acc.push(page);
+                    return acc;
+                  }, [])
+                  .map((item, idx) =>
+                    typeof item === 'string' ? (
+                      <span key={`ellipsis-${idx}`} className="px-2 py-1 text-gray-400">…</span>
+                    ) : (
+                      <Button
+                        key={item}
+                        variant={item === meta.current_page ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => router.get(route('admin.clients.index'), { ...urlParams, page: item }, { preserveState: true })}
+                        className={item === meta.current_page ? 'bg-red-600 hover:bg-red-700' : ''}
+                      >
+                        {item}
+                      </Button>
+                    )
+                  )}
+
+                {/* Next button */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => meta.current_page < meta.last_page && router.get(route('admin.clients.index'), { ...urlParams, page: meta.current_page + 1 }, { preserveState: true })}
+                  disabled={meta.current_page >= meta.last_page}
+                >
+                  Next →
+                </Button>
+              </div>
             </div>
           )}
           {editingClient && (
@@ -632,6 +696,7 @@ export default function ClientsIndex({ clients, filters, services = [], zones = 
               client={viewingClient}
               open={true}
               services={services}
+              zones={zones}
               onClientUpdated={(c: any) => {
                 setViewingClient(c);
                 router.reload({ only: ['clients'] });

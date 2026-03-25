@@ -54,7 +54,7 @@ const statusOptions = [
 ];
 
 export default function AttendanceEdit() {
-  const { attendance, sites, guards, isSuperAdmin } = usePage<PageProps>().props;
+  const { attendance, sites, guards, isSuperAdmin } = usePage().props as any;
 
   const [form, setForm] = useState({
     guard_id: String(attendance.guard_id || ''),
@@ -105,8 +105,8 @@ export default function AttendanceEdit() {
     });
   };
 
-  const currentGuard = guards.find((g) => g.id === Number(form.guard_id));
-  const currentSite = sites.find((s) => s.id === Number(form.client_site_id));
+  const currentGuard = guards.find((g: any) => g.id === Number(form.guard_id));
+  const currentSite = sites.find((s: any) => s.id === Number(form.client_site_id));
 
   return (
     <ControlRoomLayout title="Edit Attendance Record">
@@ -171,7 +171,7 @@ export default function AttendanceEdit() {
                 required
               >
                 <option value="">Select Guard...</option>
-                {guards.map((guard) => (
+                {guards.map((guard: any) => (
                   <option key={guard.id} value={guard.id}>
                     {guard.name} ({guard.employee_id})
                   </option>
@@ -216,7 +216,7 @@ export default function AttendanceEdit() {
                 required
               >
                 <option value="">Select Site...</option>
-                {sites.map((site) => (
+                {sites.map((site: any) => (
                   <option key={site.id} value={site.id}>
                     {site.name} {site.client ? `(${site.client.name})` : ''}
                   </option>

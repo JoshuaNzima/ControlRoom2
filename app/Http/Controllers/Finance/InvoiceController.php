@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Finance;
 
 use App\Models\Invoice;
+use App\Models\InvoiceAuditLog;
 use App\Models\ClientPayment;
 use App\Models\Guards\Client as GuardClient;
 use App\Models\Service;
@@ -16,10 +17,32 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Carbon;
 use Inertia\Inertia;
 use App\Mail\InvoiceMailable;
+use App\Mail\InvoicePaymentReceived;
 use Barryvdh\DomPDF\Facade\Pdf;
 
 class InvoiceController extends Controller
 {
+    /**
+     * Log invoice action to audit log
+     */
+    private function logInvoiceAction(
+        Invoice $invoice,
+        string $action,
+        ?string $field = null,
+        ?string $oldValue = null,
+        ?string $newValue = null,
+        ?string $notes = null
+    ): void {
+        InvoiceAuditLog::log(
+            $invoice->id,
+            Auth::id(),
+            $action,
+            $field,
+            $oldValue,
+            $newValue,
+            $notes
+        );
+    }
     /**
      * Display a listing of invoices
      */
@@ -133,7 +156,7 @@ class InvoiceController extends Controller
                     $qty = (float) ($item['quantity'] ?? 1);
                     $price = (float) ($item['unit_price'] ?? 0);
                     $invoice->lineItems()->create([
-                        'description' => $item['description'],
+                        'description' => e($item['description']), // Sanitize
                         'quantity' => $qty,
                         'unit_price' => $price,
                         'line_total' => $qty * $price,
@@ -144,6 +167,8 @@ class InvoiceController extends Controller
             return $invoice;
         });
 
+        $this->logInvoiceAction($invoice, 'created', null, null, null, 'Invoice created with total: ' . $invoice->total_amount);
+
         return redirect()->route('finance.invoices.show', $invoice)
             ->withSuccess('Invoice created successfully.');
     }
@@ -153,7 +178,7 @@ class InvoiceController extends Controller
      */
     public function show(Request $request, Invoice $invoice)
     {
-        $invoice->load('user', 'lineItems', 'client');
+        $invoice->load('user', 'lineItems', 'client', 'payments.recordedBy');
 
         $data = $invoice->toArray();
         if (isset($data['line_items'])) {
@@ -161,7 +186,16 @@ class InvoiceController extends Controller
             unset($data['line_items']);
         }
 
-        if ($request->wantsJson() || $request->ajax()) {
+        // Calculate payment totals
+        $totalPaid = $invoice->payments->sum('amount');
+        $balanceDue = max(0, $invoice->total_amount - $totalPaid);
+        $data['paymentSummary'] = [
+            'total_paid' => $totalPaid,
+            'balance_due' => $balanceDue,
+            'payment_count' => $invoice->payments->count(),
+        ];
+
+        if (! $request->header('X-Inertia') && ($request->wantsJson() || $request->ajax())) {
             return response()->json($data);
         }
 
@@ -182,6 +216,23 @@ class InvoiceController extends Controller
 
         return Inertia::render('Finance/Invoices/Print', [
             'invoice' => $data,
+        ]);
+    }
+
+    public function preview(Request $request, Invoice $invoice)
+    {
+        $invoice->load('user', 'lineItems', 'client');
+
+        $data = $invoice->toArray();
+        if (isset($data['line_items'])) {
+            $data['lineItems'] = $data['line_items'];
+            unset($data['line_items']);
+        }
+
+        // Always return HTML view - never JSON for preview
+        return Inertia::render('Finance/Invoices/Preview', [
+            'invoice' => $data,
+            'isPreview' => true,
         ]);
     }
 
@@ -262,13 +313,15 @@ class InvoiceController extends Controller
         if ($request->has('line_items')) {
             foreach ($request->line_items as $item) {
                 $invoice->lineItems()->create([
-                    'description' => $item['description'],
+                    'description' => e($item['description']), // Sanitize
                     'quantity' => $item['quantity'],
                     'unit_price' => $item['unit_price'],
                     'line_total' => $item['quantity'] * $item['unit_price'],
                 ]);
             }
         }
+
+        $this->logInvoiceAction($invoice, 'updated');
 
         return redirect()->route('finance.invoices.show', $invoice)
             ->withSuccess('Invoice updated successfully.');
@@ -280,6 +333,8 @@ class InvoiceController extends Controller
     public function destroy(Invoice $invoice)
     {
         $this->authorize('delete', $invoice);
+
+        $this->logInvoiceAction($invoice, 'deleted', null, null, null, 'Invoice deleted by user');
 
         $invoice->delete();
 
@@ -319,7 +374,9 @@ class InvoiceController extends Controller
         }
 
         if ($sentAny) {
+            $oldStatus = $invoice->status;
             $invoice->markAsSent();
+            $this->logInvoiceAction($invoice, 'status_changed', 'status', $oldStatus, 'sent', 'Invoice sent via: ' . implode(', ', $channels));
             return back()->withSuccess('Invoice sent.');
         }
 
@@ -435,11 +492,13 @@ class InvoiceController extends Controller
         $this->authorize('update', $invoice);
 
         $wasPaid = $invoice->status === 'paid';
+        $oldStatus = $invoice->status;
 
         $invoice->markAsPaid();
 
         if (! $wasPaid) {
-            $this->syncClientPaymentForInvoice($invoice);
+            $this->syncClientPaymentForInvoice($invoice, 'add');
+            $this->logInvoiceAction($invoice, 'status_changed', 'status', $oldStatus, 'paid', 'Invoice marked as paid');
         }
 
         return back()->withSuccess('Invoice marked as paid.');
@@ -452,19 +511,91 @@ class InvoiceController extends Controller
     {
         $this->authorize('update', $invoice);
 
+        $oldStatus = $invoice->status;
+
+        // Reverse payment sync if invoice was previously paid
+        if ($invoice->status === 'paid') {
+            $this->syncClientPaymentForInvoice($invoice, 'remove');
+        }
+
         $invoice->markAsCancelled();
 
+        $this->logInvoiceAction($invoice, 'status_changed', 'status', $oldStatus, 'cancelled', 'Invoice cancelled');
+
         return back()->withSuccess('Invoice cancelled.');
+    }
+
+    /**
+     * Record a partial payment on an invoice
+     */
+    public function recordPayment(Request $request, Invoice $invoice)
+    {
+        $this->authorize('update', $invoice);
+
+        // Prevent payments on cancelled invoices
+        if ($invoice->status === 'cancelled') {
+            return back()->withError('Cannot record payments on cancelled invoices.');
+        }
+
+        $validated = $request->validate([
+            'amount' => 'required|numeric|min:0.01|max:' . $invoice->total_amount,
+            'payment_date' => 'required|date',
+            'payment_method' => 'nullable|string|in:cash,bank_transfer,cheque,mobile_money,other',
+            'reference' => 'nullable|string|max:255',
+            'notes' => 'nullable|string',
+        ]);
+
+        // Calculate total payments already recorded
+        $existingPayments = (float) ($invoice->payments()->sum('amount') ?? 0);
+        $newTotal = $existingPayments + (float) $validated['amount'];
+
+        // Create payment record
+        $payment = $invoice->payments()->create([
+            'amount' => $validated['amount'],
+            'payment_date' => $validated['payment_date'],
+            'payment_method' => $validated['payment_method'] ?? 'other',
+            'reference' => e($validated['reference'] ?? ''), // Sanitize
+            'notes' => e($validated['notes'] ?? ''), // Sanitize
+            'recorded_by' => Auth::id(),
+        ]);
+
+        $this->logInvoiceAction($invoice, 'payment_recorded', null, null, null, "Payment of {$validated['amount']} recorded via {$validated['payment_method']}");
+
+        // Send payment notification email
+        try {
+            $to = $invoice->client_email ?: ($invoice->client->email ?? null);
+            if ($to) {
+                Mail::to($to)->queue(new InvoicePaymentReceived($invoice, $validated['amount']));
+            }
+        } catch (\Throwable $e) {
+            Log::warning('Invoice payment notification email failed', ['invoice_id' => $invoice->id, 'error' => $e->getMessage()]);
+        }
+
+        // Auto-update invoice status if fully paid
+        if ($newTotal >= $invoice->total_amount) {
+            if ($invoice->status !== 'paid') {
+                $oldStatus = $invoice->status;
+                $invoice->markAsPaid();
+                $this->syncClientPaymentForInvoice($invoice, 'add');
+                $this->logInvoiceAction($invoice, 'status_changed', 'status', $oldStatus, 'paid', 'Auto-marked as paid after full payment received');
+            }
+        } elseif ($newTotal > 0 && $invoice->status === 'draft') {
+            // Move to sent status if partial payment received
+            $oldStatus = $invoice->status;
+            $invoice->markAsSent();
+            $this->logInvoiceAction($invoice, 'status_changed', 'status', $oldStatus, 'sent', 'Moved to sent after partial payment');
+        }
+
+        return back()->withSuccess('Payment recorded successfully.');
     }
 
     /**
      * One-way sync from Finance invoice payments into the Admin Payment Checker.
      *
      * When an invoice is marked as paid, update or create a ClientPayment row
-     * for the inferred client/year/month. This never changes invoice status
-     * and does not attempt to reverse payments from the checker side.
+     * for the inferred client/year/month. When cancelled, remove the payment amount.
      */
-    private function syncClientPaymentForInvoice(Invoice $invoice): void
+    private function syncClientPaymentForInvoice(Invoice $invoice, string $operation = 'add'): void
     {
         try {
             // Determine guarding client
@@ -520,16 +651,24 @@ class InvoiceController extends Controller
                 $payment->amount_due = $amountDue;
             }
 
-            $payment->amount_paid = (float) $payment->amount_paid + (float) $invoice->total_amount;
+            if ($operation === 'add') {
+                $payment->amount_paid = (float) $payment->amount_paid + (float) $invoice->total_amount;
+            } elseif ($operation === 'remove') {
+                $payment->amount_paid = max(0, (float) $payment->amount_paid - (float) $invoice->total_amount);
+            }
 
+            // Recalculate paid status
             if ($payment->amount_due > 0 && $payment->amount_paid >= $payment->amount_due) {
                 $payment->paid = true;
+            } else {
+                $payment->paid = false;
             }
 
             $payment->save();
         } catch (\Throwable $e) {
             Log::warning('Failed to sync invoice payment into client payments', [
                 'invoice_id' => $invoice->id,
+                'operation' => $operation,
                 'message' => $e->getMessage(),
             ]);
         }

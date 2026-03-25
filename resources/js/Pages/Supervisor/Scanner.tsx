@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Head, router } from '@inertiajs/react';
 import { Card } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
@@ -6,25 +6,35 @@ import { Html5QrcodeScanner } from 'html5-qrcode';
 
 interface Props {
   activeScan?: {
+    scan_id?: number;
     site_id: number;
     site_name: string;
     client_name?: string;
     scanned_at: string;
-    expires_at: string;
+    expires_at?: string;
   } | null;
 }
 
 export default function Scanner({ activeScan }: Props) {
-  const [scanResult, setScanResult] = useState<string | null>(null);
   const [scanning, setScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const scannerRef = useRef<Html5QrcodeScanner | null>(null);
+  const processingRef = useRef(false);
 
-  const handleScan = useCallback(async (decodedText: string) => {
-    if (scanning) return;
+  const handleScan = async (decodedText: string) => {
+    // Use ref to prevent double-processing (avoids stale closure issues)
+    if (processingRef.current) return;
+    processingRef.current = true;
     setScanning(true);
     setError(null);
     setSuccess(null);
+
+    // Stop the scanner to prevent further reads
+    if (scannerRef.current) {
+      try { scannerRef.current.clear(); } catch {}
+      scannerRef.current = null;
+    }
 
     try {
       // Get GPS coordinates
@@ -39,54 +49,63 @@ export default function Scanner({ activeScan }: Props) {
       const { latitude, longitude } = position.coords;
 
       // Determine if it's a site QR or checkpoint QR
-      let payload;
+      let payload: any = null;
       try {
         payload = JSON.parse(decodedText);
       } catch {
         payload = null;
       }
 
-      const isSiteQR = payload && payload.type === 'site';
-      const routeName = isSiteQR ? 'scan.site' : 'scan.checkpoint';
+      const isSiteQR = payload && (payload.type === 'site' || payload.t === 'site');
 
       if (isSiteQR) {
         const siteId = payload?.site_id ?? payload?.site ?? payload?.id;
-        router.visit(route(routeName, { site: siteId, latitude, longitude }), {
+        router.visit(route('scan.site', { site: siteId, latitude, longitude }), {
           onSuccess: () => {
             setSuccess('Site scanned successfully!');
-            setScanResult(decodedText);
+            processingRef.current = false;
           },
           onError: (errors) => {
             const msg = (Object.values(errors || {})[0] as string) || 'Scan failed. Please try again.';
             setError(msg);
+            processingRef.current = false;
           },
           onFinish: () => setScanning(false),
         });
         return;
       }
 
-      router.post(route(routeName), {
+      // Checkpoint scan
+      router.post(route('scan.checkpoint'), {
         code: decodedText,
         latitude,
         longitude,
       }, {
         onSuccess: () => {
           setSuccess('Checkpoint scanned successfully!');
-          setScanResult(decodedText);
+          processingRef.current = false;
         },
         onError: (errors) => {
           const msg = (Object.values(errors || {})[0] as string) || 'Scan failed. Please try again.';
           setError(msg);
+          processingRef.current = false;
         },
         onFinish: () => setScanning(false),
       });
     } catch (err) {
       setError('GPS location required. Please enable location services.');
       setScanning(false);
+      processingRef.current = false;
     }
-  }, [scanning]);
+  };
 
-  useEffect(() => {
+  const initScanner = () => {
+    // Clean up any existing scanner
+    if (scannerRef.current) {
+      try { scannerRef.current.clear(); } catch {}
+      scannerRef.current = null;
+    }
+
     const scanner = new Html5QrcodeScanner(
       'qr-reader',
       {
@@ -97,28 +116,48 @@ export default function Scanner({ activeScan }: Props) {
       false
     );
 
+    scannerRef.current = scanner;
+
     scanner.render(
       (decodedText) => {
         handleScan(decodedText);
       },
-      (errorMessage) => {
+      (_errorMessage) => {
         // Ignore scan errors (no QR code in frame)
       }
     );
+  };
+
+  useEffect(() => {
+    initScanner();
 
     return () => {
-      scanner.clear().catch(console.error);
+      if (scannerRef.current) {
+        scannerRef.current.clear().catch(console.error);
+        scannerRef.current = null;
+      }
     };
-  }, [handleScan]);
+  }, []);
+
+  const handleRetry = () => {
+    setError(null);
+    setSuccess(null);
+    processingRef.current = false;
+    // Re-initialize scanner after a brief delay to let DOM settle
+    setTimeout(() => initScanner(), 100);
+  };
 
   const handleClear = () => {
     router.post(route('scan.clear'), {}, {
       onSuccess: () => {
         setSuccess('Scan lock cleared');
-        setScanResult(null);
       }
     });
   };
+
+  const timeRemaining = activeScan?.expires_at
+    ? Math.max(0, Math.floor((new Date(activeScan.expires_at).getTime() - Date.now()) / 60000))
+    : null;
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-6">
@@ -132,6 +171,11 @@ export default function Scanner({ activeScan }: Props) {
           {error && (
             <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-200 text-sm">
               {error}
+              <div className="mt-2">
+                <Button variant="outline" size="sm" onClick={handleRetry}>
+                  Try Again
+                </Button>
+              </div>
             </div>
           )}
 
@@ -149,6 +193,11 @@ export default function Scanner({ activeScan }: Props) {
               </div>
               <div className="text-xs text-blue-600 dark:text-blue-300 mt-1">
                 Scanned: {new Date(activeScan.scanned_at).toLocaleString()}
+                {timeRemaining !== null && (
+                  <span className={timeRemaining < 15 ? ' text-yellow-600 font-semibold' : ''}>
+                    {' '}· Expires in: {timeRemaining} min
+                  </span>
+                )}
               </div>
               <Button
                 variant="outline"

@@ -161,6 +161,9 @@ class RolesAndPermissionsSeeder extends Seeder
             'clients.view',
             // Requisitions
             'requisitions.create', 'requisitions.view_own',
+            // Finance access for supervisors
+            'finance.access', 'finance.view',
+            'finance.invoices.view',
         ]);
 
         // Sergeant role - supervisory position for guards
@@ -175,6 +178,9 @@ class RolesAndPermissionsSeeder extends Seeder
             'clients.view',
             // Requisitions
             'requisitions.create', 'requisitions.view_own',
+            // Finance access for sergeants
+            'finance.access', 'finance.view',
+            'finance.invoices.view',
         ]);
 
         // Zone Commander role - manages a specific zone
@@ -191,6 +197,9 @@ class RolesAndPermissionsSeeder extends Seeder
             'control.reports.view',
             // Requisitions
             'requisitions.create', 'requisitions.view_own',
+            // Finance access for zone commanders
+            'finance.access', 'finance.view',
+            'finance.invoices.view',
         ]);
 
         // Control Room Operator role - dedicated control room access
@@ -219,6 +228,9 @@ class RolesAndPermissionsSeeder extends Seeder
             'clients.view', // Need to see clients for incidents
             // Requisitions
             'requisitions.create', 'requisitions.view_own',
+            // Finance access for control room operators
+            'finance.access', 'finance.view',
+            'finance.invoices.view',
         ]);
 
         // Operations Officer - oversees control room, guards and zone operations
@@ -234,6 +246,11 @@ class RolesAndPermissionsSeeder extends Seeder
             ])->pluck('name')->toArray()
         ));
         $operationsOfficerRole->givePermissionTo($operationsOfficerPermissions);
+        // Add finance access to operations officer
+        $operationsOfficerRole->givePermissionTo([
+            'finance.access', 'finance.view',
+            'finance.invoices.view',
+        ]);
 
         // Client role - very limited access
         $clientRole = Role::firstOrCreate(['name' => 'client']);
@@ -243,6 +260,9 @@ class RolesAndPermissionsSeeder extends Seeder
             'reports.view', // Only their reports
             // Requisitions
             'requisitions.create', 'requisitions.view_own',
+            // Finance access for clients
+            'finance.access', 'finance.view',
+            'finance.invoices.view',
         ]);
 
         // Finance roles

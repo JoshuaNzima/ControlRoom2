@@ -1,0 +1,35 @@
+# Coin Security ControlRoom Code Style Rules
+
+## Backend (Laravel 12)
+- Always use Laravel 12 conventions and patterns
+- Follow PSR-12 coding standards
+- Use type hints and return types on all methods
+- Prefer dependency injection over facades where possible
+- Use Eloquent relationships properly with eager loading to avoid N+1 issues
+
+## Frontend (React + TypeScript)
+- All frontend components must use React with TypeScript (.tsx format)
+- Use functional components with hooks (no class components)
+- Use Tailwind CSS for styling with the coin theme color palette
+- Maintain dark mode consistency - never use light colors in dark mode
+- Use mobile-first responsive design approach
+
+## UI/UX Guidelines
+- Use modals instead of create/show/edit pages for faster navigation
+- All pages and modals must be mobile-first designed
+- Maintain consistent dark mode theming throughout the application
+- Use the coin color theme (coin-600, coin-700, coin-800, coin-900)
+- Use shadcn/ui components where available
+
+## Code Quality
+- Delete all obsolete code and files whenever making changes
+- Avoid reverting to previously changed code unless explicitly instructed
+- Keep components small and focused (single responsibility)
+- Add proper TypeScript types for all props and state
+- Use proper error handling and loading states
+
+## Project Structure
+- Keep Laravel backend code in `app/` directory
+- Keep React components in `resources/js/` directory
+- Use Inertia.js for page routing
+- Follow existing project conventions

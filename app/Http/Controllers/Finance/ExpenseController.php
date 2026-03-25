@@ -3,6 +3,9 @@
 namespace App\Http\Controllers\Finance;
 
 use App\Models\Expense;
+use App\Models\Requisition;
+use App\Models\PettyCashEntry;
+use App\Models\PettyCashBalance;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -58,7 +61,8 @@ class ExpenseController extends Controller
 
         $expenses = $query->paginate(15)->withQueryString();
 
-        // Calculate totals on the same filtered scope
+        // Calculate totals from multiple sources
+        // 1. Expense totals
         $base = Expense::query();
         if ($request->filled('category')) {
             $base->byCategory($request->category);
@@ -76,10 +80,35 @@ class ExpenseController extends Controller
             $base->where('user_id', $user->id);
         }
 
-        $totals = [
+        $expenseTotals = [
             'total' => (clone $base)->sum('amount'),
             'approved' => (clone $base)->approved()->sum('amount'),
             'pending' => (clone $base)->pending()->sum('amount'),
+            'petty_cash' => (clone $base)->where('payment_method', 'cash')->sum('amount'),
+        ];
+
+        // 2. Approved Requisitions totals
+        $requisitionQuery = Requisition::query();
+        if ($request->filled('start_date') && $request->filled('end_date')) {
+            $requisitionQuery->whereBetween('created_at', [$request->start_date, $request->end_date]);
+        }
+        if (! $canApprove && $user) {
+            $requisitionQuery->where('requested_by', $user->id);
+        }
+        // Only count disbursed/approved requisitions
+        $requisitionTotals = [
+            'total' => (clone $requisitionQuery)->whereIn('status', ['disbursed', 'pending_disbursement'])->sum('amount'),
+            'count' => (clone $requisitionQuery)->whereIn('status', ['disbursed', 'pending_disbursement'])->count(),
+        ];
+
+        // Combined totals for display
+        $totals = [
+            'total' => $expenseTotals['total'] + $requisitionTotals['total'],
+            'approved' => $expenseTotals['approved'],
+            'pending' => $expenseTotals['pending'],
+            'petty_cash' => $expenseTotals['petty_cash'],
+            'requisitions_total' => $requisitionTotals['total'],
+            'requisitions_count' => $requisitionTotals['count'],
             'by_category' => (clone $base)->approved()
                 ->selectRaw('category, SUM(amount) as total')
                 ->groupBy('category')
@@ -277,6 +306,41 @@ class ExpenseController extends Controller
                 'approval_stage' => 'complete',
                 'status' => 'approved',
             ]);
+
+            // Sync to Petty Cash if payment method is cash
+            if ($expense->payment_method === 'cash') {
+                $categoryMap = [
+                    'office_supplies' => 'office_supplies',
+                    'travel' => 'transport',
+                    'meals' => 'refreshments',
+                    'utilities' => 'maintenance',
+                    'maintenance' => 'maintenance',
+                    'marketing' => 'other',
+                    'equipment' => 'maintenance',
+                    'general' => 'other',
+                    'other' => 'other',
+                ];
+
+                PettyCashEntry::create([
+                    'user_id' => $expense->user_id,
+                    'date' => $expense->expense_date,
+                    'description' => $expense->description ?: 'Expense #' . $expense->id,
+                    'category' => $categoryMap[$expense->category] ?? 'other',
+                    'amount' => $expense->amount,
+                    'receipt_number' => null,
+                    'vendor' => null,
+                    'type' => 'expense',
+                    'status' => 'approved',
+                    'approved_by' => Auth::id(),
+                    'approved_at' => now(),
+                    'notes' => 'Auto-synced from approved expense #' . $expense->id,
+                ]);
+
+                // Update balance
+                $balance = PettyCashBalance::getCurrent();
+                $balance->recalculate();
+            }
+
             return back()->withSuccess('Requisition approved.');
         }
 

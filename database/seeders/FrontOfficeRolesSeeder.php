@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\User;
 use Illuminate\Database\Seeder;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
@@ -10,163 +11,111 @@ class FrontOfficeRolesSeeder extends Seeder
 {
     public function run(): void
     {
-        app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
+        // Create roles
+        $roles = [
+            'executive_assistant' => 'Executive Assistant',
+            'receptionist' => 'Receptionist',
+            'personal_assistant' => 'Personal Assistant',
+        ];
 
+        foreach ($roles as $name => $label) {
+            Role::firstOrCreate(
+                ['name' => $name, 'guard_name' => 'web'],
+                ['description' => $label]
+            );
+        }
+
+        // Define permissions for each role
         $permissions = [
-            // Executive Assistant permissions
-            'front_office.executive.calendar.view',
-            'front_office.executive.calendar.manage',
-            'front_office.executive.communications.view',
-            'front_office.executive.communications.manage',
-            'front_office.executive.meetings.view',
-            'front_office.executive.meetings.manage',
-            'front_office.executive.travel.view',
-            'front_office.executive.travel.manage',
-            'front_office.executive.documents.view',
-            'front_office.executive.documents.manage',
-            'front_office.executive.petty_cash.view',
-            'front_office.executive.petty_cash.manage',
-            'front_office.executive.events.view',
-            'front_office.executive.events.manage',
-            'front_office.executive.office_admin.view',
-            'front_office.executive.office_admin.manage',
+            // Visitor management (all front office roles)
+            'front_office.visitors.view',
+            'front_office.visitors.create',
+            'front_office.visitors.check_out',
+            'front_office.visitors.badge',
 
-            // Personal Assistant permissions
-            'front_office.personal.diary.view',
-            'front_office.personal.diary.manage',
-            'front_office.personal.calls.view',
-            'front_office.personal.calls.manage',
-            'front_office.personal.travel.view',
-            'front_office.personal.travel.manage',
-            'front_office.personal.errands.view',
-            'front_office.personal.errands.manage',
-            'front_office.personal.documents.view',
-            'front_office.personal.documents.manage',
-            'front_office.personal.household.view',
-            'front_office.personal.household.manage',
-            'front_office.personal.correspondence.view',
-            'front_office.personal.correspondence.manage',
-            'front_office.personal.reminders.view',
-            'front_office.personal.reminders.manage',
-            'front_office.personal.general_admin.view',
-            'front_office.personal.general_admin.manage',
+            // Messages (all front office roles)
+            'front_office.messages.view',
+            'front_office.messages.send',
+            'front_office.messages.read',
 
-            // Shared Front Office permissions
-            'front_office.dashboard.view',
+            // Calendar (Executive Assistant, Personal Assistant, Admin)
+            'front_office.calendar.view',
+            'front_office.calendar.create',
+            'front_office.calendar.edit',
+            'front_office.calendar.delete',
 
-            // Finance integration permissions
-            'finance.view',
-            'finance.access',
+            // Tasks (Executive Assistant, Personal Assistant)
+            'front_office.tasks.view',
+            'front_office.tasks.create',
+            'front_office.tasks.edit',
+            'front_office.tasks.complete',
+
+            // Reports (Executive Assistant only)
+            'front_office.reports.view',
+            'front_office.reports.export',
+            'front_office.reports.visitors',
         ];
 
         foreach ($permissions as $permission) {
             Permission::firstOrCreate(['name' => $permission, 'guard_name' => 'web']);
         }
 
-        // Executive Assistant role
-        $executiveAssistant = Role::firstOrCreate(['name' => 'executive_assistant']);
-        $executiveAssistant->givePermissionTo([
-            'front_office.dashboard.view',
-            'front_office.executive.calendar.view',
-            'front_office.executive.calendar.manage',
-            'front_office.executive.communications.view',
-            'front_office.executive.communications.manage',
-            'front_office.executive.meetings.view',
-            'front_office.executive.meetings.manage',
-            'front_office.executive.travel.view',
-            'front_office.executive.travel.manage',
-            'front_office.executive.documents.view',
-            'front_office.executive.documents.manage',
-            'front_office.executive.petty_cash.view',
-            'front_office.executive.petty_cash.manage',
-            'front_office.executive.events.view',
-            'front_office.executive.events.manage',
-            'front_office.executive.office_admin.view',
-            'front_office.executive.office_admin.manage',
-            'finance.view',
-            'finance.access',
-            'requisitions.create',
-            'requisitions.view_own',
+        // Assign permissions to roles
+        $executiveAssistant = Role::findByName('executive_assistant');
+        $receptionist = Role::findByName('receptionist');
+        $personalAssistant = Role::findByName('personal_assistant');
+
+        // Executive Assistant gets all permissions
+        $executiveAssistant->syncPermissions([
+            'front_office.visitors.view',
+            'front_office.visitors.create',
+            'front_office.visitors.check_out',
+            'front_office.visitors.badge',
+            'front_office.messages.view',
+            'front_office.messages.send',
+            'front_office.messages.read',
+            'front_office.calendar.view',
+            'front_office.calendar.create',
+            'front_office.calendar.edit',
+            'front_office.calendar.delete',
+            'front_office.tasks.view',
+            'front_office.tasks.create',
+            'front_office.tasks.edit',
+            'front_office.tasks.complete',
+            'front_office.reports.view',
+            'front_office.reports.export',
+            'front_office.reports.visitors',
         ]);
 
-        // Personal Assistant role
-        $personalAssistant = Role::firstOrCreate(['name' => 'personal_assistant']);
-        $personalAssistant->givePermissionTo([
-            'front_office.dashboard.view',
-            'front_office.personal.diary.view',
-            'front_office.personal.diary.manage',
-            'front_office.personal.calls.view',
-            'front_office.personal.calls.manage',
-            'front_office.personal.travel.view',
-            'front_office.personal.travel.manage',
-            'front_office.personal.errands.view',
-            'front_office.personal.errands.manage',
-            'front_office.personal.documents.view',
-            'front_office.personal.documents.manage',
-            'front_office.personal.household.view',
-            'front_office.personal.household.manage',
-            'front_office.personal.correspondence.view',
-            'front_office.personal.correspondence.manage',
-            'front_office.personal.reminders.view',
-            'front_office.personal.reminders.manage',
-            'front_office.personal.general_admin.view',
-            'front_office.personal.general_admin.manage',
-            'finance.view',
-            'finance.access',
-            'requisitions.create',
-            'requisitions.view_own',
+        // Receptionist gets basic permissions (visitors, messages)
+        $receptionist->syncPermissions([
+            'front_office.visitors.view',
+            'front_office.visitors.create',
+            'front_office.visitors.check_out',
+            'front_office.visitors.badge',
+            'front_office.messages.view',
+            'front_office.messages.send',
+            'front_office.messages.read',
         ]);
 
-        // Unified Assistant role - combines Executive & Personal permissions
-        $assistant = Role::firstOrCreate(['name' => 'assistant']);
-        $assistant->givePermissionTo([
-            'front_office.dashboard.view',
-            // Executive permissions
-            'front_office.executive.calendar.view',
-            'front_office.executive.calendar.manage',
-            'front_office.executive.communications.view',
-            'front_office.executive.communications.manage',
-            'front_office.executive.meetings.view',
-            'front_office.executive.meetings.manage',
-            'front_office.executive.travel.view',
-            'front_office.executive.travel.manage',
-            'front_office.executive.documents.view',
-            'front_office.executive.documents.manage',
-            'front_office.executive.petty_cash.view',
-            'front_office.executive.petty_cash.manage',
-            'front_office.executive.events.view',
-            'front_office.executive.events.manage',
-            'front_office.executive.office_admin.view',
-            'front_office.executive.office_admin.manage',
-            // Personal permissions
-            'front_office.personal.diary.view',
-            'front_office.personal.diary.manage',
-            'front_office.personal.calls.view',
-            'front_office.personal.calls.manage',
-            'front_office.personal.travel.view',
-            'front_office.personal.travel.manage',
-            'front_office.personal.errands.view',
-            'front_office.personal.errands.manage',
-            'front_office.personal.documents.view',
-            'front_office.personal.documents.manage',
-            'front_office.personal.household.view',
-            'front_office.personal.household.manage',
-            'front_office.personal.correspondence.view',
-            'front_office.personal.correspondence.manage',
-            'front_office.personal.reminders.view',
-            'front_office.personal.reminders.manage',
-            'front_office.personal.general_admin.view',
-            'front_office.personal.general_admin.manage',
-            // Finance integration
-            'finance.view',
-            'finance.access',
-            'requisitions.create',
-            'requisitions.view_own',
+        // Personal Assistant gets calendar and tasks access
+        $personalAssistant->syncPermissions([
+            'front_office.visitors.view',
+            'front_office.visitors.create',
+            'front_office.visitors.check_out',
+            'front_office.visitors.badge',
+            'front_office.messages.view',
+            'front_office.messages.send',
+            'front_office.messages.read',
+            'front_office.calendar.view',
+            'front_office.calendar.create',
+            'front_office.calendar.edit',
+            'front_office.tasks.view',
+            'front_office.tasks.create',
+            'front_office.tasks.complete',
         ]);
 
-        // Legacy roles - keep for backwards compatibility
-        Role::firstOrCreate(['name' => 'front_office']);
-        Role::firstOrCreate(['name' => 'receptionist']);
-        Role::firstOrCreate(['name' => 'client_service']);
+        $this->command->info('Front Office roles and permissions seeded successfully!');
+        $this->command->info('Roles: Executive Assistant, Receptionist, Personal Assistant');
     }
 }

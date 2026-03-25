@@ -119,6 +119,7 @@ export const SelectContent: React.FC<SelectContentProps> = ({ children }) => {
 export interface SelectItemProps {
   value: string;
   children: React.ReactNode;
+  className?: string;
 }
 
 export const SelectItem: React.FC<SelectItemProps> = ({ value, children }) => {

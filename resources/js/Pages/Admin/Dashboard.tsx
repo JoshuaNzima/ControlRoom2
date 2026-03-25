@@ -9,6 +9,7 @@ import EmptyState from '@/Components/ui/empty-state';
 import { ResponsiveContainer, LineChart, Line, CartesianGrid, XAxis, YAxis, Tooltip, AreaChart, Area, BarChart, Bar } from 'recharts';
 import useCounters from '@/Hooks/useCounters';
 import ScannerModal from '@/Components/Scanner/ScannerModal';
+import IncentiveSummary from '@/Components/IncentiveSummary';
 
 // Animated Counter Component
 const AnimatedCounter: React.FC<{ value: number; duration?: number; prefix?: string; suffix?: string }> = ({ 
@@ -1288,6 +1289,28 @@ export default function Dashboard({
                 </div>
               </div>
             </Card>
+
+            {/* Dashboard Incentive Summary Widget */}
+            {(kpis?.supervisor_incentives || kpis?.incentive_system) && (
+              <IncentiveSummary
+                stats={{
+                  total_supervisors: kpis?.supervisor_incentives?.supervisors_count || 0,
+                  total_sergeants: kpis?.supervisor_incentives?.sergeants_count || 0,
+                  active_profiles: kpis?.incentive_system?.total_types || 0,
+                  pending_count: (kpis?.supervisor_incentives?.pending_calculations || 0) + (kpis?.incentive_system?.pending_entries || 0),
+                  approved_count: kpis?.incentive_system?.approved_entries || 0,
+                  paid_count: kpis?.incentive_system?.paid_entries || 0,
+                  total_paid_amount: kpis?.incentive_system?.paid_amount_mtd || 0,
+                  pending_amount: (kpis?.supervisor_incentives?.pending_amount_total || 0) + (kpis?.incentive_system?.pending_amount || 0),
+                  by_role: {
+                    supervisor: kpis?.supervisor_incentives?.pending_amount_total || 0,
+                    sergeant: 0,
+                  },
+                }}
+                period={{ year: new Date().getFullYear(), month: new Date().getMonth() + 1 }}
+                canCalculate={true}
+              />
+            )}
           </div>
         )}
 

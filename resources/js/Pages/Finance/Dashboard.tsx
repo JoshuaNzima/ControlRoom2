@@ -7,6 +7,7 @@ import { Card } from '@/Components/ui/card';
 import { ResponsiveContainer, LineChart, Line, CartesianGrid, XAxis, YAxis, Tooltip, AreaChart, Area } from 'recharts';
 import FinanceDrilldownPanel from '@/Components/FinanceDrilldownPanel';
 import RequisitionSummary from '@/Components/Requisitions/RequisitionSummary';
+import IncentiveSummary from '@/Components/IncentiveSummary';
 
 // Animated Counter Component
 const AnimatedCounter: React.FC<{ value: number; duration?: number; prefix?: string; suffix?: string }> = ({ 
@@ -388,67 +389,72 @@ export default function FinanceDashboard(props: Props) {
               />
             </div>
 
-            {/* My Requisitions + Last Payroll */}
-            {(props as any).myRequisitions || (props as any).lastPayroll ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {(props as any).myRequisitions && (
-                  <Card className="p-5 dark:bg-gray-800 dark:border-gray-700">
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">My Requisitions</h3>
-                    <div className="text-3xl font-bold text-red-600 dark:text-red-400">
-                      {formatCurrencyMWK((props as any).myRequisitions.this_month_total || 0)}
-                    </div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">This month</p>
-                    <div className="mt-4 flex gap-6">
-                      <div>
-                        <span className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
-                          {Number((props as any).myRequisitions.pending_count || 0)}
-                        </span>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">Pending</p>
-                      </div>
-                      <div>
-                        <span className="text-2xl font-semibold text-emerald-600 dark:text-emerald-400">
-                          {Number((props as any).myRequisitions.approved_count || 0)}
-                        </span>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">Approved</p>
-                      </div>
-                      <div>
-                        <span className="text-2xl font-semibold text-red-600 dark:text-red-400">
-                          {Number((props as any).myRequisitions.rejected_count || 0)}
-                        </span>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">Rejected</p>
-                      </div>
-                    </div>
-                  </Card>
-                )}
-                {(props as any).lastPayroll && (
-                  <Card className="p-5 dark:bg-gray-800 dark:border-gray-700">
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Last Payroll</h3>
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="px-2 py-1 rounded bg-emerald-100 text-emerald-800 text-xs font-medium dark:bg-emerald-900/30 dark:text-emerald-300">
-                        {(props as any).lastPayroll.status}
+            {/* My Requisitions + Last Payroll + Incentives */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {(props as any).myRequisitions && (
+                <Card className="p-5 dark:bg-gray-800 dark:border-gray-700">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">My Requisitions</h3>
+                  <div className="text-3xl font-bold text-red-600 dark:text-red-400">
+                    {formatCurrencyMWK((props as any).myRequisitions.this_month_total || 0)}
+                  </div>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">This month</p>
+                  <div className="mt-4 flex gap-6">
+                    <div>
+                      <span className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
+                        {Number((props as any).myRequisitions.pending_count || 0)}
                       </span>
-                      <span className="text-sm text-gray-500 dark:text-gray-400">
-                        {(props as any).lastPayroll.period_start} → {(props as any).lastPayroll.period_end}
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Pending</p>
+                    </div>
+                    <div>
+                      <span className="text-2xl font-semibold text-emerald-600 dark:text-emerald-400">
+                        {Number((props as any).myRequisitions.approved_count || 0)}
                       </span>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Approved</p>
                     </div>
-                    <div className="grid grid-cols-2 gap-4 mt-4">
-                      <div>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">Gross Total</p>
-                        <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                          {formatCurrencyMWK(Number((props as any).lastPayroll.gross_total || 0))}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">Net Total</p>
-                        <p className="text-lg font-semibold text-emerald-600 dark:text-emerald-400">
-                          {formatCurrencyMWK(Number((props as any).lastPayroll.net_total || 0))}
-                        </p>
-                      </div>
+                    <div>
+                      <span className="text-2xl font-semibold text-red-600 dark:text-red-400">
+                        {Number((props as any).myRequisitions.rejected_count || 0)}
+                      </span>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Rejected</p>
                     </div>
-                  </Card>
-                )}
-              </div>
-            ) : null}
+                  </div>
+                </Card>
+              )}
+              {(props as any).lastPayroll && (
+                <Card className="p-5 dark:bg-gray-800 dark:border-gray-700">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Last Payroll</h3>
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="px-2 py-1 rounded bg-emerald-100 text-emerald-800 text-xs font-medium dark:bg-emerald-900/30 dark:text-emerald-300">
+                      {(props as any).lastPayroll.status}
+                    </span>
+                    <span className="text-sm text-gray-500 dark:text-gray-400">
+                      {(props as any).lastPayroll.period_start} → {(props as any).lastPayroll.period_end}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4 mt-4">
+                    <div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Gross Total</p>
+                      <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                        {formatCurrencyMWK(Number((props as any).lastPayroll.gross_total || 0))}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Net Total</p>
+                      <p className="text-lg font-semibold text-emerald-600 dark:text-emerald-400">
+                        {formatCurrencyMWK(Number((props as any).lastPayroll.net_total || 0))}
+                      </p>
+                    </div>
+                  </div>
+                </Card>
+              )}
+              {(props as any).incentiveSummary && (
+                <IncentiveSummary
+                  stats={(props as any).incentiveSummary}
+                  period={{ year: new Date().getFullYear(), month: new Date().getMonth() + 1 }}
+                  canCalculate={true}
+                />
+              )}
+            </div>
           </div>
         )}
 

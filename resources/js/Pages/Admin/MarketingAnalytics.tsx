@@ -20,12 +20,12 @@ export default function MarketingAnalytics({ auth = {}, campaignsByStatus = [], 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
-              <h1 className="text-2xl md:text-3xl font-bold text-red-900">Analytics</h1>
-              <p className="text-sm text-red-800/80 mt-1">Performance across campaigns and leads.</p>
+              <h1 className="text-2xl md:text-3xl font-bold text-coin-700 dark:text-coin-300">Analytics</h1>
+              <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">Performance across campaigns and leads.</p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <Link href={route('admin.marketing')} className="inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium bg-white text-red-800 border border-red-200 hover:bg-red-50">Marketing</Link>
-              <Link href={route('admin.marketing.leads.index')} className="inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium bg-white text-red-800 border border-red-200 hover:bg-red-50">Leads</Link>
+              <Link href={route('admin.marketing')} className="inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium bg-white dark:bg-gray-900/60 text-coin-700 dark:text-coin-300 border border-coin-200 dark:border-coin-800 hover:bg-coin-50 dark:hover:bg-coin-900/30">Marketing</Link>
+              <Link href={route('admin.marketing.leads.index')} className="inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium bg-white dark:bg-gray-900/60 text-coin-700 dark:text-coin-300 border border-coin-200 dark:border-coin-800 hover:bg-coin-50 dark:hover:bg-coin-900/30">Leads</Link>
             </div>
           </div>
 

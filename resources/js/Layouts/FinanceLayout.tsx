@@ -1,6 +1,5 @@
 import React from 'react';
-import { Head, Link, router, usePage } from '@inertiajs/react';
-import BaseShell from './BaseShell';
+import { Link, Head, router, usePage } from '@inertiajs/react';
 import IconMapper from '@/Components/IconMapper';
 import NotificationBell from '@/Components/Common/NotificationBell';
 import { User, PageProps } from '@/types';
@@ -9,6 +8,9 @@ import QuickRequisitionButton from '@/Components/Requisitions/QuickRequisitionBu
 import QuickBudgetButton from '@/Components/Budgets/QuickBudgetButton';
 import useCounters from '@/Hooks/useCounters';
 import FloatingNavButton from '@/Components/FloatingNavButton';
+import WeeklyTasks from '@/Components/WeeklyTasks';
+import { motion, AnimatePresence } from 'framer-motion';
+import useGpsAlerts from '@/Hooks/useGpsAlerts';
 
 interface Props {
   title: string;
@@ -24,16 +26,56 @@ interface NavItem {
   badge?: string;
 }
 
+// Quick Stats Component for Header
+const QuickStats: React.FC = () => {
+  const { counters } = useCounters();
+  const stats = [
+    { label: 'Approvals', value: (Number(counters?.requisitions_pending_admin || 0) + Number(counters?.finance_approvals_pending || 0)), color: 'bg-amber-500' },
+    { label: 'Open Downs', value: counters?.control_downs_active || 0, color: 'bg-red-500' },
+    { label: 'Messages', value: counters?.notifications_unread || 0, color: 'bg-blue-500' },
+  ].filter(s => s.value > 0);
+
+  if (stats.length === 0) return null;
+
+  return (
+    <div className="hidden lg:flex items-center gap-2 mr-4">
+      {stats.map((stat) => (
+        <div key={stat.label} className={`${stat.color} text-white px-3 py-1 rounded-full text-xs font-medium`}>
+          {stat.value} {stat.label}
+        </div>
+      ))}
+    </div>
+  );
+};
+
 export default function FinanceLayout({ title, children, user }: Props) {
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
+  const [tasksOpen, setTasksOpen] = React.useState(false);
+  const [isMobile, setIsMobile] = React.useState(false);
   const [logoOk, setLogoOk] = React.useState<boolean>(true);
+  const { counters } = useCounters();
   const { theme, toggle } = useTheme();
   const page = usePage<PageProps>();
-  const { counters } = useCounters();
+  const { weeklyTasks, isExecutiveAssistant } = page.props as any;
+
+  React.useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 1024);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  useGpsAlerts();
   const currentUser = (page?.props?.auth?.user as any) as (User & { roles?: string[]; permissions?: string[] }) | undefined;
   const permissions = currentUser?.permissions ?? [];
   const roles = currentUser?.roles ?? [];
   const isAdminUser = Array.isArray(roles) && (roles.includes('admin') || roles.includes('super_admin'));
+  const isGuard = Array.isArray(roles) && roles.includes('guard');
+  const isClient = Array.isArray(roles) && roles.includes('client');
+  const isFinanceUser = Array.isArray(roles) && roles.some((r) => ['super_admin', 'finance_officer', 'accountant', 'finance', 'accounting', 'admin'].includes(String(r)));
+  const canViewPayroll = isFinanceUser || isAdminUser;
+  const canViewAllInvoices = isFinanceUser || isAdminUser;
+  const canViewAllPayments = isFinanceUser || isAdminUser;
   const allowedRoles = ['admin', 'super_admin', 'finance_officer', 'accountant'];
   const hasRoleApproval = Array.isArray(roles) && roles.some((r) => allowedRoles.includes(String(r)));
   const hasPermApproval = Array.isArray(permissions) && permissions.some((p) => (
@@ -56,20 +98,32 @@ export default function FinanceLayout({ title, children, user }: Props) {
     }
   };
 
-  // Main Finance Navigation
+  // Main Finance Navigation (role-based)
   const financeLinks: NavItem[] = [
     { name: 'Dashboard', href: safeRoute('finance.dashboard', '/finance'), icon: <IconMapper name="home" className="h-6 w-6" />, current: isCurrent(safeRoute('finance.dashboard', '/finance')) },
-    { name: 'Invoices', href: safeRoute('finance.invoices.index', '/finance/invoices'), icon: <IconMapper name="file-text" className="h-6 w-6" />, current: isCurrent(safeRoute('finance.invoices.index', '/finance/invoices')) },
-    { name: 'Payments', href: safeRoute('finance.payments.index', '/finance/payments'), icon: <IconMapper name="check-square" className="h-6 w-6" />, current: isCurrent(safeRoute('finance.payments.index', '/finance/payments')) },
-    { name: 'Payroll', href: safeRoute('finance.payroll.index', '/finance/payroll'), icon: <IconMapper name="users" className="h-6 w-6" />, current: isCurrent(safeRoute('finance.payroll.index', '/finance/payroll')) },
+    ...(canViewAllInvoices ? [
+      { name: 'Invoices', href: safeRoute('finance.invoices.index', '/finance/invoices'), icon: <IconMapper name="file-text" className="h-6 w-6" />, current: isCurrent(safeRoute('finance.invoices.index', '/finance/invoices')) }
+    ] : []),
+    ...(canViewAllPayments ? [
+      { name: 'Payments', href: safeRoute('finance.payments.index', '/finance/payments'), icon: <IconMapper name="check-square" className="h-6 w-6" />, current: isCurrent(safeRoute('finance.payments.index', '/finance/payments')) }
+    ] : []),
+    ...(canViewPayroll ? [
+      { name: 'Payroll', href: safeRoute('finance.payroll.index', '/finance/payroll'), icon: <IconMapper name="users" className="h-6 w-6" />, current: isCurrent(safeRoute('finance.payroll.index', '/finance/payroll')) }
+    ] : []),
+  ];
+
+  // Directory & Reference Links
+  const directoryLinks: NavItem[] = [
+    { name: 'Clients', href: safeRoute('clients.index', '/clients/list'), icon: <IconMapper name="building" className="h-6 w-6" />, current: isCurrent(safeRoute('clients.index', '/clients/list')) },
+    { name: 'Guard Directory', href: safeRoute('guards.index', '/guards'), icon: <IconMapper name="shield" className="h-6 w-6" />, current: isCurrent(safeRoute('guards.index', '/guards')) },
   ];
 
   // Budget & Requisitions
   const managementLinks: NavItem[] = [
     { name: 'Requisitions', href: route('requisitions.index') as unknown as string, icon: <IconMapper name="clipboard-list" className="h-6 w-6" />, current: isCurrent(route('requisitions.index') as unknown as string), badge: (()=>{ const n = Number(counters?.requisitions_my_open||0); return n>0? String(n): undefined; })() },
     { name: 'Expenses', href: safeRoute('finance.expenses.index', '/finance/expenses'), icon: <IconMapper name="trending-down" className="h-6 w-6" />, current: isCurrent(safeRoute('finance.expenses.index', '/finance/expenses')), badge: (()=>{ const n = Number(counters?.finance_approvals_pending || counters?.finance_expenses_pending_mine || 0); return n>0? String(n): undefined; })() },
+    { name: 'Quotations', href: safeRoute('finance.quotations.index', '/finance/quotations'), icon: <IconMapper name="file-text" className="h-6 w-6" />, current: isCurrent(safeRoute('finance.quotations.index', '/finance/quotations')) },
     { name: 'Budgets', href: safeRoute('finance.budgets.index', '/finance/budgets'), icon: <IconMapper name="pie-chart" className="h-6 w-6" />, current: isCurrent(safeRoute('finance.budgets.index', '/finance/budgets')) },
-    { name: 'My Budgets', href: route('budgets.index'), icon: <IconMapper name="pie-chart" className="h-6 w-6" />, current: isCurrent(route('budgets.index')) },
   ];
 
   const handleLogout = (e: React.FormEvent) => {
@@ -142,16 +196,53 @@ export default function FinanceLayout({ title, children, user }: Props) {
                 </Link>
               ))}
             </div>
+
+            <div className="space-y-1">
+              <h3 className="px-3 text-xs font-semibold text-red-200 dark:text-gray-400 uppercase tracking-wider">Directory</h3>
+              {directoryLinks.map((item) => (
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md ${item.current ? 'bg-red-800 text-white dark:bg-gray-800' : 'text-red-100 hover:bg-red-800 hover:text-white dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white'}`}
+                >
+                  {item.icon}
+                  <span className="ml-3">{item.name}</span>
+                  {item.badge && (
+                    <span className="ml-auto inline-block py-0.5 px-2 text-xs font-medium rounded-full bg-white/10 text-white">{item.badge}</span>
+                  )}
+                </Link>
+              ))}
+            </div>
           </nav>
         </div>
 
-        <div className="flex-shrink-0 flex border-t border-red-800 p-4">
-          <div className="flex-shrink-0">
-            <div className="flex items-center">
-              <div className="text-sm font-medium text-white max-w-xs truncate">
-                {user?.name || 'User'}
-              </div>
+        <div className="flex-shrink-0 border-t border-red-800 dark:border-gray-800 p-4">
+            <div className="flex items-center gap-3 mb-3">
+            <div className="w-9 h-9 rounded-full bg-red-800 dark:bg-gray-800 flex items-center justify-center text-white font-semibold text-sm">
+              {user?.name?.charAt(0) || 'F'}
             </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-white truncate">{user?.name}</p>
+              <p className="text-xs text-red-200 dark:text-gray-400 truncate">{roles?.join(', ') || 'Finance User'}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Link
+              href={route('finance.profile') as unknown as string}
+              className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-md bg-gray-800 px-3 py-2 text-xs font-medium text-white hover:bg-gray-700 transition-colors"
+            >
+              <IconMapper name="User" size={14} />
+              Profile
+            </Link>
+            <form method="POST" action={route('logout')} onSubmit={handleLogout} className="flex-1">
+              <button
+                type="submit"
+                className="w-full inline-flex items-center justify-center gap-1.5 rounded-md bg-red-700 px-3 py-2 text-xs font-medium text-white hover:bg-red-600 transition-colors"
+              >
+                <IconMapper name="LogOut" size={14} />
+                Logout
+              </button>
+            </form>
           </div>
         </div>
       </div>
@@ -174,16 +265,18 @@ export default function FinanceLayout({ title, children, user }: Props) {
                 <h1 className="text-xl font-semibold text-red-900 dark:text-gray-100 truncate">{title}</h1>
               </div>
               <div className="flex items-center justify-end gap-2 sm:gap-4 shrink-0">
+                <QuickStats />
                 <NotificationBell />
+                <button
+                  onClick={() => setTasksOpen(!tasksOpen)}
+                  className="inline-flex items-center gap-1.5 rounded-md bg-red-100 text-red-700 hover:bg-red-200 px-3 py-1.5 text-sm dark:bg-red-900/30 dark:text-red-200 transition-colors"
+                  title="Toggle Tasks Panel"
+                >
+                  <IconMapper name="CheckSquare" size={16} />
+                  <span className="hidden sm:inline">Tasks</span>
+                </button>
                 <div className="hidden sm:flex items-center gap-4">
                   <QuickBudgetButton />
-                  <QuickRequisitionButton />
-                  <Link
-                    href={route('finance.profile') as unknown as string}
-                    className="inline-flex items-center px-3 py-1.5 rounded-md bg-gray-800 text-white hover:bg-gray-700 text-sm"
-                  >
-                    My Profile
-                  </Link>
                 </div>
                 {Array.isArray(roles) && roles.includes('super_admin') && (
                   <Link
@@ -195,12 +288,6 @@ export default function FinanceLayout({ title, children, user }: Props) {
                     <span className="sm:hidden">SA</span>
                   </Link>
                 )}
-                <Link
-                  href={route('requisitions.index')}
-                  className="hidden sm:inline-flex items-center px-3 py-1.5 rounded-md bg-red-600 text-white hover:bg-red-700 text-sm"
-                >
-                  Request Requisition
-                </Link>
                 <button
                   onClick={toggle}
                   className="rounded-md p-2 text-gray-600 hover:bg-gray-100 hover:text-gray-800 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-gray-100"
@@ -211,26 +298,53 @@ export default function FinanceLayout({ title, children, user }: Props) {
                     <IconMapper name="moon" className="h-5 w-5" />
                   )}
                 </button>
-                <form method="POST" action={route('logout')} onSubmit={handleLogout} className="inline">
-                  <button
-                    type="submit"
-                    className="rounded-md p-2 text-gray-600 hover:bg-gray-100 hover:text-gray-800 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-gray-100"
-                    title="Logout"
-                  >
-                    <IconMapper name="log-out" className="h-5 w-5" />
-                  </button>
-                </form>
               </div>
             </div>
           </div>
         </div>
 
         {/* Page content */}
-        <BaseShell noHeader fullScreen={false}>
-          <div className="animate-slideUp transition-all-smooth">
-            {children}
+        <main className="flex-1">
+          <div className="py-6 px-4 sm:px-6 lg:px-8">
+            <AnimatePresence mode="wait">
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.2 }}
+                className={`grid gap-4 ${tasksOpen ? 'grid-cols-1 xl:grid-cols-4' : 'grid-cols-1'}`}
+              >
+                <div className={tasksOpen ? 'xl:col-span-3' : ''}>
+                  {children}
+                </div>
+                {tasksOpen && !isMobile && (
+                  <motion.div
+                    initial={{ opacity: 0, x: 50 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 50 }}
+                    transition={{ duration: 0.3 }}
+                    className="xl:col-span-1 hidden xl:block"
+                  >
+                    <WeeklyTasks
+                      tasks={weeklyTasks || []}
+                      showModule={true}
+                      isExecutiveAssistant={isExecutiveAssistant}
+                    />
+                  </motion.div>
+                )}
+              </motion.div>
+            </AnimatePresence>
           </div>
-        </BaseShell>
+        </main>
+        {tasksOpen && isMobile && (
+          <WeeklyTasks
+            tasks={weeklyTasks || []}
+            showModule={true}
+            isExecutiveAssistant={isExecutiveAssistant}
+            isOpen={tasksOpen}
+            onClose={() => setTasksOpen(false)}
+          />
+        )}
         <FloatingNavButton />
       </div>
     </div>

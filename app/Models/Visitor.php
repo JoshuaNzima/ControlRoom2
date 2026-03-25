@@ -13,24 +13,26 @@ class Visitor extends Model
     protected $fillable = [
         'name',
         'company',
+        'phone',
+        'email',
         'purpose',
-        'contact_person',
+        'host_id',
+        'host_name',
+        'notes',
         'badge_number',
-        'status',
-        'check_in_at',
-        'check_out_at',
-        'created_by',
+        'registered_by',
     ];
 
     protected $casts = [
-        'check_in_at' => 'datetime',
-        'check_out_at' => 'datetime',
     ];
 
-    const STATUSES = ['checked_in', 'checked_out'];
-
-    public function creator(): BelongsTo
+    public function host(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'created_by');
+        return $this->belongsTo(User::class, 'host_id');
+    }
+
+    public function registeredBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'registered_by');
     }
 }

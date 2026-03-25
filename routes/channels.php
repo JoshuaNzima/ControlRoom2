@@ -40,6 +40,11 @@ Broadcast::channel('user.{id}', function ($user, $id) {
     return $user && (int) $user->id === (int) $id;
 });
 
+// Authorize supervisor private channel (used by QRScanned event)
+Broadcast::channel('supervisor.{id}', function ($user, $id) {
+    return $user && (int) $user->id === (int) $id;
+});
+
 Broadcast::channel('gps-alerts', function ($user) {
     if (!$user) return false;
     return method_exists($user, 'hasAnyRole')

@@ -1,14 +1,5 @@
 import { useEffect, useCallback } from 'react';
-import Echo from 'laravel-echo';
-import Pusher from 'pusher-js';
 import { toast } from 'react-hot-toast';
-
-declare global {
-  interface Window {
-    Pusher?: any;
-    Echo?: any;
-  }
-}
 
 interface QRScanEvent {
   message: string;
@@ -24,17 +15,15 @@ interface QRScanEvent {
   };
 }
 
-// `pusher-js` may export the Pusher constructor as the default property
-window.Pusher = (Pusher as any)?.default || Pusher;
-
 /**
- * Hook to listen for QR scan events on the control-room channel
- * This allows control room operators to see real-time scan updates from all supervisors
+ * Hook to listen for QR scan events on the control-room channel.
+ * Relies on the Echo instance already initialised in bootstrap.ts.
  */
 const useControlRoomEcho = (onScanUpdate?: (event: QRScanEvent) => void) => {
   const handleQRScanned = useCallback((e: QRScanEvent) => {
     // Show toast notification with scan details
-    const message = `${e.message}\n${e.data.site_name} - ${e.data.supervisor_name}`;
+    const data = e?.data ?? {} as any;
+    const message = `${e?.message ?? 'QR Scan'}\n${data.site_name ?? 'Unknown'} - ${data.supervisor_name ?? 'Unknown'}`;
     toast.success(message, { duration: 5000 });
 
     // Call optional callback for custom handling
@@ -44,23 +33,27 @@ const useControlRoomEcho = (onScanUpdate?: (event: QRScanEvent) => void) => {
   }, [onScanUpdate]);
 
   useEffect(() => {
-    if (!window.Echo) {
-      window.Echo = new Echo({
-        broadcaster: 'pusher',
-        key: process.env.VITE_PUSHER_APP_KEY,
-        cluster: process.env.VITE_PUSHER_APP_CLUSTER,
-        forceTLS: true,
-        client: window.Pusher,
-      });
+    const echo = (window as any).Echo;
+
+    // If Echo is not properly configured (just a stub), skip listening
+    if (!echo || typeof echo.private !== 'function') {
+      return;
     }
 
-    // Listen on the control-room channel for all scan events
-    const channel = window.Echo.private('control-room');
-
-    channel.listen('.QRScanned', handleQRScanned);
+    let channel: any;
+    try {
+      channel = echo.private('control-room');
+      // Listen for the Laravel QRScanned event (class-based event name)
+      channel.listen('QRScanned', handleQRScanned);
+    } catch (err) {
+      console.warn('useControlRoomEcho: failed to subscribe', err);
+      return;
+    }
 
     return () => {
-      channel.stopListening('.QRScanned');
+      try {
+        channel?.stopListening('.QRScanned');
+      } catch {}
     };
   }, [handleQRScanned]);
 };

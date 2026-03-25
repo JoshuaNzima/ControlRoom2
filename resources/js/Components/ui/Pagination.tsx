@@ -4,16 +4,32 @@ import { router } from '@inertiajs/react';
 interface PaginationProps {
   currentPage: number;
   lastPage: number;
-  total: number;
-  perPage: number;
-  from: number;
-  to: number;
-  baseUrl: string;
+  total?: number;
+  perPage?: number;
+  from?: number;
+  to?: number;
+  /** Route name or URL to navigate to. If omitted, uses onPageChange callback. */
+  baseUrl?: string;
+  /** Query params to preserve when navigating */
   filters?: Record<string, any>;
+  /** Callback for page changes (alternative to baseUrl) */
+  onPageChange?: (page: number) => void;
 }
 
-export function Pagination({ currentPage, lastPage, total, perPage, from, to, baseUrl, filters = {} }: PaginationProps) {
-  const pageNumbers = [];
+export function Pagination({
+  currentPage,
+  lastPage,
+  total = 0,
+  perPage = 20,
+  from = 0,
+  to = 0,
+  baseUrl,
+  filters = {},
+  onPageChange,
+}: PaginationProps) {
+  if (lastPage <= 1) return null;
+
+  const pageNumbers: (number | string)[] = [];
   let startPage = Math.max(1, currentPage - 2);
   let endPage = Math.min(lastPage, currentPage + 2);
 
@@ -35,8 +51,16 @@ export function Pagination({ currentPage, lastPage, total, perPage, from, to, ba
   }
 
   const goToPage = (page: number) => {
-    router.get(baseUrl, { ...filters, page }, { preserveState: true });
+    if (onPageChange) {
+      onPageChange(page);
+    } else if (baseUrl) {
+      router.get(baseUrl, { ...filters, page }, { preserveState: true });
+    }
   };
+
+  // Compute from/to if not provided
+  const displayFrom = from || (total > 0 ? (currentPage - 1) * perPage + 1 : 0);
+  const displayTo = to || Math.min(currentPage * perPage, total);
 
   const PageButton = ({ page, current }: { page: number; current: boolean }) => (
     <button
@@ -44,9 +68,9 @@ export function Pagination({ currentPage, lastPage, total, perPage, from, to, ba
       type="button"
       className={`
         relative inline-flex items-center px-4 py-2 text-sm font-semibold
-        focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950
+        focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950
         ${current
-          ? 'z-10 bg-coin-700 text-white'
+          ? 'z-10 bg-red-700 text-white'
           : 'text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-950 ring-1 ring-inset ring-gray-300 dark:ring-gray-800 hover:bg-gray-50 dark:hover:bg-gray-900'
         }
       `}
@@ -56,31 +80,39 @@ export function Pagination({ currentPage, lastPage, total, perPage, from, to, ba
   );
 
   return (
-    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-4 py-3 sm:px-6">
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-4 py-3 sm:px-6 rounded-b-lg">
+      {/* Mobile: simple prev/next */}
       <div className="flex flex-1 justify-between sm:hidden">
         <button
           onClick={() => currentPage > 1 && goToPage(currentPage - 1)}
           disabled={currentPage === 1}
           type="button"
-          className="relative inline-flex items-center rounded-md border border-gray-300 dark:border-gray-800 bg-white dark:bg-gray-950 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950 disabled:opacity-60"
+          className="relative inline-flex items-center rounded-md border border-gray-300 dark:border-gray-800 bg-white dark:bg-gray-950 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-900 disabled:opacity-60"
         >
           Previous
         </button>
+        <span className="inline-flex items-center text-sm text-gray-500 dark:text-gray-400">
+          {currentPage} / {lastPage}
+        </span>
         <button
           onClick={() => currentPage < lastPage && goToPage(currentPage + 1)}
           disabled={currentPage === lastPage}
           type="button"
-          className="relative ml-3 inline-flex items-center rounded-md border border-gray-300 dark:border-gray-800 bg-white dark:bg-gray-950 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950 disabled:opacity-60"
+          className="relative ml-3 inline-flex items-center rounded-md border border-gray-300 dark:border-gray-800 bg-white dark:bg-gray-950 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-900 disabled:opacity-60"
         >
           Next
         </button>
       </div>
+
+      {/* Desktop: full pagination */}
       <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
         <div>
-          <p className="text-sm text-gray-700 dark:text-gray-300">
-            Showing <span className="font-medium">{from}</span> to <span className="font-medium">{to}</span> of{' '}
-            <span className="font-medium">{total}</span> results
-          </p>
+          {total > 0 && (
+            <p className="text-sm text-gray-700 dark:text-gray-300">
+              Showing <span className="font-medium">{displayFrom}</span> to <span className="font-medium">{displayTo}</span> of{' '}
+              <span className="font-medium">{total}</span> results
+            </p>
+          )}
         </div>
         <div>
           <nav className="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
@@ -88,7 +120,7 @@ export function Pagination({ currentPage, lastPage, total, perPage, from, to, ba
               onClick={() => currentPage > 1 && goToPage(currentPage - 1)}
               disabled={currentPage === 1}
               type="button"
-              className="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 dark:ring-gray-800 hover:bg-gray-50 dark:hover:bg-gray-900 focus:z-20 focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950 disabled:opacity-60"
+              className="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 dark:ring-gray-800 hover:bg-gray-50 dark:hover:bg-gray-900 focus:z-20 disabled:opacity-60"
             >
               <span className="sr-only">Previous</span>
               <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
@@ -101,7 +133,7 @@ export function Pagination({ currentPage, lastPage, total, perPage, from, to, ba
                 <PageButton key={idx} page={pageNum} current={pageNum === currentPage} />
               ) : (
                 <span key={idx} className="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-950 ring-1 ring-inset ring-gray-300 dark:ring-gray-800">
-                  {pageNum}
+                  …
                 </span>
               )
             )}
@@ -110,7 +142,7 @@ export function Pagination({ currentPage, lastPage, total, perPage, from, to, ba
               onClick={() => currentPage < lastPage && goToPage(currentPage + 1)}
               disabled={currentPage === lastPage}
               type="button"
-              className="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 dark:ring-gray-800 hover:bg-gray-50 dark:hover:bg-gray-900 focus:z-20 focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950 disabled:opacity-60"
+              className="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 dark:ring-gray-800 hover:bg-gray-50 dark:hover:bg-gray-900 focus:z-20 disabled:opacity-60"
             >
               <span className="sr-only">Next</span>
               <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">

@@ -40,6 +40,13 @@ type PageProps = {
     links?: Array<{ url: string | null; label: string; active: boolean }>;
     meta?: { current_page: number; last_page: number; total?: number };
   };
+  stats?: {
+    total?: number;
+    open?: number;
+    escalated?: number;
+    resolved?: number;
+    absconding?: number;
+  };
 };
 
 // Status Config
@@ -604,7 +611,8 @@ function GuardDetailsModal({
 
 // Main Component
 export default function DownsIndex() {
-  const { auth, downs } = usePage<PageProps>().props;
+  const { auth, downs: downsProp, stats: serverStats } = usePage().props as any;
+  const downs = downsProp?.data ? downsProp : { data: [] };
   const [selectedGuardId, setSelectedGuardId] = useState<number | null>(null);
   const [isReportOpen, setIsReportOpen] = useState(false);
 
@@ -613,36 +621,40 @@ export default function DownsIndex() {
   };
 
   const handleResolve = (id: number) => {
-    router.post(route('control-room.downs.resolve', id));
+    // The resolve route uses resolveWithIncentive which requires resolution_type
+    router.post(route('control-room.downs.resolve', id), {
+      resolution_type: 'control_room_resolved',
+    });
   };
 
   const handleAbscond = (id: number) => {
     router.post(route('control-room.downs.abscond', id));
   };
 
-  // Stats
+  // Use server stats (accurate across all pages) with fallback to client-side counting
+  const downsData = downs?.data || [];
   const stats = [
     {
       label: 'Open',
-      value: downs.data.filter((d) => d.status === 'open').length,
+      value: serverStats?.open ?? downsData.filter((d: any) => d.status === 'open').length,
       color: 'bg-blue-500',
       icon: 'AlertCircle',
     },
     {
       label: 'Escalated',
-      value: downs.data.filter((d) => d.status === 'escalated').length,
+      value: serverStats?.escalated ?? downsData.filter((d: any) => d.status === 'escalated').length,
       color: 'bg-amber-500',
       icon: 'TrendingUp',
     },
     {
       label: 'Resolved',
-      value: downs.data.filter((d) => d.status === 'resolved').length,
+      value: serverStats?.resolved ?? downsData.filter((d: any) => d.status === 'resolved').length,
       color: 'bg-emerald-500',
       icon: 'CheckCircle',
     },
     {
       label: 'Absconding',
-      value: downs.data.filter((d) => d.status === 'absconding').length,
+      value: serverStats?.absconding ?? downsData.filter((d: any) => d.status === 'absconding').length,
       color: 'bg-purple-500',
       icon: 'ShieldAlert',
     },
@@ -669,7 +681,7 @@ export default function DownsIndex() {
               <div className="text-right">
                 <p className="text-xs text-red-200">Active</p>
                 <p className="text-2xl font-bold">
-                  {downs.data.filter((d) => d.status !== 'resolved').length}
+                  {downsData.filter((d: any) => d.status !== 'resolved').length}
                 </p>
               </div>
             </div>
@@ -714,11 +726,11 @@ export default function DownsIndex() {
             <h2 className="text-lg font-semibold text-white flex items-center gap-2">
               Active Downs
               <Badge variant="outline" className="text-slate-400">
-                {downs.data.length}
+                {downsData.length}
               </Badge>
             </h2>
 
-            {downs.data.length === 0 ? (
+            {downsData.length === 0 ? (
               <EmptyState
                 title="No downs to display"
                 description="All clear! New downs will appear here."
@@ -726,7 +738,7 @@ export default function DownsIndex() {
               />
             ) : (
               <div className="space-y-3">
-                {downs.data.map((down) => (
+                {downsData.map((down: any) => (
                   <DownCard
                     key={down.id}
                     down={down}

@@ -14,6 +14,9 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Session;
 use App\Events\QRScanned;
+use App\Jobs\TagScanJob;
+use App\Notifications\GenericDbNotification;
+use Illuminate\Support\Facades\Notification;
 use Inertia\Inertia;
 use Illuminate\Validation\ValidationException;
 
@@ -175,6 +178,14 @@ class SiteScanController extends Controller
             'notes' => 'Site QR scan via ' . $roleName,
         ]);
 
+        // Tag the scan — runs synchronously if queue is 'sync', otherwise queued
+        // This ensures the scan always appears in the control-room dashboard
+        if (config('queue.default') === 'sync') {
+            TagScanJob::dispatchSync($scan->id);
+        } else {
+            TagScanJob::dispatch($scan->id)->onQueue('default');
+        }
+
         // Dispatch event for real-time notifications (control-room + supervisor private channel)
         event(new QRScanned(
             $user->id,
@@ -191,14 +202,28 @@ class SiteScanController extends Controller
             ]
         ));
 
+        // Send push notification to control room operators
+        try {
+            $controlRoomUsers = \App\Models\User::role(['control_room_operator', 'operations_officer', 'admin', 'super_admin'])->get();
+            if ($controlRoomUsers->isNotEmpty()) {
+                Notification::send($controlRoomUsers, new GenericDbNotification([
+                    'title' => 'Site QR Scanned',
+                    'message' => sprintf('%s scanned %s', $user->name, $site->name),
+                    'url' => route('control-room.dashboard'),
+                ]));
+            }
+        } catch (\Throwable $e) {
+            // swallow notification errors
+        }
+
         // Determine redirect based on role
         $managementRoles = ['supervisor', 'zone_commander', 'sergeant'];
 
         if (in_array($roleName, $managementRoles) || $user->hasAnyRole($managementRoles)) {
             // Check if attendance already taken today
             $attendance = Attendance::where('supervisor_id', $user->id)
-                ->whereDate('scanned_at', today())
-                ->where('site_id', $site->id)
+                ->whereDate('date', today())
+                ->where('client_site_id', $site->id)
                 ->first();
 
             if (!$attendance) {
@@ -225,8 +250,10 @@ class SiteScanController extends Controller
             'scan_id' => $scan->id,
             'site_id' => $site->id,
             'site_name' => $site->name,
+            'client_name' => (string) ($site->client?->name ?? ''),
             'checkpoint_id' => $checkpoint->id,
             'scanned_at' => now()->toIso8601String(),
+            'expires_at' => now()->addMinutes(config('scanner.lock_minutes', 120))->toIso8601String(),
             'latitude' => $latitude,
             'longitude' => $longitude,
             'location_verified' => $locationVerified,

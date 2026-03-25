@@ -321,15 +321,15 @@ export default function TrainerGuardsIndex() {
   };
 
   return (
-    <TrainingLayout title="Trainer Guards" user={auth.user}>
-      <Head title="Trainer Guards" />
+    <TrainingLayout title="Refresher Guards" user={auth.user}>
+      <Head title="Refresher Guards" />
       <div className="p-4 md:p-6 max-w-7xl mx-auto space-y-6">
         {/* Header Section */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
               <IconMapper name="UserCheck" className="h-7 w-7 text-red-600" />
-              Trainer Guards
+              Refresher Guards
             </h1>
             <p className="text-gray-600 dark:text-gray-400 mt-1">Manage guards for refresher training and evaluations</p>
           </div>

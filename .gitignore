@@ -1,6 +1,12 @@
 *.log
 .DS_Store
 .env
+
+# Debug/test scripts (should never be committed)
+debug_*.php
+test_*.php
+fix_*.php
+/laravel.log
 .env.backup
 .env.production
 .phpactor.json

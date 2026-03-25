@@ -156,21 +156,21 @@ Route::middleware(['auth'])->group(function () {
                 ->middleware(['role_or_permission:operations_officer|manager|control_room_operator|super_admin'])
                 ->name('unassign-site');
 
-            // Status actions
+            // Status actions - allow control room operators as well
             Route::post('/{guard}/suspend', [\App\Http\Controllers\ControlRoom\GuardManageController::class, 'suspend'])
-                ->middleware(['role_or_permission:operations_officer|manager|hr|hr_manager|super_admin|zone_commander'])
+                ->middleware(['role_or_permission:operations_officer|manager|hr|hr_manager|super_admin|zone_commander|control_room_operator'])
                 ->name('suspend');
             Route::post('/{guard}/reinstate', [\App\Http\Controllers\ControlRoom\GuardManageController::class, 'reinstate'])
-                ->middleware(['role_or_permission:operations_officer|manager|hr|hr_manager|super_admin|zone_commander'])
+                ->middleware(['role_or_permission:operations_officer|manager|hr|hr_manager|super_admin|zone_commander|control_room_operator'])
                 ->name('reinstate');
             Route::post('/{guard}/dismiss', [\App\Http\Controllers\ControlRoom\GuardManageController::class, 'dismiss'])
-                ->middleware(['role_or_permission:operations_officer|manager|hr|hr_manager|super_admin|zone_commander'])
+                ->middleware(['role_or_permission:operations_officer|manager|hr|hr_manager|super_admin|zone_commander|control_room_operator'])
                 ->name('dismiss');
             Route::post('/{guard}/resign', [\App\Http\Controllers\ControlRoom\GuardManageController::class, 'resign'])
-                ->middleware(['role_or_permission:operations_officer|manager|hr|hr_manager|super_admin|zone_commander'])
+                ->middleware(['role_or_permission:operations_officer|manager|hr|hr_manager|super_admin|zone_commander|control_room_operator'])
                 ->name('resign');
             Route::post('/{guard}/abscond', [\App\Http\Controllers\ControlRoom\GuardManageController::class, 'abscond'])
-                ->middleware(['role_or_permission:operations_officer|manager|hr|hr_manager|super_admin|zone_commander'])
+                ->middleware(['role_or_permission:operations_officer|manager|hr|hr_manager|super_admin|zone_commander|control_room_operator'])
                 ->name('abscond');
         });
 		Route::get('/assignments', [\App\Http\Controllers\ControlRoom\AssignmentsController::class, 'index'])->name('assignments.index');

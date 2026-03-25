@@ -6,7 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Models\Requisition;
 use App\Models\RequisitionAttachment;
 use App\Models\RequisitionItem;
+use App\Models\User;
+use App\Notifications\GenericDbNotification;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -143,6 +146,20 @@ class RequisitionController extends Controller
             });
 
             \Log::info('Requisition transaction completed', ['requisition_id' => $requisition->id]);
+
+            // Send push notification to admins
+            try {
+                $admins = User::role(['admin', 'super_admin'])->get();
+                if ($admins->isNotEmpty()) {
+                    Notification::send($admins, new GenericDbNotification([
+                        'title' => 'New Requisition Submitted',
+                        'message' => sprintf('%s submitted "%s" (%s)', $user->name, $requisition->title, $requisition->amount ? 'MWK ' . number_format($requisition->amount, 2) : 'No amount'),
+                        'url' => route('requisitions.show', $requisition->id),
+                    ]));
+                }
+            } catch (\Throwable $e) {
+                \Log::warning('Failed to send requisition notification', ['error' => $e->getMessage()]);
+            }
 
             return redirect()->route('requisitions.index')->with('success', 'Requisition created successfully.');
         } catch (\Illuminate\Validation\ValidationException $e) {

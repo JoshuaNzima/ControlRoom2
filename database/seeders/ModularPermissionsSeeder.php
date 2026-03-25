@@ -125,6 +125,15 @@ class ModularPermissionsSeeder extends Seeder
                 'training.regimens.view',
                 'training.regimens.manage',
             ],
+
+            'tasks' => [
+                'tasks.view',
+                'tasks.create',
+                'tasks.edit',
+                'tasks.delete',
+                'tasks.complete',
+                'tasks.view_all',
+            ],
         ];
 
         // Create all permissions
@@ -208,6 +217,19 @@ class ModularPermissionsSeeder extends Seeder
             'guards.view', // Only assigned
             'reports.view', // Only their reports
             'clients.reports.view',
+        ]);
+
+        // Executive Assistant - Can view and manage all tasks
+        $executiveAssistant = Role::firstOrCreate(['name' => 'executive_assistant']);
+        $executiveAssistant->givePermissionTo([
+            'tasks.view',
+            'tasks.create',
+            'tasks.edit',
+            'tasks.delete',
+            'tasks.complete',
+            'tasks.view_all',
+            'reports.view',
+            'reports.generate',
         ]);
     }
 }

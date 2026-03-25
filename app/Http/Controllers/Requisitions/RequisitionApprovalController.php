@@ -4,8 +4,11 @@ namespace App\Http\Controllers\Requisitions;
 
 use App\Http\Controllers\Controller;
 use App\Models\Requisition;
+use App\Models\User;
+use App\Notifications\GenericDbNotification;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Notification;
 
 class RequisitionApprovalController extends Controller
 {
@@ -27,6 +30,20 @@ class RequisitionApprovalController extends Controller
         $requisition->notes_admin = $request->input('notes_admin');
         $requisition->save();
 
+        // Send push notification to requester
+        try {
+            $requester = User::find($requisition->requested_by);
+            if ($requester) {
+                $requester->notify(new GenericDbNotification([
+                    'title' => 'Requisition Approved',
+                    'message' => sprintf('Your requisition "%s" has been approved.', $requisition->title),
+                    'url' => route('requisitions.show', $requisition->id),
+                ]));
+            }
+        } catch (\Throwable $e) {
+            // swallow notification errors
+        }
+
         return back();
     }
 
@@ -47,6 +64,20 @@ class RequisitionApprovalController extends Controller
         $requisition->approved_by = $user->id;
         $requisition->notes_admin = $data['notes_admin'] ?? null;
         $requisition->save();
+
+        // Send push notification to requester
+        try {
+            $requester = User::find($requisition->requested_by);
+            if ($requester) {
+                $requester->notify(new GenericDbNotification([
+                    'title' => 'Requisition Declined',
+                    'message' => sprintf('Your requisition "%s" needs revision.', $requisition->title),
+                    'url' => route('requisitions.show', $requisition->id),
+                ]));
+            }
+        } catch (\Throwable $e) {
+            // swallow notification errors
+        }
 
         return back();
     }

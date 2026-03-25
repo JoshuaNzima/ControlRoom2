@@ -28,7 +28,8 @@ class TagScanJob implements ShouldQueue
     public function __construct(int $scanId)
     {
         $this->scanId = $scanId;
-        $this->onConnection('redis');
+        // Use the default queue connection (database) instead of hardcoding redis
+        // This ensures the job runs even without Redis configured
     }
 
     /**
@@ -36,7 +37,7 @@ class TagScanJob implements ShouldQueue
      */
     public function handle(ScanTagger $tagger): void
     {
-        $scan = CheckpointScan::with('checkpoint.clientSite.client')->find($this->scanId);
+        $scan = CheckpointScan::with(['checkpoint.clientSite.client', 'supervisor'])->find($this->scanId);
 
         if (!$scan) {
             Log::warning('TagScanJob: checkpoint scan not found: ' . $this->scanId);

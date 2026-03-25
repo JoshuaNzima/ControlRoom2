@@ -22,8 +22,14 @@ class AutoMarkPresentAttendance extends Command
             'auto_present' => false,
         ]);
 
-        if (empty($methods['auto_present'])) {
-            $this->info('Auto-present is disabled.');
+        // Strict check: only proceed if auto_present is explicitly truthy
+        $autoPresent = false;
+        if (is_array($methods) && array_key_exists('auto_present', $methods)) {
+            $autoPresent = filter_var($methods['auto_present'], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) ?? false;
+        }
+
+        if (!$autoPresent) {
+            $this->info('Auto-present is disabled (setting value: '.json_encode($methods['auto_present'] ?? null).').');
             return self::SUCCESS;
         }
 

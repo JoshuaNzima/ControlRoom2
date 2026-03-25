@@ -33,8 +33,8 @@ class ScanTagged implements ShouldBroadcast
             'scan_tag' => [
                 'id' => $this->scanTag->id,
                 'tags' => $this->scanTag->tags,
-                'created_at' => $this->scanTag->created_at,
-                'checkpoint_scan_id' => $this->scanTag->checkpoint_scan_id
+                'created_at' => $this->scanTag->created_at?->toIso8601String(),
+                'checkpoint_scan_id' => $this->scanTag->checkpoint_scan_id,
             ]
         ];
     }

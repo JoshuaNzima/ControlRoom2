@@ -336,6 +336,12 @@ export default function InvoiceIndex({ invoices, summary, filters, clients, defa
                     >
                       View
                     </Link>
+                    <Link
+                      href={route('finance.invoices.preview', invoice.id)}
+                      className="px-3 py-1.5 rounded-md bg-coin-100 text-coin-700 hover:bg-coin-200 dark:bg-coin-900/30 dark:text-coin-200"
+                    >
+                      Preview
+                    </Link>
                     {invoice.status === 'draft' && (
                       <button
                         type="button"
@@ -413,6 +419,12 @@ export default function InvoiceIndex({ invoices, summary, filters, clients, defa
                           className="text-coin-700 hover:text-coin-800 dark:text-coin-200 dark:hover:text-coin-100 font-medium"
                         >
                           View
+                        </Link>
+                        <Link
+                          href={route('finance.invoices.preview', invoice.id)}
+                          className="text-coin-700 hover:text-coin-800 dark:text-coin-200 dark:hover:text-coin-100 font-medium"
+                        >
+                          Preview
                         </Link>
                         {invoice.status === 'draft' && (
                           <button

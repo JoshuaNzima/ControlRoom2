@@ -198,6 +198,7 @@ export default function ScannerModal({ open, onClose, activeScan }: Props) {
 
   const handleScan = async (code: string) => {
     setIsLoading(true);
+    setScanError(null);
     const normalized = normalizeCode(code);
     
     try {
@@ -207,7 +208,6 @@ export default function ScannerModal({ open, onClose, activeScan }: Props) {
       }
     } catch (error) {
       console.error('Scan submission error:', error);
-    } finally {
       setIsLoading(false);
     }
   };
@@ -264,41 +264,86 @@ export default function ScannerModal({ open, onClose, activeScan }: Props) {
 
   // Try to interpret the raw code as a site scan and visit the site scan endpoint (GET)
   const submitIfSiteScan = async (raw: string): Promise<boolean> => {
+    let siteId: string | number | null = null;
+    let siteName: string | null = null;
+
     try {
       // JSON payload (our QR generation may embed type/site_id)
       if (raw.trim().startsWith('{')) {
         const obj = JSON.parse(raw);
-        const siteId = obj.site_id ?? obj.site ?? obj.id;
-        if ((obj.type === 'site' || obj.t === 'site') && siteId) {
-          router.visit(route('scan.site', { site: siteId, latitude: location?.lat, longitude: location?.lon }));
-          return true;
+        siteId = obj.site_id ?? obj.site ?? obj.id;
+        siteName = obj.site_name ?? obj.name ?? null;
+        if (!((obj.type === 'site' || obj.t === 'site') && siteId)) {
+          siteId = null;
         }
       }
     } catch {}
 
     // URL payload containing /site/scan/{id}
-    try {
-      if (raw.startsWith('http')) {
-        const url = new URL(raw);
-        const parts = url.pathname.split('/').filter(Boolean);
-        const siteIdx = parts.findIndex(p => p.toLowerCase() === 'site' && parts[parts.indexOf(p)+1]?.toLowerCase() === 'scan');
-        if (siteIdx !== -1) {
-          const idPart = parts[siteIdx + 2];
-          if (idPart) {
-            router.visit(route('scan.site', { site: idPart, latitude: location?.lat, longitude: location?.lon }));
-            return true;
+    if (!siteId) {
+      try {
+        if (raw.startsWith('http')) {
+          const url = new URL(raw);
+          const parts = url.pathname.split('/').filter(Boolean);
+          const siteIdx = parts.findIndex(p => p.toLowerCase() === 'site' && parts[parts.indexOf(p)+1]?.toLowerCase() === 'scan');
+          if (siteIdx !== -1) {
+            const idPart = parts[siteIdx + 2];
+            if (idPart) siteId = idPart;
+          }
+          // query param ?site=<id>
+          if (!siteId) {
+            const siteParam = url.searchParams.get('site');
+            if (siteParam) siteId = siteParam;
           }
         }
-        // query param ?site=<id>
-        const siteParam = url.searchParams.get('site');
-        if (siteParam) {
-          router.visit(route('scan.site', { site: siteParam, latitude: location?.lat, longitude: location?.lon }));
-          return true;
-        }
-      }
-    } catch {}
+      } catch {}
+    }
 
-    return false;
+    if (!siteId) return false;
+
+    // Submit site scan with proper success/error handling
+    const loadingToast = toast.loading('Processing site scan...');
+
+    router.visit(route('scan.site', { site: siteId, latitude: location?.lat, longitude: location?.lon }), {
+      onSuccess: (page) => {
+        toast.dismiss(loadingToast);
+        playSuccessSound();
+        triggerHaptic('success');
+
+        const flash = (page.props as any)?.flash;
+
+        setScanResult({
+          type: 'site',
+          name: siteName || flash?.scan_success || `Site #${siteId}`,
+          locationVerified: flash?.location_verified ?? true,
+          timestamp: new Date().toISOString(),
+        });
+        setShowSuccess(true);
+        setIsLoading(false);
+
+        // Auto-close after showing success for 2 seconds
+        setTimeout(() => {
+          onClose();
+        }, 2000);
+      },
+      onError: (errors) => {
+        toast.dismiss(loadingToast);
+        playErrorSound();
+        triggerHaptic('error');
+
+        const message = Object.values(errors)[0] as string;
+        const errorMsg = message || 'Failed to process site scan. Please try again.';
+
+        setScanError(errorMsg);
+        toast.error(errorMsg, { duration: 5000 });
+        setIsLoading(false);
+      },
+      onFinish: () => {
+        // isLoading is handled in onSuccess/onError
+      },
+    });
+
+    return true;
   };
 
   const clearScan = () => {

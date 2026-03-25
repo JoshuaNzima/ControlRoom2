@@ -58,15 +58,12 @@ class ExpensePolicy
         if ($expense->status !== 'pending') {
             return false;
         }
-        // Stage: admin_pending -> admins (and finance roles) can approve
-        if (($expense->approval_stage ?? 'admin_pending') === 'admin_pending') {
-            return $user->hasAnyRole(['admin','super_admin','finance_officer','accountant']) || $user->hasAnyPermission(['finance.expenses.manage','finance.*']);
-        }
-        // Stage: asset_pending -> asset managers (and super_admin) can approve
-        if (($expense->approval_stage ?? '') === 'asset_pending') {
-            return $user->hasAnyRole(['asset_manager','super_admin']);
-        }
-        return false;
+
+        return match ($expense->approval_stage ?? 'admin_pending') {
+            'admin_pending' => $user->hasAnyRole(['admin', 'super_admin', 'finance_officer', 'accountant']) || $user->hasAnyPermission(['finance.expenses.manage', 'finance.*']),
+            'asset_pending' => $user->hasAnyRole(['asset_manager', 'super_admin']),
+            default => false,
+        };
     }
 
     /**
@@ -77,13 +74,8 @@ class ExpensePolicy
         if ($expense->status !== 'pending') {
             return false;
         }
-        if (($expense->approval_stage ?? 'admin_pending') === 'admin_pending') {
-            return $user->hasAnyRole(['admin','super_admin','finance_officer','accountant']) || $user->hasAnyPermission(['finance.expenses.manage','finance.*']);
-        }
-        if (($expense->approval_stage ?? '') === 'asset_pending') {
-            return $user->hasAnyRole(['asset_manager','super_admin']);
-        }
-        return false;
+
+        return $this->approve($user, $expense);
     }
 
     /**

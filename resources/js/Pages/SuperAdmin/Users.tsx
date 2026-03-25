@@ -1,5 +1,5 @@
 import React from 'react';
-import { Head, router } from '@inertiajs/react';
+import { Head, router, usePage } from '@inertiajs/react';
 import SuperAdminLayout from '@/Layouts/SuperAdminLayout';
 import IconMapper from '@/Components/IconMapper';
 import Modal from '@/Components/Modal';
@@ -19,7 +19,7 @@ interface UserRow {
 }
 
 interface UsersIndexProps {
-  users: { data: UserRow[]; meta?: any };
+  users: { data: UserRow[]; meta?: any; links?: any[] };
   filters: { search?: string };
   roles: Role[];
   zones: Zone[];
@@ -410,6 +410,31 @@ export default function SuperAdminUsers({ users, filters, roles, zones }: UsersI
             </tbody>
           </table>
         </div>
+
+        {/* Pagination */}
+        {users?.links && users.data.length > 0 && (
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+              <div className="text-sm text-gray-600 dark:text-gray-400">
+                Showing {users.meta?.from || 1} to {users.meta?.to || users.data.length} of {users.meta?.total || users.data.length} results
+              </div>
+              <div className="flex flex-wrap items-center gap-1">
+                {users.links.filter((l: any) => l.url).map((l: any, idx: number) => (
+                  <button
+                    key={idx}
+                    className={`px-3 py-1.5 text-sm rounded border dark:border-gray-700 transition-colors ${
+                      l.active
+                        ? 'bg-red-600 text-white border-red-600'
+                        : 'bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
+                    }`}
+                    onClick={() => router.get(l.url, { search: search || undefined }, { preserveScroll: true, preserveState: true })}
+                    dangerouslySetInnerHTML={{ __html: l.label }}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Add User Modal */}
         <Modal show={showAdd} onClose={() => setShowAdd(false)} maxWidth="2xl">

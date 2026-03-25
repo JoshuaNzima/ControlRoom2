@@ -102,7 +102,7 @@ type PageProps = {
 };
 
 export default function GuardsDirectory() {
-  const { guards: guardsProp = { data: [], links: [], meta: {} }, filters = {}, grades = [], zones = [], stats } = usePage<PageProps>().props as any;
+  const { guards: guardsProp = { data: [], links: [], meta: {} }, filters = {}, grades = [], zones = [], stats } = usePage().props as any;
 
   const [search, setSearch] = useState(filters.search || '');
   const [status, setStatus] = useState<string>(filters.status || '');
@@ -659,26 +659,23 @@ export default function GuardsDirectory() {
             </div>
 
             {/* Pagination */}
-            {meta?.last_page > 1 && (
+            {guards?.links && guards.data.length > 0 && (
               <div className="p-4 border-t border-gray-200 dark:border-gray-700">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <p className="text-sm text-gray-500 dark:text-gray-400">
-                    Showing {meta?.from || 1} to {meta?.to || guards.length} of {meta?.total} results
+                    Showing {guards.meta?.from || 1} to {guards.meta?.to || guards.data.length} of {guards.meta?.total || guards.data.length} results
                   </p>
                   <div className="flex items-center gap-2">
-                    {(meta?.links || []).map((link: any, idx: number) => (
+                    {guards.links.filter((l: any) => l.url).map((l: any, idx: number) => (
                       <button
                         key={idx}
-                        onClick={() => link.url && router.get(link.url)}
-                        disabled={!link.url}
-                        className={`px-3 py-1.5 rounded-md text-sm transition-colors ${
-                          link.active
-                            ? 'bg-red-600 text-white'
-                            : link.url
-                            ? 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
-                            : 'bg-gray-50 dark:bg-gray-900 text-gray-400 cursor-not-allowed'
+                        className={`px-3 py-1.5 text-sm rounded border dark:border-gray-700 transition-colors ${
+                          l.active
+                            ? 'bg-red-600 text-white border-red-600'
+                            : 'bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
                         }`}
-                        dangerouslySetInnerHTML={{ __html: link.label }}
+                        onClick={() => router.get(l.url, { search: search || undefined, status: status || undefined, zone_id: zoneId || undefined, grade_id: gradeId || undefined, on_duty: onDuty ? '1' : undefined, sort, dir, per_page: perPage }, { preserveScroll: true, preserveState: true })}
+                        dangerouslySetInnerHTML={{ __html: l.label }}
                       />
                     ))}
                   </div>

@@ -8,6 +8,9 @@ use App\Models\Guards\Guard;
 use App\Models\Ticket;
 use App\Models\Camera;
 use App\Models\CameraAlert;
+use App\Models\IncentiveProfile;
+use App\Models\IncentiveRecord;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -83,6 +86,28 @@ class DashboardController extends Controller
             ];
         })->values();
 
+        // Incentive summary for current month
+        $year = now()->year;
+        $month = now()->month;
+        $incentiveSummary = [
+            'total_supervisors' => User::role('supervisor')->count(),
+            'total_sergeants' => User::role('sergeant')->count(),
+            'active_profiles' => IncentiveProfile::where('is_active', true)->count(),
+            'pending_count' => IncentiveRecord::forPeriod($year, $month)->where('status', 'pending')->count(),
+            'approved_count' => IncentiveRecord::forPeriod($year, $month)->where('status', 'approved')->count(),
+            'paid_count' => IncentiveRecord::forPeriod($year, $month)->where('status', 'paid')->count(),
+            'total_paid_amount' => IncentiveRecord::forPeriod($year, $month)->where('status', 'paid')->sum('final_amount'),
+            'pending_amount' => IncentiveRecord::forPeriod($year, $month)->where('status', 'pending')->sum('final_amount'),
+            'by_role' => [
+                'supervisor' => IncentiveRecord::forPeriod($year, $month)
+                    ->whereHas('user.roles', fn($q) => $q->where('name', 'supervisor'))
+                    ->sum('final_amount'),
+                'sergeant' => IncentiveRecord::forPeriod($year, $month)
+                    ->whereHas('user.roles', fn($q) => $q->where('name', 'sergeant'))
+                    ->sum('final_amount'),
+            ],
+        ];
+
         return Inertia::render('ControlRoom/Dashboard', [
             'stats' => [
                 'overallCoverage' => (float) round($zones->avg('coverage_rate') ?? 0, 1),
@@ -101,6 +126,7 @@ class DashboardController extends Controller
             'activeAlerts' => $activeAlerts,
             'coverageData' => $coverageData,
             'attendanceData' => $attendanceData,
+            'incentiveSummary' => $incentiveSummary,
         ]);
     }
 }

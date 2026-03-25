@@ -5,6 +5,7 @@ namespace App\Http\Middleware;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 use App\Services\NavigationService;
+use App\Models\Task;
 
 class HandleInertiaRequests extends Middleware
 {
@@ -78,6 +79,19 @@ class HandleInertiaRequests extends Middleware
             'toasts' => array_merge($toasts, $legacy),
             'modules' => \App\Models\Core\Module::orderBy('sort_order')->get(),
             'navigation' => $request->user() ? (new NavigationService())->getNavigationForUser($request->user()) : null,
+            'weeklyTasks' => fn () => $request->user() ? Task::with(['assignedTo:id,name'])
+                ->where('assigned_to', $request->user()->id)
+                ->whereIn('status', ['pending', 'in_progress'])
+                ->where(function ($q) {
+                    $q->whereNull('due_date')
+                      ->orWhere('due_date', '>=', now()->startOfWeek()->toDateString())
+                      ->orWhere('due_date', '<', now()->toDateString()); // Include overdue
+                })
+                ->orderBy('priority', 'desc')
+                ->orderBy('due_date')
+                ->limit(10)
+                ->get() : [],
+            'isExecutiveAssistant' => fn () => $request->user() ? $request->user()->hasRole('executive_assistant') : false,
         ];
     }
 }

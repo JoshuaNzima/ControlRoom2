@@ -29,7 +29,7 @@ type PageProps = {
 };
 
 export default function HRDownsIndex() {
-  const { auth, downs } = usePage<PageProps>().props;
+  const { auth, downs } = usePage().props as any;
 
   function escalate(id: number) {
     router.post(route('hr.downs.escalate', id));

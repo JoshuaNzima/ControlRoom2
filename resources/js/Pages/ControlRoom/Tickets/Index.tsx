@@ -12,7 +12,7 @@ import {
 	SelectValue,
 } from '@/Components/ui/select';
 import { Badge } from '@/Components/ui/badge';
-import { Dialog, DialogTrigger } from '@/Components/ui/dialog';
+import { Dialog } from '@/Components/ui/dialog';
 import CreateTicketForm from './CreateTicketForm';
 import IconMapper from '@/Components/IconMapper';
 import EmptyState from '@/Components/ui/empty-state';
@@ -26,9 +26,9 @@ interface Ticket {
 	priority: 'low' | 'medium' | 'high' | 'critical';
 	category: string;
 	reporter?: { id: number; name: string };
-	assignee?: { id: number; name: string };
+	assigned_to?: { id: number; name: string };
 	client?: { id: number; name: string };
-	clientSite?: { id: number; name: string };
+	client_site?: { id: number; name: string };
 	created_at: string;
 	updated_at: string;
 }
@@ -99,7 +99,7 @@ export default function TicketsIndex({ tickets, filters, stats, auth }: PageProp
 			ticket.title?.toLowerCase().includes(term) ||
 			ticket.ticket_number?.toLowerCase().includes(term) ||
 			ticket.reporter?.name?.toLowerCase().includes(term) ||
-			ticket.assignee?.name?.toLowerCase().includes(term)
+			ticket.assigned_to?.name?.toLowerCase().includes(term)
 		);
 	}, [tickets?.data, search]);
 
@@ -247,10 +247,10 @@ export default function TicketsIndex({ tickets, filters, stats, auth }: PageProp
 															<IconMapper name="User" size={14} />
 															{ticket.reporter?.name || 'Unassigned'}
 														</span>
-														{ticket.assignee && (
+														{ticket.assigned_to && (
 															<span className="flex items-center gap-1">
 																<IconMapper name="UserCheck" size={14} />
-																{ticket.assignee.name}
+																{ticket.assigned_to.name}
 															</span>
 														)}
 														{ticket.client && (

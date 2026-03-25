@@ -4,13 +4,25 @@ import NotificationBell from '@/Components/Common/NotificationBell';
 import IconMapper from '@/Components/IconMapper';
 import QuickRequisitionButton from '@/Components/Requisitions/QuickRequisitionButton';
 import QuickBudgetButton from '@/Components/Budgets/QuickBudgetButton';
+import WeeklyTasks from '@/Components/WeeklyTasks';
 
 type Props = {
   children: React.ReactNode;
   title?: string;
+  weeklyTasks?: any;
 };
 
-export default function AppLayout({ children, title }: Props) {
+export default function AppLayout({ children, title, weeklyTasks }: Props) {
+  const [tasksOpen, setTasksOpen] = React.useState(true);
+  const [isMobile, setIsMobile] = React.useState(false);
+
+  React.useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 1024);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
   const profileHref = (() => {
     try {
       const p = window.location.pathname;
@@ -42,6 +54,14 @@ export default function AppLayout({ children, title }: Props) {
               <h1 className="text-xl font-bold text-red-900 dark:text-gray-100">{title}</h1>
               <div className="flex items-center justify-end gap-2 sm:gap-3 shrink-0">
                 <NotificationBell />
+                <button
+                  onClick={() => setTasksOpen(!tasksOpen)}
+                  className="inline-flex items-center gap-1.5 rounded-md bg-red-100 text-red-700 hover:bg-red-200 px-3 py-1.5 text-sm dark:bg-red-900/30 dark:text-red-200 transition-colors"
+                  title="Toggle Tasks Panel"
+                >
+                  <IconMapper name="CheckSquare" size={16} />
+                  <span className="hidden sm:inline">Tasks</span>
+                </button>
                 <div className="hidden sm:flex items-center gap-3">
                   <QuickBudgetButton />
                   <QuickRequisitionButton />
@@ -61,12 +81,30 @@ export default function AppLayout({ children, title }: Props) {
         </header>
       )}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 text-gray-900 dark:text-gray-100">
-        <div className="animate-slideUp transition-all-smooth">
-          {children}
+        <div className={`grid gap-4 ${tasksOpen ? 'grid-cols-1 xl:grid-cols-4' : 'grid-cols-1'}`}>
+          <div className={tasksOpen ? 'xl:col-span-3' : ''}>
+            <div className="animate-slideUp transition-all-smooth">
+              {children}
+            </div>
+          </div>
+          {tasksOpen && !isMobile && (
+            <div className="xl:col-span-1 hidden xl:block">
+              <WeeklyTasks
+                tasks={weeklyTasks || []}
+                showModule={true}
+              />
+            </div>
+          )}
         </div>
       </main>
+      {tasksOpen && isMobile && (
+        <WeeklyTasks
+          tasks={weeklyTasks || []}
+          showModule={true}
+          isOpen={tasksOpen}
+          onClose={() => setTasksOpen(false)}
+        />
+      )}
     </div>
   );
 }
-
-
