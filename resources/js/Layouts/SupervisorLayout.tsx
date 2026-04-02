@@ -35,7 +35,9 @@ interface Notification {
 }
 
 export default function SupervisorLayout({ children, title }: SupervisorLayoutProps) {
-  const { auth, roleType, isSergeant: pageIsSergeant, notifications: serverNotifications } = usePage<PageProps<{ auth: { user: any }, roleType?: string, isSergeant?: boolean, notifications?: Notification[] }>>().props;
+  const pageProps = usePage<PageProps<{ auth: { user: any }, roleType?: string, isSergeant?: boolean, notifications?: Notification[], appName?: string }>>().props;
+  const { auth, roleType, isSergeant: pageIsSergeant, notifications: serverNotifications } = pageProps;
+  const appName = pageProps.appName ?? 'CoinSec';
   const { url } = usePage();
   const { theme, toggle } = useTheme();
   const isSuperAdmin = Array.isArray((auth?.user as any)?.roles)
@@ -46,7 +48,6 @@ export default function SupervisorLayout({ children, title }: SupervisorLayoutPr
   const isSergeant = pageIsSergeant || (auth?.user as any)?.roles?.includes('sergeant') || roleType === 'sergeant';
   const roleLabel = isSergeant ? 'Sergeant' : 'Supervisor';
   const displayTitle = title ? `${roleLabel} - ${title}` : `${roleLabel} Dashboard`;
-  
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [tasksOpen, setTasksOpen] = useState(false);
@@ -133,9 +134,16 @@ export default function SupervisorLayout({ children, title }: SupervisorLayoutPr
         className={`fixed top-0 left-0 h-full bg-red-900 dark:bg-gray-950 text-white z-50 w-64 md:relative md:translate-x-0`}
       >
         {/* Header */}
-          <div className="flex items-center justify-center md:justify-start px-6 py-4 border-b border-red-800 dark:border-gray-800 bg-red-900 dark:bg-gray-950">
-          <img src="/images/Coin-logo.png" alt="CoinSec" className="h-8 w-auto" />
-          <span className="font-bold text-xl text-white ml-2">CoinSec</span>
+        <div className="flex items-center justify-center md:justify-start px-6 py-4 border-b border-red-800 dark:border-gray-800 bg-red-900 dark:bg-gray-950">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-red-500 to-red-700 flex items-center justify-center">
+              <IconMapper name="user-check" className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h1 className="font-bold text-lg tracking-tight text-white">Supervisor</h1>
+              <p className="text-xs text-red-200 dark:text-gray-400">{appName}</p>
+            </div>
+          </div>
         </div>
 
         {/* User */}
@@ -144,7 +152,9 @@ export default function SupervisorLayout({ children, title }: SupervisorLayoutPr
             <div className="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center text-white font-bold">{auth.user.name.charAt(0)}</div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-white truncate">{auth.user.name}</p>
-              <p className="text-xs text-red-200 dark:text-gray-400 truncate">{roleLabel}</p>
+              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs border font-medium bg-red-500/20 text-red-200 border-red-500/30">
+                {roleLabel}
+              </span>
             </div>
           </div>
         </div>

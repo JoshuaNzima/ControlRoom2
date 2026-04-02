@@ -96,11 +96,11 @@ export default function VisitorsIndex({ visitors, stats, filters }: VisitorsProp
             {/* Header */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
                 <div>
-                    <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+                    <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
                         <Users className="w-6 h-6 text-red-400" />
                         Visitor Management
                     </h1>
-                    <p className="text-gray-500 mt-1">Register and manage visitors</p>
+                    <p className="text-muted-foreground mt-1">Register and manage visitors</p>
                 </div>
                 <Dialog open={isRegisterOpen} onOpenChange={setIsRegisterOpen}>
                     <DialogTrigger asChild>
@@ -109,10 +109,10 @@ export default function VisitorsIndex({ visitors, stats, filters }: VisitorsProp
                             Register Visitor
                         </Button>
                     </DialogTrigger>
-                    <DialogContent className="bg-[#111111] border-[#222222] text-white max-w-md">
+                    <DialogContent className="bg-background border-border text-foreground max-w-md">
                         <DialogHeader>
                             <DialogTitle className="flex items-center gap-2">
-                                <Users className="w-5 h-5 text-red-400" />
+                                <Users className="w-5 h-5 text-coin-500" />
                                 Register New Visitor
                             </DialogTitle>
                         </DialogHeader>
@@ -123,7 +123,7 @@ export default function VisitorsIndex({ visitors, stats, filters }: VisitorsProp
                                     id="name"
                                     value={formData.name}
                                     onChange={e => setFormData({ ...formData, name: e.target.value })}
-                                    className="bg-[#1a1a1a] border-[#333333] text-white"
+                                    className="bg-muted border-border text-foreground"
                                     required
                                 />
                             </div>
@@ -133,7 +133,7 @@ export default function VisitorsIndex({ visitors, stats, filters }: VisitorsProp
                                     id="company"
                                     value={formData.company}
                                     onChange={e => setFormData({ ...formData, company: e.target.value })}
-                                    className="bg-[#1a1a1a] border-[#333333] text-white"
+                                    className="bg-muted border-border text-foreground"
                                 />
                             </div>
                             <div className="grid grid-cols-2 gap-3">
@@ -143,7 +143,7 @@ export default function VisitorsIndex({ visitors, stats, filters }: VisitorsProp
                                         id="phone"
                                         value={formData.phone}
                                         onChange={e => setFormData({ ...formData, phone: e.target.value })}
-                                        className="bg-[#1a1a1a] border-[#333333] text-white"
+                                        className="bg-muted border-border text-foreground"
                                     />
                                 </div>
                                 <div className="space-y-2">
@@ -153,7 +153,7 @@ export default function VisitorsIndex({ visitors, stats, filters }: VisitorsProp
                                         type="email"
                                         value={formData.email}
                                         onChange={e => setFormData({ ...formData, email: e.target.value })}
-                                        className="bg-[#1a1a1a] border-[#333333] text-white"
+                                        className="bg-muted border-border text-foreground"
                                     />
                                 </div>
                             </div>
@@ -163,7 +163,7 @@ export default function VisitorsIndex({ visitors, stats, filters }: VisitorsProp
                                     id="purpose"
                                     value={formData.purpose}
                                     onChange={e => setFormData({ ...formData, purpose: e.target.value })}
-                                    className="bg-[#1a1a1a] border-[#333333] text-white"
+                                    className="bg-muted border-border text-foreground"
                                     required
                                 />
                             </div>
@@ -173,7 +173,7 @@ export default function VisitorsIndex({ visitors, stats, filters }: VisitorsProp
                                     id="host_name"
                                     value={formData.host_name}
                                     onChange={e => setFormData({ ...formData, host_name: e.target.value })}
-                                    className="bg-[#1a1a1a] border-[#333333] text-white"
+                                    className="bg-muted border-border text-foreground"
                                 />
                             </div>
                             <div className="space-y-2">
@@ -182,14 +182,14 @@ export default function VisitorsIndex({ visitors, stats, filters }: VisitorsProp
                                     id="notes"
                                     value={formData.notes}
                                     onChange={e => setFormData({ ...formData, notes: e.target.value })}
-                                    className="bg-[#1a1a1a] border-[#333333] text-white"
+                                    className="bg-muted border-border text-foreground"
                                 />
                             </div>
                             <div className="flex gap-3 pt-2">
                                 <Button type="button" variant="outline" onClick={() => setIsRegisterOpen(false)} className="flex-1">
                                     Cancel
                                 </Button>
-                                <Button type="submit" className="flex-1 bg-red-600 hover:bg-red-700">
+                                <Button type="submit" className="flex-1 bg-coin-600 hover:bg-coin-700">
                                     Register
                                 </Button>
                             </div>
@@ -200,22 +200,22 @@ export default function VisitorsIndex({ visitors, stats, filters }: VisitorsProp
 
             {/* Stats */}
             <div className="grid grid-cols-3 gap-4 mb-6">
-                <Card className="bg-[#111111] border-[#222222]">
+                <Card className="bg-card border-border">
                     <CardContent className="p-4">
-                        <p className="text-sm text-gray-500">Total Today</p>
-                        <p className="text-2xl font-bold text-white">{stats.today}</p>
+                        <p className="text-sm text-muted-foreground">Total Today</p>
+                        <p className="text-2xl font-bold text-foreground">{stats.today}</p>
                     </CardContent>
                 </Card>
-                <Card className="bg-[#111111] border-[#222222]">
+                <Card className="bg-card border-border">
                     <CardContent className="p-4">
-                        <p className="text-sm text-gray-500">Visitors</p>
-                        <p className="text-2xl font-bold text-green-400">{stats.checked_in}</p>
+                        <p className="text-sm text-muted-foreground">Visitors</p>
+                        <p className="text-2xl font-bold text-green-600 dark:text-green-400">{stats.checked_in}</p>
                     </CardContent>
                 </Card>
-                <Card className="bg-[#111111] border-[#222222]">
+                <Card className="bg-card border-border">
                     <CardContent className="p-4">
-                        <p className="text-sm text-gray-500">Total Records</p>
-                        <p className="text-2xl font-bold text-gray-400">{(visitors as any)?.meta?.total ?? 0}</p>
+                        <p className="text-sm text-muted-foreground">Total Records</p>
+                        <p className="text-2xl font-bold text-muted-foreground">{(visitors as any)?.meta?.total ?? 0}</p>
                     </CardContent>
                 </Card>
             </div>
@@ -223,20 +223,20 @@ export default function VisitorsIndex({ visitors, stats, filters }: VisitorsProp
             {/* Filters & Search */}
             <div className="flex flex-col sm:flex-row gap-3 mb-4">
                 <div className="relative flex-1">
-                    <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+                    <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                     <Input
                         placeholder="Search visitors..."
                         value={searchQuery}
                         onChange={e => setSearchQuery(e.target.value)}
-                        className="pl-10 bg-[#111111] border-[#222222] text-white"
+                        className="pl-10 bg-card border-border text-foreground"
                     />
                 </div>
                 <div className="flex gap-2">
-                    <Button variant="outline" size="sm" className="border-[#222222] text-gray-400">
+                    <Button variant="outline" size="sm" className="border-border text-muted-foreground">
                         <Filter className="w-4 h-4 mr-2" />
                         Filter
                     </Button>
-                    <Button variant="outline" size="sm" className="border-[#222222] text-gray-400">
+                    <Button variant="outline" size="sm" className="border-border text-muted-foreground">
                         <Calendar className="w-4 h-4 mr-2" />
                         {filters.date || 'Today'}
                     </Button>
@@ -244,12 +244,12 @@ export default function VisitorsIndex({ visitors, stats, filters }: VisitorsProp
             </div>
 
             {/* Visitors List */}
-            <Card className="bg-[#111111] border-[#222222]">
+            <Card className="bg-card border-border">
                 <CardContent className="p-0">
                     {/* Mobile View */}
-                    <div className="lg:hidden divide-y divide-[#222222]">
+                    <div className="lg:hidden divide-y divide-border">
                         {filteredVisitors.length === 0 ? (
-                            <div className="p-6 text-center text-gray-500">
+                            <div className="p-6 text-center text-muted-foreground">
                                 No visitors found
                             </div>
                         ) : (
@@ -258,35 +258,35 @@ export default function VisitorsIndex({ visitors, stats, filters }: VisitorsProp
                                     <div className="flex items-start justify-between">
                                         <div className="flex items-center gap-3">
                                             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-red-500/20 to-red-600/10 flex items-center justify-center">
-                                                <span className="text-red-400 font-medium">
+                                                <span className="text-red-600 dark:text-red-400 font-medium">
                                                     {visitor.name.charAt(0).toUpperCase()}
                                                 </span>
                                             </div>
                                             <div>
-                                                <p className="font-medium text-white">{visitor.name}</p>
-                                                <p className="text-sm text-gray-500">{visitor.company || 'No company'}</p>
+                                                <p className="font-medium text-foreground">{visitor.name}</p>
+                                                <p className="text-sm text-muted-foreground">{visitor.company || 'No company'}</p>
                                             </div>
                                         </div>
                                         {visitor.badge_number && (
-                                            <Badge variant="outline" className="border-[#333333] text-gray-400">
+                                            <Badge variant="outline" className="border-border text-muted-foreground">
                                                 {visitor.badge_number}
                                             </Badge>
                                         )}
                                     </div>
-                                    <div className="flex items-center gap-2 text-sm text-gray-500">
+                                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
                                         <Calendar className="w-4 h-4" />
                                         {new Date(visitor.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                     </div>
-                                    <p className="text-sm text-gray-400">{visitor.purpose}</p>
+                                    <p className="text-sm text-muted-foreground">{visitor.purpose}</p>
                                     {visitor.host_name && (
-                                        <p className="text-sm text-gray-500">Host: {visitor.host_name}</p>
+                                        <p className="text-sm text-muted-foreground">Host: {visitor.host_name}</p>
                                     )}
                                     <div className="flex gap-3 pt-2">
                                         <Button
                                             size="sm"
                                             variant="outline"
                                             onClick={() => handleBadge(visitor.id)}
-                                            className="border-[#333333] text-gray-400"
+                                            className="border-border text-muted-foreground"
                                         >
                                             <BadgeCheck className="w-4 h-4 mr-1" />
                                             New Badge
@@ -301,48 +301,48 @@ export default function VisitorsIndex({ visitors, stats, filters }: VisitorsProp
                     <div className="hidden lg:block">
                         <table className="w-full">
                             <thead>
-                                <tr className="border-b border-[#222222]">
-                                    <th className="text-left p-4 text-sm font-medium text-gray-400">Visitor</th>
-                                    <th className="text-left p-4 text-sm font-medium text-gray-400">Purpose</th>
-                                    <th className="text-left p-4 text-sm font-medium text-gray-400">Host</th>
-                                    <th className="text-left p-4 text-sm font-medium text-gray-400">Registered</th>
-                                    <th className="text-left p-4 text-sm font-medium text-gray-400">Badge</th>
-                                    <th className="text-right p-4 text-sm font-medium text-gray-400">Actions</th>
+                                <tr className="border-b border-border">
+                                    <th className="text-left p-4 text-sm font-medium text-muted-foreground">Visitor</th>
+                                    <th className="text-left p-4 text-sm font-medium text-muted-foreground">Purpose</th>
+                                    <th className="text-left p-4 text-sm font-medium text-muted-foreground">Host</th>
+                                    <th className="text-left p-4 text-sm font-medium text-muted-foreground">Registered</th>
+                                    <th className="text-left p-4 text-sm font-medium text-muted-foreground">Badge</th>
+                                    <th className="text-right p-4 text-sm font-medium text-muted-foreground">Actions</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-[#222222]">
+                            <tbody className="divide-y divide-border">
                                 {filteredVisitors.length === 0 ? (
                                     <tr>
-                                        <td colSpan={6} className="p-6 text-center text-gray-500">
+                                        <td colSpan={6} className="p-6 text-center text-muted-foreground">
                                             No visitors found
                                         </td>
                                     </tr>
                                 ) : (
                                     filteredVisitors.map((visitor) => (
-                                        <tr key={visitor.id} className="hover:bg-[#1a1a1a]/50">
+                                        <tr key={visitor.id} className="hover:bg-muted/50">
                                             <td className="p-4">
                                                 <div className="flex items-center gap-3">
                                                     <div className="w-10 h-10 rounded-full bg-gradient-to-br from-red-500/20 to-red-600/10 flex items-center justify-center">
-                                                        <span className="text-red-400 font-medium">
+                                                        <span className="text-red-600 dark:text-red-400 font-medium">
                                                             {visitor.name.charAt(0).toUpperCase()}
                                                         </span>
                                                     </div>
                                                     <div>
-                                                        <p className="font-medium text-white">{visitor.name}</p>
-                                                        <p className="text-sm text-gray-500">{visitor.company || '-'}</p>
+                                                        <p className="font-medium text-foreground">{visitor.name}</p>
+                                                        <p className="text-sm text-muted-foreground">{visitor.company || '-'}</p>
                                                     </div>
                                                 </div>
                                             </td>
-                                            <td className="p-4 text-sm text-gray-300">{visitor.purpose}</td>
-                                            <td className="p-4 text-sm text-gray-300">
+                                            <td className="p-4 text-sm text-foreground">{visitor.purpose}</td>
+                                            <td className="p-4 text-sm text-foreground">
                                                 {visitor.host?.name || visitor.host_name || '-'}
                                             </td>
-                                            <td className="p-4 text-sm text-gray-400">
+                                            <td className="p-4 text-sm text-muted-foreground">
                                                 {new Date(visitor.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                             </td>
                                             <td className="p-4">
                                                 {visitor.badge_number && (
-                                                    <Badge variant="outline" className="border-[#333333] text-gray-400">
+                                                    <Badge variant="outline" className="border-border text-muted-foreground">
                                                         {visitor.badge_number}
                                                     </Badge>
                                                 )}
@@ -353,7 +353,7 @@ export default function VisitorsIndex({ visitors, stats, filters }: VisitorsProp
                                                         size="sm"
                                                         variant="outline"
                                                         onClick={() => handleBadge(visitor.id)}
-                                                        className="border-[#333333] text-gray-400"
+                                                        className="border-border text-muted-foreground"
                                                     >
                                                         <BadgeCheck className="w-4 h-4" />
                                                     </Button>

@@ -6,6 +6,7 @@ use App\Http\Controllers\FrontOffice\VisitorController;
 use App\Http\Controllers\FrontOffice\MessageController;
 use App\Http\Controllers\FrontOffice\ProfileController;
 use App\Http\Controllers\FrontOffice\RequisitionController;
+use App\Http\Controllers\FrontOffice\TaskController;
 use Illuminate\Support\Facades\Route;
 
 // Front Office module - 3 roles with permission-based access:
@@ -75,5 +76,20 @@ Route::middleware(['auth'])
                 Route::get('/', [DashboardController::class, 'reports'])->name('index');
                 Route::get('/visitors', [DashboardController::class, 'visitorReports'])->name('visitors');
                 Route::get('/export', [DashboardController::class, 'export'])->name('export');
+            });
+
+        // Task Management (Executive Assistant, Personal Assistant, Admin)
+        Route::middleware(['role:executive_assistant|personal_assistant|admin|super_admin'])
+            ->prefix('tasks')
+            ->name('tasks.')
+            ->group(function () {
+                Route::get('/', [TaskController::class, 'index'])->name('index');
+                Route::post('/', [TaskController::class, 'store'])->name('store');
+                Route::put('/{task}/complete', [TaskController::class, 'complete'])->name('complete');
+                Route::delete('/{task}', [TaskController::class, 'destroy'])->name('destroy');
+                Route::post('/bulk', [TaskController::class, 'bulkUpdate'])->name('bulk');
+                Route::post('/{task}/comments', [TaskController::class, 'storeComment'])->name('comments.store');
+                Route::post('/{task}/time', [TaskController::class, 'storeTimeEntry'])->name('time.store');
+                Route::get('/export', [TaskController::class, 'export'])->name('export');
             });
     });

@@ -8,6 +8,8 @@ import RequisitionViewModal from '@/Components/Requisitions/RequisitionViewModal
 import { useNotification } from '@/Providers/NotificationProvider';
 import TodayBatchModal from '@/Components/Requisitions/TodayBatchModal';
 import BatchesHistoryModal from '@/Components/Requisitions/BatchesHistoryModal';
+import BatchDetailsModal from '@/Components/Requisitions/BatchDetailsModal';
+import RequisitionReportModal from '@/Components/Requisitions/RequisitionReportModal';
 import { Card } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import { Badge } from '@/Components/ui/badge';
@@ -53,7 +55,7 @@ type RequisitionsIndexProps = PageProps<{
     links?: PaginationLink[];
   };
   mode?: 'disburse' | 'mine' | string;
-  filter?: 'all' | 'pending' | 'expired' | string;
+  filter?: 'all' | 'pending' | 'approved' | 'expired' | 'rejected' | 'archived' | string;
 }>;
 
 const statusConfig: Record<string, { color: string; icon: string; label: string }> = {
@@ -75,9 +77,12 @@ export default function RequisitionsIndex({ requisitions, auth, mode: initialMod
   const [openEdit, setOpenEdit] = React.useState(false);
   const { push } = useNotification();
   const mode: 'disburse' | 'mine' = (initialMode === 'mine' ? 'mine' : 'disburse');
-  const selectedFilter: 'all' | 'pending' | 'expired' = (initialFilter === 'expired' ? 'expired' : (initialFilter === 'pending' ? 'pending' : 'all'));
+  const selectedFilter: 'all' | 'pending' | 'approved' | 'expired' | 'rejected' | 'archived' = (initialFilter === 'archived' ? 'archived' : (initialFilter === 'rejected' ? 'rejected' : (initialFilter === 'expired' ? 'expired' : (initialFilter === 'approved' ? 'approved' : (initialFilter === 'all' ? 'all' : 'pending')))));
   const [showBatch, setShowBatch] = React.useState(false);
   const [showHistory, setShowHistory] = React.useState(false);
+  const [showBatchDetails, setShowBatchDetails] = React.useState(false);
+  const [selectedBatchId, setSelectedBatchId] = React.useState<number | null>(null);
+  const [showReport, setShowReport] = React.useState(false);
 
   const getRelationName = (obj: any, camel: string, snake: string) => obj?.[camel]?.name || obj?.[snake]?.name || '';
   const getRequestedByLabel = (req: any) => {
@@ -120,6 +125,12 @@ export default function RequisitionsIndex({ requisitions, auth, mode: initialMod
                   History
                 </Button>
               )}
+              {isAdmin && (
+                <Button variant="outline" size="sm" onClick={() => setShowReport(true)}>
+                  <IconMapper name="FileText" className="w-4 h-4 mr-1.5" />
+                  Report
+                </Button>
+              )}
             </div>
           </div>
 
@@ -148,14 +159,6 @@ export default function RequisitionsIndex({ requisitions, auth, mode: initialMod
             {(isAdmin || !isAssetManager || (isAssetManager && mode === 'mine')) && (
               <div className="inline-flex rounded-full bg-gray-100 dark:bg-gray-800/40 p-1">
                 <Link
-                  href={route('requisitions.index', (isAssetManager ? { mode, filter: 'all' } : { filter: 'all' }))}
-                  className={`px-3 py-1.5 rounded-full text-xs sm:text-sm font-medium transition-colors ${selectedFilter === 'all' ? 'bg-gray-900 text-white dark:bg-gray-700' : 'text-gray-700 hover:bg-gray-200 dark:text-gray-300 dark:hover:bg-gray-700/60'}`}
-                  preserveScroll
-                  preserveState
-                >
-                  All
-                </Link>
-                <Link
                   href={route('requisitions.index', (isAssetManager ? { mode, filter: 'pending' } : { filter: 'pending' }))}
                   className={`px-3 py-1.5 rounded-full text-xs sm:text-sm font-medium transition-colors ${selectedFilter === 'pending' ? 'bg-red-600 text-white' : 'text-gray-700 hover:bg-gray-200 dark:text-gray-300 dark:hover:bg-gray-700/60'}`}
                   preserveScroll
@@ -164,12 +167,44 @@ export default function RequisitionsIndex({ requisitions, auth, mode: initialMod
                   Pending
                 </Link>
                 <Link
+                  href={route('requisitions.index', (isAssetManager ? { mode, filter: 'approved' } : { filter: 'approved' }))}
+                  className={`px-3 py-1.5 rounded-full text-xs sm:text-sm font-medium transition-colors ${selectedFilter === 'approved' ? 'bg-emerald-600 text-white' : 'text-gray-700 hover:bg-gray-200 dark:text-gray-300 dark:hover:bg-gray-700/60'}`}
+                  preserveScroll
+                  preserveState
+                >
+                  Approved
+                </Link>
+                <Link
+                  href={route('requisitions.index', (isAssetManager ? { mode, filter: 'rejected' } : { filter: 'rejected' }))}
+                  className={`px-3 py-1.5 rounded-full text-xs sm:text-sm font-medium transition-colors ${selectedFilter === 'rejected' ? 'bg-rose-600 text-white' : 'text-gray-700 hover:bg-gray-200 dark:text-gray-300 dark:hover:bg-gray-700/60'}`}
+                  preserveScroll
+                  preserveState
+                >
+                  Rejected
+                </Link>
+                <Link
                   href={route('requisitions.index', (isAssetManager ? { mode, filter: 'expired' } : { filter: 'expired' }))}
                   className={`px-3 py-1.5 rounded-full text-xs sm:text-sm font-medium transition-colors ${selectedFilter === 'expired' ? 'bg-gray-700 text-white dark:bg-gray-600' : 'text-gray-700 hover:bg-gray-200 dark:text-gray-300 dark:hover:bg-gray-700/60'}`}
                   preserveScroll
                   preserveState
                 >
                   Expired
+                </Link>
+                <Link
+                  href={route('requisitions.index', (isAssetManager ? { mode, filter: 'all' } : { filter: 'all' }))}
+                  className={`px-3 py-1.5 rounded-full text-xs sm:text-sm font-medium transition-colors ${selectedFilter === 'all' ? 'bg-gray-900 text-white dark:bg-gray-700' : 'text-gray-700 hover:bg-gray-200 dark:text-gray-300 dark:hover:bg-gray-700/60'}`}
+                  preserveScroll
+                  preserveState
+                >
+                  All
+                </Link>
+                <Link
+                  href={route('requisitions.index', (isAssetManager ? { mode, filter: 'archived' } : { filter: 'archived' }))}
+                  className={`px-3 py-1.5 rounded-full text-xs sm:text-sm font-medium transition-colors ${selectedFilter === 'archived' ? 'bg-purple-600 text-white' : 'text-gray-700 hover:bg-gray-200 dark:text-gray-300 dark:hover:bg-gray-700/60'}`}
+                  preserveScroll
+                  preserveState
+                >
+                  Archived
                 </Link>
               </div>
             )}
@@ -343,7 +378,24 @@ export default function RequisitionsIndex({ requisitions, auth, mode: initialMod
       </div>
       <RequisitionViewModal open={open} requisitionId={selectedId} initialEdit={openEdit} onClose={() => { setOpen(false); setOpenEdit(false); }} />
       <TodayBatchModal open={showBatch} onClose={() => setShowBatch(false)} isAdmin={isAdmin} isAssetManager={isAssetManager} />
-      <BatchesHistoryModal open={showHistory} onClose={() => setShowHistory(false)} />
+      <BatchesHistoryModal
+        open={showHistory}
+        onClose={() => setShowHistory(false)}
+        isAdmin={isAdmin}
+        isAssetManager={isAssetManager}
+        onViewBatch={(id) => {
+          setSelectedBatchId(id);
+          setShowBatchDetails(true);
+        }}
+      />
+      <BatchDetailsModal
+        open={showBatchDetails}
+        onClose={() => setShowBatchDetails(false)}
+        batchId={selectedBatchId}
+        isAdmin={isAdmin}
+        isAssetManager={isAssetManager}
+      />
+      <RequisitionReportModal open={showReport} onClose={() => setShowReport(false)} />
     </RequisitionsLayout>
   );
 }

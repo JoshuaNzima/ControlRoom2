@@ -34,6 +34,8 @@ interface Filters {
 interface Role { id: number; name: string }
 interface Zone { id: number; name: string }
 
+interface Client { id: number; name: string }
+
 interface CreateUserForm {
   name: string;
   email: string;
@@ -42,6 +44,8 @@ interface CreateUserForm {
   role?: string;
   zone_id?: number | null | '';
   status: 'active' | 'inactive';
+  client_id?: number | null | '';
+  client_role?: 'primary' | 'contact' | 'viewer';
 }
 
 interface EditUserForm {
@@ -52,6 +56,8 @@ interface EditUserForm {
   role: string;
   status: string;
   zone_id: number | null | '';
+  client_id?: number | null | '';
+  client_role?: 'primary' | 'contact' | 'viewer';
 }
 
 interface UsersIndexProps {
@@ -63,9 +69,10 @@ interface UsersIndexProps {
   filters: Filters;
   roles: Role[];
   zones: Zone[];
+  clients: Client[];
 }
 
-export default function UsersIndex({ users, filters, roles, zones }: UsersIndexProps) {
+export default function UsersIndex({ users, filters, roles, zones, clients }: UsersIndexProps) {
   const [search, setSearch] = useState(filters.search || '');
   const [loadingId, setLoadingId] = useState<number | null>(null);
   const initialPerPage = Number(filters?.per_page ?? users.meta?.per_page ?? 20);
@@ -90,6 +97,8 @@ export default function UsersIndex({ users, filters, roles, zones }: UsersIndexP
     role: roles?.[0]?.name || 'admin',
     zone_id: null,
     status: 'active',
+    client_id: null,
+    client_role: 'contact',
   });
 
   const openCreate = () => {
@@ -98,13 +107,17 @@ export default function UsersIndex({ users, filters, roles, zones }: UsersIndexP
     setCreateData('status', 'active');
     setCreateData('zone_id', null as any);
     setCreateData('employee_id', '');
+    setCreateData('client_id', null as any);
+    setCreateData('client_role', 'contact');
     setShowCreate(true);
   };
 
   const roleNormalized = (createData.role || '').toLowerCase().replace(' ', '_');
   const zoneRequired = roleNormalized === 'zone_commander';
+  const clientRequired = roleNormalized === 'client';
   const zoneValid = !zoneRequired || !!createData.zone_id;
-  const canCreate = !!createData.name && !!createData.email && !!(createData.role && createData.role.length) && zoneValid && !creating;
+  const clientValid = !clientRequired || !!createData.client_id;
+  const canCreate = !!createData.name && !!createData.email && !!(createData.role && createData.role.length) && zoneValid && clientValid && !creating;
 
   useEffect(() => {
     if (roleNormalized !== 'zone_commander' && createData.zone_id !== null) {
@@ -113,6 +126,14 @@ export default function UsersIndex({ users, filters, roles, zones }: UsersIndexP
       if (zones && zones.length > 0) {
         setCreateData('zone_id', zones[0].id as any);
       }
+    }
+    
+    // Reset client fields when role is not client
+    if (roleNormalized !== 'client') {
+      setCreateData('client_id', null as any);
+      setCreateData('client_role', 'contact');
+    } else if (roleNormalized === 'client' && !createData.client_id && clients.length > 0) {
+      setCreateData('client_id', clients[0].id as any);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [createData.role]);
@@ -123,6 +144,7 @@ export default function UsersIndex({ users, filters, roles, zones }: UsersIndexP
     transformCreate((data) => ({
       ...data,
       zone_id: (data.zone_id === '' ? null : data.zone_id) as any,
+      client_id: (data.client_id === '' ? null : data.client_id) as any,
       role: (data.role || '').trim(),
     }));
     postCreate(route('admin.users.store'), {
@@ -136,7 +158,8 @@ export default function UsersIndex({ users, filters, roles, zones }: UsersIndexP
     });
   };
 
-  const isCreateZoneCommander = (createData.role || '').toLowerCase().replace(' ', '_') === 'zone_commander';
+  const isCreateZoneCommander = roleNormalized === 'zone_commander';
+  const isCreateClient = roleNormalized === 'client';
 
   // Edit User modal state
   const [showEdit, setShowEdit] = useState(false);
@@ -162,11 +185,14 @@ export default function UsersIndex({ users, filters, roles, zones }: UsersIndexP
       role: user.roles[0]?.name || '',
       status: user.status || 'active',
       zone_id: (user.zone_id ?? null) as any,
+      client_id: (user as any).client_id ?? null,
+      client_role: ((user as any).client_role as 'primary' | 'contact' | 'viewer') ?? 'contact',
     });
     setShowEdit(true);
   };
 
   const isEditZoneCommander = (editForm?.role || '').toLowerCase().replace(' ', '_') === 'zone_commander';
+  const isEditClient = (editForm?.role || '').toLowerCase().replace(' ', '_') === 'client';
 
   const submitEdit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -182,6 +208,8 @@ export default function UsersIndex({ users, filters, roles, zones }: UsersIndexP
         role: editForm.role,
         status: editForm.status,
         zone_id: editForm.zone_id === '' ? null : editForm.zone_id,
+        client_id: editForm.client_id === '' ? null : editForm.client_id,
+        client_role: editForm.client_role,
       } as any,
       {
         preserveScroll: true,
@@ -569,6 +597,47 @@ export default function UsersIndex({ users, filters, roles, zones }: UsersIndexP
                 )}
               </div>
             )}
+
+            {isCreateClient && (
+              <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Linked Client <span className="text-red-500">*</span></label>
+                  <select
+                    className={adminFieldClassName}
+                    value={createData.client_id === null ? '' : String(createData.client_id)}
+                    onChange={(e) =>
+                      setCreateData('client_id', e.target.value ? (parseInt(e.target.value, 10) as any) : (null as any))
+                    }
+                  >
+                    <option value="">Select a client...</option>
+                    {clients.map((client) => (
+                      <option key={client.id} value={client.id}>
+                        {client.name}
+                      </option>
+                    ))}
+                  </select>
+                  {createErrors.client_id && <p className="text-xs text-red-600 mt-1">{createErrors.client_id}</p>}
+                  {!clientValid && (
+                    <p className="text-xs text-red-600 mt-1">Client is required for client users.</p>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Client Role</label>
+                  <select
+                    className={adminFieldClassName}
+                    value={createData.client_role || 'contact'}
+                    onChange={(e) => setCreateData('client_role', e.target.value as 'primary' | 'contact' | 'viewer')}
+                  >
+                    <option value="primary">Primary Contact</option>
+                    <option value="contact">Contact</option>
+                    <option value="viewer">Viewer</option>
+                  </select>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Primary: Full access | Contact: Standard access | Viewer: Read-only
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="mt-4 flex items-center justify-end gap-3">
@@ -685,6 +754,51 @@ export default function UsersIndex({ users, filters, roles, zones }: UsersIndexP
                       </option>
                     ))}
                   </select>
+                </div>
+              )}
+
+              {isEditClient && (
+                <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Linked Client <span className="text-red-500">*</span></label>
+                    <select
+                      className={adminFieldClassName}
+                      value={editForm.client_id === null ? '' : String(editForm.client_id)}
+                      onChange={(e) =>
+                        setEditForm({
+                          ...(editForm as EditUserForm),
+                          client_id: e.target.value ? Number(e.target.value) : null,
+                        })
+                      }
+                    >
+                      <option value="">Select a client...</option>
+                      {clients.map((client) => (
+                        <option key={client.id} value={client.id}>
+                          {client.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Client Role</label>
+                    <select
+                      className={adminFieldClassName}
+                      value={editForm.client_role || 'contact'}
+                      onChange={(e) =>
+                        setEditForm({
+                          ...(editForm as EditUserForm),
+                          client_role: e.target.value as 'primary' | 'contact' | 'viewer',
+                        })
+                      }
+                    >
+                      <option value="primary">Primary Contact</option>
+                      <option value="contact">Contact</option>
+                      <option value="viewer">Viewer</option>
+                    </select>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Primary: Full access | Contact: Standard access | Viewer: Read-only
+                    </p>
+                  </div>
                 </div>
               )}
             </div>

@@ -344,7 +344,7 @@ export default function CalendarIndex() {
                             >
                                 Cancel
                             </Button>
-                            <Button type="submit" className="flex-1 bg-red-600 hover:bg-red-700">
+                            <Button type="submit" className="flex-1 bg-coin-600 hover:bg-coin-700">
                                 {selectedEvent ? 'Update' : 'Create'}
                             </Button>
                         </div>

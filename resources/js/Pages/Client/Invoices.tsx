@@ -1,0 +1,277 @@
+import React, { useState } from 'react';
+import { Head } from '@inertiajs/react';
+import AdminLayout from '@/Layouts/AdminLayout';
+import { Card } from '@/Components/ui/card';
+import { Button } from '@/Components/ui/button';
+import { Badge } from '@/Components/ui/badge';
+import IconMapper from '@/Components/IconMapper';
+
+interface Invoice {
+  id: number;
+  invoice_number: string;
+  total_amount: number;
+  status: 'draft' | 'sent' | 'paid' | 'overdue';
+  due_date: string | null;
+  billing_month: number | null;
+  billing_year: number | null;
+  billing_period: string | null;
+  paid_date: string | null;
+  created_at: string;
+}
+
+interface ClientInvoicesProps {
+  auth: {
+    user: {
+      id: number;
+      name: string;
+      email: string;
+    };
+  };
+  client: {
+    id: number;
+    name: string;
+    monthly_rate: number;
+  } | null;
+  invoices: Invoice[];
+  paymentSummary: {
+    expected_amount: number;
+    total_due: number;
+    total_paid: number;
+    outstanding_amount: number;
+    outstanding_months: number;
+    is_overdue: boolean;
+  } | null;
+}
+
+const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
+  const colors: Record<string, string> = {
+    draft: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
+    sent: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
+    paid: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
+    overdue: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
+  };
+
+  return (
+    <span className={`px-2 py-1 rounded text-xs font-medium ${colors[status] || colors.draft}`}>
+      {status.charAt(0).toUpperCase() + status.slice(1)}
+    </span>
+  );
+};
+
+const formatCurrency = (amount: number) => {
+  return new Intl.NumberFormat('en-MW', {
+    style: 'currency',
+    currency: 'MWK',
+    minimumFractionDigits: 2,
+  }).format(amount);
+};
+
+const formatDate = (dateString: string | null) => {
+  if (!dateString) return 'N/A';
+  return new Date(dateString).toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+};
+
+export default function ClientInvoices({ auth, client, invoices, paymentSummary }: ClientInvoicesProps) {
+  const [filter, setFilter] = useState<string>('all');
+
+  const filteredInvoices = filter === 'all'
+    ? invoices
+    : invoices.filter(i => i.status === filter);
+
+  const stats = {
+    total: invoices.length,
+    paid: invoices.filter(i => i.status === 'paid').length,
+    outstanding: invoices.filter(i => i.status !== 'paid').length,
+    overdue: invoices.filter(i => i.status === 'overdue').length,
+  };
+
+  if (!client) {
+    return (
+      <AdminLayout title="Invoices" user={auth?.user}>
+        <Head title="Invoices" />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <Card className="p-8 text-center dark:bg-gray-800 dark:border-gray-700">
+            <div className="flex flex-col items-center gap-4">
+              <div className="p-4 bg-amber-100 dark:bg-amber-900/20 rounded-full">
+                <IconMapper name="AlertCircle" size={32} className="text-amber-600 dark:text-amber-400" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">No Client Assigned</h3>
+                <p className="text-gray-500 dark:text-gray-400 mt-1">
+                  Your account is not linked to any client. Please contact support for assistance.
+                </p>
+              </div>
+            </div>
+          </Card>
+        </div>
+      </AdminLayout>
+    );
+  }
+
+  return (
+    <AdminLayout title="Invoices & Billing" user={auth?.user}>
+      <Head title="Invoices" />
+
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+        {/* Header */}
+        <div className="bg-gradient-to-br from-red-900 via-red-800 to-rose-900 text-white">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-white/10 rounded-lg backdrop-blur-sm">
+                  <IconMapper name="FileText" size={24} className="text-white" />
+                </div>
+                <div>
+                  <h1 className="text-2xl md:text-3xl font-bold">Invoices & Billing</h1>
+                  <p className="text-red-100 text-sm mt-0.5">View your billing history and payment status</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+          {/* Payment Summary */}
+          {paymentSummary && (
+            <Card className="p-6 dark:bg-gray-800 dark:border-gray-700">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                  <IconMapper name="Wallet" size={20} />
+                  Payment Summary ({new Date().getFullYear()})
+                </h3>
+                <StatusBadge status={paymentSummary.is_overdue ? 'overdue' : 'paid'} />
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Total Due</p>
+                  <p className="text-xl font-bold text-gray-900 dark:text-gray-100">{formatCurrency(paymentSummary.total_due)}</p>
+                </div>
+                <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Total Paid</p>
+                  <p className="text-xl font-bold text-emerald-600 dark:text-emerald-400">{formatCurrency(paymentSummary.total_paid)}</p>
+                </div>
+                <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Outstanding</p>
+                  <p className={`text-xl font-bold ${paymentSummary.outstanding_amount > 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-gray-100'}`}>
+                    {formatCurrency(paymentSummary.outstanding_amount)}
+                  </p>
+                </div>
+                <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Monthly Rate</p>
+                  <p className="text-xl font-bold text-gray-900 dark:text-gray-100">{formatCurrency(client.monthly_rate)}</p>
+                </div>
+              </div>
+            </Card>
+          )}
+
+          {/* Stats */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <Card className="p-4 dark:bg-gray-800 dark:border-gray-700">
+              <p className="text-sm text-gray-500 dark:text-gray-400">Total Invoices</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{stats.total}</p>
+            </Card>
+            <Card className="p-4 dark:bg-gray-800 dark:border-gray-700">
+              <p className="text-sm text-gray-500 dark:text-gray-400">Paid</p>
+              <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{stats.paid}</p>
+            </Card>
+            <Card className="p-4 dark:bg-gray-800 dark:border-gray-700">
+              <p className="text-sm text-gray-500 dark:text-gray-400">Outstanding</p>
+              <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">{stats.outstanding}</p>
+            </Card>
+            <Card className="p-4 dark:bg-gray-800 dark:border-gray-700">
+              <p className="text-sm text-gray-500 dark:text-gray-400">Overdue</p>
+              <p className="text-2xl font-bold text-red-600 dark:text-red-400">{stats.overdue}</p>
+            </Card>
+          </div>
+
+          {/* Filter Tabs */}
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant={filter === 'all' ? 'default' : 'outline'}
+              onClick={() => setFilter('all')}
+              className={filter === 'all' ? 'bg-red-600' : 'dark:border-gray-600 dark:text-gray-300'}
+            >
+              All Invoices
+            </Button>
+            <Button
+              variant={filter === 'paid' ? 'default' : 'outline'}
+              onClick={() => setFilter('paid')}
+              className={filter === 'paid' ? 'bg-emerald-600' : 'dark:border-gray-600 dark:text-gray-300'}
+            >
+              Paid
+            </Button>
+            <Button
+              variant={filter === 'sent' ? 'default' : 'outline'}
+              onClick={() => setFilter('sent')}
+              className={filter === 'sent' ? 'bg-blue-600' : 'dark:border-gray-600 dark:text-gray-300'}
+            >
+              Sent
+            </Button>
+            <Button
+              variant={filter === 'overdue' ? 'default' : 'outline'}
+              onClick={() => setFilter('overdue')}
+              className={filter === 'overdue' ? 'bg-red-600' : 'dark:border-gray-600 dark:text-gray-300'}
+            >
+              Overdue
+            </Button>
+          </div>
+
+          {/* Invoices Table */}
+          <Card className="dark:bg-gray-800 dark:border-gray-700">
+            {filteredInvoices.length === 0 ? (
+              <div className="p-8 text-center">
+                <IconMapper name="FileText" size={48} className="mx-auto text-gray-300 dark:text-gray-600 mb-4" />
+                <p className="text-gray-500 dark:text-gray-400">No invoices found</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-gray-200 dark:border-gray-700">
+                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-500 dark:text-gray-400">Invoice #</th>
+                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-500 dark:text-gray-400">Period</th>
+                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-500 dark:text-gray-400">Amount</th>
+                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-500 dark:text-gray-400">Due Date</th>
+                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-500 dark:text-gray-400">Status</th>
+                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-500 dark:text-gray-400">Paid Date</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                    {filteredInvoices.map((invoice) => (
+                      <tr key={invoice.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                        <td className="py-3 px-4 text-sm font-medium text-gray-900 dark:text-gray-100">
+                          {invoice.invoice_number}
+                        </td>
+                        <td className="py-3 px-4 text-sm text-gray-500 dark:text-gray-400">
+                          {invoice.billing_period || (invoice.billing_month && invoice.billing_year
+                            ? `${new Date(0, invoice.billing_month - 1).toLocaleString('default', { month: 'short' })} ${invoice.billing_year}`
+                            : 'N/A')}
+                        </td>
+                        <td className="py-3 px-4 text-sm font-medium text-gray-900 dark:text-gray-100">
+                          {formatCurrency(invoice.total_amount)}
+                        </td>
+                        <td className="py-3 px-4 text-sm text-gray-500 dark:text-gray-400">
+                          {formatDate(invoice.due_date)}
+                        </td>
+                        <td className="py-3 px-4">
+                          <StatusBadge status={invoice.status} />
+                        </td>
+                        <td className="py-3 px-4 text-sm text-gray-500 dark:text-gray-400">
+                          {formatDate(invoice.paid_date)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </Card>
+        </div>
+      </div>
+    </AdminLayout>
+  );
+}

@@ -57,6 +57,12 @@ export default function AddClientModal({ open, onClose, services = [], zones = [
       zone_id: '',
     },
     services: [] as Array<{ id: number; custom_price: number | null; quantity: number }>,
+    create_user: false,
+    user_name: '',
+    user_email: '',
+    user_phone: '',
+    user_password: '',
+    user_role: 'primary' as 'primary' | 'contact' | 'viewer',
   });
   const [showSiteMap, setShowSiteMap] = React.useState(true);
 
@@ -444,6 +450,90 @@ export default function AddClientModal({ open, onClose, services = [], zones = [
                 />
               </div>
             </div>
+          </div>
+
+          <div className="pt-6 border-t">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Client Portal Account</h2>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={data.create_user}
+                  onChange={(e) => setData('create_user', e.target.checked)}
+                  className="h-4 w-4 text-coin-600 focus:ring-coin-500 border-gray-300 dark:border-gray-700 rounded"
+                />
+                <span className="text-sm text-gray-700 dark:text-gray-200">Create client portal account</span>
+              </label>
+            </div>
+            
+            {data.create_user && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">User Name *</label>
+                  <input
+                    type="text"
+                    value={data.user_name}
+                    onChange={(e) => setData('user_name', e.target.value)}
+                    className={clientFieldClassName}
+                    placeholder="Full name"
+                    required={data.create_user}
+                  />
+                  {errors.user_name && <p className="text-red-600 text-sm mt-1">{errors.user_name}</p>}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Email *</label>
+                  <input
+                    type="email"
+                    value={data.user_email}
+                    onChange={(e) => setData('user_email', e.target.value)}
+                    className={clientFieldClassName}
+                    placeholder="client@example.com"
+                    required={data.create_user}
+                  />
+                  {errors.user_email && <p className="text-red-600 text-sm mt-1">{errors.user_email}</p>}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Phone</label>
+                  <input
+                    type="tel"
+                    value={data.user_phone}
+                    onChange={(e) => setData('user_phone', e.target.value)}
+                    className={clientFieldClassName}
+                    placeholder="Phone number"
+                  />
+                  {errors.user_phone && <p className="text-red-600 text-sm mt-1">{errors.user_phone}</p>}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Password *</label>
+                  <input
+                    type="password"
+                    value={data.user_password}
+                    onChange={(e) => setData('user_password', e.target.value)}
+                    className={clientFieldClassName}
+                    placeholder="Min 8 characters"
+                    required={data.create_user}
+                    minLength={8}
+                  />
+                  {errors.user_password && <p className="text-red-600 text-sm mt-1">{errors.user_password}</p>}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Role</label>
+                  <select
+                    value={data.user_role}
+                    onChange={(e) => setData('user_role', e.target.value as 'primary' | 'contact' | 'viewer')}
+                    className={clientFieldClassName}
+                  >
+                    <option value="primary">Primary Contact (Full Access)</option>
+                    <option value="contact">Contact (Standard Access)</option>
+                    <option value="viewer">Viewer (Read Only)</option>
+                  </select>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    Primary: full access | Contact: standard | Viewer: view only
+                  </p>
+                  {errors.user_role && <p className="text-red-600 text-sm mt-1">{errors.user_role}</p>}
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="flex flex-col sm:flex-row gap-3 mt-6">

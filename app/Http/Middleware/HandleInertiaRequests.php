@@ -92,6 +92,7 @@ class HandleInertiaRequests extends Middleware
                 ->limit(10)
                 ->get() : [],
             'isExecutiveAssistant' => fn () => $request->user() ? $request->user()->hasRole('executive_assistant') : false,
+            'appName' => env('APP_NAME', 'CoinSec'),
         ];
     }
 }

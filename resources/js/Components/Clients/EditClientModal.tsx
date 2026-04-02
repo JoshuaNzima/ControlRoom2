@@ -15,6 +15,7 @@ interface Client {
   notes?: string;
   status?: string;
   monthly_rate?: number;
+  users?: Array<{ id: number; name: string; email: string; phone?: string; pivot?: { role: string } }>;
 }
 
 interface EditClientModalProps {
@@ -254,6 +255,36 @@ export default function EditClientModal({ client, open, onClose, services = [] }
                   })}
                 </div>
               </div>
+
+          {/* Client Portal Users */}
+          <div className="pt-4 border-t">
+            <h3 className="text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Client Portal Users</h3>
+            {client.users && client.users.length > 0 ? (
+              <div className="space-y-2">
+                {client.users.map((user) => (
+                  <div key={user.id} className="flex items-center justify-between p-3 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-950">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-coin-100 dark:bg-coin-900 flex items-center justify-center">
+                        <span className="text-coin-700 dark:text-coin-300 font-semibold text-sm">{user.name.charAt(0).toUpperCase()}</span>
+                      </div>
+                      <div>
+                        <div className="font-medium text-gray-900 dark:text-gray-100">{user.name}</div>
+                        <div className="text-sm text-gray-500 dark:text-gray-400">{user.email}</div>
+                      </div>
+                    </div>
+                    <span className="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 capitalize">
+                      {user.pivot?.role || 'contact'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-gray-500 dark:text-gray-400">No client portal users linked yet.</p>
+            )}
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+              Client users can be managed from the Users page.
+            </p>
+          </div>
 
           <div className="mt-6 flex flex-col sm:flex-row justify-end gap-3">
             <Button type="button" variant="outline" onClick={() => !processing && onClose()} disabled={processing} className="w-full sm:w-auto">

@@ -26,6 +26,7 @@ export default function TaskTrackerLayout({ title, children, user }: Props) {
   const { theme, toggle } = useTheme();
   const { counters } = useCounters();
   const page = usePage<any>();
+  const appName = (page?.props as any)?.appName ?? 'CoinSec';
   const roles = ((user as any)?.roles ?? (page?.props as any)?.auth?.user?.roles ?? []) as any;
   const isExecutiveAssistant = Array.isArray(roles) && (roles.includes('executive_assistant') || roles.includes('super_admin'));
 
@@ -64,20 +65,21 @@ export default function TaskTrackerLayout({ title, children, user }: Props) {
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         } md:translate-x-0 transition-transform duration-300 ease-in-out z-50`}
       >
-        <div className="flex-1 flex flex-col pt-5 pb-4 overflow-y-auto">
-          <div className="flex items-center flex-shrink-0 px-4">
-            <img
-              src="/images/Coin-logo.png"
-              alt="Coin Security"
-              className="h-10 w-auto"
-              style={{ display: logoOk ? 'block' : 'none' }}
-              onLoad={() => setLogoOk(true)}
-              onError={() => setLogoOk(false)}
-            />
-            {!logoOk && <span className="ml-2 text-2xl font-bold text-white">TaskTracker</span>}
+        {/* Logo / App Name */}
+        <div className="flex items-center flex-shrink-0 px-4 py-5 border-b border-red-800 dark:border-gray-800">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-red-500 to-red-700 flex items-center justify-center">
+              <IconMapper name="check-square" className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h1 className="font-bold text-lg tracking-tight text-white">Task Tracker</h1>
+              <p className="text-xs text-red-200 dark:text-gray-400">{appName}</p>
+            </div>
           </div>
+        </div>
 
-          <nav className="mt-5 flex-1 px-2 space-y-1">
+        <div className="flex-1 flex flex-col overflow-y-auto">
+          <nav className="flex-1 px-2 py-4 space-y-1">
             {navSections.map((section) => (
               <div key={section.title} className="mb-4">
                 <h3 className="px-3 text-xs font-semibold text-red-200 dark:text-gray-400 uppercase tracking-wider mb-2">
@@ -107,12 +109,16 @@ export default function TaskTrackerLayout({ title, children, user }: Props) {
           </nav>
         </div>
 
-        {/* Sidebar footer */}
-        <div className="flex-shrink-0 flex border-t border-red-800 dark:border-gray-800 p-4">
-          <div className="flex items-center">
-            <div className="ml-3">
-              <p className="text-sm font-medium text-white">{(user as any)?.name ?? 'User'}</p>
-              <p className="text-xs text-red-200 dark:text-gray-400">Task Tracker</p>
+        <div className="flex-shrink-0 border-t border-red-800 dark:border-gray-800 p-4 bg-red-900 dark:bg-gray-950">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-10 h-10 rounded-full bg-red-800 dark:bg-gray-800 border-2 border-red-700 dark:border-gray-700 flex items-center justify-center text-white font-semibold text-sm">
+              {(user as any)?.name?.charAt(0) || 'T'}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-white truncate">{(user as any)?.name}</p>
+              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs border font-medium bg-red-500/20 text-red-200 border-red-500/30">
+                Task Tracker
+              </span>
             </div>
           </div>
         </div>

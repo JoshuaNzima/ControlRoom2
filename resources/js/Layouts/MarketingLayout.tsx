@@ -33,10 +33,11 @@ export default function MarketingLayout({ title, children, user }: Props) {
   const { theme, toggle } = useTheme();
   const { counters } = useCounters();
   const page = usePage<any>();
-  const { weeklyTasks, isExecutiveAssistant } = page.props as any;
+  const { weeklyTasks, isExecutiveAssistant, appName } = page.props as any;
   const roles = ((user as any)?.roles ?? (page?.props as any)?.auth?.user?.roles ?? []) as any;
   const isSuperAdmin = Array.isArray(roles) ? roles.includes('super_admin') : roles === 'super_admin';
   const isAdminUser = Array.isArray(roles) && (roles.includes('admin') || roles.includes('super_admin'));
+  const roleDisplay = Array.isArray(roles) && roles.length > 0 ? roles[0].replace(/_/g, ' ') : 'Marketing';
 
   React.useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 1024);
@@ -62,11 +63,20 @@ export default function MarketingLayout({ title, children, user }: Props) {
       <div className={`fixed inset-0 bg-coin-800 bg-opacity-50 z-40 md:hidden ${sidebarOpen ? 'block' : 'hidden'}`} onClick={() => setSidebarOpen(false)} />
 
       <div className={`fixed top-0 left-0 bottom-0 flex flex-col w-64 bg-coin-900 dark:bg-gray-950 text-white transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 transition-transform duration-300 ease-in-out z-50`}>
-        <div className="flex-1 flex flex-col pt-5 pb-4 overflow-y-auto">
-          <div className="flex items-center flex-shrink-0 px-4">
-            <span className="ml-2 text-2xl font-bold text-white">Marketing</span>
+        {/* Logo / App Name */}
+        <div className="flex items-center flex-shrink-0 px-4 py-5 border-b border-coin-800 dark:border-gray-800">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-coin-500 to-coin-700 flex items-center justify-center">
+              <IconMapper name="megaphone" className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h1 className="font-bold text-lg tracking-tight text-white">Marketing</h1>
+              <p className="text-xs text-coin-200 dark:text-gray-400">{appName}</p>
+            </div>
           </div>
-          <nav className="mt-8 flex-1 px-2 space-y-1">
+        </div>
+        <div className="flex-1 flex flex-col overflow-y-auto">
+          <nav className="flex-1 px-2 py-4 space-y-1">
             {nav.map((item) => (
               <Link key={item.name} href={item.href} className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md ${item.current ? 'bg-coin-800 text-white dark:bg-gray-800' : 'text-coin-100 hover:bg-coin-800 hover:text-white dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white'}`}>
                 {item.icon}
@@ -78,14 +88,16 @@ export default function MarketingLayout({ title, children, user }: Props) {
             ))}
           </nav>
         </div>
-        <div className="flex-shrink-0 border-t border-coin-800 dark:border-gray-800 p-4">
+        <div className="flex-shrink-0 border-t border-coin-800 dark:border-gray-800 p-4 bg-coin-900 dark:bg-gray-950">
           <div className="flex items-center gap-3 mb-3">
-            <div className="w-9 h-9 rounded-full bg-coin-800 dark:bg-gray-800 flex items-center justify-center text-white font-semibold text-sm">
+            <div className="w-10 h-10 rounded-full bg-coin-800 dark:bg-gray-800 border-2 border-coin-700 dark:border-gray-700 flex items-center justify-center text-white font-semibold text-sm">
               {user?.name?.charAt(0) || 'M'}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-white truncate">{user?.name}</p>
-              <p className="text-xs text-coin-200 dark:text-gray-400 truncate">Marketing</p>
+              <p className="text-sm font-semibold text-white truncate">{user?.name}</p>
+              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs border font-medium bg-coin-500/20 text-coin-200 border-coin-500/30">
+                {roleDisplay || 'Marketing'}
+              </span>
             </div>
           </div>
           <div className="flex items-center gap-2">

@@ -35,6 +35,7 @@ export default function TrainingLayout({ title, children, user }: Props) {
   const { counters } = useCounters();
   const page = usePage<any>();
   const { weeklyTasks, isExecutiveAssistant } = page.props;
+  const appName = page.props?.appName ?? 'CoinSec';
 
   React.useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 1024);
@@ -45,6 +46,7 @@ export default function TrainingLayout({ title, children, user }: Props) {
   const roles = ((user as any)?.roles ?? (page?.props as any)?.auth?.user?.roles ?? []) as any;
   const isSuperAdmin = Array.isArray(roles) ? roles.includes('super_admin') : roles === 'super_admin';
   const isAdminUser = Array.isArray(roles) && (roles.includes('admin') || roles.includes('super_admin'));
+  const roleDisplay = Array.isArray(roles) && roles.length > 0 ? roles[0].replace(/_/g, ' ') : 'Training';
 
   // Main Training Navigation
   const mainLinks: NavItem[] = [
@@ -77,21 +79,20 @@ export default function TrainingLayout({ title, children, user }: Props) {
       <div className={`fixed inset-0 bg-red-800 bg-opacity-50 dark:bg-gray-900 dark:bg-opacity-70 z-40 md:hidden ${sidebarOpen ? 'block' : 'hidden'}`} onClick={() => setSidebarOpen(false)} />
 
       <div className={`fixed top-0 left-0 bottom-0 flex flex-col w-64 bg-red-900 dark:bg-gray-950 text-white transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 transition-transform duration-300 ease-in-out z-50`}>
-        <div className="flex-1 flex flex-col pt-5 pb-4 overflow-y-auto">
-          <div className="flex items-center flex-shrink-0 px-4">
-            <img
-              src="/images/Coin-logo.png"
-              alt="Coin Security"
-              className="h-10 w-auto"
-              style={{ display: logoOk ? 'block' : 'none' }}
-              onLoad={() => setLogoOk(true)}
-              onError={() => setLogoOk(false)}
-            />
-            {!logoOk && (
-              <span className="ml-2 text-2xl font-bold text-white">Training</span>
-            )}
+        {/* Logo / App Name */}
+        <div className="flex items-center flex-shrink-0 px-4 py-5 border-b border-red-800 dark:border-gray-800">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-red-500 to-red-700 flex items-center justify-center">
+              <IconMapper name="graduation-cap" className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h1 className="font-bold text-lg tracking-tight text-white">Training</h1>
+              <p className="text-xs text-red-200 dark:text-gray-400">{appName}</p>
+            </div>
           </div>
-          <nav className="mt-8 flex-1 px-2 space-y-8">
+        </div>
+        <div className="flex-1 flex flex-col overflow-y-auto">
+          <nav className="flex-1 px-2 py-4 space-y-8">
             <div className="space-y-1">
               <h3 className="px-3 text-xs font-semibold text-red-200 dark:text-gray-400 uppercase tracking-wider">Training</h3>
               {mainLinks.map((item) => (
@@ -132,11 +133,16 @@ export default function TrainingLayout({ title, children, user }: Props) {
             </div>
           </nav>
         </div>
-        <div className="flex-shrink-0 flex border-t border-red-800 dark:border-gray-800 p-4">
-          <div className="flex items-center">
-            <div>
-              <div className="text-base font-medium text-white">{user?.name}</div>
-              <div className="text-sm font-medium text-red-200 dark:text-gray-400">Training</div>
+        <div className="flex-shrink-0 border-t border-red-800 dark:border-gray-800 p-4 bg-red-900 dark:bg-gray-950">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-10 h-10 rounded-full bg-red-800 dark:bg-gray-800 border-2 border-red-700 dark:border-gray-700 flex items-center justify-center text-white font-semibold text-sm">
+              {user?.name?.charAt(0) || 'T'}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-white truncate">{user?.name}</p>
+              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs border font-medium bg-red-500/20 text-red-200 border-red-500/30">
+                {roleDisplay || 'Training'}
+              </span>
             </div>
           </div>
         </div>

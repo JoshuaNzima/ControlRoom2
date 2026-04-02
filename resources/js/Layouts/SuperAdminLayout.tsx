@@ -53,7 +53,7 @@ export default function SuperAdminLayout({ title, children, user }: Props) {
     const { counters } = useCounters();
     const { theme, toggle } = useTheme();
     const page = usePage<any>();
-    const { weeklyTasks, isExecutiveAssistant } = page.props;
+    const { weeklyTasks, isExecutiveAssistant, appName } = page.props;
     useGpsAlerts();
 
     const isCurrent = (href: string) => {
@@ -209,19 +209,17 @@ export default function SuperAdminLayout({ title, children, user }: Props) {
                     sidebarOpen ? 'translate-x-0' : '-translate-x-full'
                 } md:translate-x-0 transition-transform duration-300 ease-in-out z-50`}
             >
-                {/* Logo */}
-                <div className="flex items-center flex-shrink-0 px-4 py-5">
-                    <img
-                        src="/images/Coin-logo.png"
-                        alt="Coin Security"
-                        className="h-8 w-auto"
-                        style={{ display: logoOk ? 'block' : 'none' }}
-                        onLoad={() => setLogoOk(true)}
-                        onError={() => setLogoOk(false)}
-                    />
-                    {!logoOk && (
-                        <span className="ml-2 text-xl font-bold text-white">CoinSec</span>
-                    )}
+                {/* Logo / App Name */}
+                <div className="flex items-center flex-shrink-0 px-4 py-5 border-b border-red-800 dark:border-gray-800">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-red-500 to-red-700 flex items-center justify-center">
+                            <IconMapper name="shield" className="w-5 h-5 text-white" />
+                        </div>
+                        <div>
+                            <h1 className="font-bold text-lg tracking-tight text-white">Super Admin</h1>
+                            <p className="text-xs text-red-200 dark:text-gray-400">{appName}</p>
+                        </div>
+                    </div>
                 </div>
 
                 {/* Navigation */}
@@ -232,15 +230,17 @@ export default function SuperAdminLayout({ title, children, user }: Props) {
                     <NavSection title="Tools" items={toolsNav} />
                 </nav>
 
-                {/* User Menu */}
-                <div className="flex-shrink-0 border-t border-red-800 dark:border-gray-800 p-4">
+                {/* User Menu - Bottom */}
+                <div className="flex-shrink-0 border-t border-red-800 dark:border-gray-800 p-4 bg-red-900 dark:bg-gray-950">
                     <div className="flex items-center gap-3 mb-3">
-                        <div className="w-9 h-9 rounded-full bg-red-800 dark:bg-gray-800 flex items-center justify-center text-white font-semibold text-sm">
+                        <div className="w-10 h-10 rounded-full bg-red-800 dark:bg-gray-800 border-2 border-red-700 dark:border-gray-700 flex items-center justify-center text-white font-semibold text-sm">
                             {user?.name?.charAt(0) || 'S'}
                         </div>
                         <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-white truncate">{user?.name}</p>
-                            <p className="text-xs text-red-200 dark:text-gray-400 truncate">{roleDisplay}</p>
+                            <p className="text-sm font-semibold text-white truncate">{user?.name}</p>
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs border font-medium bg-red-500/20 text-red-200 border-red-500/30">
+                                {roleDisplay}
+                            </span>
                         </div>
                     </div>
                     <div className="flex items-center gap-2">

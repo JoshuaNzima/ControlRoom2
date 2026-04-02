@@ -23,9 +23,19 @@ class RequisitionController extends Controller
     {
         $user = $request->user();
 
+        // First: mark overdue requisitions as expired immediately
+        $this->expireOverdueRequisitions();
+
         $query = Requisition::query()->with(['requestedBy', 'approvedBy', 'disbursedBy', 'batch']);
         $filter = $request->query('filter', 'all');
         $pendingStatuses = ['pending_admin', 'needs_revision', 'pending_disbursement', 'pending_funding'];
+
+        // By default, exclude archived requisitions unless specifically requested
+        if ($filter !== 'archived') {
+            $query->whereNull('archived_at');
+        } else {
+            $query->whereNotNull('archived_at');
+        }
 
         if ($user->hasAnyRole(['admin', 'super_admin'])) {
             // admins see everything
@@ -47,6 +57,12 @@ class RequisitionController extends Controller
             $query->where('status', 'expired');
         } elseif ($filter === 'pending') {
             $query->whereIn('status', $pendingStatuses);
+        } elseif ($filter === 'approved') {
+            $query->whereIn('status', ['pending_disbursement', 'pending_funding', 'disbursed']);
+        } elseif ($filter === 'rejected') {
+            $query->where('status', 'needs_revision');
+        } elseif ($filter === 'archived') {
+            // Already filtered above, no additional status filter
         }
 
         $requisitions = $query->orderByDesc('created_at')->paginate(20)->withQueryString();
@@ -173,6 +189,15 @@ class RequisitionController extends Controller
 
     public function show(Requisition $requisition): Response|JsonResponse
     {
+        // Check and mark as expired if needed
+        if (in_array($requisition->status, ['pending_admin', 'pending_disbursement', 'pending_funding'])) {
+            $cutoffDate = now()->subDays(5)->toDateString();
+            if ($requisition->needed_by && $requisition->needed_by->toDateString() <= $cutoffDate) {
+                $requisition->status = 'expired';
+                $requisition->save();
+            }
+        }
+
         $requisition->load(['requestedBy', 'approvedBy', 'disbursedBy', 'batch', 'attachments.uploadedBy', 'items.approvedBy', 'items.disbursedBy']);
 
         if (request()->wantsJson() || request()->ajax()) {
@@ -264,6 +289,10 @@ class RequisitionController extends Controller
             ->where('status', 'needs_revision')
             ->count();
 
+        $myExpired = Requisition::where('requested_by', $user->id)
+            ->where('status', 'expired')
+            ->count();
+
         $pendingAdmin = 0;
         $pendingDisbursement = 0;
 
@@ -278,6 +307,7 @@ class RequisitionController extends Controller
         return response()->json([
             'my_open' => $myOpen,
             'my_needs_revision' => $myNeedsRevision,
+            'my_expired' => $myExpired,
             'pending_admin' => $pendingAdmin,
             'pending_disbursement' => $pendingDisbursement,
         ]);
@@ -286,5 +316,20 @@ class RequisitionController extends Controller
     protected function authorizeOwner(Request $request, Requisition $requisition): void
     {
         abort_unless($request->user()->id === $requisition->requested_by, 403);
+    }
+
+    /**
+     * Mark requisitions as expired if their needed_by date has passed.
+     * Uses a 5-day grace period before marking as expired.
+     */
+    protected function expireOverdueRequisitions(): void
+    {
+        $cutoffDate = now()->subDays(5)->toDateString();
+
+        Requisition::query()
+            ->whereIn('status', ['pending_admin', 'pending_disbursement', 'pending_funding'])
+            ->whereNotNull('needed_by')
+            ->whereDate('needed_by', '<=', $cutoffDate)
+            ->update(['status' => 'expired']);
     }
 }

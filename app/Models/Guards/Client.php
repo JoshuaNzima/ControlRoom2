@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Client extends Model
 {
@@ -57,6 +58,13 @@ class Client extends Model
     public function payments(): HasMany
     {
         return $this->hasMany(\App\Models\ClientPayment::class);
+    }
+
+    public function users(): BelongsToMany
+    {
+        return $this->belongsToMany(\App\Models\User::class, 'client_user')
+            ->withPivot('role')
+            ->withTimestamps();
     }
 
     public function scopeActive($query)

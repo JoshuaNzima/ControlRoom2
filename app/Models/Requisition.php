@@ -25,12 +25,14 @@ class Requisition extends Model
         'notes_disbursement',
         'batch_id',
         'batched_at',
+        'archived_at',
     ];
 
     protected $casts = [
         'needed_by' => 'date',
         'amount' => 'decimal:2',
         'batched_at' => 'datetime',
+        'archived_at' => 'datetime',
     ];
 
     public function requestedBy(): BelongsTo

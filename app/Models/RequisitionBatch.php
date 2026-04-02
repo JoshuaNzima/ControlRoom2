@@ -18,12 +18,14 @@ class RequisitionBatch extends Model
         'acknowledged_by',
         'acknowledged_at',
         'total_amount',
+        'archived_at',
     ];
 
     protected $casts = [
         'batch_date' => 'date',
         'acknowledged_at' => 'datetime',
         'total_amount' => 'decimal:2',
+        'archived_at' => 'datetime',
     ];
 
     public function compiledBy(): BelongsTo

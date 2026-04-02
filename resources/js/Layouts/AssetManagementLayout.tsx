@@ -44,6 +44,7 @@ export default function AssetManagementLayout({ title, children, user }: Props) 
   const roles = ((user as any)?.roles ?? (page?.props as any)?.auth?.user?.roles ?? []) as any;
   const isSuperAdmin = Array.isArray(roles) ? roles.includes('super_admin') : roles === 'super_admin';
   const isAdminUser = Array.isArray(roles) && (roles.includes('admin') || roles.includes('super_admin'));
+  const roleDisplay = Array.isArray(roles) && roles.length > 0 ? roles[0].replace(/_/g, ' ') : 'Asset Manager';
 
   const nav: NavItem[] = [
     { name: 'Overview', href: route('assets.index'), icon: <IconMapper name="package" className="h-6 w-6" />, current: isCurrent(route('assets.index')), badge: (()=>{ const n = Number(counters?.assets_handovers_outstanding||0); return n>0? String(n): undefined; })() },
@@ -84,14 +85,16 @@ export default function AssetManagementLayout({ title, children, user }: Props) 
             ))}
           </nav>
         </div>
-        <div className="flex-shrink-0 border-t border-red-800 dark:border-gray-800 p-4">
+        <div className="flex-shrink-0 border-t border-red-800 dark:border-gray-800 p-4 bg-red-900 dark:bg-gray-950">
           <div className="flex items-center gap-3 mb-3">
-            <div className="w-9 h-9 rounded-full bg-red-800 dark:bg-gray-800 flex items-center justify-center text-white font-semibold text-sm">
+            <div className="w-10 h-10 rounded-full bg-red-800 dark:bg-gray-800 border-2 border-red-700 dark:border-gray-700 flex items-center justify-center text-white font-semibold text-sm">
               {user?.name?.charAt(0) || 'A'}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-white truncate">{user?.name}</p>
-              <p className="text-xs text-red-200 dark:text-gray-400 truncate">Assets</p>
+              <p className="text-sm font-semibold text-white truncate">{user?.name}</p>
+              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs border font-medium bg-red-500/20 text-red-200 border-red-500/30">
+                {roleDisplay}
+              </span>
             </div>
           </div>
           <div className="flex items-center gap-2">

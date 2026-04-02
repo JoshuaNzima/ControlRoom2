@@ -17,7 +17,16 @@ import {
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
-import { cn } from '@/lib/utils';
+import { Input } from '@/Components/ui/input';
+import { Label } from '@/Components/ui/label';
+import { Textarea } from '@/Components/ui/textarea';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/Components/ui/select';
 import {
     Dialog,
     DialogContent,
@@ -25,8 +34,7 @@ import {
     DialogTitle,
     DialogTrigger,
 } from '@/Components/ui/dialog';
-import { Label } from '@/Components/ui/label';
-import { Input } from '@/Components/ui/input';
+import { cn } from '@/lib/utils';
 
 interface DashboardProps {
     stats: {
@@ -83,7 +91,7 @@ export default function Dashboard({ stats, recentVisitors, todayEvents, tasks, r
 
     const handleCreateTask = (e: React.FormEvent) => {
         e.preventDefault();
-        router.post(route('tasks.store'), taskForm, {
+        router.post(route('front-office.tasks.store'), taskForm, {
             onSuccess: () => {
                 setIsTaskModalOpen(false);
                 setTaskForm({ title: '', description: '', priority: 'medium', due_date: '', category: 'front_office' });
@@ -93,13 +101,13 @@ export default function Dashboard({ stats, recentVisitors, todayEvents, tasks, r
 
     const handleCompleteTask = (taskId: number) => {
         if (confirm('Mark this task as complete?')) {
-            router.post(route('tasks.complete', taskId));
+            router.put(route('front-office.tasks.complete', taskId));
         }
     };
 
     const handleDeleteTask = (taskId: number) => {
         if (confirm('Delete this task?')) {
-            router.delete(route('tasks.destroy', taskId));
+            router.delete(route('front-office.tasks.destroy', taskId));
         }
     };
 
@@ -171,22 +179,22 @@ export default function Dashboard({ stats, recentVisitors, todayEvents, tasks, r
 
             {/* Welcome Header */}
             <div className="mb-8">
-                <h1 className="text-2xl lg:text-3xl font-bold text-red-900 dark:text-white">
+                <h1 className="text-2xl lg:text-3xl font-bold text-foreground">
                     Welcome back, {getRoleLabel(role)}
                 </h1>
-                <p className="text-gray-600 dark:text-gray-400 mt-1">
+                <p className="text-muted-foreground mt-1">
                     Here's what's happening at the front office today
                 </p>
             </div>
 
             {/* Stats Grid */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-                <Card className="bg-white dark:bg-gray-800 border-red-100 dark:border-gray-700">
+                <Card className="bg-card border-border">
                     <CardContent className="p-4 lg:p-6">
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-sm text-gray-500 dark:text-gray-400">Today's Visitors</p>
-                                <p className="text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white mt-1">{stats.today_visitors}</p>
+                                <p className="text-sm text-muted-foreground">Today's Visitors</p>
+                                <p className="text-2xl lg:text-3xl font-bold text-foreground mt-1">{stats.today_visitors}</p>
                             </div>
                             <div className="w-10 h-10 lg:w-12 lg:h-12 rounded-lg bg-blue-500/10 flex items-center justify-center">
                                 <Users className="w-5 h-5 lg:w-6 lg:h-6 text-blue-500" />
@@ -195,12 +203,12 @@ export default function Dashboard({ stats, recentVisitors, todayEvents, tasks, r
                     </CardContent>
                 </Card>
 
-                <Card className="bg-white dark:bg-gray-800 border-red-100 dark:border-gray-700">
+                <Card className="bg-card border-border">
                     <CardContent className="p-4 lg:p-6">
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-sm text-gray-500 dark:text-gray-400">Checked In</p>
-                                <p className="text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white mt-1">{stats.pending_visitors}</p>
+                                <p className="text-sm text-muted-foreground">Checked In</p>
+                                <p className="text-2xl lg:text-3xl font-bold text-foreground mt-1">{stats.pending_visitors}</p>
                             </div>
                             <div className="w-10 h-10 lg:w-12 lg:h-12 rounded-lg bg-green-500/10 flex items-center justify-center">
                                 <UserCheck className="w-5 h-5 lg:w-6 lg:h-6 text-green-500" />
@@ -209,12 +217,12 @@ export default function Dashboard({ stats, recentVisitors, todayEvents, tasks, r
                     </CardContent>
                 </Card>
 
-                <Card className="bg-white dark:bg-gray-800 border-red-100 dark:border-gray-700">
+                <Card className="bg-card border-border">
                     <CardContent className="p-4 lg:p-6">
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-sm text-gray-500 dark:text-gray-400">Today's Events</p>
-                                <p className="text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white mt-1">{stats.today_events}</p>
+                                <p className="text-sm text-muted-foreground">Today's Events</p>
+                                <p className="text-2xl lg:text-3xl font-bold text-foreground mt-1">{stats.today_events}</p>
                             </div>
                             <div className="w-10 h-10 lg:w-12 lg:h-12 rounded-lg bg-purple-500/10 flex items-center justify-center">
                                 <Calendar className="w-5 h-5 lg:w-6 lg:h-6 text-purple-500" />
@@ -223,12 +231,12 @@ export default function Dashboard({ stats, recentVisitors, todayEvents, tasks, r
                     </CardContent>
                 </Card>
 
-                <Card className="bg-white dark:bg-gray-800 border-red-100 dark:border-gray-700">
+                <Card className="bg-card border-border">
                     <CardContent className="p-4 lg:p-6">
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-sm text-gray-500 dark:text-gray-400">Messages</p>
-                                <p className="text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white mt-1">{stats.unread_messages}</p>
+                                <p className="text-sm text-muted-foreground">Messages</p>
+                                <p className="text-2xl lg:text-3xl font-bold text-foreground mt-1">{stats.unread_messages}</p>
                             </div>
                             <div className="w-10 h-10 lg:w-12 lg:h-12 rounded-lg bg-red-500/10 flex items-center justify-center">
                                 <MessageSquare className="w-5 h-5 lg:w-6 lg:h-6 text-red-500" />
@@ -240,9 +248,9 @@ export default function Dashboard({ stats, recentVisitors, todayEvents, tasks, r
 
             {/* Role Duties & Responsibilities */}
             {(role === 'executive_assistant' || role === 'personal_assistant') && roleDuties.length > 0 && (
-                <Card className="bg-white dark:bg-gray-800 border-red-100 dark:border-gray-700 mb-8">
+                <Card className="bg-card border-border mb-8">
                     <CardHeader className="pb-4">
-                        <CardTitle className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                        <CardTitle className="text-lg font-semibold text-foreground flex items-center gap-2">
                             <Briefcase className="w-5 h-5 text-red-500" />
                             Key Duties & Responsibilities
                         </CardTitle>
@@ -254,7 +262,7 @@ export default function Dashboard({ stats, recentVisitors, todayEvents, tasks, r
                                 return (
                                     <div
                                         key={index}
-                                        className="p-4 rounded-lg bg-gray-50 dark:bg-gray-700/50 border border-gray-100 dark:border-gray-600 hover:border-red-200 dark:hover:border-red-500/30 transition-colors"
+                                        className="p-4 rounded-lg bg-muted border border-border hover:border-coin-500/30 transition-colors"
                                     >
                                         <div className="flex items-start gap-3">
                                             <div className="w-8 h-8 rounded-lg bg-red-500/10 flex items-center justify-center flex-shrink-0">
@@ -262,7 +270,7 @@ export default function Dashboard({ stats, recentVisitors, todayEvents, tasks, r
                                             </div>
                                             <div className="min-w-0 flex-1">
                                                 <div className="flex items-center gap-2 mb-1">
-                                                    <h4 className="font-medium text-gray-900 dark:text-white text-sm">{duty.title}</h4>
+                                                    <h4 className="font-medium text-foreground text-sm">{duty.title}</h4>
                                                     <span className={cn(
                                                         "px-1.5 py-0.5 rounded text-xs border",
                                                         getPriorityColor(duty.priority)
@@ -270,7 +278,7 @@ export default function Dashboard({ stats, recentVisitors, todayEvents, tasks, r
                                                         {duty.priority}
                                                     </span>
                                                 </div>
-                                                <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2">{duty.description}</p>
+                                                <p className="text-xs text-muted-foreground line-clamp-2">{duty.description}</p>
                                             </div>
                                         </div>
                                     </div>
@@ -284,23 +292,23 @@ export default function Dashboard({ stats, recentVisitors, todayEvents, tasks, r
             {/* Main Grid */}
             <div className="grid lg:grid-cols-3 gap-6">
                 {/* Recent Visitors */}
-                <Card className="bg-white dark:bg-gray-800 border-red-100 dark:border-gray-700 lg:col-span-2">
+                <Card className="bg-card border-border lg:col-span-2">
                     <CardHeader className="flex flex-row items-center justify-between pb-4">
-                        <CardTitle className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                        <CardTitle className="text-lg font-semibold text-foreground flex items-center gap-2">
                             <Users className="w-5 h-5 text-red-500" />
                             Today's Visitors
                         </CardTitle>
-                        <Button variant="ghost" size="sm" className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20">
+                        <Button variant="ghost" size="sm" className="text-coin-600 hover:text-coin-700 hover:bg-coin-50 dark:hover:bg-coin-900/20">
                             View All
                         </Button>
                     </CardHeader>
                     <CardContent className="p-0">
                         {recentVisitors.length === 0 ? (
-                            <div className="p-6 text-center text-gray-500 dark:text-gray-400">
+                            <div className="p-6 text-center text-muted-foreground">
                                 No visitors today
                             </div>
                         ) : (
-                            <div className="divide-y divide-gray-100 dark:divide-gray-700">
+                            <div className="divide-y divide-border">
                                 {recentVisitors.slice(0, 5).map((visitor) => (
                                     <div key={visitor.id} className="p-4 flex items-center justify-between">
                                         <div className="flex items-center gap-3">
@@ -310,15 +318,15 @@ export default function Dashboard({ stats, recentVisitors, todayEvents, tasks, r
                                                 </span>
                                             </div>
                                             <div>
-                                                <p className="font-medium text-gray-900 dark:text-white">{visitor.name}</p>
-                                                <p className="text-sm text-gray-500 dark:text-gray-400">
+                                                <p className="font-medium text-foreground">{visitor.name}</p>
+                                                <p className="text-sm text-muted-foreground">
                                                     {visitor.company || 'No company'} • {visitor.purpose}
                                                 </p>
                                             </div>
                                         </div>
                                         <div className="text-right">
                                             {visitor.badge_number && (
-                                                <p className="text-xs text-gray-400 dark:text-gray-500">{visitor.badge_number}</p>
+                                                <p className="text-xs text-muted-foreground">{visitor.badge_number}</p>
                                             )}
                                         </div>
                                     </div>
@@ -331,32 +339,32 @@ export default function Dashboard({ stats, recentVisitors, todayEvents, tasks, r
                 {/* Quick Actions */}
                 <div className="space-y-6">
                     {/* Today's Events */}
-                    <Card className="bg-white dark:bg-gray-800 border-red-100 dark:border-gray-700">
+                    <Card className="bg-card border-border">
                         <CardHeader className="pb-4">
-                            <CardTitle className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                            <CardTitle className="text-lg font-semibold text-foreground flex items-center gap-2">
                                 <Calendar className="w-5 h-5 text-red-500" />
                                 Today's Schedule
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
                             {todayEvents.length === 0 ? (
-                                <div className="text-center text-gray-500 dark:text-gray-400 py-4">
+                                <div className="text-center text-muted-foreground py-4">
                                     No events scheduled
                                 </div>
                             ) : (
                                 <div className="space-y-3">
                                     {todayEvents.slice(0, 3).map((event) => (
-                                        <div key={event.id} className="flex items-start gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50">
+                                        <div key={event.id} className="flex items-start gap-3 p-3 rounded-lg bg-muted">
                                             <div className="w-10 h-10 rounded-lg bg-purple-500/10 flex items-center justify-center flex-shrink-0">
                                                 <Clock className="w-5 h-5 text-purple-500" />
                                             </div>
                                             <div className="min-w-0 flex-1">
-                                                <p className="font-medium text-gray-900 dark:text-white truncate">{event.title}</p>
-                                                <p className="text-sm text-gray-500 dark:text-gray-400">
+                                                <p className="font-medium text-foreground truncate">{event.title}</p>
+                                                <p className="text-sm text-muted-foreground">
                                                     {new Date(event.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                 </p>
                                                 {event.location && (
-                                                    <p className="text-xs text-gray-400 dark:text-gray-500">{event.location}</p>
+                                                    <p className="text-xs text-muted-foreground">{event.location}</p>
                                                 )}
                                             </div>
                                         </div>
@@ -367,24 +375,24 @@ export default function Dashboard({ stats, recentVisitors, todayEvents, tasks, r
                     </Card>
 
                     {/* Quick Tasks */}
-                    <Card className="bg-white dark:bg-gray-800 border-red-100 dark:border-gray-700">
+                    <Card className="bg-card border-border">
                         <CardHeader className="flex flex-row items-center justify-between pb-4">
-                            <CardTitle className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                            <CardTitle className="text-lg font-semibold text-foreground flex items-center gap-2">
                                 <CheckSquare className="w-5 h-5 text-red-500" />
                                 Pending Tasks ({tasks.length})
                             </CardTitle>
                             {can.manage_tasks && (
                                 <Dialog open={isTaskModalOpen} onOpenChange={setIsTaskModalOpen}>
                                     <DialogTrigger asChild>
-                                        <Button size="sm" className="bg-red-600 hover:bg-red-700 text-white">
+                                        <Button size="sm" className="bg-coin-600 hover:bg-coin-700 text-white">
                                             <Plus className="w-4 h-4 mr-1" />
                                             Add
                                         </Button>
                                     </DialogTrigger>
-                                    <DialogContent className="bg-white dark:bg-gray-800 border-red-100 dark:border-gray-700 text-gray-900 dark:text-white max-w-md">
+                                    <DialogContent className="bg-background border-border text-foreground max-w-md">
                                         <DialogHeader>
                                             <DialogTitle className="flex items-center gap-2">
-                                                <CheckSquare className="w-5 h-5 text-red-500" />
+                                                <CheckSquare className="w-5 h-5 text-coin-500" />
                                                 New Task
                                             </DialogTitle>
                                         </DialogHeader>
@@ -395,33 +403,36 @@ export default function Dashboard({ stats, recentVisitors, todayEvents, tasks, r
                                                     id="title"
                                                     value={taskForm.title}
                                                     onChange={e => setTaskForm({ ...taskForm, title: e.target.value })}
-                                                    className="bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600"
+                                                    className="bg-muted border-border text-foreground"
                                                     required
                                                 />
                                             </div>
                                             <div className="space-y-2">
                                                 <Label htmlFor="description">Description</Label>
-                                                <Input
+                                                <Textarea
                                                     id="description"
                                                     value={taskForm.description}
                                                     onChange={e => setTaskForm({ ...taskForm, description: e.target.value })}
-                                                    className="bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600"
+                                                    className="bg-muted border-border text-foreground min-h-[80px]"
                                                 />
                                             </div>
                                             <div className="grid grid-cols-2 gap-3">
                                                 <div className="space-y-2">
-                                                    <Label htmlFor="priority">Priority</Label>
-                                                    <select
-                                                        id="priority"
+                                                    <Label>Priority</Label>
+                                                    <Select
                                                         value={taskForm.priority}
-                                                        onChange={e => setTaskForm({ ...taskForm, priority: e.target.value })}
-                                                        className="w-full rounded-md bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white px-3 py-2"
+                                                        onValueChange={v => setTaskForm({ ...taskForm, priority: v })}
                                                     >
-                                                        <option value="low">Low</option>
-                                                        <option value="medium">Medium</option>
-                                                        <option value="high">High</option>
-                                                        <option value="urgent">Urgent</option>
-                                                    </select>
+                                                        <SelectTrigger className="bg-muted border-border text-foreground">
+                                                            <SelectValue />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            <SelectItem value="low">Low</SelectItem>
+                                                            <SelectItem value="medium">Medium</SelectItem>
+                                                            <SelectItem value="high">High</SelectItem>
+                                                            <SelectItem value="urgent">Urgent</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
                                                 </div>
                                                 <div className="space-y-2">
                                                     <Label htmlFor="due_date">Due Date</Label>
@@ -430,7 +441,7 @@ export default function Dashboard({ stats, recentVisitors, todayEvents, tasks, r
                                                         type="date"
                                                         value={taskForm.due_date}
                                                         onChange={e => setTaskForm({ ...taskForm, due_date: e.target.value })}
-                                                        className="bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600"
+                                                        className="bg-muted border-border text-foreground"
                                                     />
                                                 </div>
                                             </div>
@@ -438,7 +449,7 @@ export default function Dashboard({ stats, recentVisitors, todayEvents, tasks, r
                                                 <Button type="button" variant="outline" onClick={() => setIsTaskModalOpen(false)} className="flex-1">
                                                     Cancel
                                                 </Button>
-                                                <Button type="submit" className="flex-1 bg-red-600 hover:bg-red-700">
+                                                <Button type="submit" className="flex-1 bg-coin-600 hover:bg-coin-700">
                                                     Create Task
                                                 </Button>
                                             </div>
@@ -449,17 +460,17 @@ export default function Dashboard({ stats, recentVisitors, todayEvents, tasks, r
                         </CardHeader>
                         <CardContent>
                             {tasks.length === 0 ? (
-                                <div className="text-center text-gray-500 dark:text-gray-400 py-4">
+                                <div className="text-center text-muted-foreground py-4">
                                     No pending tasks
                                 </div>
                             ) : (
                                 <div className="space-y-2">
                                     {tasks.slice(0, 4).map((task) => (
-                                        <div key={task.id} className="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50">
+                                        <div key={task.id} className="flex items-center justify-between p-3 rounded-lg bg-muted">
                                             <div className="min-w-0 flex-1">
-                                                <p className="text-sm text-gray-900 dark:text-white truncate">{task.title}</p>
+                                                <p className="text-sm text-foreground truncate">{task.title}</p>
                                                 {task.due_date && (
-                                                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                                                    <p className="text-xs text-muted-foreground">
                                                         Due {new Date(task.due_date).toLocaleDateString()}
                                                     </p>
                                                 )}
@@ -477,7 +488,7 @@ export default function Dashboard({ stats, recentVisitors, todayEvents, tasks, r
                                                             size="sm"
                                                             variant="outline"
                                                             onClick={() => handleCompleteTask(task.id)}
-                                                            className="border-green-500/30 text-green-400 hover:bg-green-500/10 p-1 h-7 w-7"
+                                                            className="border-green-500/30 text-green-600 dark:text-green-400 hover:bg-green-500/10 p-1 h-7 w-7"
                                                         >
                                                             <CheckCircle className="w-4 h-4" />
                                                         </Button>
@@ -485,7 +496,7 @@ export default function Dashboard({ stats, recentVisitors, todayEvents, tasks, r
                                                             size="sm"
                                                             variant="outline"
                                                             onClick={() => handleDeleteTask(task.id)}
-                                                            className="border-red-500/30 text-red-400 hover:bg-red-500/10 p-1 h-7 w-7"
+                                                            className="border-red-500/30 text-red-600 dark:text-red-400 hover:bg-red-500/10 p-1 h-7 w-7"
                                                         >
                                                             <Trash2 className="w-4 h-4" />
                                                         </Button>

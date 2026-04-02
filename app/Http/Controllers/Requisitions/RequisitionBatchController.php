@@ -335,6 +335,23 @@ class RequisitionBatchController extends Controller
 
         $batches = $q->paginate($perPage);
 
+        // Add funding stats to each batch
+        $batches->getCollection()->transform(function ($batch) {
+            $stats = Requisition::where('batch_id', $batch->id)
+                ->selectRaw("
+                    SUM(CASE WHEN status = 'disbursed' THEN 1 ELSE 0 END) as funded_count,
+                    SUM(CASE WHEN status = 'pending_funding' THEN 1 ELSE 0 END) as pending_funding_count,
+                    SUM(CASE WHEN status = 'pending_disbursement' THEN 1 ELSE 0 END) as pending_disbursement_count
+                ")
+                ->first();
+
+            $batch->funded_count = (int) ($stats->funded_count ?? 0);
+            $batch->pending_funding_count = (int) ($stats->pending_funding_count ?? 0);
+            $batch->pending_disbursement_count = (int) ($stats->pending_disbursement_count ?? 0);
+
+            return $batch;
+        });
+
         return response()->json([
             'batches' => $batches,
         ]);
@@ -394,20 +411,112 @@ class RequisitionBatchController extends Controller
         return response()->stream($callback, 200, $headers);
     }
 
-    public function print(Request $request, RequisitionBatch $batch): Response
+    public function generateReport(Request $request): JsonResponse|StreamedResponse
     {
         $user = $request->user();
-        abort_unless($user->hasAnyRole(['admin', 'super_admin', 'asset_manager', 'assets_manager']), 403);
+        abort_unless($user->hasAnyRole(['admin', 'super_admin']), 403);
 
-        $batch->load(['compiledBy:id,name','acknowledgedBy:id,name']);
-        $requisitions = Requisition::with(['requestedBy:id,name','approvedBy:id,name'])
-            ->where('batch_id', $batch->id)
-            ->orderBy('created_at')
-            ->get();
-
-        return Inertia::render('Requisitions/BatchPrint', [
-            'batch' => $batch,
-            'requisitions' => $requisitions,
+        $data = $request->validate([
+            'month' => ['required', 'integer', 'min:1', 'max:12'],
+            'year' => ['required', 'integer', 'min:2020'],
+            'format' => ['required', 'string', 'in:csv,json'],
         ]);
+
+        $month = $data['month'];
+        $year = $data['year'];
+        $format = $data['format'];
+
+        $startDate = Carbon::create($year, $month, 1)->startOfMonth();
+        $endDate = $startDate->copy()->endOfMonth();
+
+        // Get summary statistics
+        $stats = [
+            'total_requisitions' => Requisition::whereBetween('created_at', [$startDate, $endDate])->count(),
+            'total_amount' => Requisition::whereBetween('created_at', [$startDate, $endDate])->sum('amount') ?? 0,
+            'pending_admin' => Requisition::whereBetween('created_at', [$startDate, $endDate])->where('status', 'pending_admin')->count(),
+            'needs_revision' => Requisition::whereBetween('created_at', [$startDate, $endDate])->where('status', 'needs_revision')->count(),
+            'pending_disbursement' => Requisition::whereBetween('created_at', [$startDate, $endDate])->where('status', 'pending_disbursement')->count(),
+            'pending_funding' => Requisition::whereBetween('created_at', [$startDate, $endDate])->where('status', 'pending_funding')->count(),
+            'disbursed' => Requisition::whereBetween('created_at', [$startDate, $endDate])->where('status', 'disbursed')->count(),
+            'expired' => Requisition::whereBetween('created_at', [$startDate, $endDate])->where('status', 'expired')->count(),
+            'total_batches' => RequisitionBatch::whereBetween('batch_date', [$startDate, $endDate])->count(),
+        ];
+
+        $filename = "requisitions-report-{$year}-".str_pad($month, 2, '0', STR_PAD_LEFT);
+
+        if ($format === 'json') {
+            $requisitions = Requisition::with(['requestedBy:id,name', 'approvedBy:id,name'])
+                ->whereBetween('created_at', [$startDate, $endDate])
+                ->get();
+
+            $batches = RequisitionBatch::with(['compiledBy:id,name', 'acknowledgedBy:id,name'])
+                ->whereBetween('batch_date', [$startDate, $endDate])
+                ->get();
+
+            return response()->json([
+                'period' => $startDate->format('F Y'),
+                'summary' => $stats,
+                'requisitions' => $requisitions,
+                'batches' => $batches,
+            ]);
+        }
+
+        // CSV download
+        $headers = [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => "attachment; filename=\"{$filename}.csv\"",
+        ];
+
+        $callback = function () use ($startDate, $endDate, $stats) {
+            $out = fopen('php://output', 'w');
+
+            fputcsv($out, ['REQUISITION REPORT', $startDate->format('F Y')]);
+            fputcsv($out, []);
+            fputcsv($out, ['SUMMARY']);
+            foreach ($stats as $key => $value) {
+                fputcsv($out, [str_replace('_', ' ', ucfirst($key)), $value]);
+            }
+            fputcsv($out, []);
+
+            // Batches
+            $batches = RequisitionBatch::with(['compiledBy:id,name'])
+                ->whereBetween('batch_date', [$startDate, $endDate])
+                ->get();
+
+            fputcsv($out, ['BATCHES']);
+            fputcsv($out, ['ID', 'Date', 'Status', 'Total Amount', 'Compiled By']);
+            foreach ($batches as $b) {
+                fputcsv($out, [
+                    $b->id,
+                    $b->batch_date?->format('Y-m-d'),
+                    $b->status,
+                    $b->total_amount,
+                    $b->compiledBy?->name ?? "User #{$b->compiled_by}",
+                ]);
+            }
+            fputcsv($out, []);
+
+            // Requisitions
+            $requisitions = Requisition::with(['requestedBy:id,name'])
+                ->whereBetween('created_at', [$startDate, $endDate])
+                ->get();
+
+            fputcsv($out, ['REQUISITIONS']);
+            fputcsv($out, ['ID', 'Title', 'Amount', 'Status', 'Requested By', 'Created At']);
+            foreach ($requisitions as $r) {
+                fputcsv($out, [
+                    $r->id,
+                    $r->title,
+                    $r->amount,
+                    $r->status,
+                    $r->requestedBy?->name ?? "User #{$r->requested_by}",
+                    $r->created_at?->format('Y-m-d H:i'),
+                ]);
+            }
+
+            fclose($out);
+        };
+
+        return response()->stream($callback, 200, $headers);
     }
 }

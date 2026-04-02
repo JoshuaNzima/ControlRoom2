@@ -43,7 +43,7 @@ interface NavItem {
 }
 
 export default function FrontOfficeLayout({ children, title }: FrontOfficeLayoutProps) {
-    const { auth, role, can, unreadCount = 0 } = usePage().props as any;
+    const { auth, role, can, unreadCount = 0, appName } = usePage().props as any;
     const user = auth?.user;
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [isDark, setIsDark] = useState(true);
@@ -148,7 +148,7 @@ export default function FrontOfficeLayout({ children, title }: FrontOfficeLayout
                         </div>
                         <div>
                             <h1 className="font-bold text-lg tracking-tight text-white">Front Office</h1>
-                            <p className="text-xs text-red-200 dark:text-gray-400">ControlRoom</p>
+                            <p className="text-xs text-red-200 dark:text-gray-400">{appName}</p>
                         </div>
                     </div>
                 </div>

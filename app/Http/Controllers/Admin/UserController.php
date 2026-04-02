@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Inertia\Inertia;
 use Spatie\Permission\Models\Role;
+use App\Models\Guards\Client;
 use App\Models\Zone;
 use App\Notifications\ZoneCommanderUnassigned;
 use Illuminate\Support\Facades\Notification as NotificationFacade;
@@ -67,12 +68,14 @@ class UserController extends Controller
 
         $roles = Role::all();
         $zones = Zone::orderBy('name')->get(['id','name']);
+        $clients = Client::orderBy('name')->get(['id', 'name']);
 
         return Inertia::render('Admin/Users/Index', [
             'users' => $users,
             'filters' => request()->only('search', 'per_page', 'role', 'status', 'zone_id', 'sort', 'direction'),
             'roles' => $roles,
             'zones' => $zones,
+            'clients' => $clients,
         ]);
     }
 
@@ -109,6 +112,8 @@ class UserController extends Controller
             'role' => 'required|exists:roles,name',
             'zone_id' => 'nullable|exists:zones,id',
             'status' => 'nullable|in:active,inactive',
+            'client_id' => 'nullable|exists:clients,id',
+            'client_role' => 'nullable|in:primary,contact,viewer',
         ]);
 
         // Auto-generate employee_id if not provided
@@ -130,6 +135,15 @@ class UserController extends Controller
         ]);
 
         $user->assignRole($validated['role']);
+
+        // Link user to client if client_id provided and role is client
+        if (!empty($validated['client_id']) && $validated['role'] === 'client') {
+            $user->clients()->attach($validated['client_id'], [
+                'role' => $validated['client_role'] ?? 'contact',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
 
         // Send password reset link to user so they can set their own password
         try {
@@ -162,6 +176,8 @@ class UserController extends Controller
             'role' => 'nullable|exists:roles,name',
             'status' => 'nullable|in:active,inactive',
             'zone_id' => 'nullable|exists:zones,id',
+            'client_id' => 'nullable|exists:clients,id',
+            'client_role' => 'nullable|in:primary,contact,viewer',
         ]);
 
         if (isset($validated['name'])) $user->name = $validated['name'];
@@ -187,6 +203,21 @@ class UserController extends Controller
                     // Fallback: log so admins can be informed via logs until notifications table exists
                     \Illuminate\Support\Facades\Log::warning('ZoneCommander without zone assigned: ' . $user->email);
                 }
+            }
+        }
+
+        // Handle client linking update
+        if (array_key_exists('client_id', $validated)) {
+            // Detach existing client relationships
+            $user->clients()->detach();
+            
+            // Attach new client if provided and role is client
+            if (!empty($validated['client_id']) && ($validated['role'] === 'client' || $user->hasRole('client'))) {
+                $user->clients()->attach($validated['client_id'], [
+                    'role' => $validated['client_role'] ?? 'contact',
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
             }
         }
 

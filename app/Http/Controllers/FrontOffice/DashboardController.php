@@ -63,7 +63,7 @@ class DashboardController extends Controller
         ]);
     }
 
-    public function reports()
+    public function reports(Request $request)
     {
         $user = Auth::user();
         $role = $this->getFrontOfficeRole($user);
@@ -71,6 +71,10 @@ class DashboardController extends Controller
         if (!in_array($role, ['executive_assistant', 'admin', 'super_admin'])) {
             abort(403, 'Unauthorized');
         }
+
+        // Date range filtering
+        $startDate = $request->input('start_date', now()->subMonths(6)->format('Y-m-d'));
+        $endDate = $request->input('end_date', now()->format('Y-m-d'));
 
         // Monthly visitor stats
         $monthlyStats = Visitor::selectRaw('DATE_FORMAT(created_at, "%Y-%m") as month, COUNT(*) as count')
@@ -85,9 +89,71 @@ class DashboardController extends Controller
             ->groupBy('purpose')
             ->get();
 
+        // Task statistics
+        $taskStats = [
+            'total' => FrontOfficeTask::whereBetween('created_at', [$startDate, $endDate])->count(),
+            'completed' => FrontOfficeTask::whereBetween('created_at', [$startDate, $endDate])->where('status', 'completed')->count(),
+            'pending' => FrontOfficeTask::whereBetween('created_at', [$startDate, $endDate])->where('status', 'pending')->count(),
+            'in_progress' => FrontOfficeTask::whereBetween('created_at', [$startDate, $endDate])->where('status', 'in_progress')->count(),
+            'overdue' => FrontOfficeTask::whereBetween('created_at', [$startDate, $endDate])->where('status', 'overdue')->count(),
+            'cancelled' => FrontOfficeTask::whereBetween('created_at', [$startDate, $endDate])->where('status', 'cancelled')->count(),
+        ];
+
+        // Task priority breakdown
+        $priorityStats = FrontOfficeTask::selectRaw('priority, COUNT(*) as count')
+            ->whereBetween('created_at', [$startDate, $endDate])
+            ->groupBy('priority')
+            ->pluck('count', 'priority')
+            ->toArray();
+
+        // Task category breakdown
+        $categoryStats = FrontOfficeTask::selectRaw('category, COUNT(*) as count')
+            ->whereBetween('created_at', [$startDate, $endDate])
+            ->groupBy('category')
+            ->pluck('count', 'category')
+            ->toArray();
+
+        // Monthly task trend
+        $monthlyTaskStats = FrontOfficeTask::selectRaw('DATE_FORMAT(created_at, "%Y-%m") as month, COUNT(*) as count')
+            ->whereBetween('created_at', [$startDate, $endDate])
+            ->groupBy('month')
+            ->orderBy('month')
+            ->get();
+
+        // Task completion by user (top performers)
+        $topPerformers = FrontOfficeTask::selectRaw('completed_by, COUNT(*) as count')
+            ->whereNotNull('completed_by')
+            ->whereBetween('completed_at', [$startDate, $endDate])
+            ->groupBy('completed_by')
+            ->orderByDesc('count')
+            ->limit(5)
+            ->with('completedBy:id,name')
+            ->get()
+            ->map(fn($t) => [
+                'name' => $t->completedBy?->name ?? 'Unknown',
+                'count' => $t->count,
+            ]);
+
+        // Average completion time (in hours)
+        $avgCompletionTime = FrontOfficeTask::whereNotNull('completed_at')
+            ->whereBetween('created_at', [$startDate, $endDate])
+            ->selectRaw('AVG(TIMESTAMPDIFF(HOUR, created_at, completed_at)) as avg_hours')
+            ->first()
+            ->avg_hours ?? 0;
+
         return Inertia::render('FrontOffice/Reports', [
             'monthlyStats' => $monthlyStats,
             'purposeStats' => $purposeStats,
+            'taskStats' => $taskStats,
+            'priorityStats' => $priorityStats,
+            'categoryStats' => $categoryStats,
+            'monthlyTaskStats' => $monthlyTaskStats,
+            'topPerformers' => $topPerformers,
+            'avgCompletionTime' => round($avgCompletionTime, 1),
+            'filters' => [
+                'start_date' => $startDate,
+                'end_date' => $endDate,
+            ],
             'role' => $role,
             'can' => [
                 'manage_calendar' => in_array($role, ['executive_assistant', 'personal_assistant', 'admin', 'super_admin']),

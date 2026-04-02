@@ -69,6 +69,8 @@ Route::middleware(['auth'])
         // Batches history
         Route::get('/batches', [RequisitionBatchController::class, 'index'])
             ->name('batches.index');
+        Route::get('/batches/report', [RequisitionBatchController::class, 'generateReport'])
+            ->name('batches.report');
         Route::get('/batches/{batch}', [RequisitionBatchController::class, 'show'])
             ->name('batches.show');
         Route::get('/batches/{batch}/export.csv', [RequisitionBatchController::class, 'exportCsv'])

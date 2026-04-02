@@ -20,6 +20,8 @@ import {
     Trash2,
     Edit3,
     FileText,
+    FileDown,
+    FileSpreadsheet,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
@@ -254,9 +256,10 @@ export default function TasksIndex({ tasks, users = [], templates = [], filters 
 
     const getStatusColor = (status: string) => {
         switch (status) {
-            case 'completed': return 'bg-green-500/10 text-green-400 border-green-500/20';
-            case 'in_progress': return 'bg-purple-500/10 text-purple-400 border-purple-500/20';
-            default: return 'bg-gray-500/10 text-gray-400 border-gray-500/20';
+            case 'completed': return 'bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20';
+            case 'in_progress': return 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20';
+            case 'overdue': return 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20';
+            default: return 'bg-gray-500/10 text-gray-600 dark:text-gray-400 border-gray-500/20';
         }
     };
 
@@ -264,7 +267,8 @@ export default function TasksIndex({ tasks, users = [], templates = [], filters 
         t.title.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
-    const pendingCount = (tasks?.data || []).filter(t => t.status !== 'completed').length;
+    const pendingCount = (tasks?.data || []).filter(t => t.status !== 'completed' && t.status !== 'overdue').length;
+    const overdueCount = (tasks?.data || []).filter(t => t.status === 'overdue').length;
     const completedCount = (tasks?.data || []).filter(t => t.status === 'completed').length;
 
     return (
@@ -305,6 +309,32 @@ export default function TasksIndex({ tasks, users = [], templates = [], filters 
                         <Filter className="w-4 h-4 mr-2" />
                         Filters
                     </Button>
+                    {isExecutiveAssistant && (
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="outline" className="border-border">
+                                    <FileDown className="w-4 h-4 mr-2" />
+                                    Export
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent className="bg-popover border-border">
+                                <DropdownMenuItem
+                                    onClick={() => window.open(route('front-office.tasks.export', { format: 'excel', ...filters }), '_blank')}
+                                    className="text-foreground hover:bg-muted"
+                                >
+                                    <FileSpreadsheet className="w-4 h-4 mr-2 text-green-500" />
+                                    Export to Excel
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                    onClick={() => window.open(route('front-office.tasks.export', { format: 'pdf', ...filters }), '_blank')}
+                                    className="text-foreground hover:bg-muted"
+                                >
+                                    <FileDown className="w-4 h-4 mr-2 text-red-500" />
+                                    Export to PDF
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    )}
                     <Dialog open={isTemplateOpen} onOpenChange={setIsTemplateOpen}>
                         <DialogTrigger asChild>
                             <Button variant="outline" className="border-border">
@@ -426,6 +456,11 @@ export default function TasksIndex({ tasks, users = [], templates = [], filters 
                                             <SelectItem value="front_office">Front Office</SelectItem>
                                             <SelectItem value="executive">Executive</SelectItem>
                                             <SelectItem value="personal">Personal</SelectItem>
+                                            <SelectItem value="ict">ICT</SelectItem>
+                                            <SelectItem value="administration">Administration</SelectItem>
+                                            <SelectItem value="marketing">Marketing</SelectItem>
+                                            <SelectItem value="operations">Operations</SelectItem>
+                                            <SelectItem value="accounts">Accounts</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>
@@ -474,9 +509,9 @@ export default function TasksIndex({ tasks, users = [], templates = [], filters 
                     </DialogContent>
                 </Dialog>
             </div>
-            </div>               
+            </div>
             {/* Stats */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
                 <Card className="bg-card border-border">
                     <CardContent className="p-4">
                         <p className="text-sm text-muted-foreground">Total Tasks</p>
@@ -487,6 +522,12 @@ export default function TasksIndex({ tasks, users = [], templates = [], filters 
                     <CardContent className="p-4">
                         <p className="text-sm text-muted-foreground">Pending</p>
                         <p className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">{pendingCount}</p>
+                    </CardContent>
+                </Card>
+                <Card className="bg-card border-border">
+                    <CardContent className="p-4">
+                        <p className="text-sm text-muted-foreground">Overdue</p>
+                        <p className="text-2xl font-bold text-red-600 dark:text-red-400">{overdueCount}</p>
                     </CardContent>
                 </Card>
                 <Card className="bg-card border-border">
@@ -518,6 +559,7 @@ export default function TasksIndex({ tasks, users = [], templates = [], filters 
                                     <SelectItem value="">All Statuses</SelectItem>
                                     <SelectItem value="pending">Pending</SelectItem>
                                     <SelectItem value="in_progress">In Progress</SelectItem>
+                                    <SelectItem value="overdue">Overdue</SelectItem>
                                     <SelectItem value="completed">Completed</SelectItem>
                                 </SelectContent>
                             </Select>
@@ -657,7 +699,7 @@ export default function TasksIndex({ tasks, users = [], templates = [], filters 
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-2">
-                                            {task.status !== 'completed' && (
+                                            {task.status !== 'completed' && task.status !== 'overdue' && (
                                                 <Button
                                                     size="sm"
                                                     variant="outline"
@@ -666,6 +708,9 @@ export default function TasksIndex({ tasks, users = [], templates = [], filters 
                                                 >
                                                     <CheckCircle className="w-4 h-4" />
                                                 </Button>
+                                            )}
+                                            {task.status === 'overdue' && (
+                                                <Badge className="bg-red-500 text-white border-red-500">Overdue</Badge>
                                             )}
                                             <DropdownMenu>
                                                 <DropdownMenuTrigger asChild>

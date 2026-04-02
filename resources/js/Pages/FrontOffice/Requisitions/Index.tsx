@@ -1,39 +1,22 @@
 import { useState } from 'react';
 import { Head, router } from '@inertiajs/react';
 import FrontOfficeLayout from '@/Layouts/FrontOfficeLayout';
+import QuickRequisitionButton from '@/Components/Requisitions/FrontOfficeRequisitionButton';
 import {
     ShoppingCart,
-    Plus,
     Search,
     CheckCircle,
     Clock,
-    AlertCircle,
     FileText,
     DollarSign,
     User,
     Calendar,
     ChevronRight,
 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card';
+import { Card, CardContent } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import { Input } from '@/Components/ui/input';
 import { Badge } from '@/Components/ui/badge';
-import {
-    Dialog,
-    DialogContent,
-    DialogHeader,
-    DialogTitle,
-    DialogTrigger,
-} from '@/Components/ui/dialog';
-import { Label } from '@/Components/ui/label';
-import { Textarea } from '@/Components/ui/textarea';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/Components/ui/select';
 import { cn } from '@/lib/utils';
 
 interface RequisitionsProps {
@@ -74,54 +57,7 @@ interface RequisitionsProps {
 }
 
 export default function RequisitionsIndex({ requisitions, stats, filters, can }: RequisitionsProps) {
-    const [isCreateOpen, setIsCreateOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState(filters.search || '');
-    const [formData, setFormData] = useState({
-        title: '',
-        description: '',
-        priority: 'medium',
-        currency: 'MWK',
-        items: [{ description: '', quantity: 1, unit_price: '', justification: '' }],
-    });
-
-    const handleCreate = (e: React.FormEvent) => {
-        e.preventDefault();
-        router.post(route('front-office.requisitions.store'), formData, {
-            onSuccess: () => {
-                setIsCreateOpen(false);
-                setFormData({
-                    title: '',
-                    description: '',
-                    priority: 'medium',
-                    currency: 'MWK',
-                    items: [{ description: '', quantity: 1, unit_price: '', justification: '' }],
-                });
-            },
-        });
-    };
-
-    const addItem = () => {
-        setFormData(prev => ({
-            ...prev,
-            items: [...prev.items, { description: '', quantity: 1, unit_price: '', justification: '' }],
-        }));
-    };
-
-    const removeItem = (index: number) => {
-        setFormData(prev => ({
-            ...prev,
-            items: prev.items.filter((_, i) => i !== index),
-        }));
-    };
-
-    const updateItem = (index: number, field: string, value: string | number) => {
-        setFormData(prev => ({
-            ...prev,
-            items: prev.items.map((item, i) =>
-                i === index ? { ...item, [field]: value } : item
-            ),
-        }));
-    };
 
     const filteredRequisitions = requisitions.data.filter(r =>
         r.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -162,168 +98,13 @@ export default function RequisitionsIndex({ requisitions, stats, filters, can }:
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
                 <div>
                     <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-                        <ShoppingCart className="w-6 h-6 text-red-500" />
+                        <ShoppingCart className="w-6 h-6 text-coin-500" />
                         Requisitions
                     </h1>
                     <p className="text-muted-foreground mt-1">Request office supplies, equipment, and services</p>
                 </div>
                 {can.create && (
-                    <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-                        <DialogTrigger asChild>
-                            <Button className="bg-red-600 hover:bg-red-700 text-white">
-                                <Plus className="w-4 h-4 mr-2" />
-                                New Requisition
-                            </Button>
-                        </DialogTrigger>
-                        <DialogContent className="bg-background border-border text-foreground max-w-2xl max-h-[90vh] overflow-y-auto">
-                            <DialogHeader>
-                                <DialogTitle className="flex items-center gap-2">
-                                    <ShoppingCart className="w-5 h-5 text-red-500" />
-                                    Create New Requisition
-                                </DialogTitle>
-                            </DialogHeader>
-                            <form onSubmit={handleCreate} className="space-y-4 mt-4">
-                                <div className="space-y-2">
-                                    <Label htmlFor="title">Title *</Label>
-                                    <Input
-                                        id="title"
-                                        value={formData.title}
-                                        onChange={e => setFormData({ ...formData, title: e.target.value })}
-                                        className="bg-muted border-border text-foreground"
-                                        placeholder="e.g., Office Stationery Q2 2025"
-                                        required
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="description">Description</Label>
-                                    <Textarea
-                                        id="description"
-                                        value={formData.description}
-                                        onChange={e => setFormData({ ...formData, description: e.target.value })}
-                                        className="bg-muted border-border text-foreground min-h-[80px]"
-                                        placeholder="Brief description of the requisition purpose..."
-                                    />
-                                </div>
-                                <div className="grid grid-cols-2 gap-3">
-                                    <div className="space-y-2">
-                                        <Label>Priority</Label>
-                                        <Select
-                                            value={formData.priority}
-                                            onValueChange={v => setFormData({ ...formData, priority: v })}
-                                        >
-                                            <SelectTrigger className="bg-muted border-border text-foreground">
-                                                <SelectValue />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="low">Low</SelectItem>
-                                                <SelectItem value="medium">Medium</SelectItem>
-                                                <SelectItem value="high">High</SelectItem>
-                                                <SelectItem value="urgent">Urgent</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label>Currency</Label>
-                                        <Select
-                                            value={formData.currency}
-                                            onValueChange={v => setFormData({ ...formData, currency: v })}
-                                        >
-                                            <SelectTrigger className="bg-muted border-border text-foreground">
-                                                <SelectValue />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="MWK">MWK (Malawi Kwacha)</SelectItem>
-                                                <SelectItem value="USD">USD (US Dollar)</SelectItem>
-                                                <SelectItem value="ZAR">ZAR (South African Rand)</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                </div>
-
-                                <div className="border-t border-border pt-4">
-                                    <div className="flex items-center justify-between mb-3">
-                                        <Label>Items</Label>
-                                        <Button type="button" variant="outline" size="sm" onClick={addItem}>
-                                            <Plus className="w-4 h-4 mr-1" />
-                                            Add Item
-                                        </Button>
-                                    </div>
-                                    <div className="space-y-3">
-                                        {formData.items.map((item, index) => (
-                                            <div key={index} className="p-3 bg-muted rounded-lg border border-border">
-                                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                                                    <div className="sm:col-span-2">
-                                                        <Label className="text-xs">Description *</Label>
-                                                        <Input
-                                                            value={item.description}
-                                                            onChange={e => updateItem(index, 'description', e.target.value)}
-                                                            className="bg-background border-border text-foreground"
-                                                            placeholder="Item description"
-                                                            required
-                                                        />
-                                                    </div>
-                                                    <div>
-                                                        <Label className="text-xs">Quantity *</Label>
-                                                        <Input
-                                                            type="number"
-                                                            min="1"
-                                                            value={item.quantity}
-                                                            onChange={e => updateItem(index, 'quantity', parseInt(e.target.value) || 1)}
-                                                            className="bg-background border-border text-foreground"
-                                                            required
-                                                        />
-                                                    </div>
-                                                    <div className="sm:col-span-2">
-                                                        <Label className="text-xs">Unit Price ({formData.currency}) *</Label>
-                                                        <Input
-                                                            type="number"
-                                                            step="0.01"
-                                                            min="0"
-                                                            value={item.unit_price}
-                                                            onChange={e => updateItem(index, 'unit_price', e.target.value)}
-                                                            className="bg-background border-border text-foreground"
-                                                            placeholder="0.00"
-                                                            required
-                                                        />
-                                                    </div>
-                                                    <div className="flex items-end">
-                                                        {formData.items.length > 1 && (
-                                                            <Button
-                                                                type="button"
-                                                                variant="destructive"
-                                                                size="sm"
-                                                                onClick={() => removeItem(index)}
-                                                            >
-                                                                Remove
-                                                            </Button>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                                <div className="mt-2">
-                                                    <Label className="text-xs">Justification</Label>
-                                                    <Input
-                                                        value={item.justification}
-                                                        onChange={e => updateItem(index, 'justification', e.target.value)}
-                                                        className="bg-background border-border text-foreground"
-                                                        placeholder="Why is this item needed?"
-                                                    />
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                <div className="flex gap-3 pt-4 border-t border-border">
-                                    <Button type="button" variant="outline" onClick={() => setIsCreateOpen(false)} className="flex-1">
-                                        Cancel
-                                    </Button>
-                                    <Button type="submit" className="flex-1 bg-red-600 hover:bg-red-700">
-                                        Submit Requisition
-                                    </Button>
-                                </div>
-                            </form>
-                        </DialogContent>
-                    </Dialog>
+                    <QuickRequisitionButton className="bg-coin-600 hover:bg-coin-700 shadow-lg shadow-coin-600/20" />
                 )}
             </div>
 

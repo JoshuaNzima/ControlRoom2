@@ -46,13 +46,16 @@ const QuickStats: React.FC = () => {
     );
 };
 
-export default function AdminLayout({ title, children, user }: Props) {
+export default function AdminLayout({ title, children }: Props) {
     const [sidebarOpen, setSidebarOpen] = React.useState(false);
     const [tasksOpen, setTasksOpen] = React.useState(false);
-    const [logoOk, setLogoOk] = React.useState<boolean>(true);
-    const { counters } = useCounters();
+    const page = usePage();
     const { theme, toggle } = useTheme();
-    const { weeklyTasks, isExecutiveAssistant } = usePage().props as any;
+    const user = page?.props?.auth?.user;
+    const weeklyTasks = (page?.props?.weeklyTasks || []) as any[];
+    const counters = (page?.props?.counters || {}) as any;
+    const isExecutiveAssistant = page?.props?.isExecutiveAssistant ?? false;
+    const appName = (page?.props as any)?.appName ?? 'CoinSec';
     useGpsAlerts();
 
     const roles = (() => {
@@ -79,6 +82,37 @@ export default function AdminLayout({ title, children, user }: Props) {
         if (typeof r === 'string') return String(r).replaceAll('_', ' ');
         return 'Admin';
     })();
+
+    const isClient = roles.includes('client');
+
+    // Client Portal Navigation
+    const clientNav: NavItem[] = isClient ? [
+        { 
+            name: 'Dashboard', 
+            href: route('client.dashboard'), 
+            icon: <IconMapper name="LayoutDashboard" size={20} />,
+        },
+        { 
+            name: 'My Sites', 
+            href: route('client.sites'), 
+            icon: <IconMapper name="Building" size={20} />,
+        },
+        { 
+            name: 'Reports', 
+            href: route('client.reports'), 
+            icon: <IconMapper name="FileText" size={20} />,
+        },
+        { 
+            name: 'Invoices', 
+            href: route('client.invoices'), 
+            icon: <IconMapper name="CreditCard" size={20} />,
+        },
+        {
+            name: 'Support',
+            href: 'mailto:support@coinsec.com',
+            icon: <IconMapper name="Headphones" size={20} />,
+        },
+    ] : [];
 
     // Main navigation - organized by category (matching SuperAdmin structure)
     const mainNav: NavItem[] = [
@@ -138,7 +172,7 @@ export default function AdminLayout({ title, children, user }: Props) {
         },
         ...(!isAdminUser ? ([
             {
-                name: 'My Requisitions',
+                name: 'Requisitions',
                 href: route('requisitions.index'),
                 icon: <IconMapper name="ClipboardList" size={20} />,
                 badge: counters?.requisitions_my_open,
@@ -231,39 +265,45 @@ export default function AdminLayout({ title, children, user }: Props) {
                     sidebarOpen ? 'translate-x-0' : '-translate-x-full'
                 } md:translate-x-0 transition-transform duration-300 ease-in-out z-50`}
             >
-                {/* Logo */}
-                <div className="flex items-center flex-shrink-0 px-4 py-5">
-                    <img
-                        src="/images/Coin-logo.png"
-                        alt="Coin Security"
-                        className="h-8 w-auto"
-                        style={{ display: logoOk ? 'block' : 'none' }}
-                        onLoad={() => setLogoOk(true)}
-                        onError={() => setLogoOk(false)}
-                    />
-                    {!logoOk && (
-                        <span className="ml-2 text-xl font-bold text-white">CoinSec</span>
-                    )}
+                {/* Logo / App Name */}
+                <div className="flex items-center flex-shrink-0 px-4 py-5 border-b border-red-800 dark:border-gray-800">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-red-500 to-red-700 flex items-center justify-center">
+                            <IconMapper name="layout-dashboard" className="w-5 h-5 text-white" />
+                        </div>
+                        <div>
+                            <h1 className="font-bold text-lg tracking-tight text-white">Admin</h1>
+                            <p className="text-xs text-red-200 dark:text-gray-400">{appName}</p>
+                        </div>
+                    </div>
                 </div>
 
-                {/* Navigation */}
+                {/* Navigation - Client gets simplified navigation */}
                 <nav className="flex-1 px-3 py-2 space-y-6 overflow-y-auto">
-                    <NavSection title="Main" items={mainNav} />
-                    <NavSection title="Operations" items={operationsNav} />
-                    <NavSection title="Finance" items={financeNav} />
-                    <NavSection title="Management" items={managementNav} />
-                    <NavSection title="Tools" items={toolsNav} />
+                    {isClient ? (
+                        <NavSection title="Client Portal" items={clientNav} />
+                    ) : (
+                        <>
+                            <NavSection title="Main" items={mainNav} />
+                            <NavSection title="Operations" items={operationsNav} />
+                            <NavSection title="Finance" items={financeNav} />
+                            <NavSection title="Management" items={managementNav} />
+                            <NavSection title="Tools" items={toolsNav} />
+                        </>
+                    )}
                 </nav>
 
-                {/* User Menu */}
-                <div className="flex-shrink-0 border-t border-red-800 dark:border-gray-800 p-4">
+                {/* User Menu - Bottom */}
+                <div className="flex-shrink-0 border-t border-red-800 dark:border-gray-800 p-4 bg-red-900 dark:bg-gray-950">
                     <div className="flex items-center gap-3 mb-3">
-                        <div className="w-9 h-9 rounded-full bg-red-800 dark:bg-gray-800 flex items-center justify-center text-white font-semibold text-sm">
+                        <div className="w-10 h-10 rounded-full bg-red-800 dark:bg-gray-800 border-2 border-red-700 dark:border-gray-700 flex items-center justify-center text-white font-semibold text-sm">
                             {user?.name?.charAt(0) || 'A'}
                         </div>
                         <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-white truncate">{user?.name}</p>
-                            <p className="text-xs text-red-200 dark:text-gray-400 truncate">{roleDisplay}</p>
+                            <p className="text-sm font-semibold text-white truncate">{user?.name}</p>
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs border font-medium bg-red-500/20 text-red-200 border-red-500/30">
+                                {roleDisplay}
+                            </span>
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
@@ -358,7 +398,7 @@ export default function AdminLayout({ title, children, user }: Props) {
                                         <WeeklyTasks
                                             tasks={weeklyTasks || []}
                                             showModule={true}
-                                            isExecutiveAssistant={isExecutiveAssistant}
+                                            isExecutiveAssistant={isExecutiveAssistant as any}
                                         />
                                     </motion.div>
                                 )}

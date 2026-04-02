@@ -53,10 +53,9 @@ export default function FinanceLayout({ title, children, user }: Props) {
   const [tasksOpen, setTasksOpen] = React.useState(false);
   const [isMobile, setIsMobile] = React.useState(false);
   const [logoOk, setLogoOk] = React.useState<boolean>(true);
-  const { counters } = useCounters();
   const { theme, toggle } = useTheme();
   const page = usePage<PageProps>();
-  const { weeklyTasks, isExecutiveAssistant } = page.props as any;
+  const { counters, weeklyTasks, isExecutiveAssistant, appName } = usePage().props as any;
 
   React.useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 1024);
@@ -147,22 +146,21 @@ export default function FinanceLayout({ title, children, user }: Props) {
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         } md:translate-x-0 transition-transform duration-300 ease-in-out z-50`}
       >
-        <div className="flex-1 flex flex-col pt-5 pb-4 overflow-y-auto">
-          <div className="flex items-center flex-shrink-0 px-4">
-            <img
-              src="/images/Coin-logo.png"
-              alt="Coin Security"
-              className="h-10 w-auto"
-              style={{ display: logoOk ? 'block' : 'none' }}
-              onLoad={() => setLogoOk(true)}
-              onError={() => setLogoOk(false)}
-            />
-            {!logoOk && (
-              <span className="text-white font-bold text-lg">CoinSec</span>
-            )}
+        {/* Logo / App Name */}
+        <div className="flex items-center flex-shrink-0 px-4 py-5 border-b border-red-800 dark:border-gray-800">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-red-500 to-red-700 flex items-center justify-center">
+              <IconMapper name="wallet" className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h1 className="font-bold text-lg tracking-tight text-white">Finance</h1>
+              <p className="text-xs text-red-200 dark:text-gray-400">{appName}</p>
+            </div>
           </div>
+        </div>
 
-          <nav className="mt-8 flex-1 px-2 space-y-8">
+        <div className="flex-1 flex flex-col overflow-y-auto">
+          <nav className="flex-1 px-2 py-4 space-y-8">
             <div className="space-y-1">
               <h3 className="px-3 text-xs font-semibold text-red-200 dark:text-gray-400 uppercase tracking-wider">Finance</h3>
               {financeLinks.map((item) => (
@@ -216,14 +214,16 @@ export default function FinanceLayout({ title, children, user }: Props) {
           </nav>
         </div>
 
-        <div className="flex-shrink-0 border-t border-red-800 dark:border-gray-800 p-4">
-            <div className="flex items-center gap-3 mb-3">
-            <div className="w-9 h-9 rounded-full bg-red-800 dark:bg-gray-800 flex items-center justify-center text-white font-semibold text-sm">
+        <div className="flex-shrink-0 border-t border-red-800 dark:border-gray-800 p-4 bg-red-900 dark:bg-gray-950">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-10 h-10 rounded-full bg-red-800 dark:bg-gray-800 border-2 border-red-700 dark:border-gray-700 flex items-center justify-center text-white font-semibold text-sm">
               {user?.name?.charAt(0) || 'F'}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-white truncate">{user?.name}</p>
-              <p className="text-xs text-red-200 dark:text-gray-400 truncate">{roles?.join(', ') || 'Finance User'}</p>
+              <p className="text-sm font-semibold text-white truncate">{user?.name}</p>
+              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs border font-medium bg-red-500/20 text-red-200 border-red-500/30">
+                {Array.isArray(roles) ? roles[0] : 'Finance User'}
+              </span>
             </div>
           </div>
           <div className="flex items-center gap-2">

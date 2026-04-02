@@ -210,6 +210,19 @@ class ConversationController extends Controller
         ]);
     }
 
+    public function typing(Request $request, Conversation $conversation)
+    {
+        abort_unless($conversation->participants()->where('user_id', Auth::id())->exists(), 403);
+
+        broadcast(new \App\Events\UserTyping(
+            conversationId: $conversation->id,
+            userId: Auth::id(),
+            userName: Auth::user()->name
+        ))->toOthers();
+
+        return response()->json(['status' => 'ok']);
+    }
+
     public function markRead(Request $request, Conversation $conversation)
     {
         abort_unless($conversation->participants()->where('user_id', Auth::id())->exists(), 403);

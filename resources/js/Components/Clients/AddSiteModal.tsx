@@ -373,7 +373,7 @@ export default function AddSiteModal({ open, onClose, clientId, onAdded, zones =
             type="button" 
             onClick={handleAdd} 
             disabled={saving} 
-            className="bg-red-600 hover:bg-red-700 text-white"
+            className="bg-coin-600 hover:bg-coin-700 text-white"
           >
             {saving ? (
               <>

@@ -239,10 +239,10 @@ export default function ClientDashboard({
   }, []);
 
   const quickActions = useMemo(() => [
-    { title: 'My Sites', description: 'View your assigned sites', href: '#sites', icon: <IconMapper name="Building" size={20} />, color: 'bg-blue-600' },
-    { title: 'Reports', description: 'Access security reports', href: '#incidents', icon: <IconMapper name="FileText" size={20} />, color: 'bg-purple-600' },
+    { title: 'My Sites', description: 'View your assigned sites', href: route('client.sites'), icon: <IconMapper name="Building" size={20} />, color: 'bg-blue-600' },
+    { title: 'Reports', description: 'Access security reports', href: route('client.reports'), icon: <IconMapper name="FileText" size={20} />, color: 'bg-purple-600' },
     { title: 'Support', description: 'Contact support team', href: 'mailto:support@coinsec.com', icon: <IconMapper name="Headphones" size={20} />, color: 'bg-emerald-600' },
-    { title: 'Invoices', description: 'View contracts & invoices', href: '#invoices', icon: <IconMapper name="FileCheck" size={20} />, color: 'bg-cyan-600' },
+    { title: 'Invoices', description: 'View contracts & invoices', href: route('client.invoices'), icon: <IconMapper name="FileCheck" size={20} />, color: 'bg-cyan-600' },
   ], []);
 
   // Format date for display

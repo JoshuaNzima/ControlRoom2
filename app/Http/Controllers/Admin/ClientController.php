@@ -67,7 +67,7 @@ class ClientController extends Controller
             ->with(['services' => function ($query) {
                 $query->select('services.id', 'services.name', 'services.monthly_price')
                     ->withPivot('custom_price', 'quantity');
-            }, 'supervisor:id,name', 'sergeant:id,name'])
+            }, 'supervisor:id,name', 'sergeant:id,name', 'users:id,name,email,phone'])
             ->when(request('search'), function($q, $search) {
                 $q->where('name', 'like', "%{$search}%");
             })
@@ -170,6 +170,13 @@ class ClientController extends Controller
             'site.longitude' => 'nullable|numeric|between:-180,180',
             'site.zone_id' => 'nullable|integer|exists:zones,id',
             'site.site_type' => 'nullable|string|max:50',
+            // Optional client user account
+            'create_user' => 'nullable|boolean',
+            'user_name' => 'required_if:create_user,true|string|max:255',
+            'user_email' => 'required_if:create_user,true|email|unique:users,email',
+            'user_phone' => 'nullable|string|max:20',
+            'user_password' => 'required_if:create_user,true|string|min:8',
+            'user_role' => 'required_if:create_user,true|in:primary,contact,viewer',
         ]);
 
         $client = Client::create(collect($validated)->except(['site', 'services'])->toArray());
@@ -206,8 +213,27 @@ class ClientController extends Controller
         // If zone_id provided, ensure it's included in the site record
         $client->sites()->create($siteData);
 
+        // Create client user account if requested
+        if (!empty($validated['create_user'])) {
+            $user = \App\Models\User::create([
+                'name' => $validated['user_name'],
+                'email' => $validated['user_email'],
+                'phone' => $validated['user_phone'] ?? null,
+                'password' => \Illuminate\Support\Facades\Hash::make($validated['user_password']),
+                'status' => 'active',
+            ]);
+
+            // Assign client role to user
+            $user->assignRole('client');
+
+            // Link user to client with specified role
+            $client->users()->attach($user->id, [
+                'role' => $validated['user_role'] ?? 'contact',
+            ]);
+        }
+
         return redirect()->route('admin.clients.index')
-            ->withSuccess('Client created successfully.');
+            ->withSuccess('Client created successfully.' . (!empty($validated['create_user']) ? ' Client portal account created.' : ''));
     }
 
     public function show(Client $client)
