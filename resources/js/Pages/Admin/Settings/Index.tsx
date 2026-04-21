@@ -46,7 +46,7 @@ type PageProps = {
       id: number;
       name: string;
       email: string;
-      roles: string[];
+      roles: (string | { id: number; name: string })[];
     }
   };
   system: {
@@ -62,7 +62,7 @@ type PageProps = {
 };
 
 export default function SettingsIndex() {
-  const { auth, system, payrollDefaults, guardGrades } = usePage<PageProps>().props as any;
+  const { auth, system, payrollDefaults, guardGrades } = usePage<any>().props;
   const { theme, toggle } = useTheme();
   const [activeTab, setActiveTab] = React.useState<'general' | 'hr' | 'payroll'>('general');
 

@@ -3,10 +3,14 @@ import { Head, router } from '@inertiajs/react';
 import { Card } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import { Html5QrcodeScanner } from 'html5-qrcode';
+import toast, { Toaster } from 'react-hot-toast';
 
 interface Props {
   activeScan?: {
     scan_id?: number;
+    checkpoint_id?: number;
+    checkpoint_name?: string;
+    checkpoint_code?: string;
     site_id: number;
     site_name: string;
     client_name?: string;
@@ -36,6 +40,8 @@ export default function Scanner({ activeScan }: Props) {
       scannerRef.current = null;
     }
 
+    const loadingToast = toast.loading('Processing scan...');
+
     try {
       // Get GPS coordinates
       const position = await new Promise<GeolocationPosition>((resolve, reject) => {
@@ -62,11 +68,15 @@ export default function Scanner({ activeScan }: Props) {
         const siteId = payload?.site_id ?? payload?.site ?? payload?.id;
         router.visit(route('scan.site', { site: siteId, latitude, longitude }), {
           onSuccess: () => {
+            toast.dismiss(loadingToast);
+            toast.success('Site scanned successfully!', { duration: 4000, icon: '✅' });
             setSuccess('Site scanned successfully!');
             processingRef.current = false;
           },
           onError: (errors) => {
+            toast.dismiss(loadingToast);
             const msg = (Object.values(errors || {})[0] as string) || 'Scan failed. Please try again.';
+            toast.error(msg, { duration: 6000, icon: '❌' });
             setError(msg);
             processingRef.current = false;
           },
@@ -82,17 +92,23 @@ export default function Scanner({ activeScan }: Props) {
         longitude,
       }, {
         onSuccess: () => {
+          toast.dismiss(loadingToast);
+          toast.success('Checkpoint scanned successfully!', { duration: 4000, icon: '✅' });
           setSuccess('Checkpoint scanned successfully!');
           processingRef.current = false;
         },
         onError: (errors) => {
+          toast.dismiss(loadingToast);
           const msg = (Object.values(errors || {})[0] as string) || 'Scan failed. Please try again.';
+          toast.error(msg, { duration: 6000, icon: '❌' });
           setError(msg);
           processingRef.current = false;
         },
         onFinish: () => setScanning(false),
       });
     } catch (err) {
+      toast.dismiss(loadingToast);
+      toast.error('GPS location required. Please enable location services.', { duration: 6000, icon: '❌' });
       setError('GPS location required. Please enable location services.');
       setScanning(false);
       processingRef.current = false;
@@ -148,9 +164,16 @@ export default function Scanner({ activeScan }: Props) {
   };
 
   const handleClear = () => {
+    const loadingToast = toast.loading('Clearing scan lock...');
     router.post(route('scan.clear'), {}, {
       onSuccess: () => {
+        toast.dismiss(loadingToast);
+        toast.success('Scan lock cleared', { duration: 3000, icon: '✅' });
         setSuccess('Scan lock cleared');
+      },
+      onError: () => {
+        toast.dismiss(loadingToast);
+        toast.error('Failed to clear scan lock', { duration: 4000, icon: '❌' });
       }
     });
   };
@@ -161,6 +184,7 @@ export default function Scanner({ activeScan }: Props) {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-6">
+      <Toaster position="top-right" />
       <Head title="QR Scanner" />
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
         <Card className="p-4 sm:p-6 dark:bg-gray-800">
@@ -190,6 +214,11 @@ export default function Scanner({ activeScan }: Props) {
               <div className="text-sm text-blue-800 dark:text-blue-200">
                 <strong>Active Scan:</strong> {activeScan.site_name}
                 {activeScan.client_name && ` (${activeScan.client_name})`}
+                {activeScan.checkpoint_name && (
+                  <span className="block text-xs mt-1 text-blue-600 dark:text-blue-300">
+                    Checkpoint: {activeScan.checkpoint_name}
+                  </span>
+                )}
               </div>
               <div className="text-xs text-blue-600 dark:text-blue-300 mt-1">
                 Scanned: {new Date(activeScan.scanned_at).toLocaleString()}

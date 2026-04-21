@@ -9,8 +9,10 @@ import QuickBudgetButton from '@/Components/Budgets/QuickBudgetButton';
 import useCounters from '@/Hooks/useCounters';
 import FloatingNavButton from '@/Components/FloatingNavButton';
 import WeeklyTasks from '@/Components/WeeklyTasks';
+import TutorialSection from '@/Components/Tutorials/TutorialSection';
 import { motion, AnimatePresence } from 'framer-motion';
 import useGpsAlerts from '@/Hooks/useGpsAlerts';
+import { useRealtimeNotifications } from '@/Hooks/useRealtimeNotifications';
 
 interface Props {
   title: string;
@@ -65,19 +67,24 @@ export default function FinanceLayout({ title, children, user }: Props) {
   }, []);
 
   useGpsAlerts();
-  const currentUser = (page?.props?.auth?.user as any) as (User & { roles?: string[]; permissions?: string[] }) | undefined;
+  const currentUser = (page?.props?.auth?.user as any) as (User & { roles?: (string | { id: number; name: string })[]; permissions?: string[] }) | undefined;
   const permissions = currentUser?.permissions ?? [];
-  const roles = currentUser?.roles ?? [];
-  const isAdminUser = Array.isArray(roles) && (roles.includes('admin') || roles.includes('super_admin'));
-  const isGuard = Array.isArray(roles) && roles.includes('guard');
-  const isClient = Array.isArray(roles) && roles.includes('client');
-  const isFinanceUser = Array.isArray(roles) && roles.some((r) => ['super_admin', 'finance_officer', 'accountant', 'finance', 'accounting', 'admin'].includes(String(r)));
+  const rawRoles = (currentUser?.roles ?? []) as (string | { id: number; name: string })[];
+  const roles = rawRoles.map((r) => (typeof r === 'string' ? r : r.name));
+
+  // Initialize real-time notifications
+  useRealtimeNotifications({ userId: currentUser?.id, userRoles: roles });
+
+  const isAdminUser = roles.includes('admin') || roles.includes('super_admin');
+  const isGuard = roles.includes('guard');
+  const isClient = roles.includes('client');
+  const isFinanceUser = roles.some((r) => ['super_admin', 'finance_officer', 'accountant', 'finance', 'accounting', 'admin'].includes(String(r)));
   const canViewPayroll = isFinanceUser || isAdminUser;
   const canViewAllInvoices = isFinanceUser || isAdminUser;
   const canViewAllPayments = isFinanceUser || isAdminUser;
   const allowedRoles = ['admin', 'super_admin', 'finance_officer', 'accountant'];
-  const hasRoleApproval = Array.isArray(roles) && roles.some((r) => allowedRoles.includes(String(r)));
-  const hasPermApproval = Array.isArray(permissions) && permissions.some((p) => (
+  const hasRoleApproval = roles.some((r) => allowedRoles.includes(String(r)));
+  const hasPermApproval = permissions.some((p) => (
     p === 'approve_expense' || p === 'manage_expense' || p === 'finance.approvals'
   ));
   const canApproveRequisitions = hasRoleApproval || hasPermApproval;
@@ -113,8 +120,8 @@ export default function FinanceLayout({ title, children, user }: Props) {
 
   // Directory & Reference Links
   const directoryLinks: NavItem[] = [
-    { name: 'Clients', href: safeRoute('clients.index', '/clients/list'), icon: <IconMapper name="building" className="h-6 w-6" />, current: isCurrent(safeRoute('clients.index', '/clients/list')) },
-    { name: 'Guard Directory', href: safeRoute('guards.index', '/guards'), icon: <IconMapper name="shield" className="h-6 w-6" />, current: isCurrent(safeRoute('guards.index', '/guards')) },
+    { name: 'Clients', href: safeRoute('admin.clients.index', '/admin/clients'), icon: <IconMapper name="building" className="h-6 w-6" />, current: isCurrent(safeRoute('admin.clients.index', '/admin/clients')) },
+    { name: 'Guard Directory', href: safeRoute('admin.guards.index', '/admin/guards'), icon: <IconMapper name="shield" className="h-6 w-6" />, current: isCurrent(safeRoute('admin.guards.index', '/admin/guards')) },
   ];
 
   // Budget & Requisitions
@@ -251,25 +258,25 @@ export default function FinanceLayout({ title, children, user }: Props) {
       <div className="md:pl-64 flex flex-col flex-1">
         {/* Top bar */}
         <div className="sticky top-0 z-30 border-b border-red-100 bg-white/95 backdrop-blur-sm dark:border-gray-800 dark:bg-gray-950/80">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-3">
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-3 min-w-0">
+          <div className="max-w-7xl mx-auto px-2 sm:px-4 md:px-8 py-2 sm:py-3">
+            <div className="flex items-center justify-between gap-2 sm:gap-3">
+              <div className="flex items-center gap-2 sm:gap-3 min-w-0">
                 <button
                   type="button"
-                  className="h-10 w-10 inline-flex items-center justify-center rounded-md text-red-700 hover:bg-red-100 hover:text-red-900 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-coin-600 md:hidden"
+                  className="h-10 w-10 inline-flex items-center justify-center rounded-md text-red-700 hover:bg-red-100 hover:text-red-900 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-coin-600 md:hidden touch-target-min"
                   onClick={() => setSidebarOpen(true)}
                 >
                   <span className="sr-only">Open sidebar</span>
                   <IconMapper name="menu" className="h-6 w-6" />
                 </button>
-                <h1 className="text-xl font-semibold text-red-900 dark:text-gray-100 truncate">{title}</h1>
+                <h1 className="text-lg sm:text-xl font-semibold text-red-900 dark:text-gray-100 truncate">{title}</h1>
               </div>
-              <div className="flex items-center justify-end gap-2 sm:gap-4 shrink-0">
+              <div className="flex items-center justify-end gap-1 sm:gap-4 shrink-0">
                 <QuickStats />
                 <NotificationBell />
                 <button
                   onClick={() => setTasksOpen(!tasksOpen)}
-                  className="inline-flex items-center gap-1.5 rounded-md bg-red-100 text-red-700 hover:bg-red-200 px-3 py-1.5 text-sm dark:bg-red-900/30 dark:text-red-200 transition-colors"
+                  className="inline-flex items-center gap-1.5 rounded-md bg-red-100 text-red-700 hover:bg-red-200 px-2 sm:px-3 py-1.5 text-xs sm:text-sm dark:bg-red-900/30 dark:text-red-200 transition-colors touch-target-min"
                   title="Toggle Tasks Panel"
                 >
                   <IconMapper name="CheckSquare" size={16} />
@@ -305,7 +312,7 @@ export default function FinanceLayout({ title, children, user }: Props) {
 
         {/* Page content */}
         <main className="flex-1">
-          <div className="py-6 px-4 sm:px-6 lg:px-8">
+          <div className="py-4 sm:py-6 px-2 sm:px-4 md:px-6 lg:px-8">
             <AnimatePresence mode="wait">
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
@@ -315,6 +322,7 @@ export default function FinanceLayout({ title, children, user }: Props) {
                 className={`grid gap-4 ${tasksOpen ? 'grid-cols-1 xl:grid-cols-4' : 'grid-cols-1'}`}
               >
                 <div className={tasksOpen ? 'xl:col-span-3' : ''}>
+                  <TutorialSection dashboard="admin" canManage={false} />
                   {children}
                 </div>
                 {tasksOpen && !isMobile && (

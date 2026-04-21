@@ -19,7 +19,8 @@ const badgeColors: Record<string, string> = {
 
 export default function RequisitionShow({ requisition }: RequisitionShowProps) {
   const { auth } = (usePage().props as any);
-  const roles = (auth.user.roles ?? []) as string[];
+  const rawRoles = (auth.user.roles ?? []) as (string | { id: number; name: string })[];
+  const roles = rawRoles.map((r) => (typeof r === 'string' ? r : r.name));
   const isAdmin = roles.includes('admin') || roles.includes('super_admin');
   const isAssetManager = roles.includes('asset_manager') || roles.includes('assets_manager');
   const isOwner = String(auth?.user?.id ?? '') === String((requisition as any)?.requested_by ?? '');

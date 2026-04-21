@@ -1,6 +1,7 @@
-import React, { ChangeEvent, FormEvent } from 'react';
+import React, { ChangeEvent, FormEvent, useRef, useState } from 'react';
 import { useForm } from '@inertiajs/react';
 import { GuardFormData } from '@/types/guards';
+import IconMapper from '@/Components/IconMapper';
 
 const DISTRICTS = [
   'Balaka','Blantyre','Chikwawa','Chiradzulu','Chitipa','Dedza','Dowa','Karonga','Kasungu','Likoma','Lilongwe','Machinga','Mangochi','Mchinji','Mulanje','Mwanza','Mzimba','Neno','Nkhata Bay','Nkhotakota','Nsanje','Ntcheu','Ntchisi','Phalombe','Rumphi','Salima','Thyolo','Zomba'
@@ -12,10 +13,10 @@ interface Supervisor {
 }
 
 interface GuardFormProps {
-  initialData: Partial<GuardFormData>;
+  initialData: Partial<GuardFormData> & { photo_url?: string };
   supervisors: Supervisor[];
   grades?: { id: number; code: string; name: string }[];
-  onSubmit: (data: GuardFormData) => void;
+  onSubmit: (data: FormData) => void;
   canAssignSupervisor: boolean;
   processing?: boolean;
   errors?: Record<string, string>;
@@ -102,7 +103,38 @@ export default function GuardForm({
 
   const [clientErrors, setClientErrors] = React.useState<Record<string, string>>({});
   const [submitted, setSubmitted] = React.useState(false);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(initialData.photo_url || null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const err = (k: string) => (errors && (errors as any)[k]) || clientErrors[k];
+
+  const handlePhotoChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        setClientErrors((prev) => ({ ...prev, photo: 'Photo must be less than 5MB' }));
+        return;
+      }
+      if (!file.type.startsWith('image/')) {
+        setClientErrors((prev) => ({ ...prev, photo: 'File must be an image' }));
+        return;
+      }
+      setPhotoFile(file);
+      setPhotoPreview(URL.createObjectURL(file));
+      setClientErrors((prev) => {
+        const { photo: _omit, ...rest } = prev;
+        return rest;
+      });
+    }
+  };
+
+  const removePhoto = () => {
+    setPhotoFile(null);
+    setPhotoPreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
 
   const missingProfileFields = React.useMemo(() => {
     const missing: string[] = [];
@@ -126,7 +158,6 @@ export default function GuardForm({
     setClientErrors(local);
     if (Object.keys(local).length > 0) return;
 
-    const payload = { ...data };
     const normalizeDate = (input: any): any => {
       if (!input || typeof input !== 'string') return input;
       const s = input.trim();
@@ -151,11 +182,38 @@ export default function GuardForm({
       }
       return [];
     };
-    payload.date_of_birth = normalizeDate(payload.date_of_birth);
-    payload.hire_date = normalizeDate(payload.hire_date);
-    if (payload.qualifications) payload.qualifications = toArray(payload.qualifications);
-    if (payload.languages) payload.languages = toArray(payload.languages);
-    onSubmit(payload as GuardFormData);
+
+    // Build FormData for file upload support
+    const formData = new FormData();
+    const entries = Object.entries(data) as [string, any][];
+    for (const [key, value] of entries) {
+      if (value === null || value === undefined || value === '') continue;
+      if (key === 'date_of_birth' || key === 'hire_date') {
+        const normalized = normalizeDate(value);
+        if (normalized) formData.append(key, normalized);
+      } else if (key === 'qualifications' || key === 'languages') {
+        const arr = toArray(value);
+        if (arr.length > 0) formData.append(key, JSON.stringify(arr));
+      } else if (typeof value === 'boolean') {
+        formData.append(key, value ? '1' : '0');
+      } else if (typeof value === 'number') {
+        formData.append(key, String(value));
+      } else {
+        formData.append(key, value);
+      }
+    }
+
+    // Add photo file if selected
+    if (photoFile) {
+      formData.append('photo', photoFile);
+    }
+
+    // Add _method for PUT requests if editing
+    if ((initialData as any).id) {
+      formData.append('_method', 'PUT');
+    }
+
+    onSubmit(formData);
   };
 
   return (
@@ -169,6 +227,55 @@ export default function GuardForm({
           </div>
         </div>
       )}
+
+      {/* Photo Upload Section */}
+      <div className="flex flex-col items-center sm:items-start gap-4 mb-4">
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Guard Photo</label>
+        <div className="flex items-center gap-4">
+          <div className="relative">
+            {photoPreview ? (
+              <div className="relative group">
+                <img
+                  src={photoPreview}
+                  alt="Guard preview"
+                  className="w-24 h-24 sm:w-32 sm:h-32 rounded-full object-cover border-2 border-gray-300 dark:border-gray-600"
+                />
+                <button
+                  type="button"
+                  onClick={removePhoto}
+                  className="absolute -top-1 -right-1 p-1 bg-red-600 text-white rounded-full hover:bg-red-700 transition-colors touch-target-min"
+                  title="Remove photo"
+                >
+                  <IconMapper name="X" size={14} />
+                </button>
+              </div>
+            ) : (
+              <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-full bg-gray-200 dark:bg-gray-700 border-2 border-dashed border-gray-300 dark:border-gray-600 flex items-center justify-center">
+                <IconMapper name="User" size={32} className="text-gray-400 dark:text-gray-500" />
+              </div>
+            )}
+          </div>
+          <div className="flex flex-col gap-2">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handlePhotoChange}
+              className="hidden"
+              id="photo-upload"
+            />
+            <label
+              htmlFor="photo-upload"
+              className="inline-flex items-center gap-2 px-3 py-2 text-xs sm:text-sm font-medium rounded-lg bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-200 cursor-pointer transition-colors touch-target-min"
+            >
+              <IconMapper name="Upload" size={16} />
+              <span>{photoPreview ? 'Change Photo' : 'Upload Photo'}</span>
+            </label>
+            <p className="text-xs text-gray-500 dark:text-gray-400">Max 5MB, JPG/PNG</p>
+            {err('photo') && <p className="text-red-600 text-xs">{err('photo')}</p>}
+          </div>
+        </div>
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>

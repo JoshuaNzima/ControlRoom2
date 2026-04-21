@@ -1408,4 +1408,121 @@ class SupervisorController extends Controller
         // Redirect to scanner path (no named route available)
         return redirect('/supervisor/scanner');
     }
+
+    /**
+     * Show guard details
+     */
+    public function showGuard(Guard $guard): Response
+    {
+        $user = Auth::user();
+        
+        // Check if the supervisor manages this guard
+        $managedGuardIds = $this->getManagedGuardIds($user);
+        if (!in_array($guard->id, $managedGuardIds)) {
+            abort(403, 'You do not have permission to view this guard.');
+        }
+
+        $guard->load(['currentAssignmentRelation.site.client', 'supervisor', 'grade', 'zone']);
+
+        // Get recent attendance (last 30 days)
+        $recentAttendance = Attendance::where('guard_id', $guard->id)
+            ->whereDate('date', '>=', Carbon::today()->subDays(30))
+            ->orderBy('date', 'desc')
+            ->get()
+            ->map(fn($att) => [
+                'id' => $att->id,
+                'date' => $att->date?->format('Y-m-d'),
+                'check_in_time' => $att->check_in_time ? Carbon::parse($att->check_in_time)->format('H:i') : null,
+                'check_out_time' => $att->check_out_time ? Carbon::parse($att->check_out_time)->format('H:i') : null,
+                'status' => $att->status,
+                'hours_worked' => $att->hours_worked,
+                'site_name' => $att->clientSite?->name,
+            ]);
+
+        return Inertia::render('Supervisor/GuardShow', [
+            'guard' => [
+                'id' => $guard->id,
+                'employee_id' => $guard->employee_id,
+                'name' => $guard->name,
+                'phone' => $guard->phone,
+                'email' => $guard->email,
+                'status' => $guard->status,
+                'guard_type' => $guard->guard_type ?? 'permanent',
+                'hire_date' => $guard->hire_date?->format('Y-m-d'),
+                'supervisor' => $guard->supervisor?->name,
+                'grade' => $guard->grade?->name,
+                'zone' => $guard->zone?->name,
+                'current_assignment' => $guard->currentAssignmentRelation ? [
+                    'site_name' => $guard->currentAssignmentRelation->site?->name,
+                    'client_name' => $guard->currentAssignmentRelation->site?->client?->name,
+                    'start_date' => $guard->currentAssignmentRelation->start_date?->format('Y-m-d'),
+                ] : null,
+            ],
+            'recentAttendance' => $recentAttendance,
+            'roleType' => $this->getUserRoleType($user),
+            'isSergeant' => $user->isSergeant(),
+        ]);
+    }
+
+    /**
+     * Reports page for supervisor
+     */
+    public function reports(): Response
+    {
+        $user = Auth::user();
+        $supervisorGuardIds = $this->getManagedGuardIds($user);
+        $date = Carbon::today();
+        $thirtyDaysAgo = Carbon::today()->subDays(30);
+
+        // Attendance summary for last 30 days
+        $attendanceSummary = Attendance::whereIn('guard_id', $supervisorGuardIds)
+            ->whereDate('date', '>=', $thirtyDaysAgo)
+            ->selectRaw('status, COUNT(*) as count')
+            ->groupBy('status')
+            ->pluck('count', 'status')
+            ->toArray();
+
+        // Guards with most absences
+        $absenceLeaders = Guard::whereIn('id', $supervisorGuardIds)
+            ->where('status', 'active')
+            ->with(['attendance' => function($q) use ($thirtyDaysAgo) {
+                $q->whereDate('date', '>=', $thirtyDaysAgo)
+                  ->where('status', 'absent');
+            }])
+            ->get()
+            ->map(fn($g) => [
+                'id' => $g->id,
+                'name' => $g->name,
+                'employee_id' => $g->employee_id,
+                'absent_count' => $g->attendance->count(),
+            ])
+            ->sortByDesc('absent_count')
+            ->take(5)
+            ->values()
+            ->toArray();
+
+        // Site coverage stats
+        $assignedClientIds = $user->isSergeant() 
+            ? \App\Models\Client::where('sergeant_id', $user->id)->pluck('id')->toArray()
+            : \App\Models\Client::where('supervisor_id', $user->id)->pluck('id')->toArray();
+
+        $sitesCount = ClientSite::active()
+            ->when(!empty($assignedClientIds), fn($q) => $q->whereIn('client_id', $assignedClientIds))
+            ->count();
+
+        $todayAttendanceCount = Attendance::whereDate('date', $date)
+            ->whereIn('guard_id', $supervisorGuardIds)
+            ->whereNotNull('check_in_time')
+            ->count();
+
+        return Inertia::render('Supervisor/Reports', [
+            'attendanceSummary' => $attendanceSummary,
+            'absenceLeaders' => $absenceLeaders,
+            'sitesCount' => $sitesCount,
+            'todayAttendanceCount' => $todayAttendanceCount,
+            'totalGuards' => count($supervisorGuardIds),
+            'roleType' => $this->getUserRoleType($user),
+            'isSergeant' => $user->isSergeant(),
+        ]);
+    }
 } 

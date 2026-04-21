@@ -9,7 +9,9 @@ import QuickBudgetButton from '@/Components/Budgets/QuickBudgetButton';
 import FloatingNavButton from '@/Components/FloatingNavButton';
 import useCounters from '@/Hooks/useCounters';
 import useGpsAlerts from '@/Hooks/useGpsAlerts';
+import { useRealtimeNotifications } from '@/Hooks/useRealtimeNotifications';
 import WeeklyTasks from '@/Components/WeeklyTasks';
+import TutorialSection from '@/Components/Tutorials/TutorialSection';
 
 interface Props {
   title: string;
@@ -43,15 +45,18 @@ export default function ControlRoomLayout({ title, children, user }: Props) {
   }, []);
 
   useGpsAlerts();
-  const roles = ((user as any)?.roles ?? (page?.props as any)?.auth?.user?.roles ?? []) as any;
-  const isSuperAdmin = Array.isArray(roles) ? roles.includes('super_admin') : roles === 'super_admin';
-  const isAdminUser = Array.isArray(roles) && (roles.includes('admin') || roles.includes('super_admin'));
-  const roleDisplay = (() => {
-    const r: any = roles;
-    if (Array.isArray(r) && r.length) return String(r[0]).replaceAll('_', ' ');
-    if (typeof r === 'string') return String(r).replaceAll('_', ' ');
-    return 'Control Room';
-  })();
+
+  // Initialize real-time notifications for QR scans and messages
+  const rawRoles = ((user as any)?.roles ?? (page?.props as any)?.auth?.user?.roles ?? []) as (string | { id: number; name: string })[];
+  const roles = rawRoles.map((r) => (typeof r === 'string' ? r : r.name));
+  const userId = (user as any)?.id ?? (page?.props as any)?.auth?.user?.id;
+  useRealtimeNotifications({
+    userId,
+    userRoles: roles,
+  });
+  const isSuperAdmin = roles.includes('super_admin');
+  const isAdminUser = roles.includes('admin') || roles.includes('super_admin');
+  const roleDisplay = roles.length > 0 ? roles[0].replace(/_/g, ' ') : 'Control Room';
 
   const isCurrent = (href: string) => window.location.pathname === href;
 
@@ -80,6 +85,7 @@ export default function ControlRoomLayout({ title, children, user }: Props) {
     { name: 'Guards', href: route('control-room.guards'), icon: <IconMapper name="shield-check" className="h-6 w-6" />, current: false },
     { name: 'Assignments', href: route('control-room.assignments.index'), icon: <IconMapper name="briefcase" className="h-6 w-6" />, current: false },
     { name: 'Clients', href: route('control-room.clients'), icon: <IconMapper name="building-2" className="h-6 w-6" />, current: false },
+    { name: 'Checkpoints', href: route('control-room.checkpoints.index'), icon: <IconMapper name="map-pin" className="h-6 w-6" />, current: false },
     { name: 'QR Codes', href: route('control-room.qr-codes.index'), icon: <IconMapper name="qr-code" className="h-6 w-6" />, current: false },
     { name: 'Reports', href: route('control-room.reports'), icon: <IconMapper name="bar-chart-2" className="h-6 w-6" />, current: false },
     { name: 'Settings', href: route('control-room.settings'), icon: <IconMapper name="settings" className="h-6 w-6" />, current: false },
@@ -185,24 +191,24 @@ export default function ControlRoomLayout({ title, children, user }: Props) {
 
       <div className="md:pl-64">
         <div className="sticky top-0 z-30 border-b border-red-100 bg-white/95 backdrop-blur-sm dark:border-gray-800 dark:bg-gray-950/80">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-3">
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-3 min-w-0">
+          <div className="max-w-7xl mx-auto px-2 sm:px-4 md:px-8 py-2 sm:py-3">
+            <div className="flex items-center justify-between gap-2 sm:gap-3">
+              <div className="flex items-center gap-2 sm:gap-3 min-w-0">
                 <button
                   type="button"
-                  className="h-10 w-10 inline-flex items-center justify-center rounded-md text-red-700 hover:bg-red-100 hover:text-red-900 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-coin-600 md:hidden"
+                  className="h-10 w-10 inline-flex items-center justify-center rounded-md text-red-700 hover:bg-red-100 hover:text-red-900 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-coin-600 md:hidden touch-target-min"
                   onClick={() => setSidebarOpen(true)}
                 >
                   <span className="sr-only">Open sidebar</span>
                   <IconMapper name="menu" className="h-6 w-6" />
                 </button>
-                <h1 className="text-xl font-semibold text-red-900 dark:text-gray-100 truncate">{title}</h1>
+                <h1 className="text-lg sm:text-xl font-semibold text-red-900 dark:text-gray-100 truncate">{title}</h1>
               </div>
-              <div className="flex items-center justify-end gap-2 sm:gap-4 shrink-0">
+              <div className="flex items-center justify-end gap-1 sm:gap-4 shrink-0">
                 <NotificationBell />
                 <button
                   onClick={() => setTasksOpen(!tasksOpen)}
-                  className="inline-flex items-center gap-1.5 rounded-md bg-red-100 text-red-700 hover:bg-red-200 px-3 py-1.5 text-sm dark:bg-red-900/30 dark:text-red-200 transition-colors"
+                  className="inline-flex items-center gap-1.5 rounded-md bg-red-100 text-red-700 hover:bg-red-200 px-2 sm:px-3 py-1.5 text-xs sm:text-sm dark:bg-red-900/30 dark:text-red-200 transition-colors touch-target-min"
                   title="Toggle Tasks Panel"
                 >
                   <IconMapper name="CheckSquare" size={16} />
@@ -222,7 +228,7 @@ export default function ControlRoomLayout({ title, children, user }: Props) {
                     <span className="sm:hidden">SA</span>
                   </Link>
                 )}
-                <button onClick={toggle} className="text-sm px-3 py-1 rounded-md bg-red-100 text-red-800 hover:bg-red-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700">
+                <button onClick={toggle} className="text-xs sm:text-sm px-2 sm:px-3 py-1 rounded-md bg-red-100 text-red-800 hover:bg-red-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700 touch-target-min">
                   <span className="hidden sm:inline">{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>
                   <span className="sm:hidden">{theme === 'dark' ? 'Light' : 'Dark'}</span>
                 </button>
@@ -231,11 +237,12 @@ export default function ControlRoomLayout({ title, children, user }: Props) {
           </div>
         </div>
         <main className="flex-1">
-          <div className="py-6">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 text-gray-900 dark:text-gray-100">
+          <div className="py-4 sm:py-6">
+            <div className="max-w-7xl mx-auto px-2 sm:px-4 md:px-8 text-gray-900 dark:text-gray-100">
               <div className={`grid gap-4 ${tasksOpen ? 'grid-cols-1 xl:grid-cols-4' : 'grid-cols-1'}`}>
                 <div className={tasksOpen ? 'xl:col-span-3' : ''}>
                   <div className="animate-slideUp transition-all-smooth">
+                    <TutorialSection dashboard="control-room" canManage={false} />
                     {children}
                   </div>
                 </div>

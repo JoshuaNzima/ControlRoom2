@@ -15,7 +15,8 @@ interface Props {
 
 export default function RequisitionSummary({ className = '' }: Props) {
   const { auth } = usePage<PageProps>().props;
-  const roles = (auth.user.roles ?? []) as string[];
+  const rawRoles = (auth.user.roles ?? []) as (string | { id: number; name: string })[];
+  const roles = rawRoles.map((r) => (typeof r === 'string' ? r : r.name));
 
   const [summary, setSummary] = React.useState<SummaryResponse | null>(null);
   const [loading, setLoading] = React.useState(true);

@@ -5,6 +5,7 @@ import NotificationBell from '@/Components/Common/NotificationBell';
 import { User } from '@/types';
 import { useTheme } from '@/Providers/ThemeProvider';
 import useCounters from '@/Hooks/useCounters';
+import { useRealtimeNotifications } from '@/Hooks/useRealtimeNotifications';
 
 interface Props {
   title: string;
@@ -27,8 +28,14 @@ export default function TaskTrackerLayout({ title, children, user }: Props) {
   const { counters } = useCounters();
   const page = usePage<any>();
   const appName = (page?.props as any)?.appName ?? 'CoinSec';
-  const roles = ((user as any)?.roles ?? (page?.props as any)?.auth?.user?.roles ?? []) as any;
-  const isExecutiveAssistant = Array.isArray(roles) && (roles.includes('executive_assistant') || roles.includes('super_admin'));
+  const rawRoles = ((user as any)?.roles ?? (page?.props as any)?.auth?.user?.roles ?? []) as (string | { id: number; name: string })[];
+  const roles = rawRoles.map((r) => (typeof r === 'string' ? r : r.name));
+  const userId = (user as any)?.id ?? (page?.props as any)?.auth?.user?.id;
+
+  // Initialize real-time notifications
+  useRealtimeNotifications({ userId, userRoles: roles });
+
+  const isExecutiveAssistant = roles.includes('executive_assistant') || roles.includes('super_admin');
 
   const isCurrent = (href: string) => window.location.pathname === href;
 

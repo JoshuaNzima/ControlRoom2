@@ -9,6 +9,7 @@ use App\Models\FrontOfficeMessage;
 use App\Models\FrontOfficeTask;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
 class DashboardController extends Controller
@@ -76,8 +77,12 @@ class DashboardController extends Controller
         $startDate = $request->input('start_date', now()->subMonths(6)->format('Y-m-d'));
         $endDate = $request->input('end_date', now()->format('Y-m-d'));
 
-        // Monthly visitor stats
-        $monthlyStats = Visitor::selectRaw('DATE_FORMAT(created_at, "%Y-%m") as month, COUNT(*) as count')
+        // Monthly visitor stats - database agnostic
+        $driver = DB::getDriverName();
+        $monthFormat = $driver === 'sqlite' 
+            ? "strftime('%Y-%m', created_at) as month"
+            : "DATE_FORMAT(created_at, '%Y-%m') as month";
+        $monthlyStats = Visitor::selectRaw("$monthFormat, COUNT(*) as count")
             ->whereYear('created_at', now()->year)
             ->groupBy('month')
             ->orderBy('month')
@@ -113,8 +118,12 @@ class DashboardController extends Controller
             ->pluck('count', 'category')
             ->toArray();
 
-        // Monthly task trend
-        $monthlyTaskStats = FrontOfficeTask::selectRaw('DATE_FORMAT(created_at, "%Y-%m") as month, COUNT(*) as count')
+        // Monthly task trend - database agnostic
+        $driver = DB::getDriverName();
+        $monthFormat = $driver === 'sqlite'
+            ? "strftime('%Y-%m', created_at) as month"
+            : "DATE_FORMAT(created_at, '%Y-%m') as month";
+        $monthlyTaskStats = FrontOfficeTask::selectRaw("$monthFormat, COUNT(*) as count")
             ->whereBetween('created_at', [$startDate, $endDate])
             ->groupBy('month')
             ->orderBy('month')
@@ -134,10 +143,14 @@ class DashboardController extends Controller
                 'count' => $t->count,
             ]);
 
-        // Average completion time (in hours)
+        // Average completion time (in hours) - database agnostic
+        $driver = DB::getDriverName();
+        $avgHoursRaw = $driver === 'sqlite'
+            ? 'AVG((julianday(completed_at) - julianday(created_at)) * 24) as avg_hours'
+            : 'AVG(TIMESTAMPDIFF(HOUR, created_at, completed_at)) as avg_hours';
         $avgCompletionTime = FrontOfficeTask::whereNotNull('completed_at')
             ->whereBetween('created_at', [$startDate, $endDate])
-            ->selectRaw('AVG(TIMESTAMPDIFF(HOUR, created_at, completed_at)) as avg_hours')
+            ->selectRaw($avgHoursRaw)
             ->first()
             ->avg_hours ?? 0;
 

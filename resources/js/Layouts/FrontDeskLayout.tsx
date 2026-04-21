@@ -8,6 +8,7 @@ import QuickRequisitionButton from '@/Components/Requisitions/QuickRequisitionBu
 import QuickBudgetButton from '@/Components/Budgets/QuickBudgetButton';
 import NotificationBell from '@/Components/Common/NotificationBell';
 import useCounters from '@/Hooks/useCounters';
+import { useRealtimeNotifications } from '@/Hooks/useRealtimeNotifications';
 
 interface Props {
   title: string;
@@ -29,9 +30,15 @@ export default function FrontDeskLayout({ title, children, user }: Props) {
   const { theme, toggle } = useTheme();
   const { counters } = useCounters();
   const page = usePage<any>();
-  const roles = ((user as any)?.roles ?? (page?.props as any)?.auth?.user?.roles ?? []) as any;
-  const isSuperAdmin = Array.isArray(roles) ? roles.includes('super_admin') : roles === 'super_admin';
-  const isAdminUser = Array.isArray(roles) && (roles.includes('admin') || roles.includes('super_admin'));
+  const rawRoles = ((user as any)?.roles ?? (page?.props as any)?.auth?.user?.roles ?? []) as (string | { id: number; name: string })[];
+  const roles = rawRoles.map((r) => (typeof r === 'string' ? r : r.name));
+  const userId = (user as any)?.id ?? (page?.props as any)?.auth?.user?.id;
+
+  // Initialize real-time notifications
+  useRealtimeNotifications({ userId, userRoles: roles });
+
+  const isSuperAdmin = roles.includes('super_admin');
+  const isAdminUser = roles.includes('admin') || roles.includes('super_admin');
 
   const nav: NavItem[] = [
     { name: 'Overview', href: route('admin.front-desk'), icon: <IconMapper name="users-2" className="h-6 w-6" />, current: isCurrent(route('admin.front-desk')) },

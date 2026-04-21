@@ -8,8 +8,10 @@ import QuickRequisitionButton from '@/Components/Requisitions/QuickRequisitionBu
 import QuickBudgetButton from '@/Components/Budgets/QuickBudgetButton';
 import NotificationBell from '@/Components/Common/NotificationBell';
 import useCounters from '@/Hooks/useCounters';
+import { useRealtimeNotifications } from '@/Hooks/useRealtimeNotifications';
 import FloatingNavButton from '@/Components/FloatingNavButton';
 import WeeklyTasks from '@/Components/WeeklyTasks';
+import TutorialSection from '@/Components/Tutorials/TutorialSection';
 
 interface Props {
   title: string;
@@ -41,10 +43,16 @@ export default function AssetManagementLayout({ title, children, user }: Props) 
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
-  const roles = ((user as any)?.roles ?? (page?.props as any)?.auth?.user?.roles ?? []) as any;
-  const isSuperAdmin = Array.isArray(roles) ? roles.includes('super_admin') : roles === 'super_admin';
-  const isAdminUser = Array.isArray(roles) && (roles.includes('admin') || roles.includes('super_admin'));
-  const roleDisplay = Array.isArray(roles) && roles.length > 0 ? roles[0].replace(/_/g, ' ') : 'Asset Manager';
+  const rawRoles = ((user as any)?.roles ?? (page?.props as any)?.auth?.user?.roles ?? []) as (string | { id: number; name: string })[];
+  const roles = rawRoles.map((r) => (typeof r === 'string' ? r : r.name));
+  const userId = (user as any)?.id ?? (page?.props as any)?.auth?.user?.id;
+
+  // Initialize real-time notifications
+  useRealtimeNotifications({ userId, userRoles: roles });
+
+  const isSuperAdmin = roles.includes('super_admin');
+  const isAdminUser = roles.includes('admin') || roles.includes('super_admin');
+  const roleDisplay = roles.length > 0 ? roles[0].replace(/_/g, ' ') : 'Asset Manager';
 
   const nav: NavItem[] = [
     { name: 'Overview', href: route('assets.index'), icon: <IconMapper name="package" className="h-6 w-6" />, current: isCurrent(route('assets.index')), badge: (()=>{ const n = Number(counters?.assets_handovers_outstanding||0); return n>0? String(n): undefined; })() },
@@ -120,24 +128,24 @@ export default function AssetManagementLayout({ title, children, user }: Props) 
 
       <div className="md:pl-64">
         <div className="sticky top-0 z-30 border-b border-red-100 bg-white/95 backdrop-blur-sm dark:border-gray-800 dark:bg-gray-950/80">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-3">
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-3 min-w-0">
+          <div className="max-w-7xl mx-auto px-2 sm:px-4 md:px-8 py-2 sm:py-3">
+            <div className="flex items-center justify-between gap-2 sm:gap-3">
+              <div className="flex items-center gap-2 sm:gap-3 min-w-0">
                 <button
                   type="button"
-                  className="h-10 w-10 inline-flex items-center justify-center rounded-md text-red-700 hover:bg-red-100 hover:text-red-900 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-coin-600 md:hidden"
+                  className="h-10 w-10 inline-flex items-center justify-center rounded-md text-red-700 hover:bg-red-100 hover:text-red-900 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-coin-600 md:hidden touch-target-min"
                   onClick={() => setSidebarOpen(true)}
                 >
                   <span className="sr-only">Open sidebar</span>
                   <IconMapper name="menu" className="h-6 w-6" />
                 </button>
-                <h1 className="text-xl font-semibold text-red-900 dark:text-gray-100 truncate">{title}</h1>
+                <h1 className="text-lg sm:text-xl font-semibold text-red-900 dark:text-gray-100 truncate">{title}</h1>
               </div>
-              <div className="flex items-center justify-end gap-2 sm:gap-4 shrink-0">
+              <div className="flex items-center justify-end gap-1 sm:gap-4 shrink-0">
                 <NotificationBell />
                 <button
                   onClick={() => setTasksOpen(!tasksOpen)}
-                  className="inline-flex items-center gap-1.5 rounded-md bg-red-100 text-red-700 hover:bg-red-200 px-3 py-1.5 text-sm dark:bg-red-900/30 dark:text-red-200 transition-colors"
+                  className="inline-flex items-center gap-1.5 rounded-md bg-red-100 text-red-700 hover:bg-red-200 px-2 sm:px-3 py-1.5 text-xs sm:text-sm dark:bg-red-900/30 dark:text-red-200 transition-colors touch-target-min"
                   title="Toggle Tasks Panel"
                 >
                   <IconMapper name="CheckSquare" size={16} />
@@ -150,14 +158,14 @@ export default function AssetManagementLayout({ title, children, user }: Props) 
                 {isSuperAdmin && (
                   <Link
                     href={route('superadmin.dashboard')}
-                    className="inline-flex items-center gap-2 rounded-md bg-red-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-600"
+                    className="inline-flex items-center gap-2 rounded-md bg-red-700 px-2 sm:px-3 py-1.5 text-xs sm:text-sm font-medium text-white hover:bg-red-600 touch-target-min"
                   >
                     <IconMapper name="shield" className="h-4 w-4" />
                     <span className="hidden sm:inline">Super Admin</span>
                     <span className="sm:hidden">SA</span>
                   </Link>
                 )}
-                <button onClick={toggle} className="text-sm px-3 py-1 rounded-md bg-red-100 text-red-800 hover:bg-red-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700">
+                <button onClick={toggle} className="text-xs sm:text-sm px-2 sm:px-3 py-1 rounded-md bg-red-100 text-red-800 hover:bg-red-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700 touch-target-min">
                   <span className="hidden sm:inline">{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>
                   <span className="sm:hidden">{theme === 'dark' ? 'Light' : 'Dark'}</span>
                 </button>
@@ -169,6 +177,7 @@ export default function AssetManagementLayout({ title, children, user }: Props) 
           <div className="animate-slideUp transition-all-smooth">
             <div className={`grid gap-4 ${tasksOpen ? 'grid-cols-1 xl:grid-cols-4' : 'grid-cols-1'}`}>
               <div className={tasksOpen ? 'xl:col-span-3' : ''}>
+                <TutorialSection dashboard="assets" canManage={true} />
                 {children}
               </div>
               {tasksOpen && !isMobile && (

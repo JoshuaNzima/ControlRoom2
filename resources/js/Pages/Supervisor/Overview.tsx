@@ -102,7 +102,7 @@ export default function Overview({
 
           {/* Stats Grid */}
           {Object.keys(stats).length > 0 && (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
               {Object.values(stats).map((stat, idx) => (
                 <StatCard
                   key={idx}
@@ -118,16 +118,16 @@ export default function Overview({
           )}
 
           {/* Two Column Layout */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
             {/* Left - Attendance Summary & Trends */}
-            <div className="lg:col-span-2 space-y-6">
+            <div className="xl:col-span-2 space-y-6">
               {/* Attendance Summary */}
               <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm p-6">
                 <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
                   <IconMapper name="Activity" size={20} className="text-coin-500" />
                   Today's Attendance
                 </h3>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                   <AttendanceCard
                     icon="CheckCircle"
                     label="Present"
@@ -157,12 +157,12 @@ export default function Overview({
 
               {/* 7-Day Trend */}
               {attendanceTrend.length > 0 && (
-                <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm p-6">
-                  <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
+                <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm p-4 sm:p-6">
+                  <h3 className="text-base sm:text-lg font-bold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
                     <IconMapper name="TrendingUp" size={20} className="text-coin-500" />
                     7-Day Attendance Trend
                   </h3>
-                  <div className="space-y-3">
+                  <div className="space-y-3 overflow-x-auto">
                     {attendanceTrend.map((day, idx) => (
                       <div key={idx} className="flex items-center gap-3">
                         <span className="text-sm text-gray-600 dark:text-gray-400 w-16">{day.date}</span>
@@ -197,12 +197,12 @@ export default function Overview({
 
               {/* Shift Stats */}
               {shiftStats.length > 0 && (
-                <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm p-6">
-                  <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
+                <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm p-4 sm:p-6">
+                  <h3 className="text-base sm:text-lg font-bold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
                     <IconMapper name="Clock" size={20} className="text-coin-500" />
                     Today's Shift Distribution
                   </h3>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
                     {shiftStats.map((shift, idx) => (
                       <div key={idx} className="text-center p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
                         <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{shift.count}</p>

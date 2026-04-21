@@ -57,6 +57,10 @@ export function DialogTitle({ children, className = '' }: { children: React.Reac
   return <h3 className={`text-lg font-semibold text-gray-900 dark:text-gray-100 ${className}`}>{children}</h3>;
 }
 
+export function DialogFooter({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+  return <div className={`px-4 py-3 bg-gray-50 dark:bg-gray-900 flex flex-col sm:flex-row sm:justify-end gap-2 ${className}`}>{children}</div>;
+}
+
 export default Dialog;
 
 

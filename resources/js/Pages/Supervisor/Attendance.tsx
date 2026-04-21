@@ -187,8 +187,8 @@ export default function Attendance({ attendance, filters, stats, activeScan }: P
           </div>
         </div>
 
-        {/* Attendance Table */}
-        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/60 overflow-hidden">
+        {/* Attendance Table - Desktop */}
+        <div className="hidden md:block rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/60 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="min-w-[900px] w-full divide-y divide-gray-200 dark:divide-gray-800">
               <thead className="bg-gray-50 dark:bg-gray-950 border-b border-gray-200 dark:border-gray-800">
@@ -256,32 +256,86 @@ export default function Attendance({ attendance, filters, stats, activeScan }: P
               </tbody>
             </table>
           </div>
+        </div>
 
-          {/* Pagination - Only show if we have multiple pages */}
-          {meta.last_page > 1 && (
-            <div className="bg-gray-50 dark:bg-gray-950 px-4 sm:px-6 py-4 border-t border-gray-200 dark:border-gray-800">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                <div className="text-sm text-gray-600 dark:text-gray-300">
-                  Showing {meta.from} to {meta.to} of {meta.total}
+        {/* Attendance Cards - Mobile */}
+        <div className="md:hidden rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/60 overflow-hidden divide-y divide-gray-200 dark:divide-gray-800">
+          {attendance.data && attendance.data.length > 0 ? (
+            attendance.data.map((record) => (
+              <div key={record.id} className="p-4">
+                <div className="flex items-start justify-between mb-3">
+                  <div>
+                    <div className="font-medium text-gray-900 dark:text-gray-100">{record.guard.name}</div>
+                    <div className="text-sm text-gray-500 dark:text-gray-400">{record.guard.employee_id}</div>
+                  </div>
+                  {getStatusBadge(record.status)}
                 </div>
-                <div className="flex flex-wrap gap-2 sm:justify-end">
-                  {links.map((link, index) => (
-                    <Link
-                      key={index}
-                      href={link.url || '#'}
-                      className={`px-4 py-2 rounded-lg text-sm font-medium ${
-                        link.active
-                          ? 'bg-coin-700 text-white'
-                          : 'bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-800 hover:bg-gray-100 dark:hover:bg-gray-800'
-                      }`}
-                      dangerouslySetInnerHTML={{ __html: link.label }}
-                    />
-                  ))}
+                
+                {record.site && (
+                  <div className="mb-3 text-sm">
+                    <span className="text-gray-500 dark:text-gray-400">Site: </span>
+                    <span className="text-gray-900 dark:text-gray-100">{record.site.client_name} - {record.site.name}</span>
+                  </div>
+                )}
+                
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <span className="text-gray-500 dark:text-gray-400">In: </span>
+                    <span className="text-gray-900 dark:text-gray-100">{record.check_in_time || '-'}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500 dark:text-gray-400">Out: </span>
+                    <span className="text-gray-900 dark:text-gray-100">{record.check_out_time || '-'}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500 dark:text-gray-400">Hours: </span>
+                    <span className="text-gray-900 dark:text-gray-100">
+                      {record.hours_worked}h
+                      {record.overtime_hours > 0 && (
+                        <span className="text-xs text-orange-600 dark:text-orange-300 ml-1">
+                          (+{record.overtime_hours}h)
+                        </span>
+                      )}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500 dark:text-gray-400">By: </span>
+                    <span className="text-gray-900 dark:text-gray-100">{record.supervisor}</span>
+                  </div>
                 </div>
               </div>
+            ))
+          ) : (
+            <div className="p-8 text-center text-gray-500 dark:text-gray-400">
+              No attendance records found.
             </div>
           )}
         </div>
+
+        {/* Pagination - Shared for both views */}
+        {meta.last_page > 1 && (
+          <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 px-4 sm:px-6 py-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div className="text-sm text-gray-600 dark:text-gray-300">
+                Showing {meta.from} to {meta.to} of {meta.total}
+              </div>
+              <div className="flex flex-wrap gap-2 sm:justify-end">
+                {links.map((link, index) => (
+                  <Link
+                    key={index}
+                    href={link.url || '#'}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium ${
+                      link.active
+                        ? 'bg-coin-700 text-white'
+                        : 'bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-800 hover:bg-gray-100 dark:hover:bg-gray-800'
+                    }`}
+                    dangerouslySetInnerHTML={{ __html: link.label }}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Scanner Modal */}
         <ScannerModal

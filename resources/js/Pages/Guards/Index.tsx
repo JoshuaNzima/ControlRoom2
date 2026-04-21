@@ -7,6 +7,7 @@ import { Badge } from '@/Components/ui/badge';
 import { Label } from '@/Components/ui/label';
 import IconMapper from '@/Components/IconMapper';
 import Modal from '@/Components/Modal';
+import useNotification from '@/Providers/useNotifications';
 
 // Animated Counter Component
 const AnimatedCounter: React.FC<{ value: number; duration?: number }> = ({ value, duration = 1000 }) => {
@@ -103,6 +104,7 @@ type PageProps = {
 
 export default function GuardsDirectory() {
   const { guards: guardsProp = { data: [], links: [], meta: {} }, filters = {}, grades = [], zones = [], stats } = usePage().props as any;
+  const { push } = useNotification();
 
   const [search, setSearch] = useState(filters.search || '');
   const [status, setStatus] = useState<string>(filters.status || '');
@@ -308,8 +310,9 @@ export default function GuardsDirectory() {
         setMarkNotes('');
         setMarkProcessing(false);
       },
-      onError: () => {
+      onError: (errs) => {
         setMarkProcessing(false);
+        push(Object.values(errs)[0] || 'Failed to mark present', 'error');
       },
     });
   };
@@ -327,8 +330,9 @@ export default function GuardsDirectory() {
         setMarkNotes('');
         setMarkProcessing(false);
       },
-      onError: () => {
+      onError: (errs) => {
         setMarkProcessing(false);
+        push(Object.values(errs)[0] || 'Failed to mark absent', 'error');
       },
     });
   };
@@ -381,8 +385,9 @@ export default function GuardsDirectory() {
         setImportAllowUpdates(false);
         setImportProcessing(false);
       },
-      onError: () => {
+      onError: (errs) => {
         setImportProcessing(false);
+        push(Object.values(errs)[0] || 'Import failed', 'error');
       },
     });
   };
@@ -404,20 +409,20 @@ export default function GuardsDirectory() {
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
         {/* Hero Header */}
         <div className="bg-gradient-to-br from-red-900 via-red-800 to-red-900 text-white">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8">
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-6 md:py-8">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 sm:gap-4">
               <div>
-                <div className="flex items-center gap-3">
-                  <div className="p-2.5 bg-white/10 rounded-lg backdrop-blur-sm">
-                    <IconMapper name="Shield" size={24} className="text-white" />
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <div className="p-2 sm:p-2.5 bg-white/10 rounded-lg backdrop-blur-sm">
+                    <IconMapper name="Shield" size={20} className="sm:w-6 sm:h-6 text-white" />
                   </div>
                   <div>
-                    <h1 className="text-2xl md:text-3xl font-bold">Guards Directory</h1>
-                    <p className="text-red-100 text-sm mt-0.5">Manage security personnel</p>
+                    <h1 className="text-xl sm:text-2xl md:text-3xl font-bold">Guards Directory</h1>
+                    <p className="text-red-100 text-xs sm:text-sm mt-0.5">Manage security personnel</p>
                   </div>
                 </div>
               </div>
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2 sm:gap-4">
                 <div className="text-right hidden sm:block">
                   <p className="text-2xl font-mono font-semibold">
                     {currentTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
@@ -431,24 +436,24 @@ export default function GuardsDirectory() {
           </div>
         </div>
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="max-w-7xl mx-auto px-2 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-6">
           {/* Stats Grid */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3 md:gap-4 mb-4 sm:mb-6">
             {statCards.map((stat, idx) => (
               <StatCard key={idx} {...stat} />
             ))}
           </div>
 
           {/* Quick Actions */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3 mb-4 sm:mb-6">
             {quickActions.map((action, idx) => (
               <ActionTile key={idx} {...action} />
             ))}
           </div>
 
           {/* Filters Card */}
-          <Card className="p-4 md:p-5 mb-6">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
+          <Card className="p-3 sm:p-4 md:p-5 mb-4 sm:mb-6">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4 mb-3 sm:mb-4">
               <div className="relative flex-1 max-w-md">
                 <IconMapper name="Search" size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                 <Input
@@ -537,13 +542,13 @@ export default function GuardsDirectory() {
 
           {/* Guards List */}
           <Card className="overflow-hidden">
-            <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+            <div className="p-3 sm:p-4 border-b border-gray-200 dark:border-gray-700">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-3">
+                <h2 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-gray-100">
                   Guards ({meta?.total || guards.length})
                 </h2>
-                <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-                  <span>Sort by:</span>
+                <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+                  <span className="hidden xs:inline">Sort by:</span>
                   <select
                     value={sort}
                     onChange={(e) => { setSort(e.target.value); applyFilters(); }}
@@ -555,7 +560,7 @@ export default function GuardsDirectory() {
                   </select>
                   <button
                     onClick={() => { setDir(dir === 'asc' ? 'desc' : 'asc'); applyFilters(); }}
-                    className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
+                    className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700 touch-target-min"
                   >
                     <IconMapper name={dir === 'asc' ? "ArrowUp" : "ArrowDown"} size={16} />
                   </button>
@@ -565,36 +570,36 @@ export default function GuardsDirectory() {
 
             <div className="divide-y divide-gray-200 dark:divide-gray-700">
               {guards.length === 0 ? (
-                <div className="p-8 text-center">
-                  <div className="inline-flex p-4 rounded-full bg-gray-100 dark:bg-gray-800 mb-3">
-                    <IconMapper name="Search" size={32} className="text-gray-400" />
+                <div className="p-6 sm:p-8 text-center">
+                  <div className="inline-flex p-3 sm:p-4 rounded-full bg-gray-100 dark:bg-gray-800 mb-3">
+                    <IconMapper name="Search" size={28} className="sm:w-8 sm:h-8 text-gray-400" />
                   </div>
-                  <p className="text-gray-500 dark:text-gray-400">No guards found</p>
-                  <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">Try adjusting your filters</p>
+                  <p className="text-sm sm:text-base text-gray-500 dark:text-gray-400">No guards found</p>
+                  <p className="text-xs sm:text-sm text-gray-400 dark:text-gray-500 mt-1">Try adjusting your filters</p>
                 </div>
               ) : (
                 guards.map((guard: Guard) => (
                   <div
                     key={guard.id}
-                    className="p-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group"
+                    className="p-3 sm:p-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group"
                   >
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                      <div className="flex items-start gap-3">
-                        <div className="p-2 bg-red-100 dark:bg-red-900/20 rounded-lg">
-                          <IconMapper name="User" size={20} className="text-red-600 dark:text-red-400" />
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-3">
+                      <div className="flex items-start gap-2 sm:gap-3 min-w-0">
+                        <div className="p-1.5 sm:p-2 bg-red-100 dark:bg-red-900/20 rounded-lg flex-shrink-0">
+                          <IconMapper name="User" size={18} className="sm:w-5 sm:h-5 text-red-600 dark:text-red-400" />
                         </div>
-                        <div>
-                          <h3 className="font-medium text-gray-900 dark:text-gray-100">{guard.name}</h3>
-                          <p className="text-sm text-gray-500 dark:text-gray-400">ID: {guard.employee_id}</p>
+                        <div className="min-w-0 flex-1">
+                          <h3 className="font-medium text-sm sm:text-base text-gray-900 dark:text-gray-100 truncate">{guard.name}</h3>
+                          <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">ID: {guard.employee_id}</p>
                           {guard.active_assignment && (
-                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 truncate">
                               <IconMapper name="MapPin" size={12} className="inline mr-1" />
                               {guard.active_assignment.site_name} ({guard.active_assignment.client_name})
                             </p>
                           )}
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
                         <Badge className={guard.status === 'active' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300' : guard.status === 'inactive' ? 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300' : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'}>
                           {guard.status}
                         </Badge>
@@ -604,12 +609,12 @@ export default function GuardsDirectory() {
                             On Duty
                           </Badge>
                         )}
-                        <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="flex items-center opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                           <Button
                             variant="ghost"
                             size="sm"
                             onClick={() => openMarkPresent(guard)}
-                            className="text-emerald-600 hover:text-emerald-700"
+                            className="text-emerald-600 hover:text-emerald-700 h-8 w-8 p-0 touch-target-min"
                             title="Mark Present"
                           >
                             <IconMapper name="CheckCircle" size={16} />
@@ -618,7 +623,7 @@ export default function GuardsDirectory() {
                             variant="ghost"
                             size="sm"
                             onClick={() => openMarkAbsent(guard)}
-                            className="text-red-600 hover:text-red-700"
+                            className="text-red-600 hover:text-red-700 h-8 w-8 p-0 touch-target-min"
                             title="Mark Absent"
                           >
                             <IconMapper name="XCircle" size={16} />
@@ -628,6 +633,7 @@ export default function GuardsDirectory() {
                             size="sm"
                             onClick={() => openView(guard.id)}
                             disabled={viewLoading === guard.id}
+                            className="h-8 w-8 p-0 touch-target-min"
                           >
                             {viewLoading === guard.id ? (
                               <IconMapper name="Loader2" size={16} className="animate-spin" />
@@ -639,6 +645,7 @@ export default function GuardsDirectory() {
                             variant="ghost"
                             size="sm"
                             onClick={() => openEditForm(guard)}
+                            className="h-8 w-8 p-0 touch-target-min"
                           >
                             <IconMapper name="Pencil" size={16} />
                           </Button>
@@ -646,7 +653,7 @@ export default function GuardsDirectory() {
                             variant="ghost"
                             size="sm"
                             onClick={() => confirmDelete(guard)}
-                            className="text-red-600 hover:text-red-700"
+                            className="text-red-600 hover:text-red-700 h-8 w-8 p-0 touch-target-min"
                           >
                             <IconMapper name="Trash2" size={16} />
                           </Button>
@@ -660,16 +667,50 @@ export default function GuardsDirectory() {
 
             {/* Pagination */}
             {guards?.links && guards.data.length > 0 && (
-              <div className="p-4 border-t border-gray-200 dark:border-gray-700">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="p-2 sm:p-4 border-t border-gray-200 dark:border-gray-700">
+                {/* Mobile: Simple prev/next */}
+                <div className="flex sm:hidden justify-between items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const prevLink = guards.links.find((l: any) => l.label.includes('Previous') || l.label.includes('«'));
+                      if (prevLink?.url) router.get(prevLink.url, {}, { preserveScroll: true, preserveState: true });
+                    }}
+                    disabled={!guards.links.some((l: any) => l.label.includes('Previous') || l.label.includes('«'))}
+                    className="touch-target-min px-3 py-2 text-xs font-medium"
+                  >
+                    <IconMapper name="ChevronLeft" size={14} className="mr-1" />
+                    Prev
+                  </Button>
+                  <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">
+                    {guards.meta?.current_page || 1} / {guards.meta?.last_page || 1}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const nextLink = guards.links.find((l: any) => l.label.includes('Next') || l.label.includes('»'));
+                      if (nextLink?.url) router.get(nextLink.url, {}, { preserveScroll: true, preserveState: true });
+                    }}
+                    disabled={!guards.links.some((l: any) => l.label.includes('Next') || l.label.includes('»'))}
+                    className="touch-target-min px-3 py-2 text-xs font-medium"
+                  >
+                    Next
+                    <IconMapper name="ChevronRight" size={14} className="ml-1" />
+                  </Button>
+                </div>
+
+                {/* Desktop: Full pagination */}
+                <div className="hidden sm:flex sm:flex-row sm:items-center justify-between gap-3">
                   <p className="text-sm text-gray-500 dark:text-gray-400">
                     Showing {guards.meta?.from || 1} to {guards.meta?.to || guards.data.length} of {guards.meta?.total || guards.data.length} results
                   </p>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1 flex-wrap justify-end">
                     {guards.links.filter((l: any) => l.url).map((l: any, idx: number) => (
                       <button
                         key={idx}
-                        className={`px-3 py-1.5 text-sm rounded border dark:border-gray-700 transition-colors ${
+                        className={`px-3 py-1.5 text-sm rounded border dark:border-gray-700 transition-colors touch-target-min ${
                           l.active
                             ? 'bg-red-600 text-white border-red-600'
                             : 'bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
@@ -688,18 +729,18 @@ export default function GuardsDirectory() {
 
       {/* View Modal */}
       <Modal show={viewOpen} onClose={() => setViewOpen(false)} maxWidth="lg">
-        <div className="p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Guard Details</h2>
+        <div className="p-4 sm:p-6">
+          <div className="flex items-center justify-between mb-3 sm:mb-4">
+            <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-gray-100">Guard Details</h2>
             <button
               onClick={() => setViewOpen(false)}
-              className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+              className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors touch-target-min"
             >
               <IconMapper name="X" size={20} />
             </button>
           </div>
           {viewData ? (
-            <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
+            <div className="space-y-3 sm:space-y-4 max-h-[70vh] overflow-y-auto pr-1 sm:pr-2">
               {/* Header Card */}
               <div className="flex items-center gap-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
                 <div className="p-3 bg-red-100 dark:bg-red-900/20 rounded-full">
@@ -919,45 +960,45 @@ export default function GuardsDirectory() {
 
       {/* Mark Present Modal */}
       <Modal show={markPresentOpen} onClose={() => setMarkPresentOpen(false)} maxWidth="md">
-        <div className="p-6">
-          <div className="flex items-center gap-3 mb-4">
+        <div className="p-4 sm:p-6">
+          <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
             <div className="p-2 bg-emerald-100 dark:bg-emerald-900/20 rounded-full">
-              <IconMapper name="CheckCircle" size={24} className="text-emerald-600 dark:text-emerald-400" />
+              <IconMapper name="CheckCircle" size={20} className="sm:w-6 sm:h-6 text-emerald-600 dark:text-emerald-400" />
             </div>
-            <div>
-              <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Mark Present</h3>
-              <p className="text-sm text-gray-500 dark:text-gray-400">{markGuard?.name}</p>
+            <div className="min-w-0">
+              <h3 className="text-base sm:text-lg font-bold text-gray-900 dark:text-gray-100">Mark Present</h3>
+              <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 truncate">{markGuard?.name}</p>
             </div>
           </div>
-          <div className="space-y-4">
-            <p className="text-sm text-gray-600 dark:text-gray-300">
+          <div className="space-y-3 sm:space-y-4">
+            <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">
               This will mark <strong>{markGuard?.name}</strong> as present for today.
             </p>
             <div>
-              <Label className="text-sm text-gray-700 dark:text-gray-300">Notes (optional)</Label>
+              <Label className="text-xs sm:text-sm text-gray-700 dark:text-gray-300">Notes (optional)</Label>
               <textarea
                 value={markNotes}
                 onChange={(e) => setMarkNotes(e.target.value)}
                 placeholder="Add any notes about this attendance..."
                 rows={3}
-                className="w-full mt-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-emerald-500"
+                className="w-full mt-1 px-2 sm:px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-emerald-500 text-sm"
               />
             </div>
-            <div className="flex gap-3 pt-2">
+            <div className="flex gap-2 sm:gap-3 pt-2">
               <Button
                 onClick={handleMarkPresent}
                 disabled={markProcessing}
-                className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white"
+                className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm touch-target-min"
               >
                 {markProcessing ? (
                   <>
-                    <IconMapper name="Loader2" size={16} className="animate-spin mr-2" />
+                    <IconMapper name="Loader2" size={16} className="animate-spin mr-1 sm:mr-2" />
                     Processing...
                   </>
                 ) : (
                   <>
-                    <IconMapper name="CheckCircle" size={16} className="mr-2" />
-                    Confirm Present
+                    <IconMapper name="CheckCircle" size={16} className="mr-1 sm:mr-2" />
+                    Confirm
                   </>
                 )}
               </Button>
@@ -965,7 +1006,7 @@ export default function GuardsDirectory() {
                 variant="outline"
                 onClick={() => setMarkPresentOpen(false)}
                 disabled={markProcessing}
-                className="flex-1"
+                className="flex-1 text-xs sm:text-sm touch-target-min"
               >
                 Cancel
               </Button>
@@ -976,45 +1017,45 @@ export default function GuardsDirectory() {
 
       {/* Mark Absent Modal */}
       <Modal show={markAbsentOpen} onClose={() => setMarkAbsentOpen(false)} maxWidth="md">
-        <div className="p-6">
-          <div className="flex items-center gap-3 mb-4">
+        <div className="p-4 sm:p-6">
+          <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
             <div className="p-2 bg-red-100 dark:bg-red-900/20 rounded-full">
-              <IconMapper name="XCircle" size={24} className="text-red-600 dark:text-red-400" />
+              <IconMapper name="XCircle" size={20} className="sm:w-6 sm:h-6 text-red-600 dark:text-red-400" />
             </div>
-            <div>
-              <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Mark Absent</h3>
-              <p className="text-sm text-gray-500 dark:text-gray-400">{markGuard?.name}</p>
+            <div className="min-w-0">
+              <h3 className="text-base sm:text-lg font-bold text-gray-900 dark:text-gray-100">Mark Absent</h3>
+              <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 truncate">{markGuard?.name}</p>
             </div>
           </div>
-          <div className="space-y-4">
-            <p className="text-sm text-gray-600 dark:text-gray-300">
+          <div className="space-y-3 sm:space-y-4">
+            <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">
               This will mark <strong>{markGuard?.name}</strong> as absent for today.
             </p>
             <div>
-              <Label className="text-sm text-gray-700 dark:text-gray-300">Reason (optional)</Label>
+              <Label className="text-xs sm:text-sm text-gray-700 dark:text-gray-300">Reason (optional)</Label>
               <textarea
                 value={markNotes}
                 onChange={(e) => setMarkNotes(e.target.value)}
                 placeholder="Add reason for absence..."
                 rows={3}
-                className="w-full mt-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-red-500"
+                className="w-full mt-1 px-2 sm:px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-red-500 text-sm"
               />
             </div>
-            <div className="flex gap-3 pt-2">
+            <div className="flex gap-2 sm:gap-3 pt-2">
               <Button
                 onClick={handleMarkAbsent}
                 disabled={markProcessing}
-                className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+                className="flex-1 bg-red-600 hover:bg-red-700 text-white text-xs sm:text-sm touch-target-min"
               >
                 {markProcessing ? (
                   <>
-                    <IconMapper name="Loader2" size={16} className="animate-spin mr-2" />
+                    <IconMapper name="Loader2" size={16} className="animate-spin mr-1 sm:mr-2" />
                     Processing...
                   </>
                 ) : (
                   <>
-                    <IconMapper name="XCircle" size={16} className="mr-2" />
-                    Confirm Absent
+                    <IconMapper name="XCircle" size={16} className="mr-1 sm:mr-2" />
+                    Confirm
                   </>
                 )}
               </Button>
@@ -1022,7 +1063,7 @@ export default function GuardsDirectory() {
                 variant="outline"
                 onClick={() => setMarkAbsentOpen(false)}
                 disabled={markProcessing}
-                className="flex-1"
+                className="flex-1 text-xs sm:text-sm touch-target-min"
               >
                 Cancel
               </Button>
@@ -1033,34 +1074,34 @@ export default function GuardsDirectory() {
 
       {/* Bulk Import Modal */}
       <Modal show={importOpen} onClose={() => setImportOpen(false)} maxWidth="md">
-        <div className="p-6">
-          <div className="flex items-center gap-3 mb-4">
+        <div className="p-4 sm:p-6">
+          <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
             <div className="p-2 bg-purple-100 dark:bg-purple-900/20 rounded-full">
-              <IconMapper name="Upload" size={24} className="text-purple-600 dark:text-purple-400" />
+              <IconMapper name="Upload" size={20} className="sm:w-6 sm:h-6 text-purple-600 dark:text-purple-400" />
             </div>
-            <div>
-              <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Bulk Import Guards</h3>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Upload Excel file to import multiple guards</p>
+            <div className="min-w-0">
+              <h3 className="text-base sm:text-lg font-bold text-gray-900 dark:text-gray-100">Bulk Import Guards</h3>
+              <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 truncate">Upload Excel file to import multiple guards</p>
             </div>
           </div>
-          <div className="space-y-4">
-            <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-              <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">Template</h4>
+          <div className="space-y-3 sm:space-y-4">
+            <div className="p-3 sm:p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+              <h4 className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">Template</h4>
               <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
                 Download the Excel template with the correct format for bulk importing guards.
               </p>
               <Button
                 variant="outline"
                 onClick={downloadTemplate}
-                className="w-full"
+                className="w-full text-xs sm:text-sm touch-target-min"
               >
-                <IconMapper name="Download" size={16} className="mr-2" />
+                <IconMapper name="Download" size={16} className="mr-1 sm:mr-2" />
                 Download Template
               </Button>
             </div>
 
             <div>
-              <Label className="text-sm text-gray-700 dark:text-gray-300">Upload Excel File</Label>
+              <Label className="text-xs sm:text-sm text-gray-700 dark:text-gray-300">Upload Excel File</Label>
               <div className="mt-2">
                 <input
                   type="file"
@@ -1071,49 +1112,49 @@ export default function GuardsDirectory() {
                 />
                 <label
                   htmlFor="excel-upload"
-                  className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                  className="flex flex-col items-center justify-center w-full h-28 sm:h-32 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
                 >
-                  <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                    <IconMapper name="FileUp" size={24} className="text-gray-400 mb-2" />
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                  <div className="flex flex-col items-center justify-center pt-5 pb-6 px-2">
+                    <IconMapper name="FileUp" size={20} className="sm:w-6 sm:h-6 text-gray-400 mb-2" />
+                    <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 text-center">
                       {importFile ? importFile.name : 'Click to upload Excel file'}
                     </p>
                     <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                      Excel files only (.xlsx, .xls) max 5MB
+                      Excel only, max 5MB
                     </p>
                   </div>
                 </label>
               </div>
             </div>
 
-            <label className="flex items-start gap-3 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+            <label className="flex items-start gap-2 sm:gap-3 p-3 sm:p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
               <input
                 type="checkbox"
                 checked={importAllowUpdates}
                 onChange={(e) => setImportAllowUpdates(e.target.checked)}
-                className="mt-1 h-4 w-4 rounded border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-purple-600 focus:ring-purple-500"
+                className="mt-1 h-4 w-4 rounded border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-purple-600 focus:ring-purple-500 flex-shrink-0"
               />
-              <div>
-                <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">Update existing guards when duplicates are found</div>
+              <div className="min-w-0">
+                <div className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-gray-100">Update existing guards when duplicates are found</div>
                 <div className="text-xs text-gray-500 dark:text-gray-400">If unchecked, duplicate rows will be skipped.</div>
               </div>
             </label>
 
-            <div className="flex gap-3 pt-2">
+            <div className="flex gap-2 sm:gap-3 pt-2">
               <Button
                 onClick={handleImport}
                 disabled={!importFile || importProcessing}
-                className="flex-1 bg-purple-600 hover:bg-purple-700 text-white"
+                className="flex-1 bg-purple-600 hover:bg-purple-700 text-white text-xs sm:text-sm touch-target-min"
               >
                 {importProcessing ? (
                   <>
-                    <IconMapper name="Loader2" size={16} className="animate-spin mr-2" />
+                    <IconMapper name="Loader2" size={16} className="animate-spin mr-1 sm:mr-2" />
                     Importing...
                   </>
                 ) : (
                   <>
-                    <IconMapper name="Upload" size={16} className="mr-2" />
-                    Import Guards
+                    <IconMapper name="Upload" size={16} className="mr-1 sm:mr-2" />
+                    Import
                   </>
                 )}
               </Button>
@@ -1126,7 +1167,7 @@ export default function GuardsDirectory() {
                   setImportAllowUpdates(false);
                 }}
                 disabled={importProcessing}
-                className="flex-1"
+                className="flex-1 text-xs sm:text-sm touch-target-min"
               >
                 Cancel
               </Button>

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Head, useForm, router } from '@inertiajs/react';
 import MarketingLayout from '@/Layouts/MarketingLayout';
+import PushNotificationSettings from '@/Components/Common/PushNotificationSettings';
 
 interface SocialLinks {
   facebook?: string | null;
@@ -65,7 +66,10 @@ export default function MarketingSettings({ auth = {}, settings, options, users 
     <MarketingLayout title="Marketing Settings" user={auth?.user as any}>
       <Head title="Marketing Settings" />
       <div className="py-6">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+          {/* Push Notifications */}
+          <PushNotificationSettings />
+
           <form onSubmit={onSubmit} className="space-y-6">
             <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-6">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Defaults</h2>

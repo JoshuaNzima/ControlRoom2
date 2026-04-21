@@ -144,4 +144,26 @@ class DirectoryController extends Controller
             }),
         ]);
     }
+
+    /**
+     * Dashboard for guard role users (their own profile/summary)
+     */
+    public function myDashboard(Request $request)
+    {
+        $user = $request->user();
+        $guard = Guard::where('user_id', $user->id)->first();
+
+        if (!$guard) {
+            return Inertia::render('Guards/Index', [
+                'guards' => [],
+                'filters' => [],
+                'grades' => GuardGrade::orderBy('name')->get(['id','code','name']),
+                'zones' => Zone::orderBy('name')->get(['id','name']),
+                'stats' => ['total' => 0, 'active' => 0, 'on_duty' => 0, 'off_duty' => 0],
+            ]);
+        }
+
+        // Redirect to profile page for guards
+        return redirect()->route('guard.profile');
+    }
 }

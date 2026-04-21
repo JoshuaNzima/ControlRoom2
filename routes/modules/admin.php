@@ -38,12 +38,12 @@ Route::middleware(['auth', 'role:manager,admin,super_admin'])
     });
 
 // Admin module-scoped routes
-Route::middleware(['auth', 'role:admin,super_admin'])
+Route::middleware(['auth', 'role:admin,super_admin,finance_officer'])
     ->prefix('admin')
     ->name('admin.')
     ->group(function () {
         Route::get('/dashboard', [\App\Http\Controllers\Admin\DashboardController::class, 'index'])->name('dashboard');
-        Route::get('/me', [\App\Http\Controllers\Profile\ProfileDashboardController::class, 'index'])->name('profile');
+        Route::get('/me', [\App\Http\Controllers\Admin\ProfileController::class, 'index'])->name('profile');
         Route::get('/settings', [\App\Http\Controllers\Admin\SettingController::class, 'index'])->name('settings.index');
         Route::prefix('qr-codes')->name('qr-codes.')->group(function () {
             Route::get('/', [\App\Http\Controllers\SupervisorQRCodesController::class, 'index'])->name('index');
@@ -146,6 +146,8 @@ Route::middleware(['auth', 'role:admin,super_admin'])
         Route::post('/guards/{guard}/dismiss', [\App\Http\Controllers\Admin\GuardController::class, 'dismiss'])->name('guards.dismiss');
         Route::post('/guards/{guard}/abscond', [\App\Http\Controllers\Admin\GuardController::class, 'abscond'])->name('guards.abscond');
         Route::post('/guards/{guard}/resign', [\App\Http\Controllers\Admin\GuardController::class, 'resign'])->name('guards.resign');
+        // Guard compliance update
+        Route::post('/guards/{guard}/compliance', [\App\Http\Controllers\Admin\GuardController::class, 'updateCompliance'])->name('guards.compliance');
         // Guard assignment to client site
         Route::post('/guards/assign-site', [\App\Http\Controllers\Admin\GuardAssignmentController::class, 'assignToSite'])->name('guards.assign-site');
         Route::post('/guards/unassign-site', [\App\Http\Controllers\Admin\GuardAssignmentController::class, 'unassignFromSite'])->name('guards.unassign-site');

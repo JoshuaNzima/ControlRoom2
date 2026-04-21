@@ -56,6 +56,9 @@ class Guard extends Model
         'dependents_count',
         'hire_date',
         'notes',
+        'fingerprint_registered',
+        'uniform_issued',
+        'equipment_issued',
         'photo',
         'last_known_location',
         'supervisor_id',
@@ -75,6 +78,9 @@ class Guard extends Model
         'position' => 'string',
         'is_leader' => 'boolean',
         'default_off_day' => 'integer',
+        'fingerprint_registered' => 'boolean',
+        'uniform_issued' => 'boolean',
+        'equipment_issued' => 'array',
     ];
 
     protected $appends = ['status_color', 'is_on_duty', 'photo_url', 'is_profile_complete', 'profile_missing_fields'];

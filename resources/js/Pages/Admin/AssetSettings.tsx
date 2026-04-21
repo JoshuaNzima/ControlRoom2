@@ -1,6 +1,7 @@
 import React from 'react';
 import { Head, useForm, router } from '@inertiajs/react';
 import AssetManagementLayout from '@/Layouts/AssetManagementLayout';
+import PushNotificationSettings from '@/Components/Common/PushNotificationSettings';
 
 const assetFieldClassName =
   'w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-3 py-2 focus:border-red-500 focus:ring-1 focus:ring-red-500';
@@ -35,7 +36,10 @@ export default function AssetSettings({ auth = {}, settings }: Props) {
     <AssetManagementLayout title="Asset Settings" user={auth?.user as any}>
       <Head title="Asset Settings" />
       <div className="py-6">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+          {/* Push Notifications */}
+          <PushNotificationSettings />
+
           <form onSubmit={onSubmit} className="space-y-6">
             <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-6">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Tagging</h2>

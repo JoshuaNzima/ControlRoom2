@@ -13,9 +13,8 @@ interface Props {
 
 export default function RequisitionsLayout({ title = 'Requisitions', children }: Props) {
   const page = usePage<PageProps<any>>();
-  const roles: string[] = Array.isArray((page.props as any)?.auth?.user?.roles)
-    ? ((page.props as any).auth.user.roles as string[])
-    : [];
+  const rawRoles = ((page.props as any)?.auth?.user?.roles ?? []) as (string | { id: number; name: string })[];
+  const roles = rawRoles.map((r) => (typeof r === 'string' ? r : r.name));
 
   const isAdmin = roles.includes('admin') || roles.includes('super_admin');
   const isFinance = roles.some((r) => ['finance_officer', 'accountant', 'finance'].includes(r));

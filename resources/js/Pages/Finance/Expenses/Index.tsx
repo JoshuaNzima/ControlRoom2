@@ -93,6 +93,14 @@ export default function ExpenseIndex({ expenses, totals, filters }: Props) {
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
 
+  // Loading states for view modal actions
+  const [actionLoading, setActionLoading] = useState<Record<string, boolean>>({});
+  const [actionError, setActionError] = useState<string>('');
+
+  const setActionLoadingState = (key: string, value: boolean) => {
+    setActionLoading(prev => ({ ...prev, [key]: value }));
+  };
+
   const { url, props } = usePage<any>();
   const currentUserId = props?.auth?.user?.id as number | undefined;
   const isAdminRoute = typeof url === 'string' && url.startsWith('/admin/');
@@ -632,41 +640,88 @@ export default function ExpenseIndex({ expenses, totals, filters }: Props) {
                     Stage: {viewingExpense.approval_stage === 'asset_pending' ? 'Assets approval' : viewingExpense.approval_stage === 'complete' ? 'Complete' : viewingExpense.approval_stage === 'rejected' ? 'Rejected' : 'Admin approval'}
                   </span>
                 </div>
+                {actionError && (
+                  <div className="text-xs text-red-600 dark:text-red-400">{actionError}</div>
+                )}
                 <div className="flex items-center gap-2">
                   {viewingExpense.status === 'pending' && (
                     <>
                       <button
                         type="button"
-                        onClick={() => router.post(route('finance.expenses.approve', viewingExpense.id), {}, { onSuccess: () => setViewModalOpen(false) })}
-                        className="px-3 py-1.5 rounded bg-emerald-600 hover:bg-emerald-700 text-white font-medium"
+                        onClick={() => {
+                          setActionLoadingState('approve', true);
+                          setActionError('');
+                          router.post(route('finance.expenses.approve', viewingExpense.id), {}, {
+                            onSuccess: () => setViewModalOpen(false),
+                            onFinish: () => setActionLoadingState('approve', false),
+                            onError: (errs: any) => setActionError(Object.values(errs)[0] as string || 'Failed to approve'),
+                          });
+                        }}
+                        disabled={actionLoading.approve}
+                        className="px-3 py-1.5 rounded bg-emerald-600 hover:bg-emerald-700 text-white font-medium disabled:opacity-60 flex items-center gap-2"
                       >
-                        Approve
+                        {actionLoading.approve && (
+                          <svg className="animate-spin h-3 w-3" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                          </svg>
+                        )}
+                        {actionLoading.approve ? 'Approving...' : 'Approve'}
                       </button>
                       <button
                         type="button"
                         onClick={() => {
                           const reason = prompt('Rejection reason (optional)') || '';
-                          router.post(route('finance.expenses.reject', viewingExpense.id), { reason }, { onSuccess: () => setViewModalOpen(false) });
+                          setActionLoadingState('reject', true);
+                          setActionError('');
+                          router.post(route('finance.expenses.reject', viewingExpense.id), { reason }, {
+                            onSuccess: () => setViewModalOpen(false),
+                            onFinish: () => setActionLoadingState('reject', false),
+                            onError: (errs: any) => setActionError(Object.values(errs)[0] as string || 'Failed to reject'),
+                          });
                         }}
-                        className="px-3 py-1.5 rounded bg-rose-600 hover:bg-rose-700 text-white font-medium"
+                        disabled={actionLoading.reject}
+                        className="px-3 py-1.5 rounded bg-rose-600 hover:bg-rose-700 text-white font-medium disabled:opacity-60 flex items-center gap-2"
                       >
-                        Reject
+                        {actionLoading.reject && (
+                          <svg className="animate-spin h-3 w-3" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                          </svg>
+                        )}
+                        {actionLoading.reject ? 'Rejecting...' : 'Reject'}
                       </button>
                     </>
                   )}
                   {viewingExpense.status === 'rejected' && viewingExpense.user?.id && currentUserId === viewingExpense.user.id && (
                     <button
                       type="button"
-                      onClick={() => router.post(route('finance.expenses.resubmit', viewingExpense.id), {}, { onSuccess: () => setViewModalOpen(false) })}
-                      className="px-3 py-1.5 rounded bg-coin-700 hover:bg-coin-600 text-white font-medium"
+                      onClick={() => {
+                        setActionLoadingState('resubmit', true);
+                        setActionError('');
+                        router.post(route('finance.expenses.resubmit', viewingExpense.id), {}, {
+                          onSuccess: () => setViewModalOpen(false),
+                          onFinish: () => setActionLoadingState('resubmit', false),
+                          onError: (errs: any) => setActionError(Object.values(errs)[0] as string || 'Failed to resubmit'),
+                        });
+                      }}
+                      disabled={actionLoading.resubmit}
+                      className="px-3 py-1.5 rounded bg-coin-700 hover:bg-coin-600 text-white font-medium disabled:opacity-60 flex items-center gap-2"
                     >
-                      Resubmit
+                      {actionLoading.resubmit && (
+                        <svg className="animate-spin h-3 w-3" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                        </svg>
+                      )}
+                      {actionLoading.resubmit ? 'Resubmitting...' : 'Resubmit'}
                     </button>
                   )}
                   <button
                     type="button"
                     onClick={() => setViewModalOpen(false)}
-                    className="px-3 py-1.5 rounded bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-100"
+                    disabled={Object.values(actionLoading).some(Boolean)}
+                    className="px-3 py-1.5 rounded bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-100 disabled:opacity-60"
                   >
                     Close
                   </button>

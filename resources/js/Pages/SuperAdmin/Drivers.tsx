@@ -64,6 +64,7 @@ export default function SuperAdminDrivers({ guards, filters, supervisors = [], g
     return '20';
   });
   const [loadingId, setLoadingId] = React.useState<number | null>(null);
+  const [actionLoading, setActionLoading] = React.useState<Record<string, boolean>>({});
   const { push } = useNotification();
 
   React.useEffect(() => {
@@ -173,6 +174,7 @@ export default function SuperAdminDrivers({ guards, filters, supervisors = [], g
       preserveScroll: true,
       onFinish: () => setSaving(false),
       onSuccess: () => { setShowAdd(false); setPhotoCreate(null); push('Driver created'); },
+      onError: (errs) => { push(Object.values(errs)[0] || 'Failed to create driver', 'error'); },
     });
   };
 
@@ -199,6 +201,7 @@ export default function SuperAdminDrivers({ guards, filters, supervisors = [], g
       preserveScroll: true,
       onFinish: () => setSaving(false),
       onSuccess: () => { setShowEdit(false); setPhotoEdit(null); push('Driver updated'); },
+      onError: (errs) => { push(Object.values(errs)[0] || 'Failed to update driver', 'error'); },
     });
   };
 
@@ -398,7 +401,14 @@ export default function SuperAdminDrivers({ guards, filters, supervisors = [], g
                         <IconMapper name="UserPlus" size={18} />
                       </button>
                       <button
-                        onClick={() => openConfirm('Delete driver', `Are you sure you want to delete ${g.name}?`, () => router.delete(route('admin.guards.destroy', { guard: g.id })))}
+                        onClick={() => openConfirm('Delete driver', `Are you sure you want to delete ${g.name}?`, () => {
+                          setLoadingId(g.id);
+                          router.delete(route('admin.guards.destroy', { guard: g.id }), {
+                            onFinish: () => setLoadingId(null),
+                            onSuccess: () => push('Driver deleted'),
+                            onError: (errs) => { setLoadingId(null); push(Object.values(errs)[0] || 'Failed to delete driver', 'error'); },
+                          });
+                        })}
                         className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition"
                         title="Delete"
                         aria-label="Delete"
@@ -616,12 +626,15 @@ export default function SuperAdminDrivers({ guards, filters, supervisors = [], g
               e.preventDefault();
               const targetIds = selectedGuardIds.length > 0 ? selectedGuardIds : (selectedGuard?.id ? [selectedGuard.id] : []);
               if (!targetIds.length || !selectedSupervisorId) return;
+              setActionLoading(prev => ({ ...prev, assignSupervisor: true }));
               router.post(route('guards.assign-supervisor'), {
                 guard_ids: targetIds,
                 supervisor_id: Number(selectedSupervisorId),
               }, {
                 preserveScroll: true,
-                onSuccess: () => { setShowSupervisor(false); setSelectedGuardIds([]); router.reload(); },
+                onFinish: () => setActionLoading(prev => ({ ...prev, assignSupervisor: false })),
+                onSuccess: () => { setShowSupervisor(false); setSelectedGuardIds([]); router.reload(); push('Supervisor assigned'); },
+                onError: (errs) => { push(Object.values(errs)[0] || 'Failed to assign supervisor', 'error'); },
               });
             }}
             className="p-4 sm:p-6 space-y-4 bg-white dark:bg-gray-800"
@@ -644,20 +657,26 @@ export default function SuperAdminDrivers({ guards, filters, supervisors = [], g
               <button type="button" onClick={() => setShowSupervisor(false)} className="px-4 py-2 rounded-md border dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-700 dark:text-slate-200">Cancel</button>
               <button
                 type="button"
+                disabled={actionLoading.unassignSupervisor}
                 onClick={() => {
                   const targetIds = selectedGuardIds.length > 0 ? selectedGuardIds : (selectedGuard?.id ? [selectedGuard.id] : []);
                   if (!targetIds.length) return;
                   if (!confirm('Unassign supervisor from selected driver(s)?')) return;
+                  setActionLoading(prev => ({ ...prev, unassignSupervisor: true }));
                   router.post(route('guards.unassign-supervisor'), { guard_ids: targetIds }, {
                     preserveScroll: true,
-                    onSuccess: () => { setShowSupervisor(false); setSelectedGuardIds([]); router.reload(); },
+                    onFinish: () => setActionLoading(prev => ({ ...prev, unassignSupervisor: false })),
+                    onSuccess: () => { setShowSupervisor(false); setSelectedGuardIds([]); router.reload(); push('Supervisor unassigned'); },
+                    onError: (errs) => { push(Object.values(errs)[0] || 'Failed to unassign supervisor', 'error'); },
                   });
                 }}
-                className="px-4 py-2 rounded-md bg-yellow-600 hover:bg-yellow-700 text-white"
+                className="px-4 py-2 rounded-md bg-yellow-600 hover:bg-yellow-700 text-white disabled:opacity-50"
               >
-                Unassign
+                {actionLoading.unassignSupervisor ? 'Unassigning...' : 'Unassign'}
               </button>
-              <button type="submit" disabled={!selectedSupervisorId} className="px-4 py-2 rounded-md bg-red-700 hover:bg-red-800 text-white">Assign</button>
+              <button type="submit" disabled={!selectedSupervisorId || actionLoading.assignSupervisor} className="px-4 py-2 rounded-md bg-red-700 hover:bg-red-800 text-white disabled:opacity-50">
+                {actionLoading.assignSupervisor ? 'Assigning...' : 'Assign'}
+              </button>
             </div>
           </form>
         </Modal>

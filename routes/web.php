@@ -81,12 +81,27 @@ Route::middleware('auth')->group(function () {
     Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead'])->name('notifications.readAll');
     Route::post('/notifications/{id}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
 
+    // Push Subscriptions API
+    Route::get('/push/vapid-key', [\App\Http\Controllers\PushSubscriptionController::class, 'vapidPublicKey'])->name('push.vapid');
+    Route::get('/push/subscriptions', [\App\Http\Controllers\PushSubscriptionController::class, 'index'])->name('push.index');
+    Route::post('/push/subscribe', [\App\Http\Controllers\PushSubscriptionController::class, 'store'])->name('push.subscribe');
+    Route::post('/push/unsubscribe', [\App\Http\Controllers\PushSubscriptionController::class, 'destroy'])->name('push.unsubscribe');
+    Route::post('/push/test', [\App\Http\Controllers\PushSubscriptionController::class, 'test'])->name('push.test');
+
     // Lightweight counters API for sidebar badges
     Route::get('/counters', [CounterController::class, 'index'])->name('counters.index');
+
+    // Dashboard Tutorials API
+    Route::get('/tutorials/{dashboard}', [\App\Http\Controllers\DashboardTutorialController::class, 'index'])->name('tutorials.index');
+    Route::post('/tutorials', [\App\Http\Controllers\DashboardTutorialController::class, 'store'])->name('tutorials.store');
+    Route::get('/tutorials/{tutorial}', [\App\Http\Controllers\DashboardTutorialController::class, 'show'])->name('tutorials.show');
+    Route::put('/tutorials/{tutorial}', [\App\Http\Controllers\DashboardTutorialController::class, 'update'])->name('tutorials.update');
+    Route::post('/tutorials/{tutorial}', [\App\Http\Controllers\DashboardTutorialController::class, 'update'])->name('tutorials.update.post');
+    Route::delete('/tutorials/{tutorial}', [\App\Http\Controllers\DashboardTutorialController::class, 'destroy'])->name('tutorials.destroy');
 });
 Route::middleware(['auth', 'role:super_admin'])->prefix('superadmin')->name('superadmin.')->group(function () {
     Route::get('/dashboard', [\App\Http\Controllers\SuperAdmin\DashboardController::class, 'index'])->name('dashboard');
-    Route::get('/me', [\App\Http\Controllers\Profile\ProfileDashboardController::class, 'index'])->name('profile');
+    Route::get('/me', [\App\Http\Controllers\SuperAdmin\ProfileController::class, 'index'])->name('profile');
     Route::post('/modules/{module}/toggle', [\App\Http\Controllers\SuperAdmin\DashboardController::class, 'toggleModule'])->name('modules.toggle');
     Route::post('/cache/clear', [\App\Http\Controllers\SuperAdmin\DashboardController::class, 'clearCache'])->name('cache.clear');
     Route::post('/maintenance/enable', [\App\Http\Controllers\SuperAdmin\DashboardController::class, 'enableMaintenance'])->name('maintenance.enable');
@@ -401,7 +416,13 @@ Route::middleware(['auth'])->group(function () {
         if ($user->hasRole('admin')) {
             return redirect()->route('admin.dashboard');
         }
-        if ($user->hasRole('operations_officer') || $user->hasRole('control_room_operator')) {
+        if ($user->hasRole('operations_manager')) {
+            return redirect()->route('operations.dashboard');
+        }
+        if ($user->hasRole('operations_officer')) {
+            return redirect()->route('operations.dashboard');
+        }
+        if ($user->hasRole('control_room_operator')) {
             return redirect()->route('control-room.dashboard');
         }
         if ($user->hasRole('zone_commander')) {
@@ -431,7 +452,10 @@ Route::middleware(['auth'])->group(function () {
         if ($user->hasRole('client')) {
             return redirect()->route('client.dashboard');
         }
-        if ($user->hasAnyRole(['finance_officer','accountant','finance','accounting','guard'])) {
+        if ($user->hasRole('guard')) {
+            return redirect()->route('guard.profile');
+        }
+        if ($user->hasAnyRole(['finance_officer','accountant','finance','accounting'])) {
             return redirect()->route('finance.dashboard');
         }
         if ($user->hasAnyRole(['executive_assistant','receptionist','personal_assistant'])) {
@@ -452,7 +476,7 @@ Route::middleware(['auth'])->group(function () {
             ->middleware('permission:zone.view.dashboard')
             ->name('dashboard');
 
-        Route::get('/me', [\App\Http\Controllers\Profile\ProfileDashboardController::class, 'index'])->name('profile');
+        Route::get('/me', [\App\Http\Controllers\ZoneCommander\ProfileController::class, 'index'])->name('profile');
 
         // Dashboard Data Routes
         Route::get('/data/weekly-attendance', [\App\Http\Controllers\ZoneCommander\AttendanceDataController::class, 'weeklyAttendance'])
@@ -540,6 +564,29 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/reports', [\App\Http\Controllers\ZoneCommander\ReportController::class, 'index'])
             ->middleware('permission:zone.reports.view')
             ->name('reports.index');
+
+        // Checkpoints management
+        Route::get('/checkpoints', [\App\Http\Controllers\ZoneCommander\CheckpointController::class, 'index'])
+            ->middleware('permission:zone.view.sites')
+            ->name('checkpoints.index');
+        Route::get('/checkpoints/{checkpoint}/qr', [\App\Http\Controllers\ZoneCommander\CheckpointController::class, 'qr'])
+            ->middleware('permission:zone.view.sites')
+            ->name('checkpoints.qr');
+        Route::get('/checkpoints/{checkpoint}/qr-print', [\App\Http\Controllers\ZoneCommander\CheckpointController::class, 'qrPrint'])
+            ->middleware('permission:zone.view.sites')
+            ->name('checkpoints.qr-print');
+        Route::get('/checkpoints/bulk-print', [\App\Http\Controllers\ZoneCommander\CheckpointController::class, 'bulkPrint'])
+            ->middleware('permission:zone.view.sites')
+            ->name('checkpoints.bulk-print');
+        Route::get('/checkpoints/download-bulk', [\App\Http\Controllers\ZoneCommander\CheckpointController::class, 'downloadBulk'])
+            ->middleware('permission:zone.view.sites')
+            ->name('checkpoints.download-bulk');
+    });
+
+    // Guard profile routes (for guard role users)
+    Route::middleware(['role:guard'])->prefix('guard')->name('guard.')->group(function () {
+        Route::get('/dashboard', [\App\Http\Controllers\Guards\DirectoryController::class, 'myDashboard'])->name('dashboard');
+        Route::get('/me', [\App\Http\Controllers\Guards\ProfileController::class, 'index'])->name('profile');
     });
 
     Route::middleware(['role:supervisor,manager,admin,super_admin'])->prefix('supervisor')->name('supervisor.')->group(function () {

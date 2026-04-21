@@ -8,12 +8,13 @@ use Illuminate\Support\Facades\Route;
  * Provides view access to incentives and other operational data
  */
 
-Route::middleware(['auth', 'role_or_permission:operations_officer|manager|admin|super_admin|zone_commander'])->prefix('operations')->name('operations.')->group(function () {
+Route::middleware(['auth', 'role_or_permission:operations_officer|operations_manager|manager|admin|super_admin|zone_commander'])->prefix('operations')->name('operations.')->group(function () {
 
-    // Operations Dashboard
-    Route::get('/dashboard', function () {
-        return redirect()->route('admin.dashboard', ['tab' => 'operations']);
-    })->name('dashboard');
+    // Operations Dashboard - Field Operations Focus
+    Route::get('/dashboard', [\App\Http\Controllers\ControlRoomDashboardController::class, 'index'])->name('dashboard');
+
+    // Profile
+    Route::get('/me', [\App\Http\Controllers\Profile\ProfileDashboardController::class, 'index'])->name('profile');
 
     // Incentives - View only access for operations team
     Route::prefix('incentives')->name('incentives.')->group(function () {

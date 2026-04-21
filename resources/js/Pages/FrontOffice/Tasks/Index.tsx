@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Head, router, usePage } from '@inertiajs/react';
 import FrontOfficeLayout from '@/Layouts/FrontOfficeLayout';
+import useNotification from '@/Providers/useNotifications';
 import {
     CheckSquare,
     Plus,
@@ -127,6 +128,7 @@ interface TasksProps {
 }
 
 export default function TasksIndex({ tasks, users = [], templates = [], filters = {}, auth }: TasksProps) {
+    const { push } = useNotification();
     const { props } = usePage();
     const currentUser = (auth?.user || props.auth?.user) as { id: number; name: string; role?: string } | undefined;
     const isExecutiveAssistant = currentUser?.role === 'executive_assistant' || currentUser?.role === 'super_admin';
@@ -157,6 +159,7 @@ export default function TasksIndex({ tasks, users = [], templates = [], filters 
     const handleCreate = (e: React.FormEvent) => {
         e.preventDefault();
         router.post(route('front-office.tasks.store'), formData, {
+            preserveScroll: true,
             onSuccess: () => {
                 setIsCreateOpen(false);
                 setFormData({
@@ -169,19 +172,29 @@ export default function TasksIndex({ tasks, users = [], templates = [], filters 
                     time_estimate: '',
                     template_id: '',
                 });
+                push('Task created', 'success');
             },
+            onError: (errs) => push(Object.values(errs)[0] || 'Failed to create task', 'error'),
         });
     };
 
     const handleComplete = (id: number) => {
         if (confirm('Mark this task as completed?')) {
-            router.put(route('front-office.tasks.complete', id));
+            router.put(route('front-office.tasks.complete', id), {}, {
+                preserveScroll: true,
+                onSuccess: () => push('Task completed', 'success'),
+                onError: (errs) => push(Object.values(errs)[0] || 'Failed to complete task', 'error'),
+            });
         }
     };
 
     const handleDelete = (id: number) => {
         if (confirm('Delete this task?')) {
-            router.delete(route('front-office.tasks.destroy', id));
+            router.delete(route('front-office.tasks.destroy', id), {
+                preserveScroll: true,
+                onSuccess: () => push('Task deleted', 'success'),
+                onError: (errs) => push(Object.values(errs)[0] || 'Failed to delete task', 'error'),
+            });
         }
     };
 
@@ -192,7 +205,12 @@ export default function TasksIndex({ tasks, users = [], templates = [], filters 
         router.post(route('front-office.tasks.comments.store', selectedTask.id), {
             comment: commentText,
         }, {
-            onSuccess: () => setCommentText(''),
+            preserveScroll: true,
+            onSuccess: () => {
+                setCommentText('');
+                push('Comment added', 'success');
+            },
+            onError: (errs) => push(Object.values(errs)[0] || 'Failed to add comment', 'error'),
         });
     };
 
@@ -204,7 +222,12 @@ export default function TasksIndex({ tasks, users = [], templates = [], filters 
             hours: parseFloat(timeEntry.hours),
             notes: timeEntry.notes,
         }, {
-            onSuccess: () => setTimeEntry({ hours: '', notes: '' }),
+            preserveScroll: true,
+            onSuccess: () => {
+                setTimeEntry({ hours: '', notes: '' });
+                push('Time entry added', 'success');
+            },
+            onError: (errs) => push(Object.values(errs)[0] || 'Failed to add time entry', 'error'),
         });
     };
 
@@ -214,6 +237,13 @@ export default function TasksIndex({ tasks, users = [], templates = [], filters 
             router.post(route('front-office.tasks.bulk'), {
                 task_ids: selectedTasks,
                 status: 'completed',
+            }, {
+                preserveScroll: true,
+                onSuccess: () => {
+                    push(`${selectedTasks.length} tasks completed`, 'success');
+                    setSelectedTasks([]);
+                },
+                onError: (errs) => push(Object.values(errs)[0] || 'Failed to complete tasks', 'error'),
             });
         }
     };
@@ -221,10 +251,15 @@ export default function TasksIndex({ tasks, users = [], templates = [], filters 
     const handleBulkDelete = () => {
         if (selectedTasks.length === 0) return;
         if (confirm(`Delete ${selectedTasks.length} tasks?`)) {
-            selectedTasks.forEach(id => {
-                router.delete(route('front-office.tasks.destroy', id));
+            const promises = selectedTasks.map(id => 
+                router.delete(route('front-office.tasks.destroy', id), { preserveScroll: true })
+            );
+            Promise.all(promises).then(() => {
+                push(`${selectedTasks.length} tasks deleted`, 'success');
+                setSelectedTasks([]);
+            }).catch(() => {
+                push('Some tasks failed to delete', 'error');
             });
-            setSelectedTasks([]);
         }
     };
 

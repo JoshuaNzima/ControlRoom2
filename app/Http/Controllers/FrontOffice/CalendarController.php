@@ -4,6 +4,7 @@ namespace App\Http\Controllers\FrontOffice;
 
 use App\Http\Controllers\Controller;
 use App\Models\CalendarEvent;
+use App\Events\CalendarEventCreated;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -81,6 +82,9 @@ class CalendarController extends Controller
             'created_by' => Auth::id(),
         ]);
 
+        // Dispatch event for push notification
+        CalendarEventCreated::dispatch($event, 'created');
+
         return back()->with('success', 'Event created successfully.');
     }
 
@@ -101,12 +105,18 @@ class CalendarController extends Controller
 
         $event->update($validated);
 
+        // Dispatch event for push notification
+        CalendarEventCreated::dispatch($event, 'updated');
+
         return back()->with('success', 'Event updated successfully.');
     }
 
     public function destroy(CalendarEvent $event)
     {
         $this->authorize('delete', $event);
+
+        // Dispatch event for push notification before deletion
+        CalendarEventCreated::dispatch($event, 'cancelled');
 
         $event->delete();
 

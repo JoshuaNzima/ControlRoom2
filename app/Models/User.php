@@ -128,6 +128,14 @@ class User extends Authenticatable
     }
 
     /**
+     * Get all push subscriptions for this user.
+     */
+    public function pushSubscriptions()
+    {
+        return $this->hasMany(PushSubscription::class);
+    }
+
+    /**
      * Check if user is a super admin.
      */
     public function isSuperAdmin(): bool

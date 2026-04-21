@@ -160,8 +160,9 @@ export default function FinanceDashboard(props: Props) {
   const overdueCount = Number(invoicesSummary.overdue_count || 0);
   const overdueAmount = Number(invoicesSummary.overdue_amount || 0);
   
-  const roles = (auth?.user as any)?.roles ?? [];
-  const isAdmin = Array.isArray(roles) ? roles.includes('admin') || roles.includes('super_admin') : (roles === 'admin' || roles === 'super_admin');
+  const rawRoles = ((auth?.user as any)?.roles ?? []) as (string | { id: number; name: string })[];
+  const roles = rawRoles.map((r) => (typeof r === 'string' ? r : r.name));
+  const isAdmin = roles.includes('admin') || roles.includes('super_admin');
 
   const budgetStats = useMemo(() => {
     const list = budgets || [];

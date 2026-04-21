@@ -68,7 +68,8 @@ const statusConfig: Record<string, { color: string; icon: string; label: string 
 };
 
 export default function RequisitionsIndex({ requisitions, auth, mode: initialMode, filter: initialFilter }: RequisitionsIndexProps) {
-  const roles = (auth.user.roles ?? []) as string[];
+  const rawRoles = (auth.user.roles ?? []) as (string | { id: number; name: string })[];
+  const roles = rawRoles.map((r) => (typeof r === 'string' ? r : r.name));
   const isAdmin = roles.includes('admin') || roles.includes('super_admin');
   const isAssetManager = roles.includes('asset_manager') || roles.includes('assets_manager');
   const userId = (auth.user.id as number);

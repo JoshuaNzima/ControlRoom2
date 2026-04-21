@@ -134,6 +134,30 @@ export default function GuardsIndex({ guards, filters, stats }: GuardsIndexProps
     } catch {}
   };
 
+  const handleComplianceUpdate = async (guardId: number, data: { fingerprint_registered?: boolean; uniform_issued?: boolean; equipment_issued?: string[] }) => {
+    try {
+      const res = await fetch(route('admin.guards.compliance', guardId), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '',
+        },
+        credentials: 'same-origin',
+        body: JSON.stringify(data),
+      });
+      const result = await res.json();
+      if (result.success && selectedGuardDetails) {
+        setSelectedGuardDetails({
+          ...selectedGuardDetails,
+          ...result.guard,
+        });
+      }
+    } catch (error) {
+      console.error('Failed to update compliance:', error);
+    }
+  };
+
   const handleSearch = () => {
     router.get(
       route('admin.guards.index'),
@@ -394,6 +418,7 @@ export default function GuardsIndex({ guards, filters, stats }: GuardsIndexProps
           onClose={() => setSelectedGuardDetails(null)}
           guard={selectedGuardDetails}
           scope="admin"
+          onComplianceUpdate={handleComplianceUpdate}
         />
       </div>
     </AdminLayout>

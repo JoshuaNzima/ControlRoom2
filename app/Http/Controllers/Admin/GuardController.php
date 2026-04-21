@@ -13,6 +13,7 @@ use App\Models\Zone;
 use App\Models\PayProfile;
 use App\Models\User;
 use App\Services\GuardDuplicateDetectionService;
+use App\Events\GuardDismissed;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -417,6 +418,10 @@ class GuardController extends Controller
             'status' => 'dismissed',
             'notes' => trim(($guard->notes ? ($guard->notes."\n") : '') . 'Dismissed: ' . ($request->input('reason') ?? '')),
         ]);
+
+        // Dispatch event for push notification
+        GuardDismissed::dispatch($guard, $request->input('reason') ?? 'No reason provided', $request->user()->id);
+
         return redirect()->back()->withSuccess('Guard dismissed.');
     }
 
@@ -568,29 +573,29 @@ class GuardController extends Controller
         $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
 
-        // Headers
-        $headers = ['Name', 'Employee ID', 'Phone', 'Email', 'ID Number', 'Date of Birth', 'Gender', 'Address', 'Guard Type', 'Status', 'Hire Date', 'Emergency Contact Name', 'Emergency Contact Phone'];
+        // Headers (Employee ID is auto-generated, not included in template)
+        $headers = ['Name', 'Phone', 'Email', 'ID Number', 'Date of Birth', 'Gender', 'Address', 'Guard Type', 'Status', 'Hire Date', 'Emergency Contact Name', 'Emergency Contact Phone'];
         $column = 'A';
         foreach ($headers as $header) {
             $sheet->setCellValue($column . '1', $header);
             $column++;
         }
 
-        // Example row
-        $example = ['John Doe', 'G-2503-0001', '+265999123456', 'john@example.com', '123456789', '1990-05-15', 'male', 'Blantyre', 'permanent', 'active', '2024-01-01', 'Jane Doe', '+265999654321'];
+        // Example row (Employee ID auto-generated)
+        $example = ['John Doe', '+265999123456', 'john@example.com', '123456789', '1990-05-15', 'male', 'Blantyre', 'permanent', 'active', '2024-01-01', 'Jane Doe', '+265999654321'];
         $column = 'A';
         foreach ($example as $value) {
             $sheet->setCellValue($column . '2', $value);
             $column++;
         }
 
-        // Auto-size columns
-        foreach (range('A', 'M') as $col) {
+        // Auto-size columns (A to L - 12 columns, Employee ID removed)
+        foreach (range('A', 'L') as $col) {
             $sheet->getColumnDimension($col)->setAutoSize(true);
         }
 
         // Style headers
-        $headerRange = 'A1:M1';
+        $headerRange = 'A1:L1';
         $sheet->getStyle($headerRange)->getFont()->setBold(true);
         $sheet->getStyle($headerRange)->getFill()
             ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
@@ -659,10 +664,9 @@ class GuardController extends Controller
                     'row_num' => $rowNum,
                     'data' => [
                         'name' => $col($row, ['name'], 0),
-                        'employee_id' => $col($row, ['employee id', 'employee_id'], 1),
-                        'phone' => $col($row, ['phone'], 2),
-                        'id_number' => $col($row, ['id number', 'id_number'], 4),
-                        'date_of_birth' => $col($row, ['date of birth', 'date_of_birth', 'dob'], 5),
+                        'phone' => $col($row, ['phone'], 1),
+                        'id_number' => $col($row, ['id number', 'id_number'], 3),
+                        'date_of_birth' => $col($row, ['date of birth', 'date_of_birth', 'dob'], 4),
                     ],
                 ];
             }
@@ -711,17 +715,14 @@ class GuardController extends Controller
 
                     $existingGuard = null;
                     if ($rowHasDbDuplicate && $allowUpdates) {
-                        $employeeId = trim((string) ($col($row, ['employee id', 'employee_id'], 1) ?? ''));
-                        $idNumber = trim((string) ($col($row, ['id number', 'id_number'], 4) ?? ''));
-                        $phoneRaw = (string) ($col($row, ['phone'], 2) ?? '');
+                        $idNumber = trim((string) ($col($row, ['id number', 'id_number'], 3) ?? ''));
+                        $phoneRaw = (string) ($col($row, ['phone'], 1) ?? '');
                         $phoneDigits = preg_replace('/\D+/', '', $phoneRaw);
                         $name = trim((string) ($col($row, ['name'], 0) ?? ''));
-                        $dob = trim((string) ($col($row, ['date of birth', 'date_of_birth', 'dob'], 5) ?? ''));
+                        $dob = trim((string) ($col($row, ['date of birth', 'date_of_birth', 'dob'], 4) ?? ''));
 
-                        if ($employeeId !== '') {
-                            $existingGuard = Guard::where('employee_id', $employeeId)->first();
-                        }
-                        if (!$existingGuard && $idNumber !== '') {
+                        // Lookup by ID Number, Phone, or Name+DOB (Employee ID is auto-generated, not in import)
+                        if ($idNumber !== '') {
                             $existingGuard = Guard::where('id_number', $idNumber)->first();
                         }
                         if (!$existingGuard && $phoneDigits !== '') {
@@ -740,18 +741,17 @@ class GuardController extends Controller
 
                     $validator = Validator::make([
                         'name' => $col($row, ['name'], 0),
-                        'employee_id' => $col($row, ['employee id', 'employee_id'], 1),
-                        'phone' => $col($row, ['phone'], 2),
-                        'email' => $col($row, ['email'], 3),
-                        'id_number' => $col($row, ['id number', 'id_number'], 4),
-                        'date_of_birth' => $col($row, ['date of birth', 'date_of_birth', 'dob'], 5),
-                        'gender' => $col($row, ['gender'], 6),
-                        'address' => $col($row, ['address'], 7),
-                        'guard_type' => $col($row, ['guard type', 'guard_type'], 8) ?? 'permanent',
-                        'status' => $col($row, ['status'], 9) ?? 'active',
-                        'hire_date' => $col($row, ['hire date', 'hire_date'], 10),
-                        'emergency_contact_name' => $col($row, ['emergency contact name', 'emergency_contact_name'], 11),
-                        'emergency_contact_phone' => $col($row, ['emergency contact phone', 'emergency_contact_phone'], 12),
+                        'phone' => $col($row, ['phone'], 1),
+                        'email' => $col($row, ['email'], 2),
+                        'id_number' => $col($row, ['id number', 'id_number'], 3),
+                        'date_of_birth' => $col($row, ['date of birth', 'date_of_birth', 'dob'], 4),
+                        'gender' => $col($row, ['gender'], 5),
+                        'address' => $col($row, ['address'], 6),
+                        'guard_type' => $col($row, ['guard type', 'guard_type'], 7) ?? 'permanent',
+                        'status' => $col($row, ['status'], 8) ?? 'active',
+                        'hire_date' => $col($row, ['hire date', 'hire_date'], 9),
+                        'emergency_contact_name' => $col($row, ['emergency contact name', 'emergency_contact_name'], 10),
+                        'emergency_contact_phone' => $col($row, ['emergency contact phone', 'emergency_contact_phone'], 11),
                     ], [
                         'name' => 'required|string|max:255',
                         'employee_id' => ['nullable','string','max:255', $existingGuard ? Rule::unique('guards', 'employee_id')->ignore($existingGuard->id) : Rule::unique('guards', 'employee_id')],
@@ -811,5 +811,30 @@ class GuardController extends Controller
                 'file' => 'Failed to process import file: ' . $e->getMessage(),
             ]);
         }
+    }
+
+    public function updateCompliance(Request $request, Guard $guard)
+    {
+        $this->authorize('update', $guard);
+
+        $validated = $request->validate([
+            'fingerprint_registered' => 'nullable|boolean',
+            'uniform_issued' => 'nullable|boolean',
+            'equipment_issued' => 'nullable|array',
+            'equipment_issued.*' => 'string|max:100',
+        ]);
+
+        $guard->update($validated);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Compliance updated successfully',
+            'guard' => [
+                'id' => $guard->id,
+                'fingerprint_registered' => $guard->fingerprint_registered,
+                'uniform_issued' => $guard->uniform_issued,
+                'equipment_issued' => $guard->equipment_issued,
+            ],
+        ]);
     }
 }

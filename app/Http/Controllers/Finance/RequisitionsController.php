@@ -7,6 +7,7 @@ use App\Models\Requisition;
 use App\Models\RequisitionItem;
 use App\Models\RequisitionAttachment;
 use App\Models\RequisitionBatch;
+use App\Events\RequisitionUpdated;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
@@ -259,12 +260,16 @@ class RequisitionsController extends Controller
         }
 
         // Update requisition status based on items
+        $previousStatus = $requisition->status;
         $allItemsDisbursed = $requisition->items()->whereIn('status', ['pending', 'approved'])->doesntExist();
         $requisition->update([
             'status' => $allItemsDisbursed ? 'disbursed' : 'partially_disbursed',
             'disbursed_by' => auth()->id(),
             'notes_disbursement' => $validated['notes_disbursement'] ?? null,
         ]);
+
+        // Dispatch event for push notification
+        RequisitionUpdated::dispatch($requisition, 'disbursed', $previousStatus);
 
         return redirect()->back()->with('success', 'Funds disbursed successfully.');
     }

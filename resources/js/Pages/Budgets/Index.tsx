@@ -48,7 +48,8 @@ const statusConfig: Record<string, { color: string; icon: string; label: string 
 };
 
 export default function BudgetsIndex({ budgets, auth, mode: initialMode }: BudgetsIndexProps) {
-  const roles = (auth.user.roles ?? []) as string[];
+  const rawRoles = (auth.user.roles ?? []) as (string | { id: number; name: string })[];
+  const roles = rawRoles.map((r) => (typeof r === 'string' ? r : r.name));
   const isAdmin = roles.includes('admin') || roles.includes('super_admin');
   const isFinance = roles.some((r) => ['finance_officer','accountant','finance','accounting'].includes(r));
   const [open, setOpen] = React.useState(false);

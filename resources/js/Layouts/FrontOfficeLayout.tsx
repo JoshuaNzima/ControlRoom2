@@ -20,7 +20,9 @@ import {
     Wallet,
     ShoppingCart,
 } from 'lucide-react';
+import TutorialSection from '@/Components/Tutorials/TutorialSection';
 import { cn } from '@/lib/utils';
+import { useRealtimeNotifications } from '@/Hooks/useRealtimeNotifications';
 import { Button } from '@/Components/ui/button';
 import { Avatar, AvatarFallback } from '@/Components/ui/avatar';
 import {
@@ -45,6 +47,11 @@ interface NavItem {
 export default function FrontOfficeLayout({ children, title }: FrontOfficeLayoutProps) {
     const { auth, role, can, unreadCount = 0, appName } = usePage().props as any;
     const user = auth?.user;
+
+    // Initialize real-time notifications
+    const roles = (user?.roles || []) as string[];
+    useRealtimeNotifications({ userId: user?.id, userRoles: roles });
+
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [isDark, setIsDark] = useState(true);
     const pageTitle = title || 'Front Office';
@@ -277,6 +284,7 @@ export default function FrontOfficeLayout({ children, title }: FrontOfficeLayout
 
                 {/* Page Content */}
                 <div className="p-4 lg:p-8 pt-20 lg:pt-8">
+                    <TutorialSection dashboard="admin" canManage={false} />
                     {children}
                 </div>
             </main>

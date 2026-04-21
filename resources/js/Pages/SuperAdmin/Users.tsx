@@ -33,6 +33,55 @@ export default function SuperAdminUsers({ users, filters, roles, zones }: UsersI
   const [saving, setSaving] = React.useState(false);
   const { push } = useNotification();
 
+  // Loading states for individual row actions
+  const [loading, setLoading] = React.useState<Record<string, boolean>>({});
+  const [errors, setErrors] = React.useState<Record<string, string>>({});
+
+  const setLoadingState = (key: string, value: boolean) => {
+    setLoading(prev => ({ ...prev, [key]: value }));
+  };
+
+  const setErrorState = (key: string, value: string) => {
+    setErrors(prev => ({ ...prev, [key]: value }));
+    if (value) {
+      setTimeout(() => setErrors(prev => ({ ...prev, [key]: '' })), 5000);
+    }
+  };
+
+  const handleDelete = async (user: UserRow) => {
+    if (!confirm('Are you sure you want to delete this user?')) return;
+    setLoadingState(`delete_${user.id}`, true);
+    setErrorState(`delete_${user.id}`, '');
+    router.delete(route('admin.users.destroy', { user: user.id }), {
+      preserveScroll: true,
+      onFinish: () => setLoadingState(`delete_${user.id}`, false),
+      onSuccess: () => push(`User ${user.name} deleted`, 'success'),
+      onError: (errs: any) => {
+        const msg = Object.values(errs)[0] as string || 'Failed to delete user';
+        setErrorState(`delete_${user.id}`, msg);
+        push(msg, 'error');
+      },
+    });
+  };
+
+  const handleToggleStatus = async (user: UserRow) => {
+    const newStatus = user.status === 'active' ? 'inactive' : 'active';
+    if (!confirm(`Set status to ${newStatus}?`)) return;
+    setLoadingState(`toggle_${user.id}`, true);
+    setErrorState(`toggle_${user.id}`, '');
+    try {
+      await router.put(route('admin.users.update', { user: user.id }), { status: newStatus }, {
+        preserveScroll: true,
+      });
+      push(`User ${user.name} set to ${newStatus}`, 'success');
+    } catch (e) {
+      setErrorState(`toggle_${user.id}`, 'Failed to update status');
+      push('Failed to update user status', 'error');
+    } finally {
+      setLoadingState(`toggle_${user.id}`, false);
+    }
+  };
+
   const [createForm, setCreateForm] = React.useState({
     name: '',
     email: '',
@@ -290,40 +339,41 @@ export default function SuperAdminUsers({ users, filters, roles, zones }: UsersI
                 <button
                   type="button"
                   onClick={() => { setSelectedUser(u); setShowEdit(true); }}
-                  className="flex-1 px-3 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 transition"
+                  className="flex-1 px-3 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 transition flex items-center justify-center gap-1"
                   title="Edit"
                 >
-                  Edit
+                  <IconMapper name="Pencil" size={16} className="sm:hidden" />
+                  <span className="hidden sm:inline">Edit</span>
                 </button>
                 <button
                   type="button"
-                  onClick={() => {
-                    if (confirm('Are you sure you want to delete this user?')) {
-                      router.delete(route('admin.users.destroy', { user: u.id }));
-                    }
-                  }}
-                  className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition"
+                  onClick={() => handleDelete(u)}
+                  disabled={loading[`delete_${u.id}`]}
+                  className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="Delete"
                 >
-                  <IconMapper name="Trash" size={18} />
+                  {loading[`delete_${u.id}`] ? '...' : <IconMapper name="Trash" size={18} />}
                 </button>
                 <button
                   type="button"
-                  onClick={async () => {
-                    const newStatus = u.status === 'active' ? 'inactive' : 'active';
-                    if (!confirm(`Set status to ${newStatus}?`)) return;
-                    try {
-                      await router.put(route('admin.users.update', { user: u.id }), { status: newStatus });
-                      push(`User ${u.name} set to ${newStatus}`);
-                    } catch (e) {
-                      push('Failed to update user status');
-                    }
-                  }}
-                  className="p-2 text-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 rounded-lg transition"
+                  onClick={() => handleToggleStatus(u)}
+                  disabled={loading[`toggle_${u.id}`]}
+                  className="p-2 text-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
                   title={u.status === 'active' ? 'Deactivate user' : 'Activate user'}
                 >
-                  {u.status === 'active' ? 'Deactivate' : 'Activate'}
+                  {loading[`toggle_${u.id}`] ? '...' : (
+                    <>
+                      <IconMapper name={u.status === 'active' ? 'PauseCircle' : 'PlayCircle'} size={18} className="sm:hidden" />
+                      <span className="hidden sm:inline">{u.status === 'active' ? 'Deactivate' : 'Activate'}</span>
+                    </>
+                  )}
                 </button>
               </div>
+              {(errors[`delete_${u.id}`] || errors[`toggle_${u.id}`]) && (
+                <div className="text-xs text-red-600 dark:text-red-400">
+                  {errors[`delete_${u.id}`] || errors[`toggle_${u.id}`]}
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -378,31 +428,25 @@ export default function SuperAdminUsers({ users, filters, roles, zones }: UsersI
                         <IconMapper name="Pencil" size={18} />
                       </button>
                       <button
-                        onClick={() => {
-                          if (confirm('Are you sure you want to delete this user?')) {
-                            router.delete(route('admin.users.destroy', { user: u.id }));
-                          }
-                        }}
-                        className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition"
+                        onClick={() => handleDelete(u)}
+                        disabled={loading[`delete_${u.id}`]}
+                        className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        <IconMapper name="Trash" size={18} />
+                        {loading[`delete_${u.id}`] ? '...' : <IconMapper name="Trash" size={18} />}
                       </button>
                       <button
-                        onClick={async () => {
-                          const newStatus = u.status === 'active' ? 'inactive' : 'active';
-                          if (!confirm(`Set status to ${newStatus}?`)) return;
-                          try {
-                            await router.put(route('admin.users.update', { user: u.id }), { status: newStatus });
-                            push(`User ${u.name} set to ${newStatus}`);
-                          } catch (e) {
-                            push('Failed to update user status');
-                          }
-                        }}
-                        className="p-2 text-yellow-600 hover:bg-yellow-50 rounded-lg transition"
+                        onClick={() => handleToggleStatus(u)}
+                        disabled={loading[`toggle_${u.id}`]}
+                        className="p-2 text-yellow-600 hover:bg-yellow-50 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
                         title={u.status === 'active' ? 'Deactivate user' : 'Activate user'}
                       >
-                        {u.status === 'active' ? 'Deactivate' : 'Activate'}
+                        {loading[`toggle_${u.id}`] ? '...' : (u.status === 'active' ? 'Deactivate' : 'Activate')}
                       </button>
+                      {(errors[`delete_${u.id}`] || errors[`toggle_${u.id}`]) && (
+                        <span className="text-xs text-red-600 dark:text-red-400 ml-2">
+                          {errors[`delete_${u.id}`] || errors[`toggle_${u.id}`]}
+                        </span>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -413,16 +457,46 @@ export default function SuperAdminUsers({ users, filters, roles, zones }: UsersI
 
         {/* Pagination */}
         {users?.links && users.data.length > 0 && (
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4">
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-2 sm:p-4">
+            {/* Mobile: Simple prev/next */}
+            <div className="flex sm:hidden justify-between items-center gap-2">
+              <button
+                onClick={() => {
+                  const prevLink = users.links?.find((l: any) => l.label.includes('Previous') || l.label.includes('«'));
+                  if (prevLink?.url) router.get(prevLink.url, { search: search || undefined }, { preserveScroll: true, preserveState: true });
+                }}
+                disabled={!users.links?.some((l: any) => l.label.includes('Previous') || l.label.includes('«'))}
+                className="touch-target-min px-3 py-2 text-xs font-medium rounded border dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 disabled:opacity-50"
+              >
+                <IconMapper name="ChevronLeft" size={14} className="mr-1" />
+                Prev
+              </button>
+              <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">
+                {users.meta?.current_page || 1} / {users.meta?.last_page || 1}
+              </span>
+              <button
+                onClick={() => {
+                  const nextLink = users.links?.find((l: any) => l.label.includes('Next') || l.label.includes('»'));
+                  if (nextLink?.url) router.get(nextLink.url, { search: search || undefined }, { preserveScroll: true, preserveState: true });
+                }}
+                disabled={!users.links?.some((l: any) => l.label.includes('Next') || l.label.includes('»'))}
+                className="touch-target-min px-3 py-2 text-xs font-medium rounded border dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 disabled:opacity-50"
+              >
+                Next
+                <IconMapper name="ChevronRight" size={14} className="ml-1" />
+              </button>
+            </div>
+
+            {/* Desktop: Full pagination */}
+            <div className="hidden sm:flex sm:flex-row items-center justify-between gap-3">
               <div className="text-sm text-gray-600 dark:text-gray-400">
                 Showing {users.meta?.from || 1} to {users.meta?.to || users.data.length} of {users.meta?.total || users.data.length} results
               </div>
-              <div className="flex flex-wrap items-center gap-1">
+              <div className="flex flex-wrap items-center gap-1 justify-end">
                 {users.links.filter((l: any) => l.url).map((l: any, idx: number) => (
                   <button
                     key={idx}
-                    className={`px-3 py-1.5 text-sm rounded border dark:border-gray-700 transition-colors ${
+                    className={`px-3 py-1.5 text-sm rounded border dark:border-gray-700 transition-colors touch-target-min ${
                       l.active
                         ? 'bg-red-600 text-white border-red-600'
                         : 'bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'

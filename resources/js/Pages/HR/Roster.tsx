@@ -688,7 +688,9 @@ function EditHolidayModal({
 
 function AddLeaveModal({ open, onClose, onSaved }: { open: boolean; onClose: () => void; onSaved: () => void }) {
   const [employees, setEmployees] = useState<Employee[]>([]);
+  const [employeeSearch, setEmployeeSearch] = useState('');
   const [loadingEmployees, setLoadingEmployees] = useState(false);
+  const [employeeMeta, setEmployeeMeta] = useState({ page: 1, per_page: 50, has_more: false });
 
   const { data, setData, post, processing, errors, reset } = useForm<EmployeeLeave>({
     employee_type: 'App\\Models\\Guards\\Guard',
@@ -701,22 +703,33 @@ function AddLeaveModal({ open, onClose, onSaved }: { open: boolean; onClose: () 
     notes: '',
   });
 
+  // Debounced search effect
   useEffect(() => {
-    if (open) {
+    if (!open) return;
+    
+    const timeout = setTimeout(() => {
       setLoadingEmployees(true);
-      fetch(route('hr.employee-leaves.employees'), { headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
+      const url = route('hr.employee-leaves.employees', { 
+        search: employeeSearch, 
+        page: 1, 
+        per_page: 50 
+      });
+      fetch(url, { headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
         .then((r) => r.json())
         .then((json) => {
           const list = json.employees || [];
           setEmployees(list);
+          setEmployeeMeta(json.meta || { page: 1, per_page: 50, has_more: false });
           if (list.length && !data.employee_id) {
             setData('employee_id', list[0].id);
             setData('employee_type', list[0].model);
           }
         })
         .finally(() => setLoadingEmployees(false));
-    }
-  }, [open, data.employee_id, setData]);
+    }, 300); // 300ms debounce
+
+    return () => clearTimeout(timeout);
+  }, [open, employeeSearch, data.employee_id, setData]);
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -737,23 +750,36 @@ function AddLeaveModal({ open, onClose, onSaved }: { open: boolean; onClose: () 
         <form className="grid grid-cols-1 gap-3" onSubmit={submit}>
           <div>
             <label className="block text-sm font-medium">Employee</label>
-            <select
-              className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100"
-              value={`${data.employee_type}|${data.employee_id}`}
-              onChange={(e) => {
-                const [type, id] = e.target.value.split('|');
-                setData('employee_type', type);
-                setData('employee_id', Number(id));
-              }}
-              disabled={loadingEmployees}
-            >
-              {loadingEmployees && <option>Loading...</option>}
-              {employees.map((emp) => (
-                <option key={`${emp.model}|${emp.id}`} value={`${emp.model}|${emp.id}`}>
-                  {emp.name} ({emp.type_label}) {emp.employee_id ? `- ${emp.employee_id}` : ''}
-                </option>
-              ))}
-            </select>
+            <div className="space-y-2">
+              <input
+                type="text"
+                placeholder="Search employees..."
+                value={employeeSearch}
+                onChange={(e) => setEmployeeSearch(e.target.value)}
+                className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100 text-sm"
+              />
+              <select
+                className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100"
+                value={`${data.employee_type}|${data.employee_id}`}
+                onChange={(e) => {
+                  const [type, id] = e.target.value.split('|');
+                  setData('employee_type', type);
+                  setData('employee_id', Number(id));
+                }}
+                disabled={loadingEmployees}
+                size={Math.min(5, employees.length + 1)}
+              >
+                {loadingEmployees && <option>Loading...</option>}
+                {employees.map((emp) => (
+                  <option key={`${emp.model}|${emp.id}`} value={`${emp.model}|${emp.id}`}>
+                    {emp.name} ({emp.type_label}) {emp.employee_id ? `- ${emp.employee_id}` : ''}
+                  </option>
+                ))}
+                {!loadingEmployees && employeeMeta.has_more && (
+                  <option disabled>Type to search more employees...</option>
+                )}
+              </select>
+            </div>
             {errors.employee_id && <p className="text-xs text-red-600 mt-1">{errors.employee_id}</p>}
           </div>
 
@@ -830,7 +856,9 @@ function EditLeaveModal({
   event: EventItem | null;
 }) {
   const [employees, setEmployees] = useState<Employee[]>([]);
+  const [employeeSearch, setEmployeeSearch] = useState('');
   const [loadingEmployees, setLoadingEmployees] = useState(false);
+  const [employeeMeta, setEmployeeMeta] = useState({ page: 1, per_page: 50, has_more: false });
 
   const { data, setData, put, processing, errors, reset, delete: destroy } = useForm<EmployeeLeave>({
     employee_type: 'App\\Models\\Guards\\Guard',
@@ -843,17 +871,29 @@ function EditLeaveModal({
     notes: '',
   });
 
+  // Debounced search effect
   useEffect(() => {
-    if (open) {
+    if (!open) return;
+    
+    const timeout = setTimeout(() => {
       setLoadingEmployees(true);
-      fetch(route('hr.employee-leaves.employees'), { headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
+      const url = route('hr.employee-leaves.employees', { 
+        search: employeeSearch, 
+        page: 1, 
+        per_page: 50 
+      });
+      fetch(url, { headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
         .then((r) => r.json())
         .then((json) => {
-          setEmployees(json.employees || []);
+          const list = json.employees || [];
+          setEmployees(list);
+          setEmployeeMeta(json.meta || { page: 1, per_page: 50, has_more: false });
         })
         .finally(() => setLoadingEmployees(false));
-    }
-  }, [open]);
+    }, 300); // 300ms debounce
+
+    return () => clearTimeout(timeout);
+  }, [open, employeeSearch]);
 
   useEffect(() => {
     if (!open || !event || event.entity !== 'employee_leave') return;
@@ -907,23 +947,36 @@ function EditLeaveModal({
         <form className="grid grid-cols-1 gap-3" onSubmit={submit}>
           <div>
             <label className="block text-sm font-medium">Employee</label>
-            <select
-              className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100"
-              value={`${data.employee_type}|${data.employee_id}`}
-              onChange={(e) => {
-                const [type, id] = e.target.value.split('|');
-                setData('employee_type', type);
-                setData('employee_id', Number(id));
-              }}
-              disabled={loadingEmployees}
-            >
-              {loadingEmployees && <option>Loading...</option>}
-              {employees.map((emp) => (
-                <option key={`${emp.model}|${emp.id}`} value={`${emp.model}|${emp.id}`}>
-                  {emp.name} ({emp.type_label}) {emp.employee_id ? `- ${emp.employee_id}` : ''}
-                </option>
-              ))}
-            </select>
+            <div className="space-y-2">
+              <input
+                type="text"
+                placeholder="Search employees..."
+                value={employeeSearch}
+                onChange={(e) => setEmployeeSearch(e.target.value)}
+                className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100 text-sm"
+              />
+              <select
+                className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100"
+                value={`${data.employee_type}|${data.employee_id}`}
+                onChange={(e) => {
+                  const [type, id] = e.target.value.split('|');
+                  setData('employee_type', type);
+                  setData('employee_id', Number(id));
+                }}
+                disabled={loadingEmployees}
+                size={Math.min(5, employees.length + 1)}
+              >
+                {loadingEmployees && <option>Loading...</option>}
+                {employees.map((emp) => (
+                  <option key={`${emp.model}|${emp.id}`} value={`${emp.model}|${emp.id}`}>
+                    {emp.name} ({emp.type_label}) {emp.employee_id ? `- ${emp.employee_id}` : ''}
+                  </option>
+                ))}
+                {!loadingEmployees && employeeMeta.has_more && (
+                  <option disabled>Type to search more employees...</option>
+                )}
+              </select>
+            </div>
             {errors.employee_id && <p className="text-xs text-red-600 mt-1">{errors.employee_id}</p>}
           </div>
 

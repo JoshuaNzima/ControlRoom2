@@ -24,6 +24,8 @@ class Client extends Model
         'contract_end_date',
         'monthly_rate',
         'notes',
+        'supervisor_id',
+        'sergeant_id',
     ];
 
     protected $casts = [

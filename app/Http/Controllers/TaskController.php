@@ -11,6 +11,7 @@ use App\Models\TaskTemplate;
 use App\Models\TaskDependency;
 use App\Models\TaskTimeEntry;
 use App\Notifications\TaskAssigned;
+use App\Events\TaskUpdated;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -399,6 +400,9 @@ class TaskController extends Controller
             }
         }
 
+        // Dispatch event for push notification
+        TaskUpdated::dispatch($task, 'created');
+
         // record time entry zero initially if time estimate known
         if (!empty($metadata['time_estimate'])) {
             TaskTimeEntry::create([ 'task_id' => $task->id, 'user_id' => $user->id, 'hours' => 0, 'notes' => 'Estimated ' . $metadata['time_estimate'] . 'h' ]);
@@ -428,10 +432,14 @@ class TaskController extends Controller
             'category_id' => ['nullable', 'integer', 'exists:task_categories,id'],
         ]);
 
+        $previousStatus = $task->status;
         $task->update($validated);
         if (!empty($validated['category_id'])) {
             $task->categories()->sync([$validated['category_id']]);
         }
+
+        // Dispatch event for push notification
+        TaskUpdated::dispatch($task, 'updated', $previousStatus);
 
         return back()->with('success', 'Task updated successfully.');
     }
@@ -449,7 +457,11 @@ class TaskController extends Controller
             'completion_notes' => ['nullable', 'string'],
         ]);
 
+        $previousStatus = $task->status;
         $task->markAsCompleted($user->id, $validated['completion_notes'] ?? null);
+
+        // Dispatch event for push notification
+        TaskUpdated::dispatch($task, 'completed', $previousStatus);
 
         return back()->with('success', 'Task marked as completed.');
     }
@@ -463,6 +475,9 @@ class TaskController extends Controller
         if (!$isExecutiveAssistant && $task->created_by !== $user->id) {
             abort(403, 'Unauthorized');
         }
+
+        // Dispatch event for push notification before deletion
+        TaskUpdated::dispatch($task, 'deleted', $task->status);
 
         $task->delete();
 

@@ -7,8 +7,10 @@ import BaseShell from './BaseShell';
 import useCounters from '@/Hooks/useCounters';
 import { useTheme } from '@/Providers/ThemeProvider';
 import useGpsAlerts from '@/Hooks/useGpsAlerts';
+import { useRealtimeNotifications } from '@/Hooks/useRealtimeNotifications';
 import FloatingNavButton from '@/Components/FloatingNavButton';
 import WeeklyTasks from '@/Components/WeeklyTasks';
+import TutorialSection from '@/Components/Tutorials/TutorialSection';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface Props {
@@ -49,21 +51,22 @@ const QuickStats: React.FC = () => {
 export default function AdminLayout({ title, children }: Props) {
     const [sidebarOpen, setSidebarOpen] = React.useState(false);
     const [tasksOpen, setTasksOpen] = React.useState(false);
-    const page = usePage();
+    const page = usePage<any>();
     const { theme, toggle } = useTheme();
+
+    // Extract user info
     const user = page?.props?.auth?.user;
+    const userId = user?.id;
+    const roles = (user?.roles || []) as string[];
     const weeklyTasks = (page?.props?.weeklyTasks || []) as any[];
     const counters = (page?.props?.counters || {}) as any;
     const isExecutiveAssistant = page?.props?.isExecutiveAssistant ?? false;
     const appName = (page?.props as any)?.appName ?? 'CoinSec';
+
+    // Initialize real-time notifications
+    useRealtimeNotifications({ userId, userRoles: roles });
     useGpsAlerts();
 
-    const roles = (() => {
-        const r: any = (user as any)?.roles;
-        if (Array.isArray(r)) return r.map(String);
-        if (typeof r === 'string' && r.length) return [r];
-        return [] as string[];
-    })();
     const isAdminUser = roles.includes('admin') || roles.includes('super_admin');
     const isAssetManager = roles.includes('asset_manager') || roles.includes('super_admin');
 
@@ -340,9 +343,9 @@ export default function AdminLayout({ title, children }: Props) {
             <div className="md:pl-64">
                 {/* Header */}
                 <div className="sticky top-0 z-30 border-b border-red-100 bg-white/95 backdrop-blur-sm dark:border-gray-800 dark:bg-gray-950/80">
-                    <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-3">
-                        <div className="flex items-center justify-between gap-3">
-                            <div className="flex items-center gap-3 min-w-0">
+                    <div className="max-w-7xl mx-auto px-2 sm:px-4 md:px-8 py-2 sm:py-3">
+                        <div className="flex items-center justify-between gap-2 sm:gap-3">
+                            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
                                 <button
                                     type="button"
                                     className="h-10 w-10 inline-flex items-center justify-center rounded-md text-red-700 hover:bg-red-100 hover:text-red-900 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-red-600 md:hidden"
@@ -351,22 +354,21 @@ export default function AdminLayout({ title, children }: Props) {
                                     <span className="sr-only">Open sidebar</span>
                                     <IconMapper name="Menu" size={24} />
                                 </button>
-                                <h1 className="text-xl font-semibold text-red-900 dark:text-gray-100 truncate">{title}</h1>
+                                <h1 className="text-lg sm:text-xl font-semibold text-red-900 dark:text-gray-100 truncate">{title}</h1>
                             </div>
-                            <div className="flex items-center justify-end gap-2 sm:gap-3">
+                            <div className="flex items-center justify-end gap-1 sm:gap-3">
                                 <QuickStats />
                                 <NotificationBell />
                                 <button
                                     onClick={() => setTasksOpen(!tasksOpen)}
-                                    className="inline-flex items-center gap-1.5 rounded-md bg-coin-100 text-coin-700 hover:bg-coin-200 px-3 py-1.5 text-sm dark:bg-coin-900/30 dark:text-coin-200 transition-colors"
-                                    title="Toggle Tasks Panel"
+                                    className="inline-flex items-center gap-1.5 rounded-md bg-coin-100 text-coin-700 hover:bg-coin-200 px-2 sm:px-3 py-1.5 text-xs sm:text-sm dark:bg-coin-900/30 dark:text-coin-200 transition-colors touch-target-min"
                                 >
                                     <IconMapper name="CheckSquare" size={16} />
                                     <span className="hidden sm:inline">Tasks</span>
                                 </button>
                                 <button
                                     onClick={toggle}
-                                    className="text-sm px-3 py-1.5 rounded-md bg-red-100 text-red-800 hover:bg-red-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700 transition-colors"
+                                    className="text-xs sm:text-sm px-2 sm:px-3 py-1.5 rounded-md bg-red-100 text-red-800 hover:bg-red-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700 transition-colors touch-target-min"
                                 >
                                     <span className="hidden sm:inline">{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>
                                     <span className="sm:hidden">{theme === 'dark' ? 'Light' : 'Dark'}</span>
@@ -384,6 +386,7 @@ export default function AdminLayout({ title, children }: Props) {
                     <div className="transition-all ease-out duration-500">
                         <div className={`grid gap-4 ${tasksOpen ? 'grid-cols-1 xl:grid-cols-4' : 'grid-cols-1'}`}>
                             <div className={tasksOpen ? 'xl:col-span-3' : ''}>
+                                <TutorialSection dashboard="admin" canManage={true} />
                                 {children}
                             </div>
                             <AnimatePresence>

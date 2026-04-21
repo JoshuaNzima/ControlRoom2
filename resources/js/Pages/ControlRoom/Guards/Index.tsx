@@ -215,6 +215,8 @@ export default function ControlRoomGuardsIndex({
   const [importFile, setImportFile] = React.useState<File | null>(null);
   const [importProcessing, setImportProcessing] = React.useState(false);
   const [importAllowUpdates, setImportAllowUpdates] = React.useState(false);
+  const [processingId, setProcessingId] = React.useState<number | null>(null);
+  const [actionLoading, setActionLoading] = React.useState<Record<string, boolean>>({});
 
   // Confirm/Reason modal states
   const [confirmOpen, setConfirmOpen] = React.useState(false);
@@ -270,11 +272,14 @@ export default function ControlRoomGuardsIndex({
       return;
     }
     if (!confirm(`Mark ${guard.name} present for today?`)) return;
+    setProcessingId(guard.id);
     router.post(route('control-room.attendance.mark-present'), {
       guard_id: guard.id,
     }, {
       preserveScroll: true,
+      onFinish: () => setProcessingId(null),
       onSuccess: () => push('Guard marked present', 'success'),
+      onError: (errs) => { setProcessingId(null); push(Object.values(errs)[0] || 'Failed to mark present', 'error'); },
     });
   };
 
@@ -284,11 +289,14 @@ export default function ControlRoomGuardsIndex({
       return;
     }
     if (!confirm(`Mark ${guard.name} absent for today?`)) return;
+    setProcessingId(guard.id);
     router.post(route('control-room.attendance.mark-absent'), {
       guard_id: guard.id,
     }, {
       preserveScroll: true,
+      onFinish: () => setProcessingId(null),
       onSuccess: () => push('Guard marked absent', 'info'),
+      onError: (errs) => { setProcessingId(null); push(Object.values(errs)[0] || 'Failed to mark absent', 'error'); },
     });
   };
 
@@ -296,13 +304,16 @@ export default function ControlRoomGuardsIndex({
   const canMarkAbsent = (g: Guard) => !g.today_attendance?.check_in && g.today_attendance?.status !== 'absent';
 
   const submitBulkCover = () => {
+    setActionLoading(prev => ({ ...prev, bulkCover: true }));
     router.post(route('control-room.attendance.mark-covered'), {
       client_id: clientId ? Number(clientId) : undefined,
       zone_id: zoneId ? Number(zoneId) : undefined,
       notes: bulkCoverNotes || undefined,
     }, {
       preserveScroll: true,
-      onSuccess: () => { setBulkCoverOpen(false); setBulkCoverNotes(''); setSelectedGuardIds([]); router.reload(); },
+      onFinish: () => setActionLoading(prev => ({ ...prev, bulkCover: false })),
+      onSuccess: () => { setBulkCoverOpen(false); setBulkCoverNotes(''); setSelectedGuardIds([]); router.reload(); push('Guards marked as covered', 'success'); },
+      onError: (errs) => { push(Object.values(errs)[0] || 'Failed to mark covered', 'error'); },
     });
   };
 
@@ -996,42 +1007,70 @@ export default function ControlRoomGuardsIndex({
                             <div className="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
                               {can.suspend && (
                                 <button
+                                  disabled={processingId === guard.id}
                                   onClick={() => openReason('Suspend Guard', `Suspend ${guard.name}?`, (reason) => {
-                                    router.post(route('control-room.guards.suspend', guard.id), { reason }, { preserveScroll: true });
+                                    setProcessingId(guard.id);
+                                    router.post(route('control-room.guards.suspend', guard.id), { reason }, {
+                                      preserveScroll: true,
+                                      onFinish: () => setProcessingId(null),
+                                      onSuccess: () => push('Guard suspended', 'success'),
+                                      onError: (errs) => { setProcessingId(null); push(Object.values(errs)[0] || 'Failed to suspend', 'error'); },
+                                    });
                                   })}
-                                  className="w-full px-4 py-2 text-left text-sm text-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 first:rounded-t-lg"
+                                  className="w-full px-4 py-2 text-left text-sm text-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 first:rounded-t-lg disabled:opacity-50"
                                 >
-                                  <IconMapper name="Pause" size={14} className="inline mr-2" />
+                                  <IconMapper name={processingId === guard.id ? 'Loader2' : 'Pause'} size={14} className={`inline mr-2 ${processingId === guard.id ? 'animate-spin' : ''}`} />
                                   Suspend
                                 </button>
                               )}
                               {can.dismiss && (
                                 <button
+                                  disabled={processingId === guard.id}
                                   onClick={() => openReason('Dismiss Guard', `Dismiss ${guard.name}? This action cannot be undone.`, (reason) => {
-                                    router.post(route('control-room.guards.dismiss', guard.id), { reason }, { preserveScroll: true });
+                                    setProcessingId(guard.id);
+                                    router.post(route('control-room.guards.dismiss', guard.id), { reason }, {
+                                      preserveScroll: true,
+                                      onFinish: () => setProcessingId(null),
+                                      onSuccess: () => push('Guard dismissed', 'success'),
+                                      onError: (errs) => { setProcessingId(null); push(Object.values(errs)[0] || 'Failed to dismiss', 'error'); },
+                                    });
                                   })}
-                                  className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+                                  className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50"
                                 >
-                                  <IconMapper name="UserX" size={14} className="inline mr-2" />
+                                  <IconMapper name={processingId === guard.id ? 'Loader2' : 'UserX'} size={14} className={`inline mr-2 ${processingId === guard.id ? 'animate-spin' : ''}`} />
                                   Dismiss
                                 </button>
                               )}
                               <button
+                                disabled={processingId === guard.id}
                                 onClick={() => openReason('Mark as Resigned', `${guard.name} has resigned?`, (reason) => {
-                                  router.post(route('control-room.guards.resign', guard.id), { reason }, { preserveScroll: true });
+                                  setProcessingId(guard.id);
+                                  router.post(route('control-room.guards.resign', guard.id), { reason }, {
+                                    preserveScroll: true,
+                                    onFinish: () => setProcessingId(null),
+                                    onSuccess: () => push('Guard marked as resigned', 'success'),
+                                    onError: (errs) => { setProcessingId(null); push(Object.values(errs)[0] || 'Failed to mark resigned', 'error'); },
+                                  });
                                 })}
-                                className="w-full px-4 py-2 text-left text-sm text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900/20"
+                                className="w-full px-4 py-2 text-left text-sm text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900/20 disabled:opacity-50"
                               >
-                                <IconMapper name="LogOut" size={14} className="inline mr-2" />
+                                <IconMapper name={processingId === guard.id ? 'Loader2' : 'LogOut'} size={14} className={`inline mr-2 ${processingId === guard.id ? 'animate-spin' : ''}`} />
                                 Resigned
                               </button>
                               <button
+                                disabled={processingId === guard.id}
                                 onClick={() => openReason('Mark as Retired', `${guard.name} has retired?`, (reason) => {
-                                  router.post(route('control-room.guards.resign', guard.id), { reason, status: 'retired' }, { preserveScroll: true });
+                                  setProcessingId(guard.id);
+                                  router.post(route('control-room.guards.resign', guard.id), { reason, status: 'retired' }, {
+                                    preserveScroll: true,
+                                    onFinish: () => setProcessingId(null),
+                                    onSuccess: () => push('Guard marked as retired', 'success'),
+                                    onError: (errs) => { setProcessingId(null); push(Object.values(errs)[0] || 'Failed to mark retired', 'error'); },
+                                  });
                                 })}
-                                className="w-full px-4 py-2 text-left text-sm text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 last:rounded-b-lg"
+                                className="w-full px-4 py-2 text-left text-sm text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 last:rounded-b-lg disabled:opacity-50"
                               >
-                                <IconMapper name="Crown" size={14} className="inline mr-2" />
+                                <IconMapper name={processingId === guard.id ? 'Loader2' : 'Crown'} size={14} className={`inline mr-2 ${processingId === guard.id ? 'animate-spin' : ''}`} />
                                 Retired
                               </button>
                             </div>
@@ -1095,10 +1134,13 @@ export default function ControlRoomGuardsIndex({
             <GuardForm
               initialData={{ status: 'active', guard_type: 'permanent' } as any}
               supervisors={supervisors}
-              onSubmit={(form: any) => {
-                router.post(route('control-room.guards.store'), form, {
+              onSubmit={(formData: FormData) => {
+                setActionLoading(prev => ({ ...prev, createGuard: true }));
+                router.post(route('control-room.guards.store'), formData, {
                   preserveScroll: true,
-                  onSuccess: () => { setShowAdd(false); router.reload(); },
+                  onFinish: () => setActionLoading(prev => ({ ...prev, createGuard: false })),
+                  onSuccess: () => { setShowAdd(false); router.reload(); push('Guard created', 'success'); },
+                  onError: (errs) => { push(Object.values(errs)[0] || 'Failed to create guard', 'error'); },
                 });
               }}
               canAssignSupervisor={canAssignSupervisor}
@@ -1122,10 +1164,13 @@ export default function ControlRoomGuardsIndex({
               <GuardForm
                 initialData={currentGuardData}
                 supervisors={supervisors}
-                onSubmit={(form: any) => {
-                  router.put(route('control-room.guards.update', { guard: currentGuard?.id }), form, {
+                onSubmit={(formData: FormData) => {
+                  setActionLoading(prev => ({ ...prev, updateGuard: true }));
+                  router.post(route('control-room.guards.update', { guard: currentGuard?.id }), formData, {
                     preserveScroll: true,
-                    onSuccess: () => { setShowEdit(false); router.reload(); },
+                    onFinish: () => setActionLoading(prev => ({ ...prev, updateGuard: false })),
+                    onSuccess: () => { setShowEdit(false); router.reload(); push('Guard updated', 'success'); },
+                    onError: (errs) => { push(Object.values(errs)[0] || 'Failed to update guard', 'error'); },
                   });
                 }}
                 canAssignSupervisor={canAssignSupervisor}
@@ -1154,12 +1199,15 @@ export default function ControlRoomGuardsIndex({
               e.preventDefault();
               const targetIds = selectedGuardIds.length > 0 ? selectedGuardIds : (currentGuardId ? [currentGuardId] : []);
               if (!targetIds.length || !selectedSupervisorId) return;
+              setActionLoading(prev => ({ ...prev, assignSupervisor: true }));
               router.post(route('guards.assign-supervisor'), {
                 guard_ids: targetIds,
                 supervisor_id: Number(selectedSupervisorId),
               }, {
                 preserveScroll: true,
-                onSuccess: () => { setShowSupervisor(false); setSelectedGuardIds([]); router.reload(); },
+                onFinish: () => setActionLoading(prev => ({ ...prev, assignSupervisor: false })),
+                onSuccess: () => { setShowSupervisor(false); setSelectedGuardIds([]); router.reload(); push('Supervisor assigned', 'success'); },
+                onError: (errs) => { push(Object.values(errs)[0] || 'Failed to assign supervisor', 'error'); },
               });
             }}
             className="p-4 sm:p-6 space-y-4 bg-white dark:bg-gray-900"
@@ -1187,8 +1235,10 @@ export default function ControlRoomGuardsIndex({
               <Button type="button" variant="outline" onClick={() => setShowSupervisor(false)}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={!selectedSupervisorId} className="bg-purple-600 hover:bg-purple-700">
-                Assign
+              <Button type="submit" disabled={!selectedSupervisorId || actionLoading.assignSupervisor} className="bg-purple-600 hover:bg-purple-700">
+                {actionLoading.assignSupervisor ? (
+                  <><IconMapper name="Loader2" size={16} className="mr-2 animate-spin" /> Assigning...</>
+                ) : 'Assign'}
               </Button>
             </div>
           </form>
@@ -1226,7 +1276,11 @@ export default function ControlRoomGuardsIndex({
             </div>
             <div className="flex items-center justify-end gap-2">
               <Button variant="outline" onClick={() => setBulkCoverOpen(false)}>Cancel</Button>
-              <Button onClick={submitBulkCover} className="bg-emerald-600 hover:bg-emerald-700">Confirm</Button>
+              <Button onClick={submitBulkCover} disabled={actionLoading.bulkCover} className="bg-emerald-600 hover:bg-emerald-700">
+                {actionLoading.bulkCover ? (
+                  <><IconMapper name="Loader2" size={16} className="mr-2 animate-spin" /> Confirming...</>
+                ) : 'Confirm'}
+              </Button>
             </div>
           </div>
         </Modal>

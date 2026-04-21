@@ -11,6 +11,9 @@ interface ScanResponse {
   redirect: string;
   scan: {
     scan_id: number;
+    checkpoint_id?: number;
+    checkpoint_name?: string;
+    checkpoint_code?: string;
     site_id: number;
     site_name: string;
     client_name: string;
@@ -28,6 +31,8 @@ interface ScanResponse {
 interface ScanResult {
   type: 'site' | 'checkpoint';
   name: string;
+  checkpointName?: string;
+  siteName?: string;
   clientName?: string;
   locationVerified: boolean;
   timestamp: string;
@@ -38,6 +43,9 @@ interface Props {
   onClose: () => void;
   activeScan?: {
     scan_id: number;
+    checkpoint_id?: number;
+    checkpoint_name?: string;
+    checkpoint_code?: string;
     site_id: number;
     site_name: string;
     client_name: string;
@@ -214,7 +222,7 @@ export default function ScannerModal({ open, onClose, activeScan }: Props) {
 
   const submitScan = async (code: string) => {
     const loadingToast = toast.loading('Processing scan...');
-    
+
     router.post(route('scan.checkpoint'), {
       code: code,
       latitude: location?.lat,
@@ -223,23 +231,33 @@ export default function ScannerModal({ open, onClose, activeScan }: Props) {
       preserveState: true,
       onSuccess: (page) => {
         toast.dismiss(loadingToast);
-        
+
         // Play success sound and haptic feedback
         playSuccessSound();
         triggerHaptic('success');
-        
+
+        // Show success toast notification
+        toast.success('Checkpoint scanned successfully!', {
+          duration: 3000,
+          icon: '✅',
+        });
+
         // Show success screen with scan details
         const flash = (page.props as any).flash;
         const isLocationVerified = flash?.location_verified ?? true;
-        
+        const scanData = (page.props as any)?.scan || flash?.scan;
+
         setScanResult({
           type: 'checkpoint',
-          name: code.substring(0, 20),
+          name: scanData?.checkpoint_name || scanData?.site_name || code.substring(0, 20),
+          checkpointName: scanData?.checkpoint_name,
+          siteName: scanData?.site_name,
+          clientName: scanData?.client_name,
           locationVerified: isLocationVerified,
           timestamp: new Date().toISOString(),
         });
         setShowSuccess(true);
-        
+
         // Auto-close after showing success for 2 seconds
         setTimeout(() => {
           onClose();
@@ -248,16 +266,19 @@ export default function ScannerModal({ open, onClose, activeScan }: Props) {
       },
       onError: (errors) => {
         toast.dismiss(loadingToast);
-        
+
         // Play error sound and haptic feedback
         playErrorSound();
         triggerHaptic('error');
-        
+
         const message = Object.values(errors)[0] as string;
         const errorMsg = message || 'Failed to process scan. Please try again.';
-        
+
         setScanError(errorMsg);
-        toast.error(errorMsg, { duration: 5000 });
+        toast.error(errorMsg, {
+          duration: 6000,
+          icon: '❌',
+        });
       }
     });
   };
@@ -310,11 +331,20 @@ export default function ScannerModal({ open, onClose, activeScan }: Props) {
         playSuccessSound();
         triggerHaptic('success');
 
+        // Show success toast notification
+        toast.success('Site scanned successfully!', {
+          duration: 3000,
+          icon: '✅',
+        });
+
         const flash = (page.props as any)?.flash;
+        const scanData = (page.props as any)?.scan;
 
         setScanResult({
           type: 'site',
-          name: siteName || flash?.scan_success || `Site #${siteId}`,
+          name: siteName || scanData?.site_name || flash?.scan_success || `Site #${siteId}`,
+          siteName: siteName || scanData?.site_name,
+          clientName: scanData?.client_name,
           locationVerified: flash?.location_verified ?? true,
           timestamp: new Date().toISOString(),
         });
@@ -335,7 +365,10 @@ export default function ScannerModal({ open, onClose, activeScan }: Props) {
         const errorMsg = message || 'Failed to process site scan. Please try again.';
 
         setScanError(errorMsg);
-        toast.error(errorMsg, { duration: 5000 });
+        toast.error(errorMsg, {
+          duration: 6000,
+          icon: '❌',
+        });
         setIsLoading(false);
       },
       onFinish: () => {
@@ -365,6 +398,15 @@ export default function ScannerModal({ open, onClose, activeScan }: Props) {
 
   const normalizeCode = (raw: string): string => {
     try {
+      // First, try to parse as JSON (our checkpoint QR codes embed JSON)
+      if (raw.trim().startsWith('{')) {
+        const obj = JSON.parse(raw);
+        // Checkpoint QR has type='checkpoint' and a code field
+        if ((obj.type === 'checkpoint' || obj.t === 'checkpoint') && obj.code) {
+          return obj.code;
+        }
+      }
+
       if (raw.startsWith('http')) {
         const url = new URL(raw);
         const checkpoint = url.searchParams.get('checkpoint');
@@ -441,12 +483,29 @@ export default function ScannerModal({ open, onClose, activeScan }: Props) {
               {scanResult.type === 'site' ? 'Site' : 'Checkpoint'} verified and locked
             </p>
             <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 mb-6 text-left">
-              <div className="flex items-center gap-2 mb-2">
-                <IconMapper name="MapPin" size={16} className="text-coin-600" />
-                <span className="font-medium text-gray-900 dark:text-gray-100">{scanResult.name}</span>
-              </div>
-              <div className="flex items-center gap-2 text-sm">
-                <span className={scanResult.locationVerified ? 'text-green-600' : 'text-yellow-600'}>
+              {/* Client Name */}
+              {scanResult.clientName && (
+                <div className="flex items-center gap-2 mb-2">
+                  <IconMapper name="Building2" size={16} className="text-red-600 dark:text-red-400" />
+                  <span className="font-medium text-gray-900 dark:text-gray-100">{scanResult.clientName}</span>
+                </div>
+              )}
+              {/* Site Name */}
+              {scanResult.siteName && (
+                <div className="flex items-center gap-2 mb-2">
+                  <IconMapper name="MapPin" size={16} className="text-red-600 dark:text-red-400" />
+                  <span className="font-medium text-gray-900 dark:text-gray-100">{scanResult.siteName}</span>
+                </div>
+              )}
+              {/* Checkpoint name */}
+              {scanResult.type === 'checkpoint' && scanResult.checkpointName && (
+                <div className="flex items-center gap-2 mb-2 text-sm">
+                  <IconMapper name="ScanLine" size={14} className="text-coin-600 dark:text-coin-400" />
+                  <span className="text-gray-700 dark:text-gray-300 font-medium">Checkpoint: {scanResult.checkpointName}</span>
+                </div>
+              )}
+              <div className="flex items-center gap-2 text-sm mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+                <span className={scanResult.locationVerified ? 'text-green-600 dark:text-green-400' : 'text-yellow-600 dark:text-yellow-400'}>
                   {scanResult.locationVerified ? '✓ Location verified' : '⚠ Location not verified'}
                 </span>
               </div>
@@ -538,11 +597,16 @@ export default function ScannerModal({ open, onClose, activeScan }: Props) {
             <div className="relative flex items-start justify-between">
               <div>
                 <div className="flex items-center gap-2 mb-2">
-                  <span className="text-2xl">✓</span>
-                  <h3 className="text-xl font-bold">Site Locked</h3>
+                  <span className="text-2xl">+</span>
+                  <h3 className="text-xl font-bold">Checkpoint Locked</h3>
                 </div>
                 <p className="text-green-100 text-sm mb-1">Client: {activeScan.client_name}</p>
                 <p className="text-lg font-semibold">{activeScan.site_name}</p>
+                {activeScan.checkpoint_name && (
+                  <p className="text-green-100 text-sm mt-1">
+                    Checkpoint: {activeScan.checkpoint_name}
+                  </p>
+                )}
                 <p className="text-green-100 text-sm mt-2">
                   Scanned: {new Date(activeScan.scanned_at).toLocaleTimeString()}
                 </p>

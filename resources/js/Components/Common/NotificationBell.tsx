@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { Link } from '@inertiajs/react';
 import IconMapper from '@/Components/IconMapper';
 import { useNotification } from '@/Providers/NotificationProvider';
 
@@ -20,6 +21,8 @@ export default function NotificationBell({ className = '' }: { className?: strin
   const [loading, setLoading] = useState(false);
   const [unread, setUnread] = useState<number>(0);
   const [items, setItems] = useState<AppNotification[]>([]);
+  const [pushSupported, setPushSupported] = useState(false);
+  const [pushEnabled, setPushEnabled] = useState(false);
   const { push } = useNotification();
   const prevUnread = useRef<number>(0);
   const firstLoad = useRef<boolean>(true);
@@ -75,6 +78,18 @@ export default function NotificationBell({ className = '' }: { className?: strin
     const id = window.setInterval(fetchUnread, 30000);
     // After first fetch cycle, allow toasts
     const firstLoadTimeout = window.setTimeout(() => { firstLoad.current = false; }, 1000);
+
+    // Check push notification status
+    const checkPushStatus = async () => {
+      const supported = 'serviceWorker' in navigator && 'PushManager' in window;
+      setPushSupported(supported);
+      if (supported) {
+        const permission = Notification.permission;
+        setPushEnabled(permission === 'granted');
+      }
+    };
+    checkPushStatus();
+
     return () => { window.clearInterval(id); window.clearTimeout(firstLoadTimeout); };
   }, []);
 
@@ -107,6 +122,26 @@ export default function NotificationBell({ className = '' }: { className?: strin
             <div className="text-sm font-semibold text-gray-800 dark:text-gray-100">Notifications</div>
             <button onClick={markAllRead} className="text-xs text-red-600 hover:text-red-700">Mark all read</button>
           </div>
+
+          {/* Push notification enable prompt */}
+          {pushSupported && !pushEnabled && (
+            <div className="p-3 bg-red-50 dark:bg-red-900/20 border-b border-red-100 dark:border-gray-800">
+              <div className="flex items-start gap-2">
+                <IconMapper name="Bell" className="h-4 w-4 text-red-600 dark:text-red-400 mt-0.5 shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-medium text-gray-900 dark:text-gray-100">Enable Push Notifications</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">Get instant alerts even when this tab is closed</p>
+                </div>
+              </div>
+              <Link
+                href={route('profile.edit')}
+                className="mt-2 block w-full text-center text-xs px-3 py-1.5 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+              >
+                Go to Settings
+              </Link>
+            </div>
+          )}
+
           <div className="max-h-80 overflow-auto">
             {loading ? (
               <div className="p-4 text-sm text-gray-500">Loading...</div>

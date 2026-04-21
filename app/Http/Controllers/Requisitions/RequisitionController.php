@@ -8,6 +8,7 @@ use App\Models\RequisitionAttachment;
 use App\Models\RequisitionItem;
 use App\Models\User;
 use App\Notifications\GenericDbNotification;
+use App\Events\RequisitionUpdated;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
@@ -162,6 +163,9 @@ class RequisitionController extends Controller
             });
 
             \Log::info('Requisition transaction completed', ['requisition_id' => $requisition->id]);
+
+            // Dispatch event for push notification
+            RequisitionUpdated::dispatch($requisition, 'created');
 
             // Send push notification to admins
             try {

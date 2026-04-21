@@ -59,28 +59,35 @@ export default function Pagination({
   const visiblePages = getVisiblePages();
 
   return (
-    <div className="flex items-center justify-between px-4 py-3 bg-white dark:bg-gray-950 border-t border-gray-200 dark:border-gray-800 sm:px-6">
-      <div className="flex justify-between flex-1 sm:hidden">
+    <div className="flex items-center justify-between px-2 py-2 sm:px-4 sm:py-3 bg-white dark:bg-gray-950 border-t border-gray-200 dark:border-gray-800">
+      {/* Mobile: Simple prev/next with page indicator */}
+      <div className="flex justify-between items-center flex-1 sm:hidden">
         <Button
           variant="outline"
           size="sm"
           onClick={() => onPageChange(currentPage - 1)}
           disabled={currentPage === 1}
-          className="relative inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-md hover:bg-gray-50 dark:hover:bg-gray-800"
+          className="touch-target-min px-3 py-2 text-xs font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-md hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-50"
         >
-          Previous
+          <IconMapper name="chevron-left" className="h-4 w-4 mr-1" />
+          Prev
         </Button>
+        <span className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 font-medium">
+          {currentPage} / {totalPages}
+        </span>
         <Button
           variant="outline"
           size="sm"
           onClick={() => onPageChange(currentPage + 1)}
           disabled={currentPage === totalPages}
-          className="relative ml-3 inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-md hover:bg-gray-50 dark:hover:bg-gray-800"
+          className="touch-target-min px-3 py-2 text-xs font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-md hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-50"
         >
           Next
+          <IconMapper name="chevron-right" className="h-4 w-4 ml-1" />
         </Button>
       </div>
-      
+
+      {/* Desktop: Full pagination with page numbers */}
       <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
         <div>
           <p className="text-sm text-gray-700 dark:text-gray-200">
@@ -88,7 +95,7 @@ export default function Pagination({
             <span className="font-medium">{totalPages}</span>
           </p>
         </div>
-        
+
         <div>
           <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
               <Button
@@ -100,7 +107,7 @@ export default function Pagination({
             >
               <IconMapper name="chevron-left" className="h-5 w-5" />
             </Button>
-            
+
             {showPageNumbers && visiblePages.map((page, index) => (
               <React.Fragment key={index}>
                 {page === '...' ? (
@@ -123,7 +130,7 @@ export default function Pagination({
                 )}
               </React.Fragment>
             ))}
-            
+
             <Button
               variant="outline"
               size="sm"

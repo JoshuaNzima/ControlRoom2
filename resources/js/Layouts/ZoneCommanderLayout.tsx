@@ -2,12 +2,13 @@ import { useState, useEffect, useRef } from 'react';
 import { Link, usePage, router } from '@inertiajs/react';
 import IconMapper from '@/Components/IconMapper';
 import NotificationBell from '@/Components/Common/NotificationBell';
-import BaseShell from './BaseShell';
 import useCounters from '@/Hooks/useCounters';
+import { useRealtimeNotifications } from '@/Hooks/useRealtimeNotifications';
 import { motion } from 'framer-motion';
 import { useTheme } from '@/Providers/ThemeProvider';
 import QuickBudgetButton from '@/Components/Budgets/QuickBudgetButton';
 import FloatingNavButton from '@/Components/FloatingNavButton';
+import TutorialSection from '@/Components/Tutorials/TutorialSection';
 
 type Props = {
 	title: string;
@@ -37,8 +38,14 @@ export default function ZoneCommanderLayout({ title, children }: Props) {
 	// Detect super admin role from page props
 	const pageAny = usePage<any>();
 	const auth = pageAny.props?.auth;
-	const roles = (auth?.user?.roles ?? []) as any;
-	const isSuperAdmin = Array.isArray(roles) ? roles.includes('super_admin') : roles === 'super_admin';
+	const rawRoles = (auth?.user?.roles ?? []) as (string | { id: number; name: string })[];
+	const roles = rawRoles.map((r) => (typeof r === 'string' ? r : r.name));
+	const userId = auth?.user?.id;
+
+	// Initialize real-time notifications
+	useRealtimeNotifications({ userId, userRoles: roles });
+
+	const isSuperAdmin = roles.includes('super_admin');
 
 	// Sample notifications
 	const [notifications, setNotifications] = useState<Notification[]>([
@@ -84,12 +91,14 @@ export default function ZoneCommanderLayout({ title, children }: Props) {
 		{ name: 'Dashboard', href: route('zone.dashboard'), icon: <IconMapper name="LayoutDashboard" className="h-5 w-5" /> },
 		{ name: 'Clients', href: route('zone.clients.index'), icon: <IconMapper name="Building2" className="h-5 w-5" /> },
 		{ name: 'Sites', href: route('zone.sites.index'), icon: <IconMapper name="MapPin" className="h-5 w-5" /> },
+		{ name: 'Checkpoints', href: route('zone.checkpoints.index'), icon: <IconMapper name="QrCode" className="h-5 w-5" /> },
 		{ name: 'Guards', href: route('zone.guards.index'), icon: <IconMapper name="Shield" className="h-5 w-5" /> },
 		{ name: 'Supervisors', href: route('zone.supervisors.index'), icon: <IconMapper name="UserCog" className="h-5 w-5" /> },
 		{ name: 'Patrols', href: route('zone.patrols.index'), icon: <IconMapper name="ScanLine" className="h-5 w-5" /> },
 		{ name: 'Attendance', href: route('zone.attendance.index'), icon: <IconMapper name="ClipboardList" className="h-5 w-5" /> },
 		{ name: 'Downs', href: route('zone.downs.index'), icon: <IconMapper name="AlertTriangle" className="h-5 w-5" /> },
 		{ name: 'Reports', href: route('zone.reports.index'), icon: <IconMapper name="BarChart3" className="h-5 w-5" /> },
+		{ name: 'Requisitions', href: route('requisitions.index'), icon: <IconMapper name="FileText" className="h-5 w-5" /> },
 	];
 
 	return (
@@ -100,17 +109,17 @@ export default function ZoneCommanderLayout({ title, children }: Props) {
 			onTouchEnd={handleTouchEnd}
 		>
 			{/* Mobile Header */}
-			<header className="md:hidden bg-white dark:bg-gray-900 border-b border-red-100 dark:border-gray-800 px-4 py-3 flex items-center justify-between sticky top-0 z-40 shadow-sm">
-				<button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">
-					{sidebarOpen ? <IconMapper name="X" size={24} /> : <IconMapper name="Menu" size={24} />}
+			<header className="md:hidden bg-white dark:bg-gray-900 border-b border-red-100 dark:border-gray-800 px-2 py-2 flex items-center justify-between sticky top-0 z-40 shadow-sm">
+				<button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 touch-target-min">
+					{sidebarOpen ? <IconMapper name="X" size={22} /> : <IconMapper name="Menu" size={22} />}
 				</button>
-				<h1 className="text-lg font-semibold text-gray-900 dark:text-gray-100 truncate">{title || "Zone Commander"}</h1>
-				<div className="flex items-center justify-end gap-2 shrink-0">
+				<h1 className="text-base font-semibold text-gray-900 dark:text-gray-100 truncate">{title || "Zone Commander"}</h1>
+				<div className="flex items-center justify-end gap-1 shrink-0">
 					<NotificationBell />
-					<button className="p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800" onClick={() => setSettingsOpen(!settingsOpen)}>
-						<IconMapper name="Settings" size={22} />
+					<button className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 touch-target-min" onClick={() => setSettingsOpen(!settingsOpen)}>
+						<IconMapper name="Settings" size={20} />
 					</button>
-					<button onClick={toggle} className="text-xs px-2 py-1 rounded-md bg-red-100 text-red-800 hover:bg-red-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700">
+					<button onClick={toggle} className="text-xs px-2 py-1 rounded-md bg-red-100 text-red-800 hover:bg-red-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700 touch-target-min">
 						{theme === 'dark' ? 'Light' : 'Dark'}
 					</button>
 				</div>
@@ -221,29 +230,10 @@ export default function ZoneCommanderLayout({ title, children }: Props) {
 
 				{/* Page Content */}
 				<div className="flex-1 bg-red-50 dark:bg-gray-900 overflow-y-auto">
-					<BaseShell
-						title={title}
-						fullScreen={false}
-						header={
-							<div className="flex items-center justify-between gap-3">
-								<div className="flex items-center gap-3 min-w-0">
-									<button
-										type="button"
-										className="h-10 w-10 inline-flex items-center justify-center rounded-md text-red-700 hover:bg-red-100 hover:text-red-900 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-coin-600 md:hidden"
-										onClick={() => setSidebarOpen(true)}
-									>
-										<span className="sr-only">Open menu</span>
-										<IconMapper name="Menu" className="h-6 w-6" />
-									</button>
-									<h1 className="text-xl font-bold text-red-900 dark:text-gray-100 truncate">{title}</h1>
-								</div>
-							</div>
-						}
-					>
-						<div className="animate-slideUp transition-all-smooth">
-							{children}
-						</div>
-					</BaseShell>
+					<div className="animate-slideUp transition-all-smooth p-2 sm:p-4 md:p-6">
+						<TutorialSection dashboard="control-room" canManage={false} />
+						{children}
+					</div>
 				</div>
 			</div>
 

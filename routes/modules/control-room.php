@@ -8,7 +8,7 @@ Route::middleware(['auth'])->group(function () {
     // Allow specific roles or users with permission (include admin role)
     Route::middleware(['role_or_permission:control_room_operator|operations_officer|supervisor|sergeant|manager|admin|super_admin|zone_commander|control.dashboard.view'])->prefix('control-room')->name('control-room.')->group(function () {
 		Route::get('/dashboard', [\App\Http\Controllers\ControlRoomDashboardController::class, 'index'])->name('dashboard');
-		Route::get('/me', [\App\Http\Controllers\Profile\ProfileDashboardController::class, 'index'])->name('profile');
+		Route::get('/me', [\App\Http\Controllers\ControlRoom\ProfileController::class, 'index'])->name('profile');
 		Route::get('/monitoring', [\App\Http\Controllers\ControlRoom\MonitoringController::class, 'index'])->name('monitoring');
 		Route::get('/monitoring/data', [\App\Http\Controllers\ControlRoom\MonitoringController::class, 'data'])->name('monitoring.data');
 		Route::get('/monitoring/events', [\App\Http\Controllers\ControlRoom\MonitoringController::class, 'events'])->name('monitoring.events');
@@ -32,6 +32,18 @@ Route::middleware(['auth'])->group(function () {
 			Route::get('/download-bulk', [SupervisorQRCodesController::class, 'downloadBulk'])->name('download-bulk');
 			Route::get('/download-saved', [SupervisorQRCodesController::class, 'downloadSaved'])->name('download-saved');
 			Route::get('/list-saved', [SupervisorQRCodesController::class, 'listSaved'])->name('list-saved');
+		});
+
+		// Checkpoint Management (with QR code generation)
+		Route::prefix('checkpoints')->name('checkpoints.')->middleware(['role_or_permission:control_room_operator|operations_officer|manager|super_admin'])->group(function () {
+			Route::get('/', [\App\Http\Controllers\ControlRoom\CheckpointController::class, 'index'])->name('index');
+			Route::post('/', [\App\Http\Controllers\ControlRoom\CheckpointController::class, 'store'])->name('store');
+			Route::put('/{checkpoint}', [\App\Http\Controllers\ControlRoom\CheckpointController::class, 'update'])->name('update');
+			Route::delete('/{checkpoint}', [\App\Http\Controllers\ControlRoom\CheckpointController::class, 'destroy'])->name('destroy');
+			Route::get('/{checkpoint}/qr', [\App\Http\Controllers\ControlRoom\CheckpointController::class, 'qr'])->name('qr');
+			Route::get('/{checkpoint}/qr-print', [\App\Http\Controllers\ControlRoom\CheckpointController::class, 'qrPrint'])->name('qr-print');
+			Route::get('/bulk-print', [\App\Http\Controllers\ControlRoom\CheckpointController::class, 'bulkPrint'])->name('bulk-print');
+			Route::get('/download-bulk', [\App\Http\Controllers\ControlRoom\CheckpointController::class, 'downloadBulk'])->name('download-bulk');
 		});
 		
 		// Clients Management (view-only, assignments)

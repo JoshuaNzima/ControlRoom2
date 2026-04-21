@@ -8,7 +8,9 @@ import { useTheme } from '@/Providers/ThemeProvider';
 import QuickRequisitionButton from '@/Components/Requisitions/QuickRequisitionButton';
 import QuickBudgetButton from '@/Components/Budgets/QuickBudgetButton';
 import useCounters from '@/Hooks/useCounters';
+import { useRealtimeNotifications } from '@/Hooks/useRealtimeNotifications';
 import WeeklyTasks from '@/Components/WeeklyTasks';
+import TutorialSection from '@/Components/Tutorials/TutorialSection';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface Props {
@@ -33,11 +35,18 @@ export default function MarketingLayout({ title, children, user }: Props) {
   const { theme, toggle } = useTheme();
   const { counters } = useCounters();
   const page = usePage<any>();
-  const { weeklyTasks, isExecutiveAssistant, appName } = page.props as any;
-  const roles = ((user as any)?.roles ?? (page?.props as any)?.auth?.user?.roles ?? []) as any;
-  const isSuperAdmin = Array.isArray(roles) ? roles.includes('super_admin') : roles === 'super_admin';
-  const isAdminUser = Array.isArray(roles) && (roles.includes('admin') || roles.includes('super_admin'));
-  const roleDisplay = Array.isArray(roles) && roles.length > 0 ? roles[0].replace(/_/g, ' ') : 'Marketing';
+  const { weeklyTasks, appName } = page.props as any;
+  const rawRoles = ((user as any)?.roles ?? (page?.props as any)?.auth?.user?.roles ?? []) as (string | { id: number; name: string })[];
+  const roles = rawRoles.map((r) => (typeof r === 'string' ? r : r.name));
+  const userId = (user as any)?.id ?? (page?.props as any)?.auth?.user?.id;
+
+  // Initialize real-time notifications
+  useRealtimeNotifications({ userId, userRoles: roles });
+
+  const isExecutiveAssistant = roles.includes('executive_assistant') || roles.includes('super_admin');
+  const isSuperAdmin = roles.includes('super_admin');
+  const isAdminUser = roles.includes('admin') || roles.includes('super_admin');
+  const roleDisplay = roles.length > 0 ? roles[0].replace(/_/g, ' ') : 'Marketing';
 
   React.useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 1024);
@@ -173,6 +182,7 @@ export default function MarketingLayout({ title, children, user }: Props) {
                 className={`grid gap-4 ${tasksOpen ? 'grid-cols-1 xl:grid-cols-4' : 'grid-cols-1'}`}
               >
                 <div className={tasksOpen ? 'xl:col-span-3' : ''}>
+                  <TutorialSection dashboard="admin" canManage={false} />
                   {children}
                 </div>
                 {tasksOpen && !isMobile && (

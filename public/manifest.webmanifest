@@ -1,12 +1,12 @@
 {
-  "name": "Coin Security Control Room",
-  "short_name": "ControlRoom",
+  "name": "CoinSec",
+  "short_name": "CoinSec",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "theme_color": "#B91C1C",
   "background_color": "#ffffff",
-  "description": "Operations, Finance, Admin and Control Room PWA",
+  "description": "CoinSec Security Operations Platform",
   "icons": [
     { "src": "/images/Coin-logo.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
     { "src": "/images/Coin-logo.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }

@@ -70,7 +70,9 @@ function badgeForStatus(status: string) {
 function canDecide(t: TraineeListItem, user: any) {
   if (!t) return false;
   if (t.status === 'approved' || t.status === 'rejected') return false;
-  if (Array.isArray(user?.roles) && user.roles.includes('super_admin')) return true;
+  const rawRoles = (user?.roles ?? []) as (string | { id: number; name: string })[];
+  const roles = rawRoles.map((r) => (typeof r === 'string' ? r : r.name));
+  if (roles.includes('super_admin')) return true;
 
   const primaryId = Number(t?.primary_trainer?.id || 0);
   const userId = Number(user?.id || 0);
@@ -78,7 +80,9 @@ function canDecide(t: TraineeListItem, user: any) {
 }
 
 function trainingComplete(t: TraineeListItem, user: any) {
-  if (Array.isArray(user?.roles) && user.roles.includes('super_admin')) return true;
+  const rawRoles = (user?.roles ?? []) as (string | { id: number; name: string })[];
+  const roles = rawRoles.map((r) => (typeof r === 'string' ? r : r.name));
+  if (roles.includes('super_admin')) return true;
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);

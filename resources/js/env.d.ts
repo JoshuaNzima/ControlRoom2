@@ -2,6 +2,7 @@
 
 interface ImportMetaEnv {
     readonly VITE_APP_NAME: string
+    readonly VITE_VAPID_PUBLIC_KEY: string
 }
 
 interface ImportMeta {
@@ -16,5 +17,6 @@ declare global {
         Buffer: typeof Buffer;
         EventEmitter: any;
         Stream: any;
+        csrfToken?: string;
     }
 }

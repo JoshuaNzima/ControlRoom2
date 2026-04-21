@@ -58,7 +58,8 @@ export default function QuickRequisitionButton({
   const page = usePage() as any;
   const auth = page?.props?.auth;
   const user = auth?.user;
-  const roles: string[] = Array.isArray(user?.roles) ? user.roles : [];
+  const rawRoles = (user?.roles ?? []) as (string | { id: number; name: string })[];
+  const roles = rawRoles.map((r) => (typeof r === 'string' ? r : r.name));
   if (!user) return null;
   if (roles.includes('admin') || roles.includes('super_admin')) return null;
 

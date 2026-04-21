@@ -5,12 +5,13 @@ import { Link, usePage, router } from "@inertiajs/react";
 import { PageProps } from '@/types';
 import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from '@/Providers/ThemeProvider';
-import useNotifications from '@/Hooks/useNotifications';
+import { useRealtimeNotifications } from '@/Hooks/useRealtimeNotifications';
 import { Toaster } from 'react-hot-toast';
 import NotificationBell from '@/Components/Common/NotificationBell';
 import QuickBudgetButton from '@/Components/Budgets/QuickBudgetButton';
 import FloatingNavButton from '@/Components/FloatingNavButton';
 import WeeklyTasks from '@/Components/WeeklyTasks';
+import TutorialSection from '@/Components/Tutorials/TutorialSection';
 
 const navLinks = [
   { href: "/supervisor/overview", label: "Overview", icon: <IconMapper name="LayoutDashboard" size={22} /> },
@@ -18,6 +19,7 @@ const navLinks = [
   { href: "/supervisor/analytics", label: "Analytics", icon: <IconMapper name="BarChart3" size={22} /> },
   { href: "/supervisor/attendance", label: "Attendance", icon: <IconMapper name="ClipboardList" size={22} /> },
   { href: "/supervisor/assignments", label: "Assignments", icon: <IconMapper name="MapPin" size={22} /> },
+  { href: route('requisitions.index'), label: "Requisitions", icon: <IconMapper name="FileText" size={22} /> },
 ];
 
 interface SupervisorLayoutProps {
@@ -40,12 +42,21 @@ export default function SupervisorLayout({ children, title }: SupervisorLayoutPr
   const appName = pageProps.appName ?? 'CoinSec';
   const { url } = usePage();
   const { theme, toggle } = useTheme();
-  const isSuperAdmin = Array.isArray((auth?.user as any)?.roles)
-    ? (auth?.user as any).roles.includes('super_admin')
-    : (auth?.user as any)?.roles === 'super_admin';
+  
+  // Normalize roles to string array
+  const rawRoles = ((auth?.user as any)?.roles ?? []) as (string | { id: number; name: string })[];
+  const roles = rawRoles.map((r) => (typeof r === 'string' ? r : r.name));
+
+  // Initialize real-time notifications for QR scans and messages
+  useRealtimeNotifications({
+    userId: auth?.user?.id,
+    userRoles: roles,
+  });
+
+  const isSuperAdmin = roles.includes('super_admin');
   
   // Detect if user is a sergeant (from page props or user roles)
-  const isSergeant = pageIsSergeant || (auth?.user as any)?.roles?.includes('sergeant') || roleType === 'sergeant';
+  const isSergeant = pageIsSergeant || roles.includes('sergeant') || roleType === 'sergeant';
   const roleLabel = isSergeant ? 'Sergeant' : 'Supervisor';
   const displayTitle = title ? `${roleLabel} - ${title}` : `${roleLabel} Dashboard`;
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -225,6 +236,7 @@ export default function SupervisorLayout({ children, title }: SupervisorLayoutPr
             <div className="transition-all ease-out duration-500">
               <div className={`grid gap-4 ${tasksOpen ? 'grid-cols-1 xl:grid-cols-4' : 'grid-cols-1'}`}>
                 <div className={tasksOpen ? 'xl:col-span-3' : ''}>
+                  <TutorialSection dashboard="control-room" canManage={false} />
                   {children}
                 </div>
                 <AnimatePresence>

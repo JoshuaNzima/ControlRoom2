@@ -4,6 +4,8 @@ import { Head, usePage, router } from '@inertiajs/react';
 import Modal from '@/Components/Modal';
 import IconMapper from '@/Components/IconMapper';
 import { useTheme } from '@/Providers/ThemeProvider';
+import useToast from '@/Components/ui/use-toast';
+import PushNotificationSettings from '@/Components/Common/PushNotificationSettings';
 
 type FinanceDefaults = {
   guard_absence_deduction_per_day: number;
@@ -70,7 +72,23 @@ type PageProps = {
 export default function SuperAdminSettings() {
   const { auth, system, finance, hr, attendance } = usePage<PageProps>().props as any;
   const { theme, toggle } = useTheme();
-  const [tab, setTab] = React.useState<'user' | 'finance' | 'hr' | 'system' | 'attendance'>('finance');
+  const [tab, setTab] = React.useState<'user' | 'finance' | 'hr' | 'system' | 'attendance' | 'notifications'>('finance');
+
+  // Loading states
+  const [loading, setLoading] = React.useState<Record<string, boolean>>({});
+  const [errors, setErrors] = React.useState<Record<string, string>>({});
+  const { toast } = useToast();
+
+  const setLoadingState = (key: string, value: boolean) => {
+    setLoading(prev => ({ ...prev, [key]: value }));
+  };
+
+  const setErrorState = (key: string, value: string) => {
+    setErrors(prev => ({ ...prev, [key]: value }));
+    if (value) {
+      setTimeout(() => setErrors(prev => ({ ...prev, [key]: '' })), 5000);
+    }
+  };
 
 	const [attendanceMethods, setAttendanceMethods] = React.useState(() => ({
 		auto_absent: Boolean(attendance?.methods?.auto_absent ?? true),
@@ -79,10 +97,17 @@ export default function SuperAdminSettings() {
 
 	const submitAttendanceMethods = (e: React.FormEvent) => {
 		e.preventDefault();
+		setLoadingState('attendanceMethods', true);
+		setErrorState('attendanceMethods', '');
 		router.post(route('superadmin.attendance.methods.update'), {
 			auto_absent: attendanceMethods.auto_absent ? 1 : 0,
 			auto_present: attendanceMethods.auto_present ? 1 : 0,
-		}, { preserveScroll: true });
+		}, {
+			preserveScroll: true,
+			onFinish: () => setLoadingState('attendanceMethods', false),
+			onSuccess: () => toast({ title: 'Attendance settings saved' }),
+			onError: (errs: any) => setErrorState('attendanceMethods', Object.values(errs)[0] as string || 'Failed to save attendance settings'),
+		});
 	};
 
   // Payroll Defaults state
@@ -107,11 +132,19 @@ export default function SuperAdminSettings() {
 
   const submitDefaults = (e: React.FormEvent) => {
     e.preventDefault();
-    router.post(route('admin.settings.finance.payroll-defaults'), defaults, { preserveScroll: true });
+    setLoadingState('payrollDefaults', true);
+    setErrorState('payrollDefaults', '');
+    router.post(route('admin.settings.finance.payroll-defaults'), defaults, {
+      preserveScroll: true,
+      onFinish: () => setLoadingState('payrollDefaults', false),
+      onError: (errs: any) => setErrorState('payrollDefaults', Object.values(errs)[0] as string || 'Failed to save payroll defaults'),
+    });
   };
 
   const submitNewProfile = (e: React.FormEvent) => {
     e.preventDefault();
+    setLoadingState('newProfile', true);
+    setErrorState('newProfile', '');
     const payload: any = {
       ...newProfile,
       allowances: typeof newProfile.allowances === 'string' ? newProfile.allowances : JSON.stringify(newProfile.allowances ?? []),
@@ -121,10 +154,14 @@ export default function SuperAdminSettings() {
       onSuccess: () => {
         setNewProfile({ id: 0, payee_type: 'guard', payee_id: 0, monthly_salary: 0, overtime_multiplier: 1.5, advance_amount: 0, allowances: [], absence_deduction_per_day: 0 });
       },
+      onFinish: () => setLoadingState('newProfile', false),
+      onError: (errs: any) => setErrorState('newProfile', Object.values(errs)[0] as string || 'Failed to create pay profile'),
     });
   };
 
   const updateProfile = (p: PayProfile) => {
+    setLoadingState(`profile_${p.id}`, true);
+    setErrorState(`profile_${p.id}`, '');
     const payload: any = {
       monthly_salary: p.monthly_salary,
       overtime_multiplier: p.overtime_multiplier,
@@ -132,12 +169,21 @@ export default function SuperAdminSettings() {
       allowances: typeof p.allowances === 'string' ? p.allowances : JSON.stringify(p.allowances ?? []),
       absence_deduction_per_day: p.absence_deduction_per_day,
     };
-    router.put(route('admin.settings.finance.pay-profiles.update', p.id), payload, { preserveScroll: true });
+    router.put(route('admin.settings.finance.pay-profiles.update', p.id), payload, {
+      preserveScroll: true,
+      onFinish: () => setLoadingState(`profile_${p.id}`, false),
+      onError: (errs: any) => setErrorState(`profile_${p.id}`, Object.values(errs)[0] as string || 'Failed to update profile'),
+    });
   };
 
   const deleteProfile = (id: number) => {
     if (!confirm('Remove this pay profile?')) return;
-    router.delete(route('admin.settings.finance.pay-profiles.destroy', id), { preserveScroll: true });
+    setLoadingState(`delete_profile_${id}`, true);
+    router.delete(route('admin.settings.finance.pay-profiles.destroy', id), {
+      preserveScroll: true,
+      onFinish: () => setLoadingState(`delete_profile_${id}`, false),
+      onError: () => setErrorState(`delete_profile_${id}`, 'Failed to delete profile'),
+    });
   };
 
   // HR: Guard Grades state & handlers
@@ -161,25 +207,38 @@ export default function SuperAdminSettings() {
   };
   const submitGrade = (e: React.FormEvent) => {
     e.preventDefault();
+    setLoadingState('grade', true);
+    setErrorState('grade', '');
     const payload: any = {
       ...gradeForm,
       allowances: typeof gradeForm.allowances === 'string' ? gradeForm.allowances : JSON.stringify(gradeForm.allowances ?? []),
     };
+    const onFinish = () => setLoadingState('grade', false);
+    const onError = (errs: any) => setErrorState('grade', Object.values(errs)[0] as string || 'Failed to save grade');
     if (editingGrade) {
       router.put(route('admin.settings.hr.guard-grades.update', editingGrade.id), payload, {
         preserveScroll: true,
         onSuccess: () => setShowGradeModal(false),
+        onFinish,
+        onError,
       });
     } else {
       router.post(route('admin.settings.hr.guard-grades.store'), payload, {
         preserveScroll: true,
         onSuccess: () => setShowGradeModal(false),
+        onFinish,
+        onError,
       });
     }
   };
   const deleteGrade = (g: GuardGrade) => {
     if (!confirm(`Delete grade ${g.code}?`)) return;
-    router.delete(route('admin.settings.hr.guard-grades.destroy', g.id), { preserveScroll: true });
+    setLoadingState(`delete_grade_${g.id}`, true);
+    router.delete(route('admin.settings.hr.guard-grades.destroy', g.id), {
+      preserveScroll: true,
+      onFinish: () => setLoadingState(`delete_grade_${g.id}`, false),
+      onError: () => setErrorState(`delete_grade_${g.id}`, 'Failed to delete grade'),
+    });
   };
 
   return (
@@ -209,6 +268,7 @@ export default function SuperAdminSettings() {
               { id: 'finance', label: 'Finance', icon: 'DollarSign' },
               { id: 'hr', label: 'HR', icon: 'Users2' },
               { id: 'attendance', label: 'Attendance', icon: 'Clock' },
+              { id: 'notifications', label: 'Notifications', icon: 'Bell' },
               { id: 'system', label: 'System', icon: 'Server' },
             ].map((t) => (
               <button
@@ -262,8 +322,23 @@ export default function SuperAdminSettings() {
                     />
                   </label>
                 </div>
+                {errors.attendanceMethods && (
+                  <div className="text-sm text-red-600 dark:text-red-400">{errors.attendanceMethods}</div>
+                )}
                 <div className="pt-2">
-                  <button type="submit" className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700">Save Attendance Methods</button>
+                  <button
+                    type="submit"
+                    disabled={loading.attendanceMethods}
+                    className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2"
+                  >
+                    {loading.attendanceMethods && (
+                      <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                    )}
+                    {loading.attendanceMethods ? 'Saving...' : 'Save Attendance Methods'}
+                  </button>
                 </div>
               </form>
             </div>
@@ -301,7 +376,16 @@ export default function SuperAdminSettings() {
                         <td className="px-2 py-2">{Number(g.absence_deduction_per_day ?? 0).toFixed(2)}</td>
                         <td className="px-2 py-2 space-x-2">
                           <button onClick={() => openEditGrade(g)} className="px-3 py-1 rounded bg-emerald-600 text-white hover:bg-emerald-700">Edit</button>
-                          <button onClick={() => deleteGrade(g)} className="px-3 py-1 rounded bg-red-600 text-white hover:bg-red-700">Delete</button>
+                          <button
+                            onClick={() => deleteGrade(g)}
+                            disabled={loading[`delete_grade_${g.id}`]}
+                            className="px-3 py-1 rounded bg-red-600 text-white hover:bg-red-700 disabled:opacity-60 disabled:cursor-not-allowed"
+                          >
+                            {loading[`delete_grade_${g.id}`] ? '...' : 'Delete'}
+                          </button>
+                          {errors[`delete_grade_${g.id}`] && (
+                            <span className="text-xs text-red-600 dark:text-red-400 ml-1">{errors[`delete_grade_${g.id}`]}</span>
+                          )}
                         </td>
                       </tr>
                     ))}
@@ -352,9 +436,24 @@ export default function SuperAdminSettings() {
                       onChange={(e)=>setGradeForm(f=>({ ...f, allowances: e.target.value }))} />
                   </div>
                 </div>
+                {errors.grade && (
+                  <div className="text-sm text-red-600 dark:text-red-400">{errors.grade}</div>
+                )}
                 <div className="mt-4 flex items-center justify-end gap-3">
                   <button type="button" onClick={() => setShowGradeModal(false)} className="px-4 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200">Cancel</button>
-                  <button type="submit" className="px-4 py-2 rounded-md text-white bg-red-600 hover:bg-red-700">{editingGrade ? 'Save' : 'Create'}</button>
+                  <button
+                    type="submit"
+                    disabled={loading.grade}
+                    className="px-4 py-2 rounded-md text-white bg-red-600 hover:bg-red-700 disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2"
+                  >
+                    {loading.grade && (
+                      <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                    )}
+                    {loading.grade ? (editingGrade ? 'Saving...' : 'Creating...') : (editingGrade ? 'Save' : 'Create')}
+                  </button>
                 </div>
               </form>
             </Modal>
@@ -386,8 +485,23 @@ export default function SuperAdminSettings() {
                     onChange={(e)=>setDefaults(d=>({...d, overtime_multiplier_default: Number(e.target.value)}))}
                     className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100" />
                 </div>
+                {errors.payrollDefaults && (
+                  <div className="md:col-span-3 text-sm text-red-600 dark:text-red-400">{errors.payrollDefaults}</div>
+                )}
                 <div className="md:col-span-3 pt-2">
-                  <button type="submit" className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700">Save Defaults</button>
+                  <button
+                    type="submit"
+                    disabled={loading.payrollDefaults}
+                    className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2"
+                  >
+                    {loading.payrollDefaults && (
+                      <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                    )}
+                    {loading.payrollDefaults ? 'Saving...' : 'Save Defaults'}
+                  </button>
                 </div>
               </form>
             </div>
@@ -453,8 +567,23 @@ export default function SuperAdminSettings() {
                     onChange={(e)=>setNewProfile(p=>({...p, allowances: e.target.value}))}
                     className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100" rows={2} />
                 </div>
+                {errors.newProfile && (
+                  <div className="md:col-span-6 text-sm text-red-600 dark:text-red-400">{errors.newProfile}</div>
+                )}
                 <div className="md:col-span-6 pt-2">
-                  <button type="submit" className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700">Add Profile</button>
+                  <button
+                    type="submit"
+                    disabled={loading.newProfile}
+                    className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2"
+                  >
+                    {loading.newProfile && (
+                      <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                    )}
+                    {loading.newProfile ? 'Adding...' : 'Add Profile'}
+                  </button>
                 </div>
               </form>
 
@@ -485,8 +614,32 @@ export default function SuperAdminSettings() {
                         <td className="px-2 py-2"><input type="number" step="0.01" value={Number(p.absence_deduction_per_day ?? 0)} onChange={(e)=>setProfiles(prev=>prev.map(x=>x.id===p.id?{...x, absence_deduction_per_day: Number(e.target.value)}:x))} className="w-28 rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900" /></td>
                         <td className="px-2 py-2"><textarea value={typeof p.allowances === 'string' ? p.allowances : JSON.stringify(p.allowances ?? [])} onChange={(e)=>setProfiles(prev=>prev.map(x=>x.id===p.id?{...x, allowances: e.target.value}:x))} className="w-80 h-16 rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900" /></td>
                         <td className="px-2 py-2 space-x-2">
-                          <button onClick={()=>updateProfile(p)} className="px-3 py-1 rounded bg-emerald-600 text-white hover:bg-emerald-700">Save</button>
-                          <button onClick={()=>deleteProfile(p.id)} className="px-3 py-1 rounded bg-red-600 text-white hover:bg-red-700">Delete</button>
+                          <button
+                            onClick={()=>updateProfile(p)}
+                            disabled={loading[`profile_${p.id}`]}
+                            className="px-3 py-1 rounded bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-1"
+                          >
+                            {loading[`profile_${p.id}`] && (
+                              <svg className="animate-spin h-3 w-3" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                              </svg>
+                            )}
+                            {loading[`profile_${p.id}`] ? 'Saving...' : 'Save'}
+                          </button>
+                          <button
+                            onClick={()=>deleteProfile(p.id)}
+                            disabled={loading[`delete_profile_${p.id}`]}
+                            className="px-3 py-1 rounded bg-red-600 text-white hover:bg-red-700 disabled:opacity-60 disabled:cursor-not-allowed"
+                          >
+                            {loading[`delete_profile_${p.id}`] ? '...' : 'Delete'}
+                          </button>
+                          {errors[`profile_${p.id}`] && (
+                            <span className="text-xs text-red-600 dark:text-red-400">{errors[`profile_${p.id}`]}</span>
+                          )}
+                          {errors[`delete_profile_${p.id}`] && (
+                            <span className="text-xs text-red-600 dark:text-red-400">{errors[`delete_profile_${p.id}`]}</span>
+                          )}
                         </td>
                       </tr>
                     ))}
@@ -494,6 +647,13 @@ export default function SuperAdminSettings() {
                 </table>
               </div>
             </div>
+          </section>
+        )}
+
+        {/* Notifications */}
+        {tab === 'notifications' && (
+          <section className="space-y-6">
+            <PushNotificationSettings />
           </section>
         )}
 

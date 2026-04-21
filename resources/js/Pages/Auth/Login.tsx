@@ -1,7 +1,7 @@
 import { Head, Link, usePage, router } from '@inertiajs/react';
 import { FormEventHandler, useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Eye, EyeOff, Lock, User, ArrowRight, Fingerprint, Sparkles, Sun, Moon } from 'lucide-react';
+import { Eye, EyeOff, Lock, User, ArrowRight, Fingerprint, Sparkles, Sun, Moon, Shield } from 'lucide-react';
 
 export default function Login({
   status,
@@ -20,6 +20,19 @@ export default function Login({
   const [showPassword, setShowPassword] = useState(false);
   const [focusedField, setFocusedField] = useState<'login' | 'password' | null>(null);
   const [darkMode, setDarkMode] = useState(false);
+  const [particles, setParticles] = useState<Array<{ id: number; x: number; y: number; delay: number; size: number }>>([]);
+
+  // Generate particles on mount
+  useEffect(() => {
+    const newParticles = Array.from({ length: 20 }, (_, i) => ({
+      id: i,
+      x: Math.random() * 100,
+      y: Math.random() * 100,
+      delay: Math.random() * 3,
+      size: Math.random() * 4 + 2,
+    }));
+    setParticles(newParticles);
+  }, []);
 
   // Check system preference on mount
   useEffect(() => {
@@ -94,30 +107,130 @@ export default function Login({
           <div className="h-1 bg-gradient-to-r from-red-600 via-red-500 to-orange-500" />
 
           <div className="p-8 md:p-10">
-            {/* Logo */}
+            {/* Logo with animated glow and particles */}
             <motion.div
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
-              className="flex flex-col items-center mb-8"
+              className="flex flex-col items-center mb-8 relative"
             >
+              {/* Particle effects */}
+              <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                {particles.map((particle) => (
+                  <motion.div
+                    key={particle.id}
+                    className={`absolute rounded-full ${darkMode ? 'bg-red-500/30' : 'bg-red-500/20'}`}
+                    style={{
+                      left: `${particle.x}%`,
+                      top: `${particle.y}%`,
+                      width: particle.size,
+                      height: particle.size,
+                    }}
+                    animate={{
+                      scale: [1, 1.5, 1],
+                      opacity: [0.3, 0.8, 0.3],
+                      y: [0, -20, 0],
+                    }}
+                    transition={{
+                      duration: 3,
+                      delay: particle.delay,
+                      repeat: Infinity,
+                      ease: 'easeInOut',
+                    }}
+                  />
+                ))}
+              </div>
+
+              {/* Glowing logo container */}
               <motion.div
-                className="w-24 h-24 mb-4"
-                whileHover={{ scale: 1.05 }}
-                transition={{ type: 'spring', stiffness: 300 }}
+                className="relative w-28 h-28 mb-4"
+                animate={{
+                  boxShadow: [
+                    '0 0 20px rgba(220, 38, 38, 0.3)',
+                    '0 0 40px rgba(220, 38, 38, 0.5)',
+                    '0 0 20px rgba(220, 38, 38, 0.3)',
+                  ],
+                }}
+                transition={{
+                  duration: 2,
+                  repeat: Infinity,
+                  ease: 'easeInOut',
+                }}
               >
-                <img
-                  src="/images/Coin-logo.png"
-                  alt="CoinSec Logo"
-                  className="w-full h-full object-contain"
+                {/* Outer glow ring */}
+                <motion.div
+                  className="absolute inset-0 rounded-full"
+                  animate={{
+                    scale: [1, 1.1, 1],
+                    opacity: [0.5, 0.8, 0.5],
+                  }}
+                  transition={{
+                    duration: 2,
+                    repeat: Infinity,
+                    ease: 'easeInOut',
+                  }}
+                  style={{
+                    background: 'radial-gradient(circle, rgba(220, 38, 38, 0.2) 0%, transparent 70%)',
+                  }}
                 />
+
+                {/* Inner pulse ring */}
+                <motion.div
+                  className="absolute inset-2 rounded-full border-2 border-red-500/30"
+                  animate={{
+                    scale: [1, 1.2, 1],
+                    opacity: [0.5, 0, 0.5],
+                  }}
+                  transition={{
+                    duration: 2,
+                    repeat: Infinity,
+                    ease: 'easeOut',
+                  }}
+                />
+
+                {/* Logo image */}
+                <motion.div
+                  className="relative z-10 w-full h-full flex items-center justify-center"
+                  whileHover={{ scale: 1.05 }}
+                  transition={{ type: 'spring', stiffness: 300 }}
+                >
+                  <img
+                    src="/images/Coin-logo.png"
+                    alt="CoinSec Logo"
+                    className="w-full h-full object-contain drop-shadow-[0_0_15px_rgba(220,38,38,0.4)]"
+                  />
+                </motion.div>
+
+                {/* Shield icon overlay */}
+                <motion.div
+                  className="absolute -bottom-1 -right-1 bg-gradient-to-br from-red-600 to-red-700 rounded-full p-1.5 shadow-lg"
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ delay: 0.5, type: 'spring', stiffness: 300 }}
+                >
+                  <Shield className="w-3 h-3 text-white" />
+                </motion.div>
               </motion.div>
-              <h1 className={`text-2xl font-bold tracking-tight transition-colors ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                Welcome Back
-              </h1>
-              <p className={`mt-1 text-sm transition-colors ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                Sign in to your CoinSec account
-              </p>
+
+              {/* Title with gradient */}
+              <motion.h1
+                className="text-2xl font-bold tracking-tight"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.4 }}
+              >
+                <span className={`bg-gradient-to-r from-red-600 via-red-500 to-orange-500 bg-clip-text text-transparent`}>
+                  CoinSec
+                </span>
+              </motion.h1>
+              <motion.p
+                className={`mt-1 text-sm transition-colors ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.5 }}
+              >
+                Security Operations Platform
+              </motion.p>
             </motion.div>
 
             {/* Status message */}

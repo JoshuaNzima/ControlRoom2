@@ -414,11 +414,11 @@ export default function MessagesLayout({
         )}
 
         <div className="flex-1 flex flex-col min-w-0">
-          <div className="lg:hidden flex items-center gap-3 p-4 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
-            <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(true)}>
+          <div className="lg:hidden flex items-center gap-2 p-2 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
+            <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(true)} className="h-10 w-10 touch-target-min">
               <Menu className="w-5 h-5" />
             </Button>
-            <h1 className="font-semibold text-gray-900 dark:text-gray-100">{title}</h1>
+            <h1 className="font-semibold text-sm sm:text-base text-gray-900 dark:text-gray-100 truncate">{title}</h1>
           </div>
 
           <div className="flex-1 overflow-hidden">
@@ -429,7 +429,8 @@ export default function MessagesLayout({
     </MessagesContext.Provider>
   );
 
-  const roles = user?.roles || [];
+  const rawRoles = (user?.roles || []) as (string | { id: number; name: string })[];
+  const roles = rawRoles.map((r) => (typeof r === 'string' ? r : r.name));
   const has = (role: string) => roles.includes(role);
   const isSuperAdmin = has('super_admin');
   const isAdmin = has('admin') || isSuperAdmin;

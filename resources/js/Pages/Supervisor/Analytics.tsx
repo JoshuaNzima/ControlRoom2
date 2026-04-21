@@ -94,7 +94,7 @@ export default function Analytics({
           </div>
 
           {/* Key Stats Row */}
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
             {Object.values(stats).slice(0, 6).map((stat, idx) => (
               <div key={idx} className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4 shadow-sm">
                 <div className="flex items-center justify-between mb-2">
@@ -114,10 +114,10 @@ export default function Analytics({
             ))}
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
             {/* Guard Performance */}
-            <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm p-6">
-              <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
+            <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm p-4 sm:p-6">
+              <h3 className="text-base sm:text-lg font-bold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
                 <IconMapper name="Trophy" size={20} className="text-coin-500" />
                 Guard Performance (30 Days)
               </h3>
@@ -179,8 +179,8 @@ export default function Analytics({
             {/* Relievers & Trends */}
             <div className="space-y-6">
               {/* Relievers On Duty */}
-              <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm p-6">
-                <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
+              <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm p-4 sm:p-6">
+                <h3 className="text-base sm:text-lg font-bold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
                   <IconMapper name="RefreshCw" size={20} className="text-coin-500" />
                   Relievers On Duty
                   {relieversOnDuty.length > 0 && (
@@ -210,8 +210,8 @@ export default function Analytics({
               </div>
 
               {/* Attendance Trend Chart */}
-              <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm p-6">
-                <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
+              <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm p-4 sm:p-6">
+                <h3 className="text-base sm:text-lg font-bold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
                   <IconMapper name="TrendingUp" size={20} className="text-coin-500" />
                   7-Day Attendance Trend
                 </h3>
@@ -242,8 +242,8 @@ export default function Analytics({
 
               {/* Reliever Availability Trend */}
               {relieverTrend.length > 0 && (
-                <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm p-6">
-                  <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
+                <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm p-4 sm:p-6">
+                  <h3 className="text-base sm:text-lg font-bold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
                     <IconMapper name="Users" size={20} className="text-coin-500" />
                     Reliever Availability
                   </h3>
@@ -267,15 +267,15 @@ export default function Analytics({
           </div>
 
           {/* Site Coverage Section */}
-          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm p-6">
-            <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
+          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm p-4 sm:p-6">
+            <h3 className="text-base sm:text-lg font-bold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
               <IconMapper name="MapPin" size={20} className="text-coin-500" />
               Site Coverage Status
               <span className="ml-2 text-sm font-normal text-gray-500 dark:text-gray-400">
                 ({siteCoverageStatus.filter(s => s.status === 'covered').length}/{siteCoverageStatus.length} covered)
               </span>
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {siteCoverageStatus.length === 0 ? (
                 <p className="text-gray-500 dark:text-gray-400 col-span-full text-center py-8">No site coverage data available</p>
               ) : (

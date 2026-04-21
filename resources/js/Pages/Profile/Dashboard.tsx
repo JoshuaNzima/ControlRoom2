@@ -14,10 +14,12 @@ import ZoneCommanderLayout from '@/Layouts/ZoneCommanderLayout';
 import MarketingLayout from '@/Layouts/MarketingLayout';
 import BusinessDevLayout from '@/Layouts/BusinessDevLayout';
 import FrontDeskLayout from '@/Layouts/FrontDeskLayout';
+import OperationsLayout from '@/Layouts/OperationsLayout';
 import RequisitionSummary from '@/Components/Requisitions/RequisitionSummary';
 import EditProfileModal from '@/Components/Profile/EditProfileModal';
 import ChangePasswordModal from '@/Components/Profile/ChangePasswordModal';
 import AvatarModal from '@/Components/Profile/AvatarModal';
+import PushNotificationSettings from '@/Components/Common/PushNotificationSettings';
 import EmptyState from '@/Components/ui/empty-state';
 // Account deletion removed for regular users
 
@@ -46,7 +48,7 @@ function currency(n: number | string) {
 
 export default function ProfileDashboard() {
   const { user, commissions, payroll, mustVerifyEmail = false, status } = usePage().props as any;
-  const [tab, setTab] = React.useState<'profile' | 'commissions' | 'payroll'>('profile');
+  const [tab, setTab] = React.useState<'profile' | 'commissions' | 'payroll' | 'settings'>('profile');
   const [showEdit, setShowEdit] = React.useState(false);
   const [showPassword, setShowPassword] = React.useState(false);
   const [showAvatar, setShowAvatar] = React.useState(false);
@@ -102,6 +104,9 @@ export default function ProfileDashboard() {
     if (currentRouteName === 'zone.profile') {
       return <ZoneCommanderLayout title={title}>{children}</ZoneCommanderLayout>;
     }
+    if (currentRouteName === 'operations.profile') {
+      return <OperationsLayout title={title}>{children}</OperationsLayout>;
+    }
 
     return <AuthenticatedLayout header={<h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">My Dashboard</h2>}>{children}</AuthenticatedLayout>;
   };
@@ -135,6 +140,12 @@ export default function ProfileDashboard() {
               className={`px-3 py-1.5 rounded-md text-sm ${tab === 'payroll' ? 'bg-coin-700 text-white' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-700'}`}
             >
               Payroll
+            </button>
+            <button
+              onClick={() => setTab('settings')}
+              className={`px-3 py-1.5 rounded-md text-sm ${tab === 'settings' ? 'bg-coin-700 text-white' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-700'}`}
+            >
+              Settings
             </button>
           </div>
 
@@ -248,6 +259,13 @@ export default function ProfileDashboard() {
               <div className="bg-coin-50 dark:bg-gray-800 rounded-xl border border-coin-200 dark:border-gray-700 p-4 text-sm text-coin-900 dark:text-gray-200">
                 Payroll figures reflect processed runs recorded in the system.
               </div>
+            </div>
+          )}
+
+          {/* Settings */}
+          {tab === 'settings' && (
+            <div className="space-y-4">
+              <PushNotificationSettings />
             </div>
           )}
         </div>

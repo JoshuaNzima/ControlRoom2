@@ -140,6 +140,8 @@ export default function SuperAdminGuards({ guards, inactiveGuards, filters, supe
     return '20';
   });
   const [loadingId, setLoadingId] = React.useState<number | null>(null);
+  const [processingId, setProcessingId] = React.useState<number | null>(null);
+  const [actionLoading, setActionLoading] = React.useState<Record<string, boolean>>({});
   const { push } = useNotification();
 
   // Modals
@@ -150,8 +152,6 @@ export default function SuperAdminGuards({ guards, inactiveGuards, filters, supe
   const [showPromote, setShowPromote] = React.useState(false);
   const [selectedGuard, setSelectedGuard] = React.useState<any | null>(null);
   const [saving, setSaving] = React.useState(false);
-  const [photoCreate, setPhotoCreate] = React.useState<File | null>(null);
-  const [photoEdit, setPhotoEdit] = React.useState<File | null>(null);
   const [selectedGuardIds, setSelectedGuardIds] = React.useState<number[]>([]);
   const [showSupervisor, setShowSupervisor] = React.useState(false);
   const [selectedSupervisorId, setSelectedSupervisorId] = React.useState<string>('');
@@ -320,51 +320,49 @@ export default function SuperAdminGuards({ guards, inactiveGuards, filters, supe
   };
   const openAssign = (guardId: number) => { setSelectedGuard({ id: guardId }); setShowAssign(true); };
 
-  const submitCreate = async (form: GuardFormData) => {
-    setSaving(true);
-    const fd = new FormData();
-    let appendedPhoto = false;
-    Object.entries(form as any).forEach(([k, v]) => {
-      if (v === undefined || v === null) return;
-      if (Array.isArray(v)) {
-        v.forEach((item) => fd.append(`${k}[]`, String(item)));
-      } else if (typeof File !== 'undefined' && v instanceof File) {
-        fd.append(k, v as any);
-        if (k === 'photo') appendedPhoto = true;
-      } else {
-        fd.append(k, String(v));
+  const handleComplianceUpdate = async (guardId: number, data: { fingerprint_registered?: boolean; uniform_issued?: boolean; equipment_issued?: string[] }) => {
+    try {
+      const res = await fetch(route('admin.guards.compliance', guardId), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '',
+        },
+        credentials: 'same-origin',
+        body: JSON.stringify(data),
+      });
+      const result = await res.json();
+      if (result.success && selectedGuardDetails) {
+        setSelectedGuardDetails({
+          ...selectedGuardDetails,
+          ...result.guard,
+        });
       }
-    });
-    if (!appendedPhoto && photoCreate) fd.append('photo', photoCreate);
-    router.post(route('admin.guards.store'), fd, {
+    } catch (error) {
+      console.error('Failed to update compliance:', error);
+      push('Failed to update compliance', 'error');
+    }
+  };
+
+  const submitCreate = async (formData: FormData) => {
+    setSaving(true);
+    router.post(route('admin.guards.store'), formData, {
       preserveScroll: true,
       onFinish: () => setSaving(false),
-      onSuccess: () => { setShowAdd(false); setPhotoCreate(null); },
+      onSuccess: () => { setShowAdd(false); push('Guard created successfully', 'success'); },
+      onError: (errs) => { push(Object.values(errs)[0] || 'Failed to create guard', 'error'); },
     });
   };
 
-  const submitUpdate = async (form: GuardFormData) => {
+  const submitUpdate = async (formData: FormData) => {
     if (!selectedGuard) return;
     setSaving(true);
-    const fd = new FormData();
-    let appendedPhoto = false;
-    Object.entries(form as any).forEach(([k, v]) => {
-      if (v === undefined || v === null) return;
-      if (Array.isArray(v)) {
-        v.forEach((item) => fd.append(`${k}[]`, String(item)));
-      } else if (typeof File !== 'undefined' && v instanceof File) {
-        fd.append(k, v as any);
-        if (k === 'photo') appendedPhoto = true;
-      } else {
-        fd.append(k, String(v));
-      }
-    });
-    fd.append('_method', 'PUT');
-    if (!appendedPhoto && photoEdit) fd.append('photo', photoEdit);
-    router.post(route('admin.guards.update', { guard: selectedGuard.id }), fd, {
+    router.post(route('admin.guards.update', { guard: selectedGuard.id }), formData, {
       preserveScroll: true,
       onFinish: () => setSaving(false),
-      onSuccess: () => { setShowEdit(false); setPhotoEdit(null); },
+      onSuccess: () => { setShowEdit(false); push('Guard updated successfully', 'success'); },
+      onError: (errs) => { push(Object.values(errs)[0] || 'Failed to update guard', 'error'); },
     });
   };
 
@@ -685,15 +683,22 @@ export default function SuperAdminGuards({ guards, inactiveGuards, filters, supe
                         <IconMapper name="UserPlus" size={16} />
                       </Button>
                       {can.suspend && (
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          disabled={processingId === guard.id}
                           onClick={() => openReason('Suspend Guard', `Suspend ${guard.name}? This will prevent them from being assigned to sites.`, (reason) => {
-                            router.post(route('admin.guards.suspend', guard.id), { reason }, { preserveScroll: true });
+                            setProcessingId(guard.id);
+                            router.post(route('admin.guards.suspend', guard.id), { reason }, {
+                              preserveScroll: true,
+                              onFinish: () => setProcessingId(null),
+                              onSuccess: () => push('Guard suspended', 'success'),
+                              onError: (errs) => { setProcessingId(null); push(Object.values(errs)[0] || 'Failed to suspend guard', 'error'); },
+                            });
                           })}
                           className="text-yellow-600"
                         >
-                          <IconMapper name="Pause" size={16} />
+                          <IconMapper name={processingId === guard.id ? 'Loader2' : 'Pause'} size={16} className={processingId === guard.id ? 'animate-spin' : ''} />
                         </Button>
                       )}
                     </div>
@@ -733,15 +738,22 @@ export default function SuperAdminGuards({ guards, inactiveGuards, filters, supe
                     
                     <div className="mt-3 flex flex-wrap gap-1">
                       {can.reinstate && (
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          disabled={processingId === guard.id}
                           onClick={() => openConfirm('Reinstate Guard', `Reinstate ${guard.name}? This will restore them to active duty.`, () => {
-                            router.post(route('admin.guards.reinstate', guard.id), {}, { preserveScroll: true });
+                            setProcessingId(guard.id);
+                            router.post(route('admin.guards.reinstate', guard.id), {}, {
+                              preserveScroll: true,
+                              onFinish: () => setProcessingId(null),
+                              onSuccess: () => push('Guard reinstated', 'success'),
+                              onError: (errs) => { setProcessingId(null); push(Object.values(errs)[0] || 'Failed to reinstate guard', 'error'); },
+                            });
                           })}
                           className="text-green-600"
                         >
-                          <IconMapper name="RotateCcw" size={16} />
+                          <IconMapper name={processingId === guard.id ? 'Loader2' : 'RotateCcw'} size={16} className={processingId === guard.id ? 'animate-spin' : ''} />
                           <span className="ml-1">Reinstate</span>
                         </Button>
                       )}
@@ -852,42 +864,70 @@ export default function SuperAdminGuards({ guards, inactiveGuards, filters, supe
                               <div className="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
                                 {can.suspend && (
                                   <button
+                                    disabled={processingId === guard.id}
                                     onClick={() => openReason('Suspend Guard', `Suspend ${guard.name}?`, (reason) => {
-                                      router.post(route('admin.guards.suspend', guard.id), { reason }, { preserveScroll: true });
+                                      setProcessingId(guard.id);
+                                      router.post(route('admin.guards.suspend', guard.id), { reason }, {
+                                        preserveScroll: true,
+                                        onFinish: () => setProcessingId(null),
+                                        onSuccess: () => push('Guard suspended', 'success'),
+                                        onError: (errs) => { setProcessingId(null); push(Object.values(errs)[0] || 'Failed to suspend guard', 'error'); },
+                                      });
                                     })}
-                                    className="w-full px-4 py-2 text-left text-sm text-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 first:rounded-t-lg"
+                                    className="w-full px-4 py-2 text-left text-sm text-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 first:rounded-t-lg disabled:opacity-50"
                                   >
-                                    <IconMapper name="Pause" size={14} className="inline mr-2" />
+                                    <IconMapper name={processingId === guard.id ? 'Loader2' : 'Pause'} size={14} className={`inline mr-2 ${processingId === guard.id ? 'animate-spin' : ''}`} />
                                     Suspend
                                   </button>
                                 )}
                                 {can.dismiss && (
                                   <button
+                                    disabled={processingId === guard.id}
                                     onClick={() => openReason('Dismiss Guard', `Dismiss ${guard.name}? This action cannot be undone.`, (reason) => {
-                                      router.post(route('admin.guards.dismiss', guard.id), { reason }, { preserveScroll: true });
+                                      setProcessingId(guard.id);
+                                      router.post(route('admin.guards.dismiss', guard.id), { reason }, {
+                                        preserveScroll: true,
+                                        onFinish: () => setProcessingId(null),
+                                        onSuccess: () => push('Guard dismissed', 'success'),
+                                        onError: (errs) => { setProcessingId(null); push(Object.values(errs)[0] || 'Failed to dismiss guard', 'error'); },
+                                      });
                                     })}
-                                    className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+                                    className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50"
                                   >
-                                    <IconMapper name="UserX" size={14} className="inline mr-2" />
+                                    <IconMapper name={processingId === guard.id ? 'Loader2' : 'UserX'} size={14} className={`inline mr-2 ${processingId === guard.id ? 'animate-spin' : ''}`} />
                                     Dismiss
                                   </button>
                                 )}
                                 <button
+                                  disabled={processingId === guard.id}
                                   onClick={() => openReason('Mark as Resigned', `${guard.name} has resigned?`, (reason) => {
-                                    router.post(route('admin.guards.resign', guard.id), { reason }, { preserveScroll: true });
+                                    setProcessingId(guard.id);
+                                    router.post(route('admin.guards.resign', guard.id), { reason }, {
+                                      preserveScroll: true,
+                                      onFinish: () => setProcessingId(null),
+                                      onSuccess: () => push('Guard marked as resigned', 'success'),
+                                      onError: (errs) => { setProcessingId(null); push(Object.values(errs)[0] || 'Failed to mark guard as resigned', 'error'); },
+                                    });
                                   })}
-                                  className="w-full px-4 py-2 text-left text-sm text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900/20"
+                                  className="w-full px-4 py-2 text-left text-sm text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900/20 disabled:opacity-50"
                                 >
-                                  <IconMapper name="LogOut" size={14} className="inline mr-2" />
+                                  <IconMapper name={processingId === guard.id ? 'Loader2' : 'LogOut'} size={14} className={`inline mr-2 ${processingId === guard.id ? 'animate-spin' : ''}`} />
                                   Resigned
                                 </button>
                                 <button
+                                  disabled={processingId === guard.id}
                                   onClick={() => openReason('Mark as Retired', `${guard.name} has retired?`, (reason) => {
-                                    router.post(route('admin.guards.resign', guard.id), { reason, status: 'retired' }, { preserveScroll: true });
+                                    setProcessingId(guard.id);
+                                    router.post(route('admin.guards.resign', guard.id), { reason, status: 'retired' }, {
+                                      preserveScroll: true,
+                                      onFinish: () => setProcessingId(null),
+                                      onSuccess: () => push('Guard marked as retired', 'success'),
+                                      onError: (errs) => { setProcessingId(null); push(Object.values(errs)[0] || 'Failed to mark guard as retired', 'error'); },
+                                    });
                                   })}
-                                  className="w-full px-4 py-2 text-left text-sm text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 last:rounded-b-lg"
+                                  className="w-full px-4 py-2 text-left text-sm text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 last:rounded-b-lg disabled:opacity-50"
                                 >
-                                  <IconMapper name="Crown" size={14} className="inline mr-2" />
+                                  <IconMapper name={processingId === guard.id ? 'Loader2' : 'Crown'} size={14} className={`inline mr-2 ${processingId === guard.id ? 'animate-spin' : ''}`} />
                                   Retired
                                 </button>
                               </div>
@@ -901,23 +941,55 @@ export default function SuperAdminGuards({ guards, inactiveGuards, filters, supe
               </div>
               
               {/* Pagination */}
-              <div className="px-4 py-3 border-t border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row items-center justify-between gap-3">
-                <div className="text-sm text-gray-600 dark:text-gray-400">
-                  Page {guards.meta?.current_page ?? '-'} of {guards.meta?.last_page ?? '-'}
+              <div className="px-2 sm:px-4 py-2 sm:py-3 border-t border-gray-200 dark:border-gray-700">
+                {/* Mobile: Simple prev/next */}
+                <div className="flex sm:hidden justify-between items-center gap-2">
+                  <button
+                    onClick={() => {
+                      const prevLink = guards.links?.find((l: any) => l.label.includes('Previous') || l.label.includes('«'));
+                      if (prevLink?.url) router.get(prevLink.url, {}, { preserveScroll: true, preserveState: true });
+                    }}
+                    disabled={!guards.links?.some((l: any) => l.label.includes('Previous') || l.label.includes('«'))}
+                    className="touch-target-min px-3 py-2 text-xs font-medium rounded border dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 disabled:opacity-50"
+                  >
+                    <IconMapper name="ChevronLeft" size={14} className="mr-1" />
+                    Prev
+                  </button>
+                  <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">
+                    {guards.meta?.current_page ?? '-'} / {guards.meta?.last_page ?? '-'}
+                  </span>
+                  <button
+                    onClick={() => {
+                      const nextLink = guards.links?.find((l: any) => l.label.includes('Next') || l.label.includes('»'));
+                      if (nextLink?.url) router.get(nextLink.url, {}, { preserveScroll: true, preserveState: true });
+                    }}
+                    disabled={!guards.links?.some((l: any) => l.label.includes('Next') || l.label.includes('»'))}
+                    className="touch-target-min px-3 py-2 text-xs font-medium rounded border dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 disabled:opacity-50"
+                  >
+                    Next
+                    <IconMapper name="ChevronRight" size={14} className="ml-1" />
+                  </button>
                 </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  {Array.isArray(guards.links) && guards.links.filter((l: any) => l.url !== null).map((l: any, idx: number) => (
-                    <button
-                      key={idx}
-                      className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
-                        l.active 
-                          ? 'bg-red-600 text-white' 
-                          : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700'
-                      }`}
-                      onClick={() => router.get(l.url, {}, { preserveScroll: true, preserveState: true })}
-                      dangerouslySetInnerHTML={{ __html: l.label }}
-                    />
-                  ))}
+
+                {/* Desktop: Full pagination */}
+                <div className="hidden sm:flex sm:flex-row items-center justify-between gap-3">
+                  <div className="text-sm text-gray-600 dark:text-gray-400">
+                    Page {guards.meta?.current_page ?? '-'} of {guards.meta?.last_page ?? '-'}
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2 justify-end">
+                    {Array.isArray(guards.links) && guards.links.filter((l: any) => l.url !== null).map((l: any, idx: number) => (
+                      <button
+                        key={idx}
+                        className={`px-3 py-1 rounded-md text-sm font-medium transition-colors touch-target-min ${
+                          l.active
+                            ? 'bg-red-600 text-white'
+                            : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700'
+                        }`}
+                        onClick={() => router.get(l.url, {}, { preserveScroll: true, preserveState: true })}
+                        dangerouslySetInnerHTML={{ __html: l.label }}
+                      />
+                    ))}
+                  </div>
                 </div>
               </div>
             </Card>
@@ -1024,15 +1096,6 @@ export default function SuperAdminGuards({ guards, inactiveGuards, filters, supe
               </div>
               <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Add Guard</h2>
             </div>
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Photo</label>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={(e) => setPhotoCreate(e.target.files?.[0] || null)}
-                className="w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-red-50 file:text-red-700 hover:file:bg-red-100 dark:file:bg-gray-800 dark:file:text-gray-100"
-              />
-            </div>
             <GuardForm
               initialData={{ status: 'active', guard_type: 'permanent' } as any}
               supervisors={supervisors}
@@ -1054,15 +1117,6 @@ export default function SuperAdminGuards({ guards, inactiveGuards, filters, supe
                 <IconMapper name="Pencil" size={20} className="text-blue-600 dark:text-blue-400" />
               </div>
               <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Edit Guard</h2>
-            </div>
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Photo</label>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={(e) => setPhotoEdit(e.target.files?.[0] || null)}
-                className="w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-gray-800 dark:file:text-gray-100"
-              />
             </div>
             {selectedGuard && (
               <GuardForm
@@ -1087,6 +1141,7 @@ export default function SuperAdminGuards({ guards, inactiveGuards, filters, supe
           onEdit={selectedGuardDetails ? () => { setSelectedGuard(selectedGuardDetails); setSelectedGuardDetails(null); setShowEdit(true); } : undefined}
           onAssign={selectedGuardDetails ? () => { setSelectedGuard(selectedGuardDetails); setSelectedGuardDetails(null); setShowAssign(true); } : undefined}
           scope="superadmin"
+          onComplianceUpdate={handleComplianceUpdate}
         />
 
         {/* Assign to Site Modal */}
@@ -1115,12 +1170,15 @@ export default function SuperAdminGuards({ guards, inactiveGuards, filters, supe
               e.preventDefault();
               const targetIds = selectedGuardIds.length > 0 ? selectedGuardIds : (selectedGuard?.id ? [selectedGuard.id] : []);
               if (!targetIds.length || !selectedSupervisorId) return;
+              setActionLoading(prev => ({ ...prev, assignSupervisor: true }));
               router.post(route('guards.assign-supervisor'), {
                 guard_ids: targetIds,
                 supervisor_id: Number(selectedSupervisorId),
               }, {
                 preserveScroll: true,
-                onSuccess: () => { setShowSupervisor(false); setSelectedGuardIds([]); router.reload(); },
+                onFinish: () => setActionLoading(prev => ({ ...prev, assignSupervisor: false })),
+                onSuccess: () => { setShowSupervisor(false); setSelectedGuardIds([]); router.reload(); push('Supervisor assigned', 'success'); },
+                onError: (errs) => { push(Object.values(errs)[0] || 'Failed to assign supervisor', 'error'); },
               });
             }}
             className="p-4 sm:p-6 space-y-4 bg-white dark:bg-gray-900"
@@ -1151,21 +1209,29 @@ export default function SuperAdminGuards({ guards, inactiveGuards, filters, supe
               <Button
                 type="button"
                 variant="outline"
+                disabled={actionLoading.unassignSupervisor}
                 onClick={() => {
                   const targetIds = selectedGuardIds.length > 0 ? selectedGuardIds : (selectedGuard?.id ? [selectedGuard.id] : []);
                   if (!targetIds.length) return;
                   if (!confirm('Unassign supervisor from selected guard(s)?')) return;
+                  setActionLoading(prev => ({ ...prev, unassignSupervisor: true }));
                   router.post(route('guards.unassign-supervisor'), { guard_ids: targetIds }, {
                     preserveScroll: true,
-                    onSuccess: () => { setShowSupervisor(false); setSelectedGuardIds([]); router.reload(); },
+                    onFinish: () => setActionLoading(prev => ({ ...prev, unassignSupervisor: false })),
+                    onSuccess: () => { setShowSupervisor(false); setSelectedGuardIds([]); router.reload(); push('Supervisor unassigned', 'success'); },
+                    onError: (errs) => { push(Object.values(errs)[0] || 'Failed to unassign supervisor', 'error'); },
                   });
                 }}
                 className="text-yellow-600 border-yellow-600 hover:bg-yellow-50"
               >
-                Unassign
+                {actionLoading.unassignSupervisor ? (
+                  <><IconMapper name="Loader2" size={16} className="mr-2 animate-spin" /> Unassigning...</>
+                ) : 'Unassign'}
               </Button>
-              <Button type="submit" disabled={!selectedSupervisorId} className="bg-purple-600 hover:bg-purple-700">
-                Assign
+              <Button type="submit" disabled={!selectedSupervisorId || actionLoading.assignSupervisor} className="bg-purple-600 hover:bg-purple-700">
+                {actionLoading.assignSupervisor ? (
+                  <><IconMapper name="Loader2" size={16} className="mr-2 animate-spin" /> Assigning...</>
+                ) : 'Assign'}
               </Button>
             </div>
           </form>

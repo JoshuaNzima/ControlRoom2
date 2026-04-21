@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Requisition;
 use App\Models\User;
 use App\Notifications\GenericDbNotification;
+use App\Events\RequisitionUpdated;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Notification;
@@ -25,10 +26,14 @@ class RequisitionApprovalController extends Controller
             return back();
         }
 
+        $previousStatus = $requisition->status;
         $requisition->status = 'pending_disbursement';
         $requisition->approved_by = $user->id;
         $requisition->notes_admin = $request->input('notes_admin');
         $requisition->save();
+
+        // Dispatch event for push notification
+        RequisitionUpdated::dispatch($requisition, 'approved', $previousStatus);
 
         // Send push notification to requester
         try {
@@ -60,10 +65,14 @@ class RequisitionApprovalController extends Controller
             return back();
         }
 
+        $previousStatus = $requisition->status;
         $requisition->status = 'needs_revision';
         $requisition->approved_by = $user->id;
         $requisition->notes_admin = $data['notes_admin'] ?? null;
         $requisition->save();
+
+        // Dispatch event for push notification
+        RequisitionUpdated::dispatch($requisition, 'rejected', $previousStatus);
 
         // Send push notification to requester
         try {

@@ -12,7 +12,8 @@ type Props = {
 export default function BudgetViewModal({ budgetId, open, onClose }: Props) {
   const page = usePage() as any;
   const auth = page?.props?.auth;
-  const roles: string[] = Array.isArray(auth?.user?.roles) ? auth.user.roles : [];
+  const rawRoles = (auth?.user?.roles ?? []) as (string | { id: number; name: string })[];
+  const roles = rawRoles.map((r) => (typeof r === 'string' ? r : r.name));
   const isAdmin = roles.includes('admin') || roles.includes('super_admin');
   const isFinance = roles.some((r) => ['finance_officer','accountant','finance','accounting'].includes(r)) || roles.includes('super_admin');
   const userId = auth?.user?.id;

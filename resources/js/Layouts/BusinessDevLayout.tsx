@@ -8,8 +8,10 @@ import { useTheme } from '@/Providers/ThemeProvider';
 import QuickRequisitionButton from '@/Components/Requisitions/QuickRequisitionButton';
 import QuickBudgetButton from '@/Components/Budgets/QuickBudgetButton';
 import useCounters from '@/Hooks/useCounters';
+import { useRealtimeNotifications } from '@/Hooks/useRealtimeNotifications';
 import FloatingNavButton from '@/Components/FloatingNavButton';
 import WeeklyTasks from '@/Components/WeeklyTasks';
+import TutorialSection from '@/Components/Tutorials/TutorialSection';
 
 interface Props {
   title: string;
@@ -41,10 +43,16 @@ export default function BusinessDevLayout({ title, children, user }: Props) {
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
-  const roles = ((user as any)?.roles ?? (page?.props as any)?.auth?.user?.roles ?? []) as any;
-  const isSuperAdmin = Array.isArray(roles) ? roles.includes('super_admin') : roles === 'super_admin';
-  const isAdminUser = Array.isArray(roles) && (roles.includes('admin') || roles.includes('super_admin'));
-  const roleDisplay = Array.isArray(roles) && roles.length > 0 ? roles[0].replace(/_/g, ' ') : 'Business Dev';
+  const rawRoles = ((user as any)?.roles ?? (page?.props as any)?.auth?.user?.roles ?? []) as (string | { id: number; name: string })[];
+  const roles = rawRoles.map((r) => (typeof r === 'string' ? r : r.name));
+  const userId = (user as any)?.id ?? (page?.props as any)?.auth?.user?.id;
+
+  // Initialize real-time notifications
+  useRealtimeNotifications({ userId, userRoles: roles });
+
+  const isSuperAdmin = roles.includes('super_admin');
+  const isAdminUser = roles.includes('admin') || roles.includes('super_admin');
+  const roleDisplay = roles.length > 0 ? roles[0].replace(/_/g, ' ') : 'Business Dev';
 
   const nav: NavItem[] = [
     { name: 'Overview', href: route('admin.business-dev'), icon: <IconMapper name="handshake" className="h-6 w-6" />, current: isCurrent(route('admin.business-dev')) },
@@ -170,6 +178,7 @@ export default function BusinessDevLayout({ title, children, user }: Props) {
           <div className="animate-slideUp transition-all-smooth">
             <div className={`grid gap-4 ${tasksOpen ? 'grid-cols-1 xl:grid-cols-4' : 'grid-cols-1'}`}>
               <div className={tasksOpen ? 'xl:col-span-3' : ''}>
+                <TutorialSection dashboard="admin" canManage={false} />
                 {children}
               </div>
               {tasksOpen && !isMobile && (

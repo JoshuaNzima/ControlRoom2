@@ -22,6 +22,8 @@ use App\Models\SupervisorIncentiveRecord;
 use App\Models\IncentiveType;
 use App\Models\IncentiveRule;
 use App\Models\IncentiveEntry;
+use App\Models\ScanTag;
+use Illuminate\Support\Facades\Log;
 
 class DashboardController extends Controller
 {
@@ -29,7 +31,11 @@ class DashboardController extends Controller
     {
         $today = today();
 		$opsAnalytics = (new OperationalAnalyticsService())->getSummary($today->toDateString());
-        
+
+        // QR Scan data for Control Room tab
+        $recentQrScans = $this->getRecentQrScans();
+        $todayScansCount = ScanTag::whereDate('created_at', $today)->count();
+
         // Overall Statistics
         $stats = [
             'total_guards' => Guard::count(),
@@ -244,6 +250,7 @@ class DashboardController extends Controller
                 'cameras_offline' => 0,
                 'dispatches_today' => (int) VehicleDispatch::whereDate('dispatched_at', $today)->count(),
                 'avg_response_time_min' => 0,
+                'today_scans' => $todayScansCount,
             ],
             'operations' => [
                 'active_contracts' => 0,
@@ -409,6 +416,7 @@ class DashboardController extends Controller
             'approvalsPending' => $approvalsPending,
             'approvalsDetail' => $approvalsDetail,
             'incidentsOverview' => $incidentsOverview,
+            'recentQrScans' => $recentQrScans,
             'auth' => [
             'user' => [
                 'name' => auth()->user()->name,
@@ -504,5 +512,38 @@ class DashboardController extends Controller
             ];
         }
         return $series;
+    }
+
+    /**
+     * Get recent QR scans for Control Room tab
+     */
+    private function getRecentQrScans(): array
+    {
+        try {
+            return ScanTag::with(['checkpointScan.supervisor'])
+                ->orderBy('created_at', 'desc')
+                ->limit(10)
+                ->get()
+                ->map(function ($tag) {
+                    $tags = $tag->tags ?? [];
+                    return [
+                        'id' => $tag->id,
+                        'supervisor_name' => $tags['supervisor_name']
+                            ?? $tag->checkpointScan?->supervisor?->name
+                            ?? 'Unknown',
+                        'site_name' => $tags['site_name'] ?? 'Unknown',
+                        'client_name' => $tags['client_name'] ?? '',
+                        'checkpoint_name' => $tags['checkpoint_name'] ?? '',
+                        'scanned_at' => $tags['scanned_at'] ?? $tag->created_at?->toIso8601String(),
+                        'location_quality' => $tags['location_quality'] ?? 'unknown',
+                        'location_verified' => $tags['location_verified'] ?? false,
+                        'gps_distance' => $tags['gps_distance_m'] ?? null,
+                    ];
+                })
+                ->toArray();
+        } catch (\Throwable $e) {
+            Log::warning('Failed to load recent QR scans: ' . $e->getMessage());
+            return [];
+        }
     }
 }

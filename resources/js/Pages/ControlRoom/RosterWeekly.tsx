@@ -130,11 +130,10 @@ export default function RosterWeekly() {
   const canManageAttendance = useMemo(() => {
     const can = (auth as any)?.user?.can;
     if (can && can['attendance.manage']) return true;
-    const roles = (auth as any)?.user?.roles || [];
-    if (Array.isArray(roles)) {
-      return roles.includes('control_room_operator') || roles.includes('operations_officer') || roles.includes('manager') || roles.includes('super_admin');
-    }
-    return false;
+    const rawRoles = ((auth?.user as any)?.roles ?? []) as (string | { id: number; name: string })[];
+    const roles = rawRoles.map((r) => (typeof r === 'string' ? r : r.name));
+    const isAdmin = roles.includes('admin') || roles.includes('super_admin');
+    return isAdmin || roles.includes('control_room_operator') || roles.includes('operations_officer') || roles.includes('manager');
   }, [auth]);
 
   const planLocked = useMemo(() => plan?.status === 'published', [plan?.status]);
@@ -659,10 +658,18 @@ function StandbyTable({ data, onRefresh, shiftType, canManageAttendance, planned
     if (!canManageAttendance) return;
     if (action === 'absent') {
       if (!confirm('Mark this guard as absent for today?')) return;
-      router.post(route('control-room.attendance.mark-absent'), { guard_id: guardId }, { preserveScroll: true, onSuccess: () => { toast({ title: 'Marked absent' }); onRefresh(); } });
+      router.post(route('control-room.attendance.mark-absent'), { guard_id: guardId }, {
+          preserveScroll: true,
+          onSuccess: () => { toast({ title: 'Marked absent' }); onRefresh(); },
+          onError: (errs) => toast({ title: Object.values(errs)[0] || 'Failed to mark absent', variant: 'destructive' }),
+        });
       return;
     }
-    router.post(route('control-room.attendance.mark-present'), { guard_id: guardId, client_site_id: siteId ?? undefined }, { preserveScroll: true, onSuccess: () => { toast({ title: 'Marked present' }); onRefresh(); } });
+    router.post(route('control-room.attendance.mark-present'), { guard_id: guardId, client_site_id: siteId ?? undefined }, {
+          preserveScroll: true,
+          onSuccess: () => { toast({ title: 'Marked present' }); onRefresh(); },
+          onError: (errs) => toast({ title: Object.values(errs)[0] || 'Failed to mark present', variant: 'destructive' }),
+        });
   };
 
   const standbyGuards = (data.guards || []).filter((g) => (g.guard_type || 'permanent') === 'standby');
@@ -951,10 +958,18 @@ function GuardsTable({ data, onRefresh, shiftType, canManageAttendance, plannedS
     if (!canManageAttendance) return;
     if (action === 'absent') {
       if (!confirm('Mark this guard as absent for today?')) return;
-      router.post(route('control-room.attendance.mark-absent'), { guard_id: guardId }, { preserveScroll: true, onSuccess: () => { toast({ title: 'Marked absent' }); onRefresh(); } });
+      router.post(route('control-room.attendance.mark-absent'), { guard_id: guardId }, {
+          preserveScroll: true,
+          onSuccess: () => { toast({ title: 'Marked absent' }); onRefresh(); },
+          onError: (errs) => toast({ title: Object.values(errs)[0] || 'Failed to mark absent', variant: 'destructive' }),
+        });
       return;
     }
-    router.post(route('control-room.attendance.mark-present'), { guard_id: guardId, client_site_id: siteId ?? undefined }, { preserveScroll: true, onSuccess: () => { toast({ title: 'Marked present' }); onRefresh(); } });
+    router.post(route('control-room.attendance.mark-present'), { guard_id: guardId, client_site_id: siteId ?? undefined }, {
+          preserveScroll: true,
+          onSuccess: () => { toast({ title: 'Marked present' }); onRefresh(); },
+          onError: (errs) => toast({ title: Object.values(errs)[0] || 'Failed to mark present', variant: 'destructive' }),
+        });
   };
 
   return (
@@ -1359,10 +1374,8 @@ function ManualRosterShiftModal({
     if (!confirm('Delete this manual roster shift?')) return;
     router.post(route('control-room.roster.manual-shifts.delete'), { shift_id: shiftId }, {
       preserveScroll: true,
-      onSuccess: () => {
-        reset();
-        onDeleted();
-      },
+      onSuccess: () => { reset(); onDeleted(); },
+      onError: (errs) => { toast({ title: Object.values(errs)[0] || 'Failed to delete', variant: 'destructive' }); },
     });
   };
 
@@ -1480,10 +1493,18 @@ function RelieversTable({ data, onRefresh, shiftType, canManageAttendance, plann
     if (!canManageAttendance) return;
     if (action === 'absent') {
       if (!confirm('Mark this guard as absent for today?')) return;
-      router.post(route('control-room.attendance.mark-absent'), { guard_id: guardId }, { preserveScroll: true, onSuccess: () => { toast({ title: 'Marked absent' }); onRefresh(); } });
+      router.post(route('control-room.attendance.mark-absent'), { guard_id: guardId }, {
+          preserveScroll: true,
+          onSuccess: () => { toast({ title: 'Marked absent' }); onRefresh(); },
+          onError: (errs) => toast({ title: Object.values(errs)[0] || 'Failed to mark absent', variant: 'destructive' }),
+        });
       return;
     }
-    router.post(route('control-room.attendance.mark-present'), { guard_id: guardId, client_site_id: siteId ?? undefined }, { preserveScroll: true, onSuccess: () => { toast({ title: 'Marked present' }); onRefresh(); } });
+    router.post(route('control-room.attendance.mark-present'), { guard_id: guardId, client_site_id: siteId ?? undefined }, {
+          preserveScroll: true,
+          onSuccess: () => { toast({ title: 'Marked present' }); onRefresh(); },
+          onError: (errs) => toast({ title: Object.values(errs)[0] || 'Failed to mark present', variant: 'destructive' }),
+        });
   };
 
   return (

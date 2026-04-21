@@ -200,17 +200,27 @@ class EmployeeLeaveController extends Controller
     public function employees(Request $request): JsonResponse
     {
         $search = $request->query('search', '');
-        $type = $request->query('type'); // 'all', 'users', 'guards'
+        $type = $request->query('type', 'all'); // 'all', 'users', 'guards'
+        $perPage = min((int) $request->query('per_page', 50), 100); // Max 100 per page
+        $page = (int) $request->query('page', 1);
 
         $employees = [];
+        $hasMore = false;
 
-        if (in_array($type, ['all', 'guards', null])) {
-            $guards = Guard::query()
+        if (in_array($type, ['all', 'guards'])) {
+            $guardsQuery = Guard::query()
                 ->when($search, function ($q, $search) {
                     $q->where('name', 'like', "%{$search}%")
                       ->orWhere('employee_id', 'like', "%{$search}%");
-                })
+                });
+
+            $guardsTotal = $guardsQuery->count();
+            $hasMore = $hasMore || ($guardsTotal > $perPage * $page);
+
+            $guards = $guardsQuery
                 ->orderBy('name')
+                ->limit($perPage)
+                ->offset(($page - 1) * $perPage)
                 ->get(['id', 'name', 'employee_id'])
                 ->map(function ($g) {
                     return [
@@ -225,8 +235,8 @@ class EmployeeLeaveController extends Controller
             $employees = array_merge($employees, $guards->toArray());
         }
 
-        if (in_array($type, ['all', 'users', null])) {
-            $users = User::query()
+        if (in_array($type, ['all', 'users'])) {
+            $usersQuery = User::query()
                 ->when($search, function ($q, $search) {
                     $q->where('name', 'like', "%{$search}%")
                       ->orWhere('email', 'like', "%{$search}%");
@@ -236,8 +246,15 @@ class EmployeeLeaveController extends Controller
                         'admin', 'hr', 'finance', 'operations_officer',
                         'control_room_operator', 'asset_manager', 'front_desk', 'supervisor'
                     ]);
-                })
+                });
+
+            $usersTotal = $usersQuery->count();
+            $hasMore = $hasMore || ($usersTotal > $perPage * $page);
+
+            $users = $usersQuery
                 ->orderBy('name')
+                ->limit($perPage)
+                ->offset(($page - 1) * $perPage)
                 ->get(['id', 'name', 'email'])
                 ->map(function ($u) {
                     return [
@@ -257,7 +274,17 @@ class EmployeeLeaveController extends Controller
             return strcasecmp($a['name'], $b['name']);
         });
 
-        return response()->json(['employees' => $employees]);
+        // Re-apply limit after merging
+        $employees = array_slice($employees, 0, $perPage);
+
+        return response()->json([
+            'employees' => $employees,
+            'meta' => [
+                'page' => $page,
+                'per_page' => $perPage,
+                'has_more' => $hasMore,
+            ]
+        ]);
     }
 
     private function getEmployeeName($employee): string

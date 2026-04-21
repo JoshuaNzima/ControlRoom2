@@ -9,6 +9,7 @@ import NotificationBell from '@/Components/Common/NotificationBell';
 import QuickRequisitionButton from '@/Components/Requisitions/QuickRequisitionButton';
 import QuickBudgetButton from '@/Components/Budgets/QuickBudgetButton';
 import FloatingNavButton from '@/Components/FloatingNavButton';
+import { useRealtimeNotifications } from '@/Hooks/useRealtimeNotifications';
 
 export default function Authenticated({
     user,
@@ -20,6 +21,12 @@ export default function Authenticated({
     const roles = (((pageUser as any)?.roles ?? []) as any[]).map(String);
     const isAdminUser = roles.includes('admin') || roles.includes('super_admin');
 
+    // Initialize real-time notifications for messages and QR scans
+    useRealtimeNotifications({
+        userId: pageUser?.id,
+        userRoles: roles,
+    });
+
     const profileHref = (() => {
         try {
             const p = window.location.pathname;
@@ -29,6 +36,7 @@ export default function Authenticated({
             if (p.startsWith('/admin/business-dev')) return route('admin.business-dev.profile');
             if (p.startsWith('/admin')) return route('admin.profile');
             if (p.startsWith('/control-room')) return route('control-room.profile');
+            if (p.startsWith('/operations')) return route('operations.profile');
             if (p.startsWith('/finance')) return route('finance.profile') as unknown as string;
             if (p.startsWith('/hr')) return route('hr.profile');
             if (p.startsWith('/assets')) return route('assets.profile');

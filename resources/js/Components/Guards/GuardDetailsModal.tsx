@@ -15,6 +15,7 @@ interface GuardDetailsModalProps {
   onEdit?: () => void;
   onAssign?: () => void;
   scope?: 'admin' | 'superadmin' | 'control-room' | 'hr';
+  onComplianceUpdate?: (guardId: number, data: { fingerprint_registered?: boolean; uniform_issued?: boolean; equipment_issued?: string[] }) => void;
 }
 
 interface GuardDetails {
@@ -112,6 +113,11 @@ interface GuardDetails {
   is_profile_complete?: boolean;
   profile_missing_fields?: string[];
   notes?: string;
+  
+  // Compliance
+  fingerprint_registered?: boolean;
+  uniform_issued?: boolean;
+  equipment_issued?: string[];
 }
 
 export default function GuardDetailsModal({
@@ -122,8 +128,44 @@ export default function GuardDetailsModal({
   onEdit,
   onAssign,
   scope = 'admin',
+  onComplianceUpdate,
 }: GuardDetailsModalProps) {
   const [activeTab, setActiveTab] = React.useState('overview');
+  const [complianceLoading, setComplianceLoading] = React.useState<Record<string, boolean>>({});
+  
+  // Equipment checklist options
+  const equipmentOptions = [
+    'Boots',
+    'Belt',
+    'Cap/Hat',
+    'Whistle',
+    'Flashlight',
+    'Radio',
+    'Baton',
+    'Pepper Spray',
+    'Handcuffs',
+    'Vest',
+  ];
+  
+  const handleComplianceToggle = (field: 'fingerprint_registered' | 'uniform_issued', value: boolean) => {
+    if (!guard || !onComplianceUpdate) return;
+    const key = `${field}_${guard.id}`;
+    setComplianceLoading(prev => ({ ...prev, [key]: true }));
+    onComplianceUpdate(guard.id, { [field]: value });
+    setTimeout(() => setComplianceLoading(prev => ({ ...prev, [key]: false })), 500);
+  };
+  
+  const handleEquipmentToggle = (item: string, checked: boolean) => {
+    if (!guard || !onComplianceUpdate) return;
+    const currentEquipment = guard.equipment_issued || [];
+    const newEquipment = checked
+      ? [...currentEquipment, item]
+      : currentEquipment.filter(e => e !== item);
+    const key = `equipment_${guard.id}`;
+    setComplianceLoading(prev => ({ ...prev, [key]: true }));
+    onComplianceUpdate(guard.id, { equipment_issued: newEquipment });
+    setTimeout(() => setComplianceLoading(prev => ({ ...prev, [key]: false })), 500);
+  };
 
   const getStatusColor = (status?: string) => {
     switch (status) {
@@ -424,6 +466,98 @@ export default function GuardDetailsModal({
                   <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{guard.notes}</p>
                 </Card>
               )}
+
+              {/* Compliance Checklist */}
+              <Card className="p-4">
+                <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                  <IconMapper name="ClipboardCheck" size={16} />
+                  Compliance Checklist
+                </h3>
+                <div className="space-y-3">
+                  {/* Fingerprint Registration */}
+                  <label className="flex items-center justify-between p-2 sm:p-3 bg-gray-50 dark:bg-gray-800 rounded-lg cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                    <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                      <IconMapper 
+                        name={guard.fingerprint_registered ? "Fingerprint" : "Fingerprint"} 
+                        size={18} 
+                        className={guard.fingerprint_registered ? "text-green-600 dark:text-green-400" : "text-gray-400"} 
+                      />
+                      <span className="text-xs sm:text-sm text-gray-700 dark:text-gray-300">Fingerprint Registered</span>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      {complianceLoading[`fingerprint_registered_${guard.id}`] && (
+                        <IconMapper name="Loader2" size={14} className="animate-spin text-gray-400" />
+                      )}
+                      <input
+                        type="checkbox"
+                        checked={guard.fingerprint_registered || false}
+                        onChange={(e) => handleComplianceToggle('fingerprint_registered', e.target.checked)}
+                        disabled={!onComplianceUpdate || complianceLoading[`fingerprint_registered_${guard.id}`]}
+                        className="w-4 h-4 sm:w-5 sm:h-5 rounded border-gray-300 dark:border-gray-600 text-red-600 focus:ring-red-500 disabled:opacity-50 touch-target-min"
+                      />
+                    </div>
+                  </label>
+
+                  {/* Uniform Issued */}
+                  <label className="flex items-center justify-between p-2 sm:p-3 bg-gray-50 dark:bg-gray-800 rounded-lg cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                    <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                      <IconMapper 
+                        name={guard.uniform_issued ? "Shirt" : "Shirt"} 
+                        size={18} 
+                        className={guard.uniform_issued ? "text-green-600 dark:text-green-400" : "text-gray-400"} 
+                      />
+                      <span className="text-xs sm:text-sm text-gray-700 dark:text-gray-300">Uniform Issued</span>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      {complianceLoading[`uniform_issued_${guard.id}`] && (
+                        <IconMapper name="Loader2" size={14} className="animate-spin text-gray-400" />
+                      )}
+                      <input
+                        type="checkbox"
+                        checked={guard.uniform_issued || false}
+                        onChange={(e) => handleComplianceToggle('uniform_issued', e.target.checked)}
+                        disabled={!onComplianceUpdate || complianceLoading[`uniform_issued_${guard.id}`]}
+                        className="w-4 h-4 sm:w-5 sm:h-5 rounded border-gray-300 dark:border-gray-600 text-red-600 focus:ring-red-500 disabled:opacity-50 touch-target-min"
+                      />
+                    </div>
+                  </label>
+
+                  {/* Equipment Issued */}
+                  <div className="p-2 sm:p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <IconMapper name="Briefcase" size={18} className="text-gray-400" />
+                      <span className="text-xs sm:text-sm text-gray-700 dark:text-gray-300">Equipment Issued</span>
+                      {complianceLoading[`equipment_${guard.id}`] && (
+                        <IconMapper name="Loader2" size={14} className="animate-spin text-gray-400" />
+                      )}
+                    </div>
+                    <div className="grid grid-cols-2 gap-1 sm:gap-2">
+                      {equipmentOptions.map((item) => {
+                        const isChecked = (guard.equipment_issued || []).includes(item);
+                        return (
+                          <label 
+                            key={item} 
+                            className={`flex items-center gap-1.5 sm:gap-2 p-1.5 sm:p-2 rounded cursor-pointer transition-colors text-xs sm:text-sm ${
+                              isChecked 
+                                ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' 
+                                : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-600'
+                            } ${!onComplianceUpdate ? 'opacity-50 cursor-not-allowed' : ''}`}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={(e) => handleEquipmentToggle(item, e.target.checked)}
+                              disabled={!onComplianceUpdate || complianceLoading[`equipment_${guard.id}`]}
+                              className="w-3 h-3 sm:w-4 sm:h-4 rounded border-gray-300 dark:border-gray-500 text-red-600 focus:ring-red-500"
+                            />
+                            <span className="truncate">{item}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              </Card>
             </TabsContent>
 
             {/* Personal Info Tab */}

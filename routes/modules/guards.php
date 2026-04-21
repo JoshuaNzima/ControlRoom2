@@ -22,7 +22,7 @@ Route::middleware(['auth'])->group(function () {
     // Supervisor routes (also accessible by sergeants with roaming permissions)
     Route::middleware(['role:supervisor|sergeant'])->prefix('supervisor')->name('supervisor.')->group(function () {
         Route::get('/dashboard', [SupervisorController::class, 'dashboard'])->name('dashboard');
-        Route::get('/me', [\App\Http\Controllers\Profile\ProfileDashboardController::class, 'index'])->name('profile');
+        Route::get('/me', [\App\Http\Controllers\Supervisor\ProfileController::class, 'index'])->name('profile');
         Route::get('/overview', [SupervisorController::class, 'overview'])->name('overview');
         Route::get('/analytics', [SupervisorController::class, 'analytics'])->name('analytics');
         Route::get('/attendance', [SupervisorController::class, 'attendance'])->name('attendance');

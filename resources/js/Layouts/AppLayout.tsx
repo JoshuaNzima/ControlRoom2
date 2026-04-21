@@ -32,6 +32,7 @@ export default function AppLayout({ children, title, weeklyTasks }: Props) {
       if (p.startsWith('/admin/business-dev')) return route('admin.business-dev.profile');
       if (p.startsWith('/admin')) return route('admin.profile');
       if (p.startsWith('/control-room')) return route('control-room.profile');
+      if (p.startsWith('/operations')) return route('operations.profile');
       if (p.startsWith('/finance')) return route('finance.profile') as unknown as string;
       if (p.startsWith('/hr')) return route('hr.profile');
       if (p.startsWith('/assets')) return route('assets.profile');

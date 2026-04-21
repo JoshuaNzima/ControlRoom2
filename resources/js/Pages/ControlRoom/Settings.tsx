@@ -4,6 +4,7 @@ import ControlRoomLayout from '@/Layouts/ControlRoomLayout';
 import { Card, CardContent, CardHeader } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import { Badge } from '@/Components/ui/badge';
+import PushNotificationSettings from '@/Components/Common/PushNotificationSettings';
 import { User } from '@/types';
 
 interface SettingsProps {
@@ -71,6 +72,9 @@ const Settings = ({ auth, settings }: SettingsProps) => {
       )}
 
       <div className="space-y-6">
+        {/* Push Notifications */}
+        <PushNotificationSettings />
+
         {/* Settings Overview */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card className="dark:bg-gray-800 dark:border-gray-700">

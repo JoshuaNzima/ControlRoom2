@@ -209,6 +209,17 @@ interface Props {
   modules?: { name: string; display_name?: string; is_active?: boolean; color?: string; icon?: string }[];
   systemHealth?: { database?: string; cache?: string; queue?: string; storage?: number };
   approvalsPending?: number;
+  recentQrScans?: {
+    id: number;
+    supervisor_name: string;
+    site_name: string;
+    client_name?: string;
+    checkpoint_name?: string;
+    scanned_at: string;
+    location_quality?: string;
+    location_verified?: boolean;
+    gps_distance?: number | null;
+  }[];
 }
 
 // KPI Section Component
@@ -291,6 +302,7 @@ export default function Dashboard({
   modules = [],
   systemHealth = {},
   approvalsPending = 0,
+  recentQrScans = [],
 }: Props) {
   const { counters } = useCounters();
   const [scannerOpen, setScannerOpen] = useState(false);
@@ -1042,8 +1054,8 @@ export default function Dashboard({
                   <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{kpis?.control_room?.resolved_incidents || 0}</div>
                 </div>
                 <div className="p-4 rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950/40">
-                  <div className="text-xs text-gray-500 dark:text-gray-400">Dispatches</div>
-                  <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">{kpis?.control_room?.dispatches_today || 0}</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">Today Scans</div>
+                  <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">{kpis?.control_room?.today_scans || 0}</div>
                 </div>
               </div>
 
@@ -1082,6 +1094,75 @@ export default function Dashboard({
                     </div>
                   </div>
                 </div>
+              </div>
+
+              {/* QR Scan History */}
+              <div className="mt-6 p-4 sm:p-6 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900/50">
+                <div className="flex items-center justify-between mb-4">
+                  <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                    <IconMapper name="ScanLine" size={18} />
+                    QR Scan History
+                  </h4>
+                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                    {recentQrScans.length} recent scans
+                  </span>
+                </div>
+                {recentQrScans.length === 0 ? (
+                  <div className="text-center py-6 text-sm text-gray-500 dark:text-gray-400">
+                    No QR scans recorded today
+                  </div>
+                ) : (
+                  <div className="space-y-2 max-h-64 overflow-y-auto">
+                    {recentQrScans.map((scan) => (
+                      <div
+                        key={scan.id}
+                        className="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+                              {scan.supervisor_name}
+                            </span>
+                            {scan.location_verified && (
+                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">
+                                GPS OK
+                              </span>
+                            )}
+                            {!scan.location_verified && scan.gps_distance !== null && (
+                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
+                                GPS {scan.gps_distance}m
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                            {scan.site_name}
+                            {scan.checkpoint_name && (
+                              <span className="text-gray-400 dark:text-gray-500"> • {scan.checkpoint_name}</span>
+                            )}
+                            {scan.client_name && (
+                              <span className="text-gray-400 dark:text-gray-500"> ({scan.client_name})</span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="text-right ml-4">
+                          <div className="text-xs text-gray-500 dark:text-gray-400">
+                            {new Date(scan.scanned_at).toLocaleTimeString('en-US', {
+                              hour: '2-digit',
+                              minute: '2-digit',
+                              hour12: false,
+                            })}
+                          </div>
+                          <div className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5">
+                            {new Date(scan.scanned_at).toLocaleDateString('en-US', {
+                              month: 'short',
+                              day: 'numeric',
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </Card>
           </div>

@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Head, router } from '@inertiajs/react';
 import HRLayout from '@/Layouts/HRLayout';
+import PushNotificationSettings from '@/Components/Common/PushNotificationSettings';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import { Input } from '@/Components/ui/input';
@@ -334,6 +335,9 @@ export default function IncentiveSettings({ types, settings, stats }: PageProps)
       <Head title="Incentive Settings" />
 
       <div className="w-full px-4 py-6 space-y-6">
+        {/* Push Notifications */}
+        <PushNotificationSettings />
+
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>

@@ -42,15 +42,55 @@ export default function HREmployees() {
   const [currentGuard, setCurrentGuard] = useState<any | null>(null);
   const [selectedGuardDetails, setSelectedGuardDetails] = useState<any | null>(null);
 
+  // Loading states for actions
+  const [loading, setLoading] = useState<Record<string, boolean>>({});
+  const [error, setError] = useState<string>('');
+
+  const setLoadingState = (key: string, value: boolean) => {
+    setLoading(prev => ({ ...prev, [key]: value }));
+  };
+
   const openDetails = async (guardId: number) => {
+    setLoadingState(`details_${guardId}`, true);
+    setError('');
     try {
       const res = await fetch(route('admin.guards.json', guardId), {
         headers: { 'Accept': 'application/json' },
         credentials: 'same-origin',
       });
+      if (!res.ok) throw new Error('Failed to load details');
       const data = await res.json();
       setSelectedGuardDetails(data);
-    } catch {}
+    } catch {
+      setError('Failed to load guard details');
+    } finally {
+      setLoadingState(`details_${guardId}`, false);
+    }
+  };
+
+  const handleComplianceUpdate = async (guardId: number, data: { fingerprint_registered?: boolean; uniform_issued?: boolean; equipment_issued?: string[] }) => {
+    try {
+      const res = await fetch(route('admin.guards.compliance', guardId), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '',
+        },
+        credentials: 'same-origin',
+        body: JSON.stringify(data),
+      });
+      const result = await res.json();
+      if (result.success && selectedGuardDetails) {
+        setSelectedGuardDetails({
+          ...selectedGuardDetails,
+          ...result.guard,
+        });
+      }
+    } catch (error) {
+      console.error('Failed to update compliance:', error);
+      setError('Failed to update compliance');
+    }
   };
 
   // Confirm & Reason Modals
@@ -81,22 +121,56 @@ export default function HREmployees() {
 
   const doSuspend = (guard: any) => {
     openConfirm('Suspend guard', `Suspend ${guard.name}?`, () => {
-      router.post(route('hr.guards.suspend', { guard: guard.id }), {}, { preserveScroll: true });
+      setLoadingState(`suspend_${guard.id}`, true);
+      setError('');
+      router.post(route('hr.guards.suspend', { guard: guard.id }), {}, {
+        preserveScroll: true,
+        onFinish: () => setLoadingState(`suspend_${guard.id}`, false),
+        onError: (errs: any) => setError(Object.values(errs)[0] as string || 'Failed to suspend'),
+      });
     });
   };
   const doReinstate = (guard: any) => {
     openConfirm('Reinstate guard', `Reinstate ${guard.name}?`, () => {
-      router.post(route('hr.guards.reinstate', { guard: guard.id }), {}, { preserveScroll: true });
+      setLoadingState(`reinstate_${guard.id}`, true);
+      setError('');
+      router.post(route('hr.guards.reinstate', { guard: guard.id }), {}, {
+        preserveScroll: true,
+        onFinish: () => setLoadingState(`reinstate_${guard.id}`, false),
+        onError: (errs: any) => setError(Object.values(errs)[0] as string || 'Failed to reinstate'),
+      });
     });
   };
   const doDismiss = (guard: any) => {
     openReason('Dismiss Guard', `Provide a reason (optional) for dismissing ${guard.name}`, (reason: string) => {
-      router.post(route('hr.guards.dismiss', { guard: guard.id }), { reason }, { preserveScroll: true });
+      setLoadingState(`dismiss_${guard.id}`, true);
+      setError('');
+      router.post(route('hr.guards.dismiss', { guard: guard.id }), { reason }, {
+        preserveScroll: true,
+        onFinish: () => setLoadingState(`dismiss_${guard.id}`, false),
+        onError: (errs: any) => setError(Object.values(errs)[0] as string || 'Failed to dismiss'),
+      });
     });
   };
   const doAbscond = (guard: any) => {
     openReason('Mark as Absconded', `Provide a reason (optional) for marking ${guard.name} as absconded`, (reason: string) => {
-      router.post(route('hr.guards.abscond', { guard: guard.id }), { reason }, { preserveScroll: true });
+      setLoadingState(`abscond_${guard.id}`, true);
+      setError('');
+      router.post(route('hr.guards.abscond', { guard: guard.id }), { reason }, {
+        preserveScroll: true,
+        onFinish: () => setLoadingState(`abscond_${guard.id}`, false),
+        onError: (errs: any) => setError(Object.values(errs)[0] as string || 'Failed to mark absconded'),
+      });
+    });
+  };
+
+  const handleSetRole = (guard: any) => {
+    setLoadingState(`setrole_${guard.id}`, true);
+    setError('');
+    router.post(route('hr.guards.set-role', { guard: guard.id }), { employee_role: (guard.employee_role === 'driver' ? 'guard' : 'driver') }, {
+      preserveScroll: true,
+      onFinish: () => setLoadingState(`setrole_${guard.id}`, false),
+      onError: (errs: any) => setError(Object.values(errs)[0] as string || 'Failed to set role'),
     });
   };
 
@@ -224,38 +298,46 @@ export default function HREmployees() {
                           Promote
                         </button>
                         <button
-                          onClick={() => router.post(route('hr.guards.set-role', { guard: g.id }), { employee_role: (g.employee_role === 'driver' ? 'guard' : 'driver') }, { preserveScroll: true })}
-                          className="px-3 py-1 rounded bg-blue-600 hover:bg-blue-700 text-white"
+                          onClick={() => handleSetRole(g)}
+                          disabled={loading[`setrole_${g.id}`]}
+                          className="px-3 py-1 rounded bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-60"
                         >
-                          {g.employee_role === 'driver' ? 'Set as Guard' : 'Set as Driver'}
+                          {loading[`setrole_${g.id}`] ? '...' : (g.employee_role === 'driver' ? 'Set as Guard' : 'Set as Driver')}
                         </button>
                         {g.status === 'active' ? (
                           <button
                             onClick={() => doSuspend(g)}
-                            className="px-3 py-1 rounded bg-yellow-600 hover:bg-yellow-700 text-white"
+                            disabled={loading[`suspend_${g.id}`]}
+                            className="px-3 py-1 rounded bg-yellow-600 hover:bg-yellow-700 text-white disabled:opacity-60"
                           >
-                            Suspend
+                            {loading[`suspend_${g.id}`] ? '...' : 'Suspend'}
                           </button>
                         ) : (
                           <button
                             onClick={() => doReinstate(g)}
-                            className="px-3 py-1 rounded bg-emerald-600 hover:bg-emerald-700 text-white"
+                            disabled={loading[`reinstate_${g.id}`]}
+                            className="px-3 py-1 rounded bg-emerald-600 hover:bg-emerald-700 text-white disabled:opacity-60"
                           >
-                            Reinstate
+                            {loading[`reinstate_${g.id}`] ? '...' : 'Reinstate'}
                           </button>
                         )}
                         <button
                           onClick={() => doDismiss(g)}
-                          className="px-3 py-1 rounded bg-rose-600 hover:bg-rose-700 text-white"
+                          disabled={loading[`dismiss_${g.id}`]}
+                          className="px-3 py-1 rounded bg-rose-600 hover:bg-rose-700 text-white disabled:opacity-60"
                         >
-                          Dismiss
+                          {loading[`dismiss_${g.id}`] ? '...' : 'Dismiss'}
                         </button>
                         <button
                           onClick={() => doAbscond(g)}
-                          className="px-3 py-1 rounded bg-red-700 hover:bg-red-800 text-white"
+                          disabled={loading[`abscond_${g.id}`]}
+                          className="px-3 py-1 rounded bg-red-700 hover:bg-red-800 text-white disabled:opacity-60"
                         >
-                          Abscond
+                          {loading[`abscond_${g.id}`] ? '...' : 'Abscond'}
                         </button>
+                        {error && (
+                          <span className="text-xs text-red-600 dark:text-red-400">{error}</span>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -297,6 +379,7 @@ export default function HREmployees() {
         onClose={() => setSelectedGuardDetails(null)}
         guard={selectedGuardDetails}
         scope="hr"
+        onComplianceUpdate={handleComplianceUpdate}
       />
       {/* Confirm & Reason Modals */}
       <ConfirmModal

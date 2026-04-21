@@ -91,8 +91,18 @@ export default function PettyCashIndex({ entries, balance, stats, category_break
         notes: '',
     });
 
+    // Loading states for actions
+    const [loading, setLoading] = useState<Record<string, boolean>>({});
+    const [error, setError] = useState<string>('');
+
+    const setLoadingState = (key: string, value: boolean) => {
+        setLoading(prev => ({ ...prev, [key]: value }));
+    };
+
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+        setLoadingState('submit', true);
+        setError('');
         router.post(route('finance.petty-cash.store'), formData, {
             onSuccess: () => {
                 setIsAddOpen(false);
@@ -107,24 +117,41 @@ export default function PettyCashIndex({ entries, balance, stats, category_break
                     notes: '',
                 });
             },
+            onFinish: () => setLoadingState('submit', false),
+            onError: (errs: any) => setError(Object.values(errs)[0] as string || 'Failed to save entry'),
         });
     };
 
     const handleApprove = (id: number) => {
         if (confirm('Approve this entry?')) {
-            router.post(route('finance.petty-cash.approve', id));
+            setLoadingState(`approve_${id}`, true);
+            setError('');
+            router.post(route('finance.petty-cash.approve', id), {}, {
+                onFinish: () => setLoadingState(`approve_${id}`, false),
+                onError: (errs: any) => setError(Object.values(errs)[0] as string || 'Failed to approve'),
+            });
         }
     };
 
     const handleReject = (id: number) => {
         if (confirm('Reject this entry?')) {
-            router.post(route('finance.petty-cash.reject', id));
+            setLoadingState(`reject_${id}`, true);
+            setError('');
+            router.post(route('finance.petty-cash.reject', id), {}, {
+                onFinish: () => setLoadingState(`reject_${id}`, false),
+                onError: (errs: any) => setError(Object.values(errs)[0] as string || 'Failed to reject'),
+            });
         }
     };
 
     const handleDelete = (id: number) => {
         if (confirm('Delete this entry?')) {
-            router.delete(route('finance.petty-cash.destroy', id));
+            setLoadingState(`delete_${id}`, true);
+            setError('');
+            router.delete(route('finance.petty-cash.destroy', id), {
+                onFinish: () => setLoadingState(`delete_${id}`, false),
+                onError: (errs: any) => setError(Object.values(errs)[0] as string || 'Failed to delete'),
+            });
         }
     };
 
@@ -275,12 +302,15 @@ export default function PettyCashIndex({ entries, balance, stats, category_break
                                     className="bg-muted border-border text-foreground"
                                 />
                             </div>
+                            {error && (
+                                <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+                            )}
                             <div className="flex gap-3 pt-2">
-                                <Button type="button" variant="outline" onClick={() => setIsAddOpen(false)} className="flex-1">
+                                <Button type="button" variant="outline" onClick={() => setIsAddOpen(false)} disabled={loading.submit} className="flex-1">
                                     Cancel
                                 </Button>
-                                <Button type="submit" className="flex-1 bg-coin-600 hover:bg-coin-700">
-                                    Save Entry
+                                <Button type="submit" disabled={loading.submit} className="flex-1 bg-coin-600 hover:bg-coin-700">
+                                    {loading.submit ? 'Saving...' : 'Save Entry'}
                                 </Button>
                             </div>
                         </form>
@@ -433,17 +463,29 @@ export default function PettyCashIndex({ entries, balance, stats, category_break
                                                         size="sm"
                                                         variant="outline"
                                                         onClick={() => handleApprove(entry.id)}
+                                                        disabled={loading[`approve_${entry.id}`]}
                                                         className="border-green-500/30 text-green-600 dark:text-green-400 hover:bg-green-500/10"
                                                     >
-                                                        <CheckCircle className="w-4 h-4" />
+                                                        {loading[`approve_${entry.id}`] ? (
+                                                            <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                                                            </svg>
+                                                        ) : <CheckCircle className="w-4 h-4" />}
                                                     </Button>
                                                     <Button
                                                         size="sm"
                                                         variant="outline"
                                                         onClick={() => handleReject(entry.id)}
+                                                        disabled={loading[`reject_${entry.id}`]}
                                                         className="border-red-500/30 text-red-600 dark:text-red-400 hover:bg-red-500/10"
                                                     >
-                                                        <XCircle className="w-4 h-4" />
+                                                        {loading[`reject_${entry.id}`] ? (
+                                                            <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                                                            </svg>
+                                                        ) : <XCircle className="w-4 h-4" />}
                                                     </Button>
                                                 </>
                                             )}
@@ -452,9 +494,15 @@ export default function PettyCashIndex({ entries, balance, stats, category_break
                                                     size="sm"
                                                     variant="outline"
                                                     onClick={() => handleDelete(entry.id)}
+                                                    disabled={loading[`delete_${entry.id}`]}
                                                     className="border-border text-muted-foreground hover:bg-muted"
                                                 >
-                                                    <Trash2 className="w-4 h-4" />
+                                                    {loading[`delete_${entry.id}`] ? (
+                                                        <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                                                        </svg>
+                                                    ) : <Trash2 className="w-4 h-4" />}
                                                 </Button>
                                             )}
                                         </div>
@@ -534,25 +582,43 @@ export default function PettyCashIndex({ entries, balance, stats, category_break
                                                                 size="sm"
                                                                 variant="outline"
                                                                 onClick={() => handleApprove(entry.id)}
+                                                                disabled={loading[`approve_${entry.id}`]}
                                                                 className="border-green-500/30 text-green-600 dark:text-green-400 hover:bg-green-500/10"
                                                             >
-                                                                <CheckCircle className="w-4 h-4" />
+                                                                {loading[`approve_${entry.id}`] ? (
+                                                                    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                                                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                                                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                                                                    </svg>
+                                                                ) : <CheckCircle className="w-4 h-4" />}
                                                             </Button>
                                                             <Button
                                                                 size="sm"
                                                                 variant="outline"
                                                                 onClick={() => handleReject(entry.id)}
+                                                                disabled={loading[`reject_${entry.id}`]}
                                                                 className="border-red-500/30 text-red-600 dark:text-red-400 hover:bg-red-500/10"
                                                             >
-                                                                <XCircle className="w-4 h-4" />
+                                                                {loading[`reject_${entry.id}`] ? (
+                                                                    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                                                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                                                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                                                                    </svg>
+                                                                ) : <XCircle className="w-4 h-4" />}
                                                             </Button>
                                                             <Button
                                                                 size="sm"
                                                                 variant="outline"
                                                                 onClick={() => handleDelete(entry.id)}
+                                                                disabled={loading[`delete_${entry.id}`]}
                                                                 className="border-border text-muted-foreground hover:bg-muted"
                                                             >
-                                                                <Trash2 className="w-4 h-4" />
+                                                                {loading[`delete_${entry.id}`] ? (
+                                                                    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                                                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                                                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                                                                    </svg>
+                                                                ) : <Trash2 className="w-4 h-4" />}
                                                             </Button>
                                                         </>
                                                     )}

@@ -40,11 +40,35 @@ class ControlRoomDashboardController extends Controller
 
         $user = auth()->user();
 
+        // Operations Manager gets elevated dashboard with full QR analytics
+        if ($user && $user->hasRole('operations_manager')) {
+            return Inertia::render('ControlRoom/OperationsManagerDashboard', array_merge($basePayload, [
+                'escalatedIncidents' => $this->getEscalatedIncidents(),
+                'escalatedDowns' => $this->getEscalatedDowns(),
+                'personnel' => $this->getPersonnelSummary(),
+                'sites' => $this->getSitesData(),
+                'deployments' => $this->getDeploymentsData(),
+                'qrAnalytics' => $this->getQrAnalytics(),
+                'stats' => array_merge($stats, [
+                    'understaffedSites' => $this->getUnderstaffedSitesCount(),
+                    'pendingReplacements' => $this->getPendingReplacementsCount(),
+                ]),
+            ]));
+        }
+
+        // Operations Officer gets field-focused dashboard with QR summary
         if ($user && $user->hasRole('operations_officer')) {
             return Inertia::render('ControlRoom/OperationsDashboard', array_merge($basePayload, [
                 'escalatedIncidents' => $this->getEscalatedIncidents(),
                 'escalatedDowns' => $this->getEscalatedDowns(),
                 'personnel' => $this->getPersonnelSummary(),
+                'sites' => $this->getSitesData(),
+                'deployments' => $this->getDeploymentsData(),
+                'qrScanSummary' => $this->getQrScanSummary(),
+                'stats' => array_merge($stats, [
+                    'understaffedSites' => $this->getUnderstaffedSitesCount(),
+                    'pendingReplacements' => $this->getPendingReplacementsCount(),
+                ]),
             ]));
         }
 
@@ -362,11 +386,29 @@ class ControlRoomDashboardController extends Controller
     private function getPersonnelSummary(): array
     {
         try {
+            $today = Carbon::today();
+
             $guardsTotal = Guard::count();
             $guardsActive = Guard::where('status', 'active')->count();
             $guardsOnDuty = Guard::onDuty()->count();
+            $guardsUnassigned = Guard::where('status', 'active')
+                ->whereDoesntHave('assignments', function ($q) use ($today) {
+                    $q->where('is_active', true)
+                        ->where('start_date', '<=', $today)
+                        ->where(function ($q2) use ($today) {
+                            $q2->whereNull('end_date')->orWhere('end_date', '>=', $today);
+                        });
+                })
+                ->count();
 
             $supervisorsTotal = User::role('supervisor')->count();
+            $supervisorsActiveToday = Attendance::whereDate('date', $today)
+                ->whereHas('supervisor', function ($q) {
+                    $q->role('supervisor');
+                })
+                ->distinct('supervisor_id')
+                ->count('supervisor_id');
+
             $zoneCommandersTotal = User::role('zone_commander')->count();
 
             $zonesTotal = Zone::count();
@@ -377,9 +419,11 @@ class ControlRoomDashboardController extends Controller
                     'total' => $guardsTotal,
                     'active' => $guardsActive,
                     'on_duty' => $guardsOnDuty,
+                    'unassigned' => $guardsUnassigned,
                 ],
                 'supervisors' => [
                     'total' => $supervisorsTotal,
+                    'active_today' => $supervisorsActiveToday,
                 ],
                 'zone_commanders' => [
                     'total' => $zoneCommandersTotal,
@@ -390,9 +434,418 @@ class ControlRoomDashboardController extends Controller
         } catch (\Throwable $e) {
             Log::warning('Failed to load personnel summary: ' . $e->getMessage());
             return [
-                'guards' => ['total' => 0, 'active' => 0, 'on_duty' => 0],
-                'supervisors' => ['total' => 0],
+                'guards' => ['total' => 0, 'active' => 0, 'on_duty' => 0, 'unassigned' => 0],
+                'supervisors' => ['total' => 0, 'active_today' => 0],
                 'zone_commanders' => ['total' => 0, 'zones_with_commander' => 0, 'zones_total' => 0],
+            ];
+        }
+    }
+
+    /**
+     * Get detailed site data for field operations
+     */
+    private function getSitesData(): array
+    {
+        try {
+            $today = Carbon::today();
+
+            return ClientSite::with(['client', 'zone', 'guardAssignments'])
+                ->where('status', 'active')
+                ->get()
+                ->map(function ($site) use ($today) {
+                    $guardCount = $site->guardAssignments
+                        ->where('is_active', true)
+                        ->where('start_date', '<=', $today)
+                        ->where(function ($assignment) use ($today) {
+                            return $assignment->end_date === null || $assignment->end_date >= $today;
+                        })
+                        ->count();
+
+                    $requiredGuards = $site->required_guard_count ?? 1;
+                    $attendanceToday = Attendance::where('client_site_id', $site->id)
+                        ->whereDate('date', $today)
+                        ->count();
+
+                    // Determine site status
+                    $status = 'active';
+                    if ($guardCount < $requiredGuards) {
+                        $status = 'understaffed';
+                    }
+
+                    // Get last incident
+                    $lastIncident = Down::where('client_site_id', $site->id)
+                        ->orderByDesc('created_at')
+                        ->first();
+
+                    return [
+                        'id' => $site->id,
+                        'name' => $site->name,
+                        'client_name' => $site->client?->name ?? 'Unknown',
+                        'zone_name' => $site->zone?->name ?? 'No Zone',
+                        'guard_count' => $guardCount,
+                        'required_guards' => $requiredGuards,
+                        'attendance_today' => $attendanceToday,
+                        'status' => $status,
+                        'last_incident' => $lastIncident?->created_at?->toIso8601String(),
+                    ];
+                })
+                ->toArray();
+        } catch (\Throwable $e) {
+            Log::warning('Failed to load sites data: ' . $e->getMessage());
+            return [];
+        }
+    }
+
+    /**
+     * Get deployment data by zone
+     */
+    private function getDeploymentsData(): array
+    {
+        try {
+            $today = Carbon::today();
+
+            return Zone::with(['sites', 'sites.guardAssignments'])
+                ->get()
+                ->map(function ($zone) use ($today) {
+                    $totalSites = $zone->sites->count();
+                    $coveredSites = $zone->sites->filter(function ($site) use ($today) {
+                        return $site->guardAssignments
+                            ->where('is_active', true)
+                            ->where('start_date', '<=', $today)
+                            ->where(function ($assignment) use ($today) {
+                                return $assignment->end_date === null || $assignment->end_date >= $today;
+                            })
+                            ->isNotEmpty();
+                    })->count();
+
+                    $totalGuards = Guard::where('zone_id', $zone->id)->count();
+                    $activeGuards = Guard::where('zone_id', $zone->id)
+                        ->where('status', 'active')
+                        ->count();
+
+                    $coveragePercentage = $totalSites > 0 ? round(($coveredSites / $totalSites) * 100, 1) : 0;
+
+                    return [
+                        'zone_name' => $zone->name,
+                        'total_sites' => $totalSites,
+                        'covered_sites' => $coveredSites,
+                        'total_guards' => $totalGuards,
+                        'active_guards' => $activeGuards,
+                        'coverage_percentage' => $coveragePercentage,
+                    ];
+                })
+                ->toArray();
+        } catch (\Throwable $e) {
+            Log::warning('Failed to load deployments data: ' . $e->getMessage());
+            return [];
+        }
+    }
+
+    /**
+     * Count understaffed sites
+     */
+    private function getUnderstaffedSitesCount(): int
+    {
+        try {
+            $today = Carbon::today();
+
+            return ClientSite::where('status', 'active')
+                ->whereHas('guardAssignments', function ($query) use ($today) {
+                    $query->where('is_active', true)
+                        ->where('start_date', '<=', $today)
+                        ->where(function ($q) use ($today) {
+                            $q->whereNull('end_date')->orWhere('end_date', '>=', $today);
+                        });
+                }, '<', 1)
+                ->orWhereDoesntHave('guardAssignments')
+                ->count();
+        } catch (\Throwable $e) {
+            Log::warning('Failed to count understaffed sites: ' . $e->getMessage());
+            return 0;
+        }
+    }
+
+    /**
+     * Count guards needing replacement (downs, absences, etc.)
+     */
+    private function getPendingReplacementsCount(): int
+    {
+        try {
+            $today = Carbon::today();
+
+            // Count active downs that need guard replacement
+            return Down::whereIn('status', ['open', 'escalated'])
+                ->whereDate('created_at', '>=', $today->copy()->subDays(7))
+                ->count();
+        } catch (\Throwable $e) {
+            Log::warning('Failed to count pending replacements: ' . $e->getMessage());
+            return 0;
+        }
+    }
+
+    /**
+     * Get QR scan summary for Operations Officer dashboard
+     */
+    private function getQrScanSummary(): array
+    {
+        try {
+            $today = Carbon::today();
+
+            // Get today's scans from checkpoint_scans via ScanTag
+            $todayScans = ScanTag::with(['checkpointScan.supervisor'])
+                ->whereDate('created_at', $today)
+                ->orderByDesc('created_at')
+                ->get();
+
+            // Count successful vs failed based on location_verified
+            $successful = $todayScans->filter(function ($scan) {
+                return ($scan->tags['location_verified'] ?? false) || ($scan->checkpointScan?->location_verified ?? false);
+            })->count();
+            $failed = $todayScans->count() - $successful;
+
+            // Group by site from tags
+            $bySite = $todayScans
+                ->groupBy(function ($scan) {
+                    return $scan->tags['site_name'] ?? 'Unknown Site';
+                })
+                ->map(function ($scans, $siteName) {
+                    return [
+                        'site_name' => $siteName,
+                        'scan_count' => $scans->count(),
+                        'last_scan' => $scans->first()?->created_at?->toIso8601String(),
+                    ];
+                })
+                ->sortByDesc('scan_count')
+                ->values()
+                ->toArray();
+
+            // Group by hour
+            $byHour = collect(range(0, 23))->map(function ($hour) use ($todayScans) {
+                $count = $todayScans->filter(function ($scan) use ($hour) {
+                    return $scan->created_at->hour === $hour;
+                })->count();
+                return [
+                    'hour' => sprintf('%02d:00', $hour),
+                    'count' => $count,
+                ];
+            })->toArray();
+
+            // Recent scans
+            $recentScans = $todayScans->take(20)->map(function ($scan) {
+                $tags = $scan->tags ?? [];
+                return [
+                    'id' => $scan->id,
+                    'guard_name' => $tags['guard_name'] 
+                        ?? $tags['supervisor_name'] 
+                        ?? $scan->checkpointScan?->supervisor?->name 
+                        ?? 'Unknown',
+                    'site_name' => $tags['site_name'] ?? 'Unknown',
+                    'type' => $tags['scan_type'] ?? 'check_in',
+                    'status' => ($tags['location_verified'] ?? false) || ($scan->checkpointScan?->location_verified ?? false) ? 'success' : 'failed',
+                    'scanned_at' => $scan->created_at->toIso8601String(),
+                ];
+            })->toArray();
+
+            return [
+                'totalToday' => $todayScans->count(),
+                'successful' => $successful,
+                'failed' => $failed,
+                'bySite' => $bySite,
+                'byHour' => $byHour,
+                'recentScans' => $recentScans,
+            ];
+        } catch (\Throwable $e) {
+            Log::warning('Failed to load QR scan summary: ' . $e->getMessage());
+            return [
+                'totalToday' => 0,
+                'successful' => 0,
+                'failed' => 0,
+                'bySite' => [],
+                'byHour' => [],
+                'recentScans' => [],
+            ];
+        }
+    }
+
+    /**
+     * Get comprehensive QR analytics for Operations Manager dashboard
+     */
+    private function getQrAnalytics(): array
+    {
+        try {
+            $today = Carbon::today();
+            $weekStart = $today->copy()->subDays(6);
+
+            // Today's scans
+            $todayScans = ScanTag::with(['checkpointScan.supervisor'])
+                ->whereDate('created_at', $today)
+                ->get();
+
+            // Determine success based on location_verified in tags or checkpointScan
+            $todaySuccessful = $todayScans->filter(function ($scan) {
+                return ($scan->tags['location_verified'] ?? false) || ($scan->checkpointScan?->location_verified ?? false);
+            })->count();
+            $todayFailed = $todayScans->count() - $todaySuccessful;
+
+            // By type today - extract from tags
+            $byType = $todayScans
+                ->filter(function ($scan) {
+                    return ($scan->tags['location_verified'] ?? false) || ($scan->checkpointScan?->location_verified ?? false);
+                })
+                ->groupBy(function ($scan) {
+                    return $scan->tags['scan_type'] ?? 'check_in';
+                })
+                ->map(function ($scans, $type) {
+                    return [
+                        'type' => $type ?: 'check_in',
+                        'count' => $scans->count(),
+                    ];
+                })
+                ->values()
+                ->toArray();
+
+            // By site today
+            $bySiteToday = $todayScans
+                ->filter(function ($scan) {
+                    return ($scan->tags['location_verified'] ?? false) || ($scan->checkpointScan?->location_verified ?? false);
+                })
+                ->groupBy(function ($scan) {
+                    return $scan->tags['site_name'] ?? 'Unknown Site';
+                })
+                ->map(function ($scans, $siteName) {
+                    return [
+                        'site_name' => $siteName,
+                        'count' => $scans->count(),
+                        'last_scan' => $scans->first()?->created_at?->toIso8601String(),
+                    ];
+                })
+                ->sortByDesc('count')
+                ->values()
+                ->toArray();
+
+            // By hour today
+            $byHourToday = collect(range(0, 23))->map(function ($hour) use ($todayScans) {
+                $count = $todayScans->filter(function ($scan) use ($hour) {
+                    return $scan->created_at->hour === $hour;
+                })->count();
+                return [
+                    'hour' => sprintf('%02d:00', $hour),
+                    'count' => $count,
+                ];
+            })->toArray();
+
+            // Week data - successful scans only
+            $weekScans = ScanTag::with(['checkpointScan.supervisor'])
+                ->whereDate('created_at', '>=', $weekStart)
+                ->get()
+                ->filter(function ($scan) {
+                    return ($scan->tags['location_verified'] ?? false) || ($scan->checkpointScan?->location_verified ?? false);
+                });
+
+            // Daily trend for week
+            $dailyTrend = collect(range(0, 6))->map(function ($dayOffset) use ($today, $weekScans) {
+                $date = $today->copy()->subDays($dayOffset);
+                $count = $weekScans->filter(function ($scan) use ($date) {
+                    return $scan->created_at->toDateString() === $date->toDateString();
+                })->count();
+                return [
+                    'date' => $date->toDateString(),
+                    'count' => $count,
+                ];
+            })->reverse()->values()->toArray();
+
+            // Top guards for week - extract from tags
+            $byGuardWeek = $weekScans
+                ->groupBy(function ($scan) {
+                    return $scan->tags['guard_name'] 
+                        ?? $scan->tags['supervisor_name'] 
+                        ?? $scan->checkpointScan?->supervisor?->name 
+                        ?? 'Unknown';
+                })
+                ->map(function ($scans, $guardName) {
+                    return [
+                        'guard_name' => $guardName,
+                        'scan_count' => $scans->count(),
+                        'site_name' => $scans->first()?->tags['site_name'] ?? 'Unknown',
+                    ];
+                })
+                ->sortByDesc('scan_count')
+                ->take(10)
+                ->values()
+                ->toArray();
+
+            // Issues - count failed scans (not location verified)
+            $failedScans = $todayScans->filter(function ($scan) {
+                return !($scan->tags['location_verified'] ?? false) && !($scan->checkpointScan?->location_verified ?? false);
+            })->count();
+
+            // GPS mismatches from tags
+            $gpsMismatches = $todayScans->filter(function ($scan) {
+                return ($scan->tags['location_quality'] ?? '') === 'poor' 
+                    || ($scan->tags['gps_mismatch'] ?? false);
+            })->count();
+
+            // Duplicate scans (same guard name in tags, same site, within 5 minutes)
+            $duplicateScans = $todayScans
+                ->groupBy(function ($scan) {
+                    $guardName = $scan->tags['guard_name'] ?? $scan->tags['supervisor_name'] ?? 'Unknown';
+                    $siteName = $scan->tags['site_name'] ?? 'Unknown';
+                    $hourMinute = $scan->created_at->format('Y-m-d H:i'); // Group by minute
+                    return $guardName . '|' . $siteName . '|' . $hourMinute;
+                })
+                ->filter(function ($group) {
+                    return $group->count() > 1;
+                })
+                ->count();
+
+            // Suspicious activity (guards with unusual scan patterns)
+            $suspiciousActivity = [];
+            $guardScanCounts = $todayScans
+                ->filter(function ($scan) {
+                    return ($scan->tags['location_verified'] ?? false) || ($scan->checkpointScan?->location_verified ?? false);
+                })
+                ->groupBy(function ($scan) {
+                    return $scan->tags['guard_name'] ?? $scan->tags['supervisor_name'] ?? 'Unknown';
+                });
+
+            foreach ($guardScanCounts as $guardName => $scans) {
+                if ($scans->count() > 20) {
+                    $suspiciousActivity[] = [
+                        'guard_name' => $guardName,
+                        'issue' => 'Excessive scan activity',
+                        'count' => $scans->count(),
+                        'site_name' => $scans->first()?->tags['site_name'] ?? 'Unknown',
+                    ];
+                }
+            }
+
+            return [
+                'today' => [
+                    'total' => $todayScans->count(),
+                    'successful' => $todaySuccessful,
+                    'failed' => $todayFailed,
+                    'bySite' => $bySiteToday,
+                    'byHour' => $byHourToday,
+                    'byType' => $byType,
+                ],
+                'week' => [
+                    'total' => $weekScans->count(),
+                    'dailyTrend' => $dailyTrend,
+                    'byGuard' => $byGuardWeek,
+                ],
+                'issues' => [
+                    'failedScans' => $failedScans,
+                    'gpsMismatches' => $gpsMismatches,
+                    'duplicateScans' => $duplicateScans,
+                    'suspiciousActivity' => $suspiciousActivity,
+                ],
+            ];
+        } catch (\Throwable $e) {
+            Log::warning('Failed to load QR analytics: ' . $e->getMessage());
+            return [
+                'today' => ['total' => 0, 'successful' => 0, 'failed' => 0, 'bySite' => [], 'byHour' => [], 'byType' => []],
+                'week' => ['total' => 0, 'dailyTrend' => [], 'byGuard' => []],
+                'issues' => ['failedScans' => 0, 'gpsMismatches' => 0, 'duplicateScans' => 0, 'suspiciousActivity' => []],
             ];
         }
     }

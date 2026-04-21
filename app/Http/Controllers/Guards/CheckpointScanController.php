@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Guards;
 
 use App\Http\Controllers\Controller;
 use App\Models\Guards\{Checkpoint, CheckpointScan};
+use App\Models\GPSMismatchIncident;
 use App\Events\QRScanned;
 use App\Jobs\TagScanJob;
 use App\Notifications\GenericDbNotification;
@@ -133,6 +134,8 @@ class CheckpointScanController extends Controller
         $scanData = [
             'scan_id' => $scan->id,
             'checkpoint_id' => $checkpoint->id,
+            'checkpoint_name' => $checkpoint->name,
+            'checkpoint_code' => $checkpoint->code,
             'site_id' => $checkpoint->client_site_id,
             'site_name' => $checkpoint->clientSite->name,
             'client_name' => $checkpoint->clientSite->client->name,
@@ -158,6 +161,9 @@ class CheckpointScanController extends Controller
             [
                 'id' => $scan->id,
                 'supervisor_name' => auth()->user()->name,
+                'checkpoint_id' => $checkpoint->id,
+                'checkpoint_name' => $checkpoint->name,
+                'checkpoint_code' => $checkpoint->code,
                 'site_name' => $checkpoint->clientSite->name,
                 'client_name' => $checkpoint->clientSite->client->name,
                 'scanned_at' => $scan->scanned_at ? $scan->scanned_at->toIso8601String() : now()->toIso8601String(),
@@ -173,7 +179,7 @@ class CheckpointScanController extends Controller
             if ($controlRoomUsers->isNotEmpty()) {
                 Notification::send($controlRoomUsers, new GenericDbNotification([
                     'title' => 'Checkpoint QR Scanned',
-                    'message' => sprintf('%s scanned checkpoint at %s', auth()->user()->name, $checkpoint->clientSite->name),
+                    'message' => sprintf('%s scanned checkpoint "%s" at %s', auth()->user()->name, $checkpoint->name, $checkpoint->clientSite->name),
                     'url' => route('control-room.dashboard'),
                 ]));
             }
@@ -188,7 +194,8 @@ class CheckpointScanController extends Controller
         if ($request->header('X-Inertia')) {
             return redirect()->route($redirectRoute)
                 ->with('success', 'Checkpoint scanned successfully')
-                ->with('location_verified', $locationVerified);
+                ->with('location_verified', $locationVerified)
+                ->with('scan', $scanData);
         }
 
         return response()->json([

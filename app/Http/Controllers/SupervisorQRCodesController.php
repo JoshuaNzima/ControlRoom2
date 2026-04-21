@@ -21,17 +21,27 @@ class SupervisorQRCodesController extends Controller
             ->with(['sites' => function($q) {
                 $q->select(['id', 'zone_id', 'name', 'qr_code', 'status']);
             }, 'sites.checkpoints' => function($q) {
-                $q->select(['id', 'client_site_id']);
+                $q->select(['id', 'client_site_id', 'name', 'code', 'type', 'is_active']);
             }])
             ->get()
             ->map(function($zone) {
                 $checkpointCount = $zone->sites->sum(fn($s) => $s->checkpoints->count());
                 $sitesWithQr = $zone->sites->map(function($site) {
+                    $checkpoints = $site->checkpoints->map(function($cp) {
+                        return [
+                            'id' => $cp->id,
+                            'name' => $cp->name,
+                            'code' => $cp->code,
+                            'type' => $cp->type,
+                            'is_active' => $cp->is_active,
+                        ];
+                    });
                     return [
                         'id' => $site->id,
                         'name' => $site->name,
                         'qr_code' => $site->qr_code,
                         'status' => $site->status,
+                        'checkpoints' => $checkpoints,
                     ];
                 });
                 return [
@@ -44,17 +54,44 @@ class SupervisorQRCodesController extends Controller
                 ];
             });
 
+        // Get all checkpoints with site and client info
+        $checkpoints = Checkpoint::with(['clientSite.client:id,name', 'clientSite:id,name,client_id,qr_code,status'])
+            ->select(['id', 'client_site_id', 'name', 'code', 'type', 'is_active'])
+            ->orderBy('name')
+            ->get()
+            ->map(function($cp) {
+                return [
+                    'id' => $cp->id,
+                    'name' => $cp->name,
+                    'code' => $cp->code,
+                    'type' => $cp->type,
+                    'is_active' => $cp->is_active,
+                    'site' => $cp->clientSite ? [
+                        'id' => $cp->clientSite->id,
+                        'name' => $cp->clientSite->name,
+                        'qr_code' => $cp->clientSite->qr_code,
+                        'status' => $cp->clientSite->status,
+                        'client' => $cp->clientSite->client ? [
+                            'id' => $cp->clientSite->client->id,
+                            'name' => $cp->clientSite->client->name,
+                        ] : null,
+                    ] : null,
+                ];
+            });
+
         // Determine which page to render based on route name
         $routeName = $request->route()->getName() ?? '';
         if (str_starts_with($routeName, 'control-room.')) {
             return Inertia::render('ControlRoom/SupervisorQRCodes', [
-                'zones' => $zones
+                'zones' => $zones,
+                'checkpoints' => $checkpoints,
             ]);
         }
 
         // Default to Admin page (admin route passes the same props)
         return Inertia::render('Admin/QRCodes', [
-            'zones' => $zones
+            'zones' => $zones,
+            'checkpoints' => $checkpoints,
         ]);
     }
 
