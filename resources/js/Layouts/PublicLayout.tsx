@@ -1,6 +1,7 @@
 import React from 'react';
 import { Head, Link } from '@inertiajs/react';
 import IconMapper from '@/Components/IconMapper';
+import AIAssistant from '@/Components/AI/AIAssistant';
 
 interface Props {
   title?: string;
@@ -124,6 +125,7 @@ export default function PublicLayout({ title = 'Coin Security', children }: Prop
           </div>
         </div>
       </footer>
+      <AIAssistant context="landing" />
     </div>
   );
 }

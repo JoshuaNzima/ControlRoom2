@@ -27,19 +27,6 @@ class AdminUserSeeder extends Seeder
         );
         $admin->assignRole('admin');
 
-        // Create manager user
-        $manager = User::firstOrCreate(
-            ['email' => 'manager@coinsec.com'],
-            [
-                'name' => 'Operations Manager',
-                'password' => Hash::make('password'),
-                'employee_id' => 'MGR001',
-                'phone' => '+1234567891',
-                'email_verified_at' => now(),
-            ]
-        );
-        $manager->assignRole('manager');
-
         // Create supervisor user
         $supervisor = User::firstOrCreate(
             ['email' => 'supervisor@coinsec.com'], 

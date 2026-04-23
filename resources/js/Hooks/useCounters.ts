@@ -30,6 +30,7 @@ export type Counters = {
   assets_handovers_outstanding?: number;
   tasks_my_open?: number;
   tasks_my_overdue?: number;
+  chat_transfers_pending?: number;
 };
 
 let sharedCounters: Counters = {};

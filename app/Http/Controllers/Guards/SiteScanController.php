@@ -313,9 +313,6 @@ class SiteScanController extends Controller
             case 'accounting':
                 return redirect()->route('finance.index')->with('success', 'Patrol recorded at ' . $site->name);
 
-            case 'manager':
-                return redirect()->route('manager.dashboard')->with('success', 'Patrol recorded at ' . $site->name);
-
             case 'client':
                 return redirect()->route('client.dashboard')->with('success', 'Patrol recorded at ' . $site->name);
 
@@ -334,9 +331,7 @@ class SiteScanController extends Controller
                 if (auth()->user()->hasRole('control_room_operator')) {
                     return redirect()->route('control-room.dashboard')->with('success', 'Patrol recorded at ' . $site->name);
                 }
-                if (auth()->user()->hasRole('manager')) {
-                    return redirect()->route('manager.dashboard')->with('success', 'Patrol recorded at ' . $site->name);
-                }
+              
                 return redirect()->back()->with('success', 'Patrol recorded at ' . $site->name);
         }
     }

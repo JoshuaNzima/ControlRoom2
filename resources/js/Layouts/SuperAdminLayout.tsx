@@ -8,9 +8,9 @@ import useCounters from '@/Hooks/useCounters';
 import { useTheme } from '@/Providers/ThemeProvider';
 import useGpsAlerts from '@/Hooks/useGpsAlerts';
 import { useRealtimeNotifications } from '@/Hooks/useRealtimeNotifications';
-import FloatingNavButton from '@/Components/FloatingNavButton';
 import WeeklyTasks from '@/Components/WeeklyTasks';
 import TutorialSection from '@/Components/Tutorials/TutorialSection';
+import AIAssistant from '@/Components/AI/AIAssistant';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface Props {
@@ -142,6 +142,17 @@ export default function SuperAdminLayout({ title, children, user }: Props) {
             name: 'Security', 
             href: route('superadmin.security'), 
             icon: <IconMapper name="Shield" size={20} />,
+        },
+        { 
+            name: 'Support Chats', 
+            href: route('control-room.chats.index'), 
+            icon: <IconMapper name="Headphones" size={20} />,
+            badge: counters?.chat_transfers_pending,
+        },
+        { 
+            name: 'AI Settings', 
+            href: route('superadmin.ai-settings'), 
+            icon: <IconMapper name="Bot" size={20} />,
         },
         { 
             name: 'Settings', 
@@ -344,7 +355,7 @@ export default function SuperAdminLayout({ title, children, user }: Props) {
                         </div>
                     </div>
                 </BaseShell>
-                <FloatingNavButton />
+                <AIAssistant context="superadmin" />
             </div>
         </div>
     );

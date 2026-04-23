@@ -284,7 +284,7 @@ export default function FrontOfficeLayout({ children, title }: FrontOfficeLayout
 
                 {/* Page Content */}
                 <div className="p-4 lg:p-8 pt-20 lg:pt-8">
-                    <TutorialSection dashboard="admin" canManage={false} />
+                    <TutorialSection dashboard="front-office" canManage={false} />
                     {children}
                 </div>
             </main>

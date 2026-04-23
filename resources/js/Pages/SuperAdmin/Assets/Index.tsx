@@ -6,9 +6,9 @@ import IconMapper from '@/Components/IconMapper';
 export default function AssetsIndex() {
   const cards = [
     { title: 'Manage Assets', icon: 'Wrench', href: route('superadmin.assets.manage') },
-    { title: 'Vehicles', icon: 'Car', href: route('assets.index') },
-    { title: 'Equipment', icon: 'Package', href: route('assets.index') },
-    { title: 'Handovers', icon: 'Hand', href: route('assets.index') },
+    { title: 'Vehicles', icon: 'Car', href: route('assets.vehicles.index') },
+    { title: 'Equipment', icon: 'Package', href: route('assets.equipment.index') },
+    { title: 'Handovers', icon: 'Hand', href: route('assets.handovers.index') },
     { title: 'Settings', icon: 'Settings', href: route('superadmin.settings') },
   ];
 

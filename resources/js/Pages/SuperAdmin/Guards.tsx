@@ -172,6 +172,15 @@ export default function SuperAdminGuards({ guards, inactiveGuards, filters, supe
   const [importProcessing, setImportProcessing] = React.useState(false);
   const [importAllowUpdates, setImportAllowUpdates] = React.useState(false);
 
+  // Helper to get guard initials
+  const getInitials = (name: string): string => {
+    const parts = name.split(' ');
+    if (parts.length >= 2) {
+      return (parts[0].charAt(0) + parts[1].charAt(0)).toUpperCase();
+    }
+    return name.substring(0, 2).toUpperCase();
+  };
+
   const openConfirm = (title: string, message: string, action: () => void) => {
     setConfirmTitle(title); setConfirmMessage(message); setConfirmAction(() => action); setConfirmOpen(true);
   };
@@ -631,8 +640,8 @@ export default function SuperAdminGuards({ guards, inactiveGuards, filters, supe
                           checked={selectedGuardIds.includes(guard.id)}
                           onChange={() => toggleGuardSelected(guard.id)}
                         />
-                        <div className="w-10 h-10 bg-gradient-to-br from-red-500 to-rose-600 rounded-full flex items-center justify-center text-white font-bold">
-                          {guard.name.charAt(0)}
+                        <div className="w-10 h-10 bg-gradient-to-br from-red-500 to-rose-600 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-md">
+                          {getInitials(guard.name)}
                         </div>
                         <div>
                           <button onClick={() => openDetails(guard.id)} className="text-left">
@@ -666,6 +675,9 @@ export default function SuperAdminGuards({ guards, inactiveGuards, filters, supe
                     </div>
                     
                     <div className="mt-3 flex flex-wrap gap-1">
+                      <Button variant="ghost" size="sm" onClick={() => openDetails(guard.id)} title="View Details">
+                        <IconMapper name="Eye" size={16} />
+                      </Button>
                       <Button variant="ghost" size="sm" onClick={() => openEdit(guard.id)}>
                         <IconMapper name="Pencil" size={16} />
                       </Button>
@@ -716,8 +728,8 @@ export default function SuperAdminGuards({ guards, inactiveGuards, filters, supe
                   <div className="p-4">
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-gradient-to-br from-gray-500 to-gray-600 rounded-full flex items-center justify-center text-white font-bold">
-                          {guard.name.charAt(0)}
+                        <div className="w-10 h-10 bg-gradient-to-br from-gray-500 to-gray-600 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-md">
+                          {getInitials(guard.name)}
                         </div>
                         <div>
                           <button onClick={() => openDetails(guard.id)} className="text-left">
@@ -803,8 +815,8 @@ export default function SuperAdminGuards({ guards, inactiveGuards, filters, supe
                         </td>
                         <td className="px-6 py-3">
                           <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 bg-gradient-to-br from-red-500 to-rose-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
-                              {guard.name.charAt(0)}
+                            <div className="w-8 h-8 bg-gradient-to-br from-red-500 to-rose-600 rounded-full flex items-center justify-center text-white font-bold text-xs shadow-md">
+                              {getInitials(guard.name)}
                             </div>
                             <div>
                               <button onClick={() => openDetails(guard.id)} className="text-left hover:underline">
@@ -839,6 +851,9 @@ export default function SuperAdminGuards({ guards, inactiveGuards, filters, supe
                         </td>
                         <td className="px-6 py-3">
                           <div className="flex items-center gap-1">
+                            <Button variant="ghost" size="sm" onClick={() => openDetails(guard.id)} title="View Details">
+                              <IconMapper name="Eye" size={16} />
+                            </Button>
                             <Button variant="ghost" size="sm" onClick={() => openEdit(guard.id)} title="Edit">
                               <IconMapper name="Pencil" size={16} />
                             </Button>

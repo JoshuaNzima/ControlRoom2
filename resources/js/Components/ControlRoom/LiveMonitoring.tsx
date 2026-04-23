@@ -10,6 +10,7 @@ interface QRScan {
   id: number;
   supervisor_name: string;
   site_name: string;
+  checkpoint_name: string;
   client_name: string;
   scanned_at: string;
   location_verified: boolean;
@@ -93,6 +94,7 @@ export default function LiveMonitoring({ className = '' }: LiveMonitoringProps) 
             id: d.id ?? Date.now(),
             supervisor_name: d.supervisor_name ?? 'Unknown',
             site_name: d.site_name ?? 'Unknown',
+            checkpoint_name: d.checkpoint_name ?? '',
             client_name: d.client_name ?? '',
             scanned_at: d.scanned_at ?? new Date().toISOString(),
             location_verified: d.location_verified ?? false,
@@ -204,7 +206,10 @@ export default function LiveMonitoring({ className = '' }: LiveMonitoringProps) 
                           )}
                         </div>
                         <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                          {scan.site_name} • {scan.client_name}
+                          {scan.site_name} • <span className="font-medium text-gray-700 dark:text-gray-300">{scan.checkpoint_name}</span>
+                        </div>
+                        <div className="text-xs text-gray-500 dark:text-gray-500 mt-0.5">
+                          {scan.client_name}
                         </div>
                         <div className="text-xs text-gray-500 dark:text-gray-500 mt-1">
                           {formatTime(scan.scanned_at)}

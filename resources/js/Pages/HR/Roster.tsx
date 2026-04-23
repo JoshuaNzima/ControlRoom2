@@ -100,30 +100,34 @@ export default function Roster() {
   const refreshEvents = useCallback(async () => {
     setLoading(true);
     try {
-      // Fetch holidays from legacy endpoint
-      const holidaysUrl = route('hr.leaves.events', { start: formatYmd(gridStart), end: formatYmd(gridEnd) });
-      const holidaysRes = await fetch(holidaysUrl, { headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' } });
-      
-      // Fetch employee leaves from new endpoint
-      const leavesUrl = route('hr.employee-leaves.events', { start: formatYmd(gridStart), end: formatYmd(gridEnd) });
-      const leavesRes = await fetch(leavesUrl, { headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' } });
-      
+      // Parallel fetch both endpoints for better performance
+      const [holidaysRes, leavesRes] = await Promise.all([
+        fetch(route('hr.leaves.events', { start: formatYmd(gridStart), end: formatYmd(gridEnd) }), {
+          headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+        }),
+        fetch(route('hr.employee-leaves.events', { start: formatYmd(gridStart), end: formatYmd(gridEnd) }), {
+          headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+        }),
+      ]);
+
       let allEvents: EventItem[] = [];
-      
+
       if (holidaysRes.ok) {
         const holidaysJson = await holidaysRes.json();
         // Filter only holidays from legacy endpoint
         const holidays = (holidaysJson.events || []).filter((e: EventItem) => e.entity === 'holiday');
         allEvents = [...allEvents, ...holidays];
       }
-      
+
       if (leavesRes.ok) {
         const leavesJson = await leavesRes.json();
         const leaves = leavesJson.events || [];
         allEvents = [...allEvents, ...leaves];
       }
-      
+
       setEvents(allEvents);
+    } catch (error) {
+      console.error('Failed to fetch events:', error);
     } finally {
       setLoading(false);
     }
@@ -145,10 +149,20 @@ export default function Roster() {
 
   const monthLabel = currentMonth.toLocaleString(undefined, { month: 'long', year: 'numeric' });
 
-  const dayEvents = (date: Date) => {
+  // Memoize events by date for O(1) lookup instead of O(n) filter per day
+  const eventsByDate = useMemo(() => {
+    const map: Record<string, EventItem[]> = {};
+    for (const e of events) {
+      if (!map[e.date]) map[e.date] = [];
+      map[e.date].push(e);
+    }
+    return map;
+  }, [events]);
+
+  const getDayEvents = useCallback((date: Date): EventItem[] => {
     const key = formatYmd(date);
-    return events.filter((e) => e.date === key);
-  };
+    return eventsByDate[key] || [];
+  }, [eventsByDate]);
 
   const warningDays = useMemo<AttendanceWarning[]>(() => {
     if (!Array.isArray(employees) || !employees.length || !events.length) return [];
@@ -407,7 +421,7 @@ export default function Roster() {
             <div className="grid grid-cols-7">
               {days.map((d, idx) => {
                 const inMonth = d.getMonth() === currentMonth.getMonth();
-                const evs = dayEvents(d);
+                const evs = getDayEvents(d);
                 const isWeekend = d.getDay() === 0 || d.getDay() === 6;
                 
                 return (

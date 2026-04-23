@@ -8,8 +8,8 @@ import { PropsWithChildren, ReactNode, useState } from 'react';
 import NotificationBell from '@/Components/Common/NotificationBell';
 import QuickRequisitionButton from '@/Components/Requisitions/QuickRequisitionButton';
 import QuickBudgetButton from '@/Components/Budgets/QuickBudgetButton';
-import FloatingNavButton from '@/Components/FloatingNavButton';
 import { useRealtimeNotifications } from '@/Hooks/useRealtimeNotifications';
+import AIAssistant from '@/Components/AI/AIAssistant';
 
 export default function Authenticated({
     user,
@@ -283,7 +283,7 @@ export default function Authenticated({
                     </div>
                 </main>
             </main>
-            <FloatingNavButton />
+            <AIAssistant context="dashboard" />
         </div>
     );
 }

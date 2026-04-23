@@ -363,7 +363,6 @@ const Dashboard: React.FC<SuperAdminDashboardProps> = ({
     { name: 'Assets', routeName: 'assets.index', icon: 'Boxes', color: 'bg-amber-600' },
     { name: 'K9 Unit', routeName: 'admin.business-dev.k9.dashboard', icon: 'Shield', color: 'bg-teal-600' },
     { name: 'Front Office', routeName: 'front-office.dashboard', icon: 'Building2', color: 'bg-cyan-600' },
-    { name: 'Manager', routeName: 'manager.dashboard', icon: 'Briefcase', color: 'bg-sky-600' },
     { name: 'Zone Commander', routeName: 'zone-commander.dashboard', icon: 'MapPin', color: 'bg-lime-600' },
     { name: 'Supervisor', routeName: 'supervisor.dashboard', icon: 'UserCheck', color: 'bg-violet-600' },
     { name: 'Client', routeName: 'client.dashboard', icon: 'Building', color: 'bg-rose-600' },

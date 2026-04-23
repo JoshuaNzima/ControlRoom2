@@ -28,6 +28,8 @@ class ScanTagger
         $tags['supervisor_id'] = $scan->supervisor_id;
         $tags['supervisor_name'] = optional($scan->supervisor)->name ?? 'Unknown';
         $tags['checkpoint_id'] = $scan->checkpoint_id;
+        $tags['checkpoint_name'] = optional($scan->checkpoint)->name ?? 'Unknown';
+        $tags['checkpoint_code'] = optional($scan->checkpoint)->code ?? null;
 
         $clientSite = optional($scan->checkpoint?->clientSite);
         $tags['site_id'] = $clientSite->id ?? null;

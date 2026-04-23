@@ -4,6 +4,7 @@ import AdminLayout from '@/Layouts/AdminLayout';
 import { Card } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import { Badge } from '@/Components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/Components/ui/dialog';
 import IconMapper from '@/Components/IconMapper';
 
 interface Incident {
@@ -92,6 +93,13 @@ const formatRelativeTime = (dateString: string) => {
 
 export default function ClientReports({ auth, client, incidents }: ClientReportsProps) {
   const [filter, setFilter] = useState<{ status: string; severity: string }>({ status: 'all', severity: 'all' });
+  const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+
+  const handleViewIncident = (incident: Incident) => {
+    setSelectedIncident(incident);
+    setIsDetailModalOpen(true);
+  };
 
   const filteredIncidents = incidents.filter((incident) => {
     if (filter.status !== 'all' && incident.status !== filter.status) return false;
@@ -153,22 +161,22 @@ export default function ClientReports({ auth, client, incidents }: ClientReports
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
           {/* Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <Card className="p-4 dark:bg-gray-800 dark:border-gray-700">
-              <p className="text-sm text-gray-500 dark:text-gray-400">Total Reports</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{stats.total}</p>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+            <Card className="p-3 sm:p-4 dark:bg-gray-800 dark:border-gray-700">
+              <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">Total Reports</p>
+              <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">{stats.total}</p>
             </Card>
-            <Card className="p-4 dark:bg-gray-800 dark:border-gray-700">
-              <p className="text-sm text-gray-500 dark:text-gray-400">Open</p>
-              <p className="text-2xl font-bold text-red-600 dark:text-red-400">{stats.open}</p>
+            <Card className="p-3 sm:p-4 dark:bg-gray-800 dark:border-gray-700">
+              <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">Open</p>
+              <p className="text-xl sm:text-2xl font-bold text-red-600 dark:text-red-400">{stats.open}</p>
             </Card>
-            <Card className="p-4 dark:bg-gray-800 dark:border-gray-700">
-              <p className="text-sm text-gray-500 dark:text-gray-400">Resolved</p>
-              <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{stats.resolved}</p>
+            <Card className="p-3 sm:p-4 dark:bg-gray-800 dark:border-gray-700">
+              <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">Resolved</p>
+              <p className="text-xl sm:text-2xl font-bold text-emerald-600 dark:text-emerald-400">{stats.resolved}</p>
             </Card>
-            <Card className="p-4 dark:bg-gray-800 dark:border-gray-700">
-              <p className="text-sm text-gray-500 dark:text-gray-400">Critical</p>
-              <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">{stats.critical}</p>
+            <Card className="p-3 sm:p-4 dark:bg-gray-800 dark:border-gray-700">
+              <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">Critical</p>
+              <p className="text-xl sm:text-2xl font-bold text-orange-600 dark:text-orange-400">{stats.critical}</p>
             </Card>
           </div>
 
@@ -217,26 +225,30 @@ export default function ClientReports({ auth, client, incidents }: ClientReports
               <p className="text-gray-500 dark:text-gray-400">No reports found</p>
             </Card>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-3">
               {filteredIncidents.map((incident) => (
-                <Card key={incident.id} className="p-5 dark:bg-gray-800 dark:border-gray-700">
-                  <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
-                    <div className="flex-1">
+                <Card 
+                  key={incident.id} 
+                  className="p-4 sm:p-5 dark:bg-gray-800 dark:border-gray-700 hover:shadow-lg transition-all cursor-pointer"
+                  onClick={() => handleViewIncident(incident)}
+                >
+                  <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap mb-2">
-                        <h3 className="font-semibold text-gray-900 dark:text-gray-100">{incident.title}</h3>
+                        <h3 className="font-semibold text-gray-900 dark:text-gray-100 text-sm sm:text-base">{incident.title}</h3>
                         <SeverityBadge severity={incident.severity} />
                         <StatusBadge status={incident.status} />
                       </div>
 
                       {incident.description && (
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">{incident.description}</p>
+                        <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mb-3 line-clamp-2">{incident.description}</p>
                       )}
 
-                      <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
+                      <div className="flex flex-wrap items-center gap-3 text-xs sm:text-sm text-gray-500 dark:text-gray-400">
                         {incident.site_name && (
                           <span className="flex items-center gap-1">
                             <IconMapper name="Building" size={14} />
-                            {incident.site_name}
+                            <span className="truncate">{incident.site_name}</span>
                           </span>
                         )}
                         {incident.guard_name && (
@@ -252,15 +264,11 @@ export default function ClientReports({ auth, client, incidents }: ClientReports
                       </div>
                     </div>
 
-                    <div className="text-right">
+                    <div className="text-left sm:text-right flex-shrink-0">
                       <p className="text-xs text-gray-400 dark:text-gray-500">
-                        Reported: {formatDate(incident.created_at)}
+                        {formatDate(incident.created_at)}
                       </p>
-                      {incident.resolved_at && (
-                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                          Resolved: {formatDate(incident.resolved_at)}
-                        </p>
-                      )}
+                      <IconMapper name="ChevronRight" size={16} className="text-gray-400 mt-2 sm:ml-auto" />
                     </div>
                   </div>
                 </Card>
@@ -269,6 +277,90 @@ export default function ClientReports({ auth, client, incidents }: ClientReports
           )}
         </div>
       </div>
+
+      {/* Incident Detail Modal */}
+      <Dialog open={isDetailModalOpen} onOpenChange={setIsDetailModalOpen}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto dark:bg-gray-800 dark:border-gray-700">
+          {selectedIncident && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2 text-gray-900 dark:text-gray-100">
+                  <IconMapper name="AlertTriangle" size={20} className="text-red-600 dark:text-red-400" />
+                  Incident Details
+                </DialogTitle>
+              </DialogHeader>
+
+              <div className="space-y-4 mt-4">
+                {/* Status & Severity */}
+                <div className="flex gap-2">
+                  <StatusBadge status={selectedIncident.status} />
+                  <SeverityBadge severity={selectedIncident.severity} />
+                </div>
+
+                {/* Title */}
+                <div className="p-3 bg-gray-50 dark:bg-gray-900 rounded-lg">
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Title</p>
+                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{selectedIncident.title}</p>
+                </div>
+
+                {/* Description */}
+                {selectedIncident.description && (
+                  <div className="p-3 bg-gray-50 dark:bg-gray-900 rounded-lg">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Description</p>
+                    <p className="text-sm text-gray-900 dark:text-gray-100 whitespace-pre-wrap">{selectedIncident.description}</p>
+                  </div>
+                )}
+
+                {/* Type */}
+                <div className="p-3 bg-gray-50 dark:bg-gray-900 rounded-lg">
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Incident Type</p>
+                  <p className="text-sm text-gray-900 dark:text-gray-100 capitalize">{selectedIncident.type.replace('_', ' ')}</p>
+                </div>
+
+                {/* Location & Personnel */}
+                <div className="grid grid-cols-2 gap-3">
+                  {selectedIncident.site_name && (
+                    <div className="p-3 bg-gray-50 dark:bg-gray-900 rounded-lg">
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Site</p>
+                      <p className="text-sm text-gray-900 dark:text-gray-100">{selectedIncident.site_name}</p>
+                    </div>
+                  )}
+                  {selectedIncident.guard_name && (
+                    <div className="p-3 bg-gray-50 dark:bg-gray-900 rounded-lg">
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Reported By</p>
+                      <p className="text-sm text-gray-900 dark:text-gray-100">{selectedIncident.guard_name}</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Timestamps */}
+                <div className="p-3 bg-gray-50 dark:bg-gray-900 rounded-lg">
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Reported</p>
+                      <p className="text-gray-900 dark:text-gray-100">{formatDate(selectedIncident.created_at)}</p>
+                    </div>
+                    {selectedIncident.resolved_at && (
+                      <div>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">Resolved</p>
+                        <p className="text-gray-900 dark:text-gray-100">{formatDate(selectedIncident.resolved_at)}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Close Button */}
+                <Button
+                  onClick={() => setIsDetailModalOpen(false)}
+                  className="w-full bg-red-600 hover:bg-red-700 text-white"
+                >
+                  Close
+                </Button>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </AdminLayout>
   );
 }

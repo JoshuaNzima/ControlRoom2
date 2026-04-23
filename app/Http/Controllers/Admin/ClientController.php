@@ -142,7 +142,7 @@ class ClientController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'name' => 'required|string|max:255',
+            'name' => 'required|string|max:255|unique:clients,name',
             'contact_person' => 'nullable|string|max:255',
             'phone' => 'nullable|string|max:20',
             'email' => 'nullable|email',
@@ -159,7 +159,7 @@ class ClientController extends Controller
             'services.*.quantity' => 'nullable|integer|min:1',
             // Optional initial site
             'site.name' => 'nullable|string|max:255',
-            'site.address' => 'nullable|string',
+            'site.address' => 'required|string',
             'site.required_guards' => 'nullable|integer|min:1',
             'site.services_requested' => 'nullable|string',
             'site.status' => 'nullable|in:active,inactive',
@@ -175,9 +175,22 @@ class ClientController extends Controller
             'user_name' => 'required_if:create_user,true|string|max:255',
             'user_email' => 'required_if:create_user,true|email|unique:users,email',
             'user_phone' => 'nullable|string|max:20',
-            'user_password' => 'required_if:create_user,true|string|min:8',
             'user_role' => 'required_if:create_user,true|in:primary,contact,viewer',
         ]);
+
+        // Check for potential duplicates (soft warning, not blocking)
+        $potentialDuplicates = Client::where('name', 'like', '%' . $validated['name'] . '%')
+            ->orWhere(function ($q) use ($validated) {
+                if (!empty($validated['phone'])) {
+                    $q->where('phone', $validated['phone']);
+                }
+                if (!empty($validated['email'])) {
+                    $q->orWhere('email', $validated['email']);
+                }
+            })
+            ->withTrashed()
+            ->limit(5)
+            ->get(['id', 'name', 'phone', 'email', 'status', 'deleted_at']);
 
         $client = Client::create(collect($validated)->except(['site', 'services'])->toArray());
 
@@ -210,16 +223,25 @@ class ClientController extends Controller
             'site_type' => $siteData['site_type'] ?? 'residential',
         ], $siteData);
         
+        // Ensure address is never null (database constraint)
+        $siteData['address'] = $siteData['address'] ?? '';
+        if ($siteData['address'] === null || $siteData['address'] === '') {
+            $siteData['address'] = ($validated['address'] ?? '') ?: 'Address not specified';
+        }
+        
         // If zone_id provided, ensure it's included in the site record
         $client->sites()->create($siteData);
 
         // Create client user account if requested
         if (!empty($validated['create_user'])) {
+            // Generate a random temporary password
+            $tempPassword = \Illuminate\Support\Str::random(16);
+
             $user = \App\Models\User::create([
                 'name' => $validated['user_name'],
                 'email' => $validated['user_email'],
                 'phone' => $validated['user_phone'] ?? null,
-                'password' => \Illuminate\Support\Facades\Hash::make($validated['user_password']),
+                'password' => \Illuminate\Support\Facades\Hash::make($tempPassword),
                 'status' => 'active',
             ]);
 
@@ -230,10 +252,22 @@ class ClientController extends Controller
             $client->users()->attach($user->id, [
                 'role' => $validated['user_role'] ?? 'contact',
             ]);
+
+            // Send password reset link so they can set their own password
+            try {
+                \Illuminate\Support\Facades\Password::sendResetLink(['email' => $user->email]);
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('Failed to send password reset link to new client user: ' . $user->email . ' - ' . $e->getMessage());
+            }
+        }
+
+        $warning = '';
+        if ($potentialDuplicates->isNotEmpty()) {
+            $warning = ' Warning: Possible duplicates found - ' . $potentialDuplicates->pluck('name')->join(', ');
         }
 
         return redirect()->route('admin.clients.index')
-            ->withSuccess('Client created successfully.' . (!empty($validated['create_user']) ? ' Client portal account created.' : ''));
+            ->withSuccess('Client created successfully.' . (!empty($validated['create_user']) ? ' Client portal account created. A password reset email has been sent.' : '') . $warning);
     }
 
     public function show(Client $client)
@@ -264,7 +298,19 @@ class ClientController extends Controller
             'services' => function ($query) {
                 $query->select('services.id', 'services.name', 'services.monthly_price')
                     ->withPivot('custom_price', 'quantity');
-            }
+            },
+            'users' => function ($query) {
+                $query->select('users.id', 'users.name', 'users.email', 'users.phone', 'users.status')
+                    ->withPivot('role');
+            },
+            'payments' => function ($query) {
+                $query->orderByDesc('year')->orderByDesc('month')->limit(24);
+            },
+            'contracts' => function ($query) {
+                $query->orderByDesc('created_at');
+            },
+            'supervisor:id,name,email,phone',
+            'sergeant:id,name,phone,position',
         ]);
 
         $siteIds = $client->sites->pluck('id')->filter()->values();
@@ -291,8 +337,9 @@ class ClientController extends Controller
             });
         }
 
-        // include calculated monthly_rate
+        // include calculated monthly_rate and payment summary
         $client->monthly_rate = $client->getMonthlyDueAmount();
+        $client->payment_summary = $client->getPaymentSummary(now()->year);
 
         return response()->json($client);
     }
@@ -344,7 +391,7 @@ class ClientController extends Controller
     public function update(Request $request, Client $client)
     {
         $validated = $request->validate([
-            'name' => 'required|string|max:255',
+            'name' => 'required|string|max:255|unique:clients,name,' . $client->id,
             'contact_person' => 'nullable|string|max:255',
             'phone' => 'nullable|string|max:20',
             'email' => 'nullable|email',
@@ -358,6 +405,21 @@ class ClientController extends Controller
             'services.*.id' => 'required_with:services|integer|exists:services,id',
             'services.*.custom_price' => 'nullable|numeric|min:0',
         ]);
+
+        // Check for potential duplicates (excluding current client)
+        $potentialDuplicates = Client::where('id', '!=', $client->id)
+            ->where(function ($q) use ($validated) {
+                $q->where('name', 'like', '%' . $validated['name'] . '%');
+                if (!empty($validated['phone'])) {
+                    $q->orWhere('phone', $validated['phone']);
+                }
+                if (!empty($validated['email'])) {
+                    $q->orWhere('email', $validated['email']);
+                }
+            })
+            ->withTrashed()
+            ->limit(5)
+            ->get(['id', 'name', 'phone', 'email', 'status', 'deleted_at']);
 
         $client->update($validated);
 
@@ -377,12 +439,17 @@ class ClientController extends Controller
             $client->save();
         }
 
-        $referer = (string) $request->headers->get('referer', '');
-        if ($referer && str_contains($referer, '/superadmin/')) {
-            return redirect()->back()->withSuccess('Client updated successfully.');
+        $warning = '';
+        if ($potentialDuplicates->isNotEmpty()) {
+            $warning = ' Warning: Possible duplicates found - ' . $potentialDuplicates->pluck('name')->join(', ');
         }
 
-        return redirect()->route('admin.clients.index')->withSuccess('Client updated successfully.');
+        $referer = (string) $request->headers->get('referer', '');
+        if ($referer && str_contains($referer, '/superadmin/')) {
+            return redirect()->back()->withSuccess('Client updated successfully.' . $warning);
+        }
+
+        return redirect()->route('admin.clients.index')->withSuccess('Client updated successfully.' . $warning);
     }
 
     // Update just the services/pivot for a client (custom prices)

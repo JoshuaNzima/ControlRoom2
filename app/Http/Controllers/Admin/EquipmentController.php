@@ -82,6 +82,108 @@ class EquipmentController extends Controller
         return response()->json($equipment);
     }
 
+    /**
+     * Check inventory availability for compliance items.
+     * Returns whether there's available inventory for the given item.
+     */
+    public function checkInventory(Request $request)
+    {
+        $request->validate([
+            'item' => ['required', 'string', 'max:100'],
+            'type' => ['nullable', 'string', 'in:equipment,uniform'],
+        ]);
+
+        $item = $request->input('item');
+        $type = $request->input('type', 'equipment');
+
+        // Normalize item name for matching
+        $normalizedName = strtolower(trim($item));
+        $normalizedCategory = $type === 'uniform' ? 'uniform' : null;
+
+        // Count available equipment in assets (active and not assigned)
+        $availableCount = Equipment::where('status', 'active')
+            ->where(function ($q) use ($normalizedName, $normalizedCategory, $item) {
+                $q->where('name', 'like', "%{$item}%")
+                    ->orWhere('category', 'like', "%{$item}%");
+                if ($normalizedCategory) {
+                    $q->orWhere('category', $normalizedCategory);
+                }
+            })
+            ->whereNull('assigned_to')
+            ->count();
+
+        // Count total active equipment matching the item
+        $totalCount = Equipment::where('status', 'active')
+            ->where(function ($q) use ($normalizedName, $normalizedCategory, $item) {
+                $q->where('name', 'like', "%{$item}%")
+                    ->orWhere('category', 'like', "%{$item}%");
+                if ($normalizedCategory) {
+                    $q->orWhere('category', $normalizedCategory);
+                }
+            })
+            ->count();
+
+        // Count how many guards have this equipment issued
+        $issuedCount = \App\Models\Guards\Guard::whereJsonContains('equipment_issued', $item)->count();
+
+        // For uniform, count guards with uniform_issued = true
+        $uniformIssuedCount = $type === 'uniform'
+            ? \App\Models\Guards\Guard::where('uniform_issued', true)->count()
+            : 0;
+
+        $hasAvailable = $availableCount > 0;
+        $exceedsInventory = ($type === 'uniform' ? $uniformIssuedCount : $issuedCount) >= $totalCount && $totalCount > 0;
+
+        return response()->json([
+            'item' => $item,
+            'type' => $type,
+            'available_count' => $availableCount,
+            'total_count' => $totalCount,
+            'issued_count' => $type === 'uniform' ? $uniformIssuedCount : $issuedCount,
+            'has_available' => $hasAvailable,
+            'exceeds_inventory' => $exceedsInventory,
+            'needs_creation' => $totalCount === 0 || $exceedsInventory,
+        ]);
+    }
+
+    /**
+     * Quick-create equipment from compliance check.
+     * Creates a new equipment item and returns it for asset manager to manage.
+     */
+    public function quickCreateFromCompliance(Request $request)
+    {
+        $request->validate([
+            'item' => ['required', 'string', 'max:100'],
+            'type' => ['nullable', 'string', 'in:equipment,uniform'],
+            'guard_id' => ['nullable', 'integer', 'exists:guards,id'],
+        ]);
+
+        $item = $request->input('item');
+        $type = $request->input('type', 'equipment');
+        $guardId = $request->input('guard_id');
+
+        // Generate a unique tag
+        $tag = 'EQ-' . strtoupper(str_replace(' ', '-', $item)) . '-' . str_pad(Equipment::max('id') + 1, 4, '0', STR_PAD_LEFT);
+
+        // Determine category
+        $category = $type === 'uniform' ? 'uniform' : strtolower($item);
+
+        $equipment = Equipment::create([
+            'tag' => $tag,
+            'name' => $item,
+            'category' => $category,
+            'status' => 'active',
+            'assigned_to' => null,
+            'notes' => $guardId ? "Created from guard compliance check (Guard ID: {$guardId})" : 'Created from compliance check',
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Equipment added to assets inventory',
+            'equipment' => $equipment,
+        ]);
+    }
+
     protected function validateData(Request $request): array
     {
         return $request->validate([

@@ -37,7 +37,7 @@ class GuardPolicy
      */
     public function create(User $user): bool
     {
-        return $user->hasAnyRole(['super_admin', 'admin', 'supervisor', 'manager', 'zone_commander', 'finance_officer'])
+        return $user->hasAnyRole(['super_admin', 'admin', 'supervisor', 'zone_commander', 'finance_officer'])
             || $user->hasPermissionTo('guards.create');
     }
 
@@ -46,7 +46,7 @@ class GuardPolicy
      */
     public function update(User $user, Guard $guard): bool
     {
-        if ($user->hasAnyRole(['admin', 'super_admin', 'manager', 'zone_commander'])) return true;
+        if ($user->hasAnyRole(['admin', 'super_admin', 'zone_commander'])) return true;
         if ($user->hasRole('supervisor') && $guard->supervisor_id === $user->id) return true;
 
         return false;
@@ -57,6 +57,6 @@ class GuardPolicy
      */
     public function delete(User $user, Guard $guard): bool
     {
-        return $user->hasAnyRole(['super_admin', 'admin', 'manager', 'zone_commander']);
+        return $user->hasAnyRole(['super_admin', 'admin', 'zone_commander']);
     }
 }

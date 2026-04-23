@@ -25,7 +25,7 @@ class FlagController extends Controller
         if ($user) {
             $canReview = $user->can('review flags')
                 || (method_exists($user, 'hasAnyRole') && $user->hasAnyRole([
-                    'super_admin', 'control_room_operator', 'operations_officer', 'supervisor', 'manager',
+                    'super_admin', 'control_room_operator', 'operations_officer', 'supervisor',
                 ]));
         }
 
@@ -85,7 +85,7 @@ class FlagController extends Controller
             // Allow users with explicit permission OR typical control room roles to review
             $canReview = $user->can('review flags')
                 || (method_exists($user, 'hasAnyRole') && $user->hasAnyRole([
-                    'super_admin', 'control_room_operator', 'operations_officer', 'supervisor', 'manager',
+                    'super_admin', 'control_room_operator', 'operations_officer', 'supervisor', 
                 ]));
         }
 

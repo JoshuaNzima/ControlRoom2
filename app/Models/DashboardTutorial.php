@@ -18,6 +18,7 @@ class DashboardTutorial extends Model
         'content',
         'file_path',
         'video_url',
+        'video_type',
         'order',
         'is_active',
         'created_by',
@@ -28,19 +29,33 @@ class DashboardTutorial extends Model
         'order' => 'integer',
     ];
 
-    // Supported dashboards
+    // Supported dashboards - expanded for all modules
     public const DASHBOARDS = [
         'admin' => 'Admin Dashboard',
         'superadmin' => 'Super Admin Dashboard',
         'control-room' => 'Control Room Dashboard',
         'assets' => 'Assets Dashboard',
         'client' => 'Client Portal',
+        'hr' => 'HR Module',
+        'finance' => 'Finance Module',
+        'operations' => 'Operations Module',
+        'marketing' => 'Marketing Module',
+        'training' => 'Training Module',
+        'front-office' => 'Front Office Module',
+        'business-dev' => 'Business Development Module',
+        'supervisor' => 'Supervisor Module',
+        'zone-commander' => 'Zone Commander Module',
     ];
 
     // Content types
     public const TYPE_VIDEO = 'video';
     public const TYPE_DOCUMENT = 'document';
     public const TYPE_TEXT = 'text';
+
+    // Video types
+    public const VIDEO_YOUTUBE = 'youtube';
+    public const VIDEO_VIMEO = 'vimeo';
+    public const VIDEO_UPLOAD = 'upload';
 
     /**
      * Get the user who created this tutorial.
@@ -62,11 +77,21 @@ class DashboardTutorial extends Model
     }
 
     /**
-     * Get embed URL for video (YouTube/Vimeo).
+     * Get embed URL for video (YouTube/Vimeo) or file URL for uploaded videos.
      */
     public function getEmbedUrlAttribute(): ?string
     {
-        if ($this->content_type !== self::TYPE_VIDEO || empty($this->video_url)) {
+        if ($this->content_type !== self::TYPE_VIDEO) {
+            return null;
+        }
+
+        // For uploaded videos, return the file URL
+        if ($this->video_type === self::VIDEO_UPLOAD) {
+            return $this->file_url;
+        }
+
+        // For YouTube/Vimeo, extract embed URL
+        if (empty($this->video_url)) {
             return null;
         }
 
@@ -94,6 +119,14 @@ class DashboardTutorial extends Model
 
         // Return as-is for other embed URLs
         return $url;
+    }
+
+    /**
+     * Check if video is uploaded (not embedded).
+     */
+    public function getIsUploadedVideoAttribute(): bool
+    {
+        return $this->content_type === self::TYPE_VIDEO && $this->video_type === self::VIDEO_UPLOAD;
     }
 
     /**

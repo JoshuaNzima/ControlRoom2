@@ -24,11 +24,11 @@ class FlagPolicy
 
     public function review(User $user, Flag $flag): bool
     {
-        return $user->hasAnyRole(['supervisor', 'manager']);
+        return $user->hasAnyRole(['supervisor', 'operations_officer']);
     }
 
     public function delete(User $user, Flag $flag): bool
     {
-        return $user->hasRole(['supervisor', 'manager']);
+        return $user->hasRole(['supervisor', 'operations_officer']);
     }
 }

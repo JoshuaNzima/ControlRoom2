@@ -3,6 +3,7 @@ import { usePage } from '@inertiajs/react';
 import AdminLayout from '@/Layouts/AdminLayout';
 import FinanceLayout from '@/Layouts/FinanceLayout';
 import AssetManagementLayout from '@/Layouts/AssetManagementLayout';
+import OperationsLayout from '@/Layouts/OperationsLayout';
 import AppLayout from '@/Layouts/AppLayout';
 import type { PageProps } from '@/types';
 
@@ -19,6 +20,7 @@ export default function RequisitionsLayout({ title = 'Requisitions', children }:
   const isAdmin = roles.includes('admin') || roles.includes('super_admin');
   const isFinance = roles.some((r) => ['finance_officer', 'accountant', 'finance'].includes(r));
   const isAssets = roles.some((r) => ['asset_manager', 'assets_manager'].includes(r));
+  const isOperations = roles.some((r) => ['operations_officer', 'operations_manager'].includes(r));
 
   if (isAdmin) {
     return <AdminLayout title={title}>{children}</AdminLayout>;
@@ -28,6 +30,9 @@ export default function RequisitionsLayout({ title = 'Requisitions', children }:
   }
   if (isAssets) {
     return <AssetManagementLayout title={title}>{children}</AssetManagementLayout>;
+  }
+  if (isOperations) {
+    return <OperationsLayout title={title} showQrScanner={false}>{children}</OperationsLayout>;
   }
 
   // Fallback for general authenticated users

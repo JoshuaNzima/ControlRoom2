@@ -69,6 +69,11 @@ class Client extends Model
             ->withTimestamps();
     }
 
+    public function contracts(): HasMany
+    {
+        return $this->hasMany(\App\Models\Contract::class);
+    }
+
     public function scopeActive($query)
     {
         return $query->where('status', 'active');

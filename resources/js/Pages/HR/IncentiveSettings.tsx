@@ -126,6 +126,29 @@ export default function IncentiveSettings({ types, settings, stats }: PageProps)
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('types');
   const [searchQuery, setSearchQuery] = useState('');
+  const [loading, setLoading] = useState<Record<string, boolean>>({});
+
+  const setLoadingState = (key: string, value: boolean) => {
+    setLoading(prev => ({ ...prev, [key]: value }));
+  };
+
+  const updateSetting = (key: string, value: string) => {
+    setLoadingState(`setting_${key}`, true);
+    router.post(route('hr.incentive-settings.settings.update'), {
+      settings: [{ key, value }]
+    }, {
+      preserveScroll: true,
+      onFinish: () => {
+        setLoadingState(`setting_${key}`, false);
+      },
+      onSuccess: () => {
+        toast({ title: 'Setting updated', description: 'The setting has been saved.' });
+      },
+      onError: (errors) => {
+        toast({ variant: 'destructive', title: 'Error', description: Object.values(errors)[0] || 'Failed to update setting.' });
+      },
+    });
+  };
 
   // Modals
   const [showTypeModal, setShowTypeModal] = useState(false);
@@ -620,19 +643,20 @@ export default function IncentiveSettings({ types, settings, stats }: PageProps)
                               {setting.type === 'boolean' ? (
                                 <Switch
                                   checked={setting.value === '1'}
-                                  disabled={!setting.is_editable}
+                                  disabled={!setting.is_editable || loading[`setting_${setting.key}`]}
                                   onCheckedChange={(checked: boolean) => {
-                                    // TODO: Implement setting update
+                                    updateSetting(setting.key, checked ? '1' : '0');
                                   }}
                                 />
                               ) : setting.type === 'select' ? (
                                 <Select
                                   value={setting.value}
                                   onValueChange={(v) => {
-                                    // TODO: Implement setting update
+                                    if (!setting.is_editable || loading[`setting_${setting.key}`]) return;
+                                    updateSetting(setting.key, v);
                                   }}
-                                >
-                                  <SelectTrigger>
+                               >
+                                  <SelectTrigger className={!setting.is_editable || loading[`setting_${setting.key}`] ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''}>
                                     <SelectValue />
                                   </SelectTrigger>
                                   <SelectContent>
@@ -647,9 +671,16 @@ export default function IncentiveSettings({ types, settings, stats }: PageProps)
                                 <Input
                                   type={setting.type === 'number' ? 'number' : 'text'}
                                   value={setting.value}
-                                  disabled={!setting.is_editable}
-                                  onChange={(e) => {
-                                    // TODO: Implement setting update
+                                  disabled={!setting.is_editable || loading[`setting_${setting.key}`]}
+                                  onBlur={(e) => {
+                                    if (e.target.value !== setting.value) {
+                                      updateSetting(setting.key, e.target.value);
+                                    }
+                                  }}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                        e.currentTarget.blur();
+                                    }
                                   }}
                                 />
                               )}

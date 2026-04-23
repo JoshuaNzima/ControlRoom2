@@ -161,7 +161,7 @@ class GuardController extends Controller
         $grades = GuardGrade::orderBy('name')->get(['id','code','name']);
         
         if ($canAssignSupervisor) {
-            $supervisors = User::role(['supervisor', 'manager'])
+            $supervisors = User::role(['supervisor'])
                 ->where('status', 'active')
                 ->orderBy('name')
                 ->get();
@@ -297,7 +297,7 @@ class GuardController extends Controller
         $grades = GuardGrade::orderBy('name')->get(['id','code','name']);
         
         if ($canAssignSupervisor) {
-            $supervisors = User::role(['supervisor', 'manager'])
+            $supervisors = User::role(['supervisor'])
                 ->where('status', 'active')
                 ->orderBy('name')
                 ->get();

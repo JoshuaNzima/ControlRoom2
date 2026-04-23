@@ -14,12 +14,12 @@ return [
             // Default recipients by duty type (can be role name or user ID)
             'calendar_schedule' => 'executive',
             'communication' => 'executive',
-            'meeting_coordination' => 'manager',
+            'meeting_coordination' => 'executive',
             'travel_arrangements' => 'executive',
-            'report_document' => 'manager',
+            'report_document' => 'executive',
             'petty_cash' => 'finance_officer',
             'confidential' => 'executive',
-            'event_planning' => 'manager',
+            'event_planning' => 'executive',
             'office_admin_support' => 'admin',
         ],
         'personal' => [

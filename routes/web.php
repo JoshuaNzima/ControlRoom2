@@ -98,7 +98,29 @@ Route::middleware('auth')->group(function () {
     Route::put('/tutorials/{tutorial}', [\App\Http\Controllers\DashboardTutorialController::class, 'update'])->name('tutorials.update');
     Route::post('/tutorials/{tutorial}', [\App\Http\Controllers\DashboardTutorialController::class, 'update'])->name('tutorials.update.post');
     Route::delete('/tutorials/{tutorial}', [\App\Http\Controllers\DashboardTutorialController::class, 'destroy'])->name('tutorials.destroy');
+
+    // AI Assistant API (transfer and history require auth)
+    Route::post('/ai/transfer', [\App\Http\Controllers\ChatController::class, 'requestTransfer'])->name('ai.transfer');
+    Route::get('/ai/history', [\App\Http\Controllers\ChatController::class, 'history'])->name('ai.history');
+    
+    // Agent Chat Management (super_admin, control_room_operator, admin)
+    Route::prefix('agent/chats')->name('agent.chats.')->group(function () {
+        Route::get('/pending', [\App\Http\Controllers\ChatController::class, 'pendingTransfers'])->name('pending');
+        Route::get('/active', [\App\Http\Controllers\ChatController::class, 'agentChats'])->name('active');
+        Route::post('/accept', [\App\Http\Controllers\ChatController::class, 'acceptTransfer'])->name('accept');
+        Route::post('/reject', [\App\Http\Controllers\ChatController::class, 'rejectTransfer'])->name('reject');
+        Route::post('/respond', [\App\Http\Controllers\ChatController::class, 'agentRespond'])->name('respond');
+        Route::post('/resolve', [\App\Http\Controllers\ChatController::class, 'resolveChat'])->name('resolve');
+    });
 });
+
+// Public AI Assistant API (accessible to guests on landing page)
+Route::post('/ai/chat', [\App\Http\Controllers\ChatController::class, 'chat'])->name('ai.chat');
+
+// Help Center (public)
+Route::get('/help', [\App\Http\Controllers\HelpController::class, 'index'])->name('help.index');
+Route::get('/help/search', [\App\Http\Controllers\HelpController::class, 'search'])->name('help.search');
+Route::get('/help/{slug}', [\App\Http\Controllers\HelpController::class, 'show'])->name('help.show');
 Route::middleware(['auth', 'role:super_admin'])->prefix('superadmin')->name('superadmin.')->group(function () {
     Route::get('/dashboard', [\App\Http\Controllers\SuperAdmin\DashboardController::class, 'index'])->name('dashboard');
     Route::get('/me', [\App\Http\Controllers\SuperAdmin\ProfileController::class, 'index'])->name('profile');
@@ -150,13 +172,18 @@ Route::middleware(['auth', 'role:super_admin'])->prefix('superadmin')->name('sup
     
     // User Management (SuperAdmin UI, uses Admin endpoints under the hood)
     Route::get('/users', function () {
-        $users = \App\Models\User::with('roles')
+        $users = \App\Models\User::with('roles', 'zone')
             ->when(request('search'), function($q, $search) {
                 $q->where('name', 'like', "%{$search}%")
                   ->orWhere('email', 'like', "%{$search}%");
             })
             ->orderBy('name')
-            ->paginate(20);
+            ->paginate(20)
+            ->through(function ($user) {
+                $user->avatar_url = $user->avatar_url;
+                $user->initials = $user->initials;
+                return $user;
+            });
         $roles = \Spatie\Permission\Models\Role::all();
         $zones = \App\Models\Zone::orderBy('name')->get(['id','name']);
         return Inertia::render('SuperAdmin/Users', [
@@ -195,7 +222,7 @@ Route::middleware(['auth', 'role:super_admin'])->prefix('superadmin')->name('sup
         // Fetch supervisors and zones early (needed by both views)
         $supervisors = \App\Models\User::where('status', 'active')
             ->whereHas('roles', function ($q) {
-                $q->whereIn('name', ['supervisor', 'manager', 'sergeant', 'zone_commander'])
+                $q->whereIn('name', ['supervisor', 'sergeant', 'zone_commander'])
                   ->where('guard_name', 'web');
             })
             ->orderBy('name')
@@ -343,7 +370,7 @@ Route::middleware(['auth', 'role:super_admin'])->prefix('superadmin')->name('sup
             ->withQueryString();
         $supervisors = \App\Models\User::where('status', 'active')
             ->whereHas('roles', function ($q) {
-                $q->whereIn('name', ['supervisor', 'manager', 'sergeant', 'zone_commander'])
+                $q->whereIn('name', ['supervisor', 'sergeant', 'zone_commander'])
                   ->where('guard_name', 'web');
             })
             ->orderBy('name')
@@ -395,6 +422,14 @@ Route::middleware(['auth', 'role:super_admin'])->prefix('superadmin')->name('sup
     Route::post('/security/invalidate-remember-tokens', [SystemController::class, 'securityInvalidateRememberTokens'])->name('security.invalidate-remember-tokens');
     Route::post('/security/clear-password-reset-tokens', [SystemController::class, 'securityClearPasswordResetTokens'])->name('security.clear-password-reset-tokens');
     Route::post('/security/revoke-api-tokens', [SystemController::class, 'securityRevokeApiTokens'])->name('security.revoke-api-tokens');
+
+    // AI Settings
+    Route::get('/ai-settings', [\App\Http\Controllers\SuperAdmin\AiSettingsController::class, 'index'])->name('ai-settings');
+    Route::put('/ai-settings/{provider}', [\App\Http\Controllers\SuperAdmin\AiSettingsController::class, 'update'])->name('ai-settings.update');
+    Route::post('/ai-settings/{provider}/enable', [\App\Http\Controllers\SuperAdmin\AiSettingsController::class, 'enable'])->name('ai-settings.enable');
+    Route::post('/ai-settings/{provider}/disable', [\App\Http\Controllers\SuperAdmin\AiSettingsController::class, 'disable'])->name('ai-settings.disable');
+    Route::post('/ai-settings/{provider}/test', [\App\Http\Controllers\SuperAdmin\AiSettingsController::class, 'test'])->name('ai-settings.test');
+    Route::get('/ai-settings/{provider}/models', [\App\Http\Controllers\SuperAdmin\AiSettingsController::class, 'models'])->name('ai-settings.models');
 });
 
 // Include all module routes
@@ -427,9 +462,6 @@ Route::middleware(['auth'])->group(function () {
         }
         if ($user->hasRole('zone_commander')) {
             return redirect()->route('zone.dashboard');
-        }
-        if ($user->hasRole('manager')) {
-            return redirect()->route('manager.dashboard');
         }
         if ($user->hasAnyRole(['business_dev','business_development','bdo'])) {
             return redirect()->route('admin.business-dev');
@@ -589,7 +621,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/me', [\App\Http\Controllers\Guards\ProfileController::class, 'index'])->name('profile');
     });
 
-    Route::middleware(['role:supervisor,manager,admin,super_admin'])->prefix('supervisor')->name('supervisor.')->group(function () {
+    Route::middleware(['role:supervisor,admin,super_admin'])->prefix('supervisor')->name('supervisor.')->group(function () {
         Route::get('/assignments', [\App\Http\Controllers\Guards\AssignmentController::class, 'index'])->name('assignments.index');
         Route::post('/assignments/assign', [\App\Http\Controllers\Guards\AssignmentController::class, 'assign'])->name('assignments.assign');
         Route::delete('/assignments/unassign/{assignment}', [\App\Http\Controllers\Guards\AssignmentController::class, 'unassign'])->name('assignments.unassign');

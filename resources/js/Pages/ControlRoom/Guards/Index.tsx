@@ -371,6 +371,30 @@ export default function ControlRoomGuardsIndex({
     }
   };
 
+  const handleComplianceUpdate = async (guardId: number, data: { fingerprint_registered?: boolean; uniform_issued?: boolean; equipment_issued?: string[] }) => {
+    try {
+      const res = await fetch(route('control-room.guards.compliance', { guard: guardId }), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '',
+        },
+        credentials: 'same-origin',
+        body: JSON.stringify(data),
+      });
+      const result = await res.json();
+      if (result.success && selectedGuardDetails) {
+        setSelectedGuardDetails({
+          ...selectedGuardDetails,
+          ...result.guard,
+        });
+      }
+    } catch (error) {
+      console.error('Failed to update compliance:', error);
+    }
+  };
+
   const openEdit = async (g: Guard) => {
     if (g.edit_count !== undefined && g.edit_count >= 3) {
       alert('This guard has reached the maximum edit limit (3 edits). Contact an administrator for further changes.');
@@ -1250,6 +1274,7 @@ export default function ControlRoomGuardsIndex({
           onClose={() => setSelectedGuardDetails(null)}
           guard={selectedGuardDetails}
           scope="control-room"
+          onComplianceUpdate={handleComplianceUpdate}
         />
 
         {/* Bulk Cover Modal */}

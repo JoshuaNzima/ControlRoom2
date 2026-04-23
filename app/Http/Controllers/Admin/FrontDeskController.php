@@ -110,7 +110,7 @@ class FrontDeskController extends Controller
 
         // Team members for task assignment
         $teamMembers = User::whereHas('roles', function ($q) {
-            $q->whereIn('name', ['executive_assistant', 'admin', 'front_desk', 'manager']);
+            $q->whereIn('name', ['executive_assistant', 'admin', 'front_desk']);
         })->select('id', 'name')->orderBy('name')->get();
 
         return Inertia::render('Admin/FrontDesk', [

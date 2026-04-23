@@ -67,7 +67,7 @@ class DefaultModulesSeeder extends Seeder
                 'is_core' => true,
                 'description' => 'Track company assets and equipment',
                 'icon' => 'Monitor',
-                'route' => 'admin.assets',
+                'route' => 'assets.index',
                 'order' => 30,
             ],
             [

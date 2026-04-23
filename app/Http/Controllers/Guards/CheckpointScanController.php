@@ -231,7 +231,6 @@ class CheckpointScanController extends Controller
         return match($role) {
             'super_admin' => 'superadmin.dashboard',
             'admin' => 'admin.dashboard',
-            'manager' => 'manager.dashboard',
             'control_room_operator' => 'control-room.dashboard',
             'operations_officer' => 'operations.dashboard',
             'zone_commander' => 'zone-commander.dashboard',

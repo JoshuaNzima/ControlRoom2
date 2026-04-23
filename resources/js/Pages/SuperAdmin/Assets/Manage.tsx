@@ -28,15 +28,15 @@ export default function AssetsManage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <Card className="p-4 dark:bg-gray-800 dark:border-gray-700">
             <div className="flex items-center gap-3"><IconMapper name="Car" /><div className="font-medium text-gray-900 dark:text-gray-100">Vehicles</div></div>
-            <div className="mt-3"><Button asChild><Link href={route('assets.index')}>Open</Link></Button></div>
+            <div className="mt-3"><Button asChild><Link href={route('assets.vehicles.index')}>Open</Link></Button></div>
           </Card>
           <Card className="p-4 dark:bg-gray-800 dark:border-gray-700">
             <div className="flex items-center gap-3"><IconMapper name="Package" /><div className="font-medium text-gray-900 dark:text-gray-100">Equipment</div></div>
-            <div className="mt-3"><Button asChild><Link href={route('assets.index')}>Open</Link></Button></div>
+            <div className="mt-3"><Button asChild><Link href={route('assets.equipment.index')}>Open</Link></Button></div>
           </Card>
           <Card className="p-4 dark:bg-gray-800 dark:border-gray-700">
             <div className="flex items-center gap-3"><IconMapper name="Hand" /><div className="font-medium text-gray-900 dark:text-gray-100">Handovers</div></div>
-            <div className="mt-3"><Button asChild><Link href={route('assets.index')}>Open</Link></Button></div>
+            <div className="mt-3"><Button asChild><Link href={route('assets.handovers.index')}>Open</Link></Button></div>
           </Card>
         </div>
       </div>

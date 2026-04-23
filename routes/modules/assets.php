@@ -3,6 +3,15 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Admin\AssetHandoverController;
 
+// Inventory check routes - accessible to roles that can update guard compliance
+Route::middleware(['auth', 'role:super_admin,admin,hr,control_room_operator,operations_officer'])
+    ->prefix('assets')
+    ->name('assets.')
+    ->group(function () {
+        Route::post('/equipment/check-inventory', [\App\Http\Controllers\Admin\EquipmentController::class, 'checkInventory'])->name('equipment.check-inventory');
+        Route::post('/equipment/quick-create', [\App\Http\Controllers\Admin\EquipmentController::class, 'quickCreateFromCompliance'])->name('equipment.quick-create');
+    });
+
 Route::middleware(['auth', 'role:super_admin,asset_manager'])
     ->prefix('assets')
     ->name('assets.')
@@ -20,6 +29,7 @@ Route::middleware(['auth', 'role:super_admin,asset_manager'])
         Route::resource('vehicles', \App\Http\Controllers\Admin\VehicleController::class)->except(['create','edit','show']);
 
         // Handovers
+        Route::get('/handovers', [AssetHandoverController::class, 'index'])->name('handovers.index');
         Route::post('/handovers', [AssetHandoverController::class, 'store'])->name('handovers.store');
         Route::post('/handovers/{handover}/return', [AssetHandoverController::class, 'returnAsset'])->name('handovers.return');
 

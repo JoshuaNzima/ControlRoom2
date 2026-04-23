@@ -18,6 +18,7 @@ use App\Models\Task;
 use App\Models\RequisitionBatch;
 use App\Models\Guards\Attendance;
 use App\Models\Guards\GuardAssignment;
+use App\Models\ChatSession;
 
 class CounterController extends Controller
 {
@@ -92,6 +93,11 @@ class CounterController extends Controller
             ->where('due_date', '<', now()->toDateString())
             ->count();
 
+        // Chat transfer requests (for control room operators, admins, super_admins)
+        $chatTransfersPending = $user->hasAnyRole(['control_room_operator', 'admin', 'super_admin'])
+            ? ChatSession::where('status', ChatSession::STATUS_PENDING_TRANSFER)->count()
+            : 0;
+
         return response()->json([
             'notifications_unread' => $notificationsUnread,
             'requisitions_my_open' => $requisitionsMyOpen,
@@ -120,6 +126,7 @@ class CounterController extends Controller
             'assets_handovers_outstanding' => $assetsHandoversOutstanding,
             'tasks_my_open' => $tasksMyOpen,
             'tasks_my_overdue' => $tasksMyOverdue,
+            'chat_transfers_pending' => $chatTransfersPending,
         ]);
     }
 }

@@ -1,6 +1,9 @@
 import React, { useMemo, useState } from 'react';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import HRLayout from '@/Layouts/HRLayout';
+import IconMapper from '@/Components/IconMapper';
+import { Card } from '@/Components/ui/card';
+import { Button } from '@/Components/ui/button';
 
 interface Scheme { id: number; name: string; provider?: string|null; plan?: string|null; status: string; created_at?: string }
 interface Membership { id: number; member_no?: string|null; status: string; start_date?: string|null; end_date?: string|null; scheme?: { id: number; name: string } | null; guard?: { id: number; name: string; employee_id?: string|null } | null; created_at?: string }
@@ -28,23 +31,38 @@ export default function Medical() {
   return (
     <HRLayout title="Medical Schemes" user={auth?.user as any}>
       <Head title="Medical Schemes" />
-      <div className="py-6">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+      
+      {/* Hero Header */}
+      <div className="relative overflow-hidden bg-gradient-to-br from-red-900 via-red-800 to-rose-900 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg%20width%3D%2260%22%20height%3D%2260%22%20viewBox%3D%220%200%2060%2060%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%3E%3Cg%20fill%3D%22none%22%20fill-rule%3D%22evenodd%22%3E%3Cg%20fill%3D%22%23ffffff%22%20fill-opacity%3D%220.05%22%3E%3Cpath%20d%3D%22M36%2034v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6%2034v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6%204V0H4v4H0v2h4v4h2V6h4V4H6z%22/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] opacity-20" />
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div>
-              <h1 className="text-2xl md:text-3xl font-bold text-red-900 dark:text-gray-100">Medical Schemes</h1>
-              <p className="text-sm text-red-800/80 dark:text-gray-400 mt-1">Manage medical schemes and guard memberships.</p>
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-white/10 rounded-xl backdrop-blur-sm">
+                <IconMapper name="HeartPulse" size={28} />
+              </div>
+              <div>
+                <h1 className="text-2xl md:text-3xl font-bold text-white">Medical Schemes</h1>
+                <p className="text-red-100 dark:text-gray-400 text-sm mt-1">Manage medical schemes and guard memberships</p>
+              </div>
             </div>
-            <div className="flex gap-2 flex-wrap">
-              <a href={route('hr.medical.memberships.export', { scheme_id: filterSchemeId, member_status: memberStatus, member_search: memberSearch })} className="inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium bg-white dark:bg-gray-800 text-red-800 dark:text-gray-100 border border-red-200 dark:border-gray-700 hover:bg-red-50 dark:hover:bg-gray-700">Export Memberships</a>
-              <button onClick={() => setEnrollOpen(true)} className="inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium bg-red-600 text-white hover:bg-red-700">Enroll Member</button>
-              <button onClick={() => setCreateSchemeOpen(true)} className="inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium bg-red-600 text-white hover:bg-red-700">New Scheme</button>
+            <div className="flex flex-wrap gap-2">
+              <Button onClick={() => setEnrollOpen(true)} className="bg-rose-600 hover:bg-rose-700">
+                <IconMapper name="UserPlus" size={16} className="mr-1" /> Enroll Member
+              </Button>
+              <Button onClick={() => setCreateSchemeOpen(true)} className="bg-red-600 hover:bg-red-700">
+                <IconMapper name="Plus" size={16} className="mr-1" /> New Scheme
+              </Button>
             </div>
           </div>
+        </div>
+      </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-1 space-y-4">
-              <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Schemes Column */}
+          <div className="lg:col-span-1 space-y-4">
+            <Card className="p-4 dark:bg-gray-800 dark:border-gray-700">
                 <div className="grid grid-cols-1 gap-3">
                   <input placeholder="Search schemes" value={schemeSearch} onChange={(e)=>setSchemeSearch(e.target.value)} className="w-full rounded-md border border-gray-300 dark:border-gray-700 px-3 py-2 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100" />
                   <select value={schemeStatus} onChange={(e)=>setSchemeStatus(e.target.value)} className="w-full rounded-md border border-gray-300 dark:border-gray-700 px-3 py-2 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
@@ -54,12 +72,13 @@ export default function Medical() {
                   </select>
                   <div className="flex gap-3">
                     <button onClick={doFilter} className="px-4 py-2 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200">Filter</button>
-                    <button onClick={reset} className="px-4 py-2 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200">Reset</button>
+                    <Button onClick={reset} variant="ghost">Reset</Button>
                   </div>
                 </div>
-              </div>
+            </Card>
 
-              <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden">
+            {/* Schemes Table */}
+            <Card className="overflow-hidden dark:bg-gray-800 dark:border-gray-700">
                 <div className="overflow-x-auto">
                   <table className="min-w-full text-sm">
                     <thead className="bg-gray-50 dark:bg-gray-800">
@@ -94,11 +113,12 @@ export default function Medical() {
                     ))}
                   </div>
                 )}
-              </div>
-            </div>
+            </Card>
+          </div>
 
-            <div className="lg:col-span-2 space-y-4">
-              <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4">
+          {/* Memberships Column */}
+          <div className="lg:col-span-2 space-y-4">
+            <Card className="p-4 dark:bg-gray-800 dark:border-gray-700">
                 <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
                   <select value={filterSchemeId} onChange={(e)=>setFilterSchemeId(parseInt(e.target.value))} className="w-full rounded-md border border-gray-300 dark:border-gray-700 px-3 py-2 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
                     <option value={0}>All Schemes</option>
@@ -119,9 +139,10 @@ export default function Medical() {
                     <button onClick={reset} className="px-4 py-2 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200">Reset</button>
                   </div>
                 </div>
-              </div>
+            </Card>
 
-              <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-x-auto">
+            {/* Memberships Table */}
+            <Card className="overflow-hidden dark:bg-gray-800 dark:border-gray-700">
                 <table className="min-w-full text-sm">
                   <thead className="bg-gray-50 dark:bg-gray-800">
                     <tr>
@@ -158,13 +179,12 @@ export default function Medical() {
                     ))}
                   </div>
                 )}
-              </div>
-            </div>
+            </Card>
           </div>
-
-          <SchemeModal open={createSchemeOpen || !!editScheme} onClose={()=>{ setCreateSchemeOpen(false); setEditScheme(null); }} scheme={editScheme || undefined} />
-          <EnrollModal open={enrollOpen} onClose={()=>setEnrollOpen(false)} guards={guards || []} schemes={(schemes?.data || schemes || [])} />
         </div>
+
+        <SchemeModal open={createSchemeOpen || !!editScheme} onClose={()=>{ setCreateSchemeOpen(false); setEditScheme(null); }} scheme={editScheme || undefined} />
+        <EnrollModal open={enrollOpen} onClose={()=>setEnrollOpen(false)} guards={guards || []} schemes={(schemes?.data || schemes || [])} />
       </div>
     </HRLayout>
   );

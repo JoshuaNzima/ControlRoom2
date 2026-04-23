@@ -32,10 +32,10 @@ Route::middleware(['auth'])->group(function () {
 
         Route::get('guards/{guard}', [SupervisorController::class, 'showGuard'])->name('guards.show');
 
-        // Assignments management (Supervisor)
-        Route::get('/assignments', [SupervisorAssignmentController::class, 'index'])->name('assignments');
-        Route::post('/assignments/assign', [SupervisorAssignmentController::class, 'assign'])->name('assignments.assign');
-        Route::delete('/assignments/unassign/{id}', [SupervisorAssignmentController::class, 'unassign'])->name('assignments.unassign');
+        // Assignments management (Supervisor) - legacy routes, use web.php routes instead
+        // Route::get('/assignments', [SupervisorAssignmentController::class, 'index'])->name('assignments');
+        // Route::post('/assignments/assign', [SupervisorAssignmentController::class, 'assign'])->name('assignments.assign');
+        // Route::delete('/assignments/unassign/{id}', [SupervisorAssignmentController::class, 'unassign'])->name('assignments.unassign');
 
         // Attendance management
         Route::middleware(['permission:attendance.manage'])->group(function () {

@@ -24,10 +24,13 @@ interface ClientDashboardProps {
     contract_end_date: string | null;
     monthly_rate: number;
     status: string;
+    supervisor_name?: string | null;
+    sergeant_name?: string | null;
   } | null;
   stats: {
     activeSites: number;
     totalGuards: number;
+    guardsOnDuty: number;
     monthlyReports: number;
     activeAlerts: number;
   };
@@ -74,6 +77,48 @@ interface ClientDashboardProps {
     billing_start: string | null;
     is_overdue: boolean;
   } | null;
+  guardsOnDuty?: Array<{
+    id: number;
+    guard_id: number;
+    guard_name: string | null;
+    guard_phone: string | null;
+    position: string | null;
+    site_id: number;
+    site_name: string | null;
+    check_in_time: string | null;
+    status: string;
+    hours_worked: number | null;
+  }>;
+  todayShifts?: Array<{
+    id: number;
+    guard_id: number;
+    guard_name: string | null;
+    site_id: number;
+    site_name: string | null;
+    start_time: string | null;
+    end_time: string | null;
+    status: string;
+    status_color: string;
+    shift_type: string | null;
+    is_late: boolean;
+  }>;
+  activityFeed?: Array<{
+    id: string;
+    type: string;
+    title: string;
+    description: string;
+    timestamp: string;
+    icon: string;
+    color: string;
+  }>;
+  notifications?: Array<{
+    id: string;
+    type: string;
+    title: string;
+    message: string;
+    icon: string;
+    action_url?: string;
+  }>;
 }
 
 // Animated Counter Component
@@ -230,6 +275,10 @@ export default function ClientDashboard({
   invoices,
   contractStatus,
   paymentSummary,
+  guardsOnDuty = [],
+  todayShifts = [],
+  activityFeed = [],
+  notifications = [],
 }: ClientDashboardProps) {
   const [currentTime, setCurrentTime] = useState(new Date());
 
@@ -339,8 +388,50 @@ export default function ClientDashboard({
           </div>
         </div>
 
+        {/* Notifications Banner */}
+        {notifications.length > 0 && (
+          <div className="space-y-2">
+            {notifications.map((notification) => (
+              <div
+                key={notification.id}
+                className={`p-4 rounded-lg border flex items-start gap-3 ${
+                  notification.type === 'error'
+                    ? 'bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800'
+                    : notification.type === 'warning'
+                    ? 'bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800'
+                    : 'bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800'
+                }`}
+              >
+                <IconMapper
+                  name={notification.icon}
+                  size={20}
+                  className={
+                    notification.type === 'error'
+                      ? 'text-red-600 dark:text-red-400'
+                      : notification.type === 'warning'
+                      ? 'text-amber-600 dark:text-amber-400'
+                      : 'text-blue-600 dark:text-blue-400'
+                  }
+                />
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-gray-900 dark:text-gray-100 text-sm">{notification.title}</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-400">{notification.message}</p>
+                </div>
+                {notification.action_url && (
+                  <Link
+                    href={notification.action_url}
+                    className="text-xs font-medium text-red-600 dark:text-red-400 hover:underline whitespace-nowrap"
+                  >
+                    View
+                  </Link>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
         {/* Stats Overview */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
           <StatCard
             icon={<IconMapper name="Building" size={20} />}
             title="Active Sites"
@@ -350,10 +441,17 @@ export default function ClientDashboard({
           />
           <StatCard
             icon={<IconMapper name="Shield" size={20} />}
-            title="Security Guards"
+            title="Total Guards"
             value={stats.totalGuards}
-            subtitle="On duty"
+            subtitle="Assigned"
             color="green"
+          />
+          <StatCard
+            icon={<IconMapper name="UserCheck" size={20} />}
+            title="On Duty"
+            value={stats.guardsOnDuty}
+            subtitle="Currently active"
+            color="emerald"
           />
           <StatCard
             icon={<IconMapper name="FileText" size={20} />}
@@ -407,7 +505,7 @@ export default function ClientDashboard({
         {/* Quick Actions */}
         <div>
           <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Quick Actions</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
             {quickActions.map((action) => (
               <ActionTile
                 key={action.title}
@@ -421,12 +519,156 @@ export default function ClientDashboard({
           </div>
         </div>
 
+        {/* Guards on Duty & Today's Shifts */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Guards Currently on Duty */}
+          <Card className="p-4 sm:p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                <IconMapper name="UserCheck" size={20} className="text-emerald-600 dark:text-emerald-400" />
+                Guards on Duty
+              </h3>
+              <span className="px-2 py-1 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 rounded-full text-xs font-medium">
+                {guardsOnDuty.length} active
+              </span>
+            </div>
+            {guardsOnDuty.length === 0 ? (
+              <div className="text-center py-6">
+                <IconMapper name="UserX" size={32} className="mx-auto text-gray-300 dark:text-gray-600 mb-2" />
+                <p className="text-sm text-gray-500 dark:text-gray-400">No guards currently on duty</p>
+              </div>
+            ) : (
+              <div className="space-y-2 max-h-64 overflow-y-auto">
+                {guardsOnDuty.map((guard) => (
+                  <div key={guard.id} className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
+                          <IconMapper name="User" size={16} className="text-emerald-600 dark:text-emerald-400" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-sm text-gray-900 dark:text-gray-100">{guard.guard_name || 'Unknown'}</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">{guard.site_name}</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          Since {guard.check_in_time ? new Date(guard.check_in_time).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : 'N/A'}
+                        </p>
+                        <p className="text-xs text-emerald-600 dark:text-emerald-400">
+                          {guard.hours_worked ? `${guard.hours_worked}h` : 'New'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+
+          {/* Today's Shifts */}
+          <Card className="p-4 sm:p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                <IconMapper name="Calendar" size={20} className="text-blue-600 dark:text-blue-400" />
+                Today's Shifts
+              </h3>
+              <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full text-xs font-medium">
+                {todayShifts.length} scheduled
+              </span>
+            </div>
+            {todayShifts.length === 0 ? (
+              <div className="text-center py-6">
+                <IconMapper name="CalendarOff" size={32} className="mx-auto text-gray-300 dark:text-gray-600 mb-2" />
+                <p className="text-sm text-gray-500 dark:text-gray-400">No shifts scheduled for today</p>
+              </div>
+            ) : (
+              <div className="space-y-2 max-h-64 overflow-y-auto">
+                {todayShifts.map((shift) => (
+                  <div key={shift.id} className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-2 h-2 rounded-full ${
+                          shift.status_color === 'green' ? 'bg-green-500' :
+                          shift.status_color === 'blue' ? 'bg-blue-500' :
+                          shift.status_color === 'yellow' ? 'bg-yellow-500' :
+                          'bg-gray-400'
+                        }`} />
+                        <div>
+                          <p className="font-medium text-sm text-gray-900 dark:text-gray-100">{shift.guard_name || 'Unassigned'}</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">{shift.site_name}</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-xs font-medium text-gray-700 dark:text-gray-300">
+                          {shift.start_time} - {shift.end_time}
+                        </p>
+                        <p className={`text-xs ${
+                          shift.status === 'completed' ? 'text-green-600 dark:text-green-400' :
+                          shift.status === 'in_progress' ? 'text-blue-600 dark:text-blue-400' :
+                          shift.status === 'scheduled' ? 'text-yellow-600 dark:text-yellow-400' :
+                          'text-gray-500 dark:text-gray-400'
+                        }`}>
+                          {shift.status.replace('_', ' ').charAt(0).toUpperCase() + shift.status.replace('_', ' ').slice(1)}
+                          {shift.is_late && <span className="text-red-500 ml-1">(Late)</span>}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+        </div>
+
+        {/* Activity Feed */}
+        {activityFeed.length > 0 && (
+          <Card className="p-4 sm:p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                <IconMapper name="Activity" size={20} className="text-purple-600 dark:text-purple-400" />
+                Recent Activity
+              </h3>
+            </div>
+            <div className="space-y-2 max-h-48 overflow-y-auto">
+              {activityFeed.slice(0, 8).map((activity) => (
+                <div key={activity.id} className="flex items-start gap-3 p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                  <div className={`p-2 rounded-full ${
+                    activity.color === 'green' ? 'bg-green-100 dark:bg-green-900/30' :
+                    activity.color === 'blue' ? 'bg-blue-100 dark:bg-blue-900/30' :
+                    activity.color === 'red' ? 'bg-red-100 dark:bg-red-900/30' :
+                    'bg-amber-100 dark:bg-amber-900/30'
+                  }`}>
+                    <IconMapper
+                      name={activity.icon}
+                      size={14}
+                      className={
+                        activity.color === 'green' ? 'text-green-600 dark:text-green-400' :
+                        activity.color === 'blue' ? 'text-blue-600 dark:text-blue-400' :
+                        activity.color === 'red' ? 'text-red-600 dark:text-red-400' :
+                        'text-amber-600 dark:text-amber-400'
+                      }
+                    />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{activity.title}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{activity.description}</p>
+                  </div>
+                  <span className="text-xs text-gray-400 dark:text-gray-500 whitespace-nowrap">
+                    {formatRelativeTime(activity.timestamp)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </Card>
+        )}
+
         {/* Two Column Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Sites Section */}
-          <Card className="p-6" id="sites">
+          <Card className="p-4 sm:p-6" id="sites">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+              <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
                 <IconMapper name="Building" size={20} />
                 My Sites
               </h3>
@@ -448,7 +690,7 @@ export default function ClientDashboard({
                     <div className="mt-2 flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
                       <span className="flex items-center gap-1">
                         <IconMapper name="Shield" size={14} />
-                        {site.required_guards} guards required
+                        {site.required_guards} guards
                       </span>
                       <span className="flex items-center gap-1">
                         <IconMapper name="MapPin" size={14} />
@@ -462,9 +704,9 @@ export default function ClientDashboard({
           </Card>
 
           {/* Recent Incidents */}
-          <Card className="p-6" id="incidents">
+          <Card className="p-4 sm:p-6" id="incidents">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+              <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
                 <IconMapper name="AlertTriangle" size={20} />
                 Recent Incidents
               </h3>
@@ -536,8 +778,8 @@ export default function ClientDashboard({
         </Card>
 
         {/* Client Info Footer */}
-        <Card className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Card className="p-4 sm:p-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             <div>
               <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Contact Information</h4>
               <div className="space-y-1 text-sm">
@@ -552,6 +794,26 @@ export default function ClientDashboard({
                 <p className="text-gray-900 dark:text-gray-100">Start: {formatDate(client.contract_start_date)}</p>
                 <p className="text-gray-900 dark:text-gray-100">End: {formatDate(client.contract_end_date)}</p>
                 <p className="text-gray-500 dark:text-gray-400">Monthly: {formatCurrency(client.monthly_rate)}</p>
+              </div>
+            </div>
+            <div>
+              <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Assigned Personnel</h4>
+              <div className="space-y-1 text-sm">
+                {client.supervisor_name && (
+                  <p className="text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                    <IconMapper name="User" size={14} className="text-blue-500" />
+                    Supervisor: {client.supervisor_name}
+                  </p>
+                )}
+                {client.sergeant_name && (
+                  <p className="text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                    <IconMapper name="Shield" size={14} className="text-purple-500" />
+                    Sergeant: {client.sergeant_name}
+                  </p>
+                )}
+                {!client.supervisor_name && !client.sergeant_name && (
+                  <p className="text-gray-500 dark:text-gray-400">No personnel assigned</p>
+                )}
               </div>
             </div>
             <div className="flex items-center justify-end">

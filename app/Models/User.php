@@ -50,6 +50,7 @@ class User extends Authenticatable
         'employee_id',
         'status',
         'zone_id',
+        'avatar_path',
     ];
 
     /**
@@ -176,14 +177,6 @@ class User extends Authenticatable
     }
 
     /**
-     * Check if user is a manager.
-     */
-    public function isManager(): bool
-    {
-        return $this->hasRole('manager', 'admin');
-    }
-
-    /**
      * Get the clients this user is linked to (for client role users).
      */
     public function clients()
@@ -252,5 +245,28 @@ class User extends Authenticatable
     public function sendPasswordResetNotification($token): void
     {
         $this->notify(new CustomResetPasswordNotification($token));
+    }
+
+    /**
+     * Get the user's avatar URL.
+     */
+    public function getAvatarUrlAttribute(): ?string
+    {
+        if ($this->avatar_path) {
+            return asset('storage/' . $this->avatar_path);
+        }
+        return null;
+    }
+
+    /**
+     * Get user initials for avatar display.
+     */
+    public function getInitialsAttribute(): string
+    {
+        $parts = explode(' ', $this->name);
+        if (count($parts) >= 2) {
+            return strtoupper(substr($parts[0], 0, 1) . substr($parts[1], 0, 1));
+        }
+        return strtoupper(substr($this->name, 0, 2));
     }
 }

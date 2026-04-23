@@ -4,6 +4,7 @@ import SuperAdminLayout from '@/Layouts/SuperAdminLayout';
 import IconMapper from '@/Components/IconMapper';
 import Modal from '@/Components/Modal';
 import useNotification from '@/Providers/useNotifications';
+import UserDetailsModal from '@/Components/Users/UserDetailsModal';
 
 interface Role { id: number; name: string }
 interface Zone { id: number; name: string }
@@ -16,6 +17,12 @@ interface UserRow {
   roles: { id?: number; name: string }[];
   status?: string;
   zone_id?: number | null;
+  avatar_url?: string;
+  initials?: string;
+  zone?: { id: number; name: string } | null;
+  created_at?: string;
+  updated_at?: string;
+  email_verified_at?: string;
 }
 
 interface UsersIndexProps {
@@ -29,9 +36,19 @@ export default function SuperAdminUsers({ users, filters, roles, zones }: UsersI
   const [search, setSearch] = React.useState(filters.search || '');
   const [showAdd, setShowAdd] = React.useState(false);
   const [showEdit, setShowEdit] = React.useState(false);
+  const [showDetails, setShowDetails] = React.useState(false);
   const [selectedUser, setSelectedUser] = React.useState<UserRow | null>(null);
   const [saving, setSaving] = React.useState(false);
   const { push } = useNotification();
+
+  // Helper to get user initials
+  const getInitials = (name: string): string => {
+    const parts = name.split(' ');
+    if (parts.length >= 2) {
+      return (parts[0].charAt(0) + parts[1].charAt(0)).toUpperCase();
+    }
+    return name.substring(0, 2).toUpperCase();
+  };
 
   // Loading states for individual row actions
   const [loading, setLoading] = React.useState<Record<string, boolean>>({});
@@ -314,11 +331,24 @@ export default function SuperAdminUsers({ users, filters, roles, zones }: UsersI
           {users.data.map((u) => (
             <div key={u.id} className="rounded-xl bg-white dark:bg-gray-900 shadow-md border border-gray-100 dark:border-gray-800 p-4 space-y-3">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-gradient-to-br from-red-500 to-rose-600 rounded-full flex items-center justify-center text-white font-bold text-lg">
-                  {u.name.charAt(0)}
-                </div>
+                {u.avatar_url ? (
+                  <img 
+                    src={u.avatar_url} 
+                    alt={u.name}
+                    className="w-12 h-12 rounded-full object-cover border-2 border-red-200 dark:border-red-800"
+                  />
+                ) : (
+                  <div className="w-12 h-12 bg-gradient-to-br from-red-500 to-rose-600 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-md">
+                    {u.initials || getInitials(u.name)}
+                  </div>
+                )}
                 <div className="flex-1 min-w-0">
-                  <div className="font-semibold text-gray-900 dark:text-gray-100 truncate">{u.name}</div>
+                  <button 
+                    onClick={() => { setSelectedUser(u); setShowDetails(true); }}
+                    className="text-left hover:underline"
+                  >
+                    <div className="font-semibold text-gray-900 dark:text-gray-100 truncate">{u.name}</div>
+                  </button>
                   <div className="text-sm text-gray-500 dark:text-gray-400 truncate">{u.email}</div>
                 </div>
                 <span className="px-3 py-1 bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-200 rounded-full text-xs font-semibold">
@@ -338,11 +368,20 @@ export default function SuperAdminUsers({ users, filters, roles, zones }: UsersI
               <div className="flex items-center gap-2">
                 <button
                   type="button"
+                  onClick={() => { setSelectedUser(u); setShowDetails(true); }}
+                  className="flex-1 px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition flex items-center justify-center gap-1"
+                  title="View Details"
+                >
+                  <IconMapper name="Eye" size={16} />
+                  <span className="hidden sm:inline">View</span>
+                </button>
+                <button
+                  type="button"
                   onClick={() => { setSelectedUser(u); setShowEdit(true); }}
                   className="flex-1 px-3 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 transition flex items-center justify-center gap-1"
                   title="Edit"
                 >
-                  <IconMapper name="Pencil" size={16} className="sm:hidden" />
+                  <IconMapper name="Pencil" size={16} />
                   <span className="hidden sm:inline">Edit</span>
                 </button>
                 <button
@@ -362,10 +401,7 @@ export default function SuperAdminUsers({ users, filters, roles, zones }: UsersI
                   title={u.status === 'active' ? 'Deactivate user' : 'Activate user'}
                 >
                   {loading[`toggle_${u.id}`] ? '...' : (
-                    <>
-                      <IconMapper name={u.status === 'active' ? 'PauseCircle' : 'PlayCircle'} size={18} className="sm:hidden" />
-                      <span className="hidden sm:inline">{u.status === 'active' ? 'Deactivate' : 'Activate'}</span>
-                    </>
+                    <IconMapper name={u.status === 'active' ? 'PauseCircle' : 'PlayCircle'} size={18} />
                   )}
                 </button>
               </div>
@@ -394,11 +430,24 @@ export default function SuperAdminUsers({ users, filters, roles, zones }: UsersI
                 <tr key={u.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-gradient-to-br from-red-500 to-rose-600 rounded-full flex items-center justify-center text-white font-bold">
-                        {u.name.charAt(0)}
-                      </div>
+                      {u.avatar_url ? (
+                        <img 
+                          src={u.avatar_url} 
+                          alt={u.name}
+                          className="w-10 h-10 rounded-full object-cover border-2 border-red-200 dark:border-red-800"
+                        />
+                      ) : (
+                        <div className="w-10 h-10 bg-gradient-to-br from-red-500 to-rose-600 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-md">
+                          {u.initials || getInitials(u.name)}
+                        </div>
+                      )}
                       <div>
-                        <div className="font-medium text-gray-900 dark:text-gray-100">{u.name}</div>
+                        <button 
+                          onClick={() => { setSelectedUser(u); setShowDetails(true); }}
+                          className="text-left hover:underline"
+                        >
+                          <div className="font-medium text-gray-900 dark:text-gray-100">{u.name}</div>
+                        </button>
                         <div className="text-sm text-gray-500 dark:text-gray-400">{u.employee_id || 'N/A'}</div>
                       </div>
                     </div>
@@ -421,6 +470,13 @@ export default function SuperAdminUsers({ users, filters, roles, zones }: UsersI
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2">
                       <button
+                        onClick={() => { setSelectedUser(u); setShowDetails(true); }}
+                        className="p-2 text-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg transition"
+                        title="View Details"
+                      >
+                        <IconMapper name="Eye" size={18} />
+                      </button>
+                      <button
                         onClick={() => { setSelectedUser(u); setShowEdit(true); }}
                         className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition"
                         title="Edit"
@@ -440,7 +496,7 @@ export default function SuperAdminUsers({ users, filters, roles, zones }: UsersI
                         className="p-2 text-yellow-600 hover:bg-yellow-50 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
                         title={u.status === 'active' ? 'Deactivate user' : 'Activate user'}
                       >
-                        {loading[`toggle_${u.id}`] ? '...' : (u.status === 'active' ? 'Deactivate' : 'Activate')}
+                        <IconMapper name={u.status === 'active' ? 'ToggleLeft' : 'ToggleRight'} size={18} />
                       </button>
                       {(errors[`delete_${u.id}`] || errors[`toggle_${u.id}`]) && (
                         <span className="text-xs text-red-600 dark:text-red-400 ml-2">
@@ -622,6 +678,17 @@ export default function SuperAdminUsers({ users, filters, roles, zones }: UsersI
             </div>
           </div>
         </Modal>
+
+        {/* User Details Modal */}
+        <UserDetailsModal
+          open={showDetails}
+          onClose={() => setShowDetails(false)}
+          user={selectedUser}
+          onEdit={() => {
+            setShowDetails(false);
+            setShowEdit(true);
+          }}
+        />
       </div>
     </SuperAdminLayout>
   );

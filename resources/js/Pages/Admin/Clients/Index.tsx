@@ -340,9 +340,11 @@ interface ClientsIndexProps {
   filters: Filters;
   services?: Array<{ id: number; name: string; monthly_price: number; required_guards?: number }>;
   zones?: Array<{ id: number; name: string }>;
+  supervisors?: Array<{ id: number; name: string; email?: string }>;
+  sergeants?: Array<{ id: number; name: string; position?: string }>;
 }
 
-export default function ClientsIndex({ clients, filters, services = [], zones = [] }: ClientsIndexProps) {
+export default function ClientsIndex({ clients, filters, services = [], zones = [], supervisors = [], sergeants = [] }: ClientsIndexProps) {
   const [search, setSearch] = React.useState(filters.search || '');
   const initialPerPage = Number(filters?.per_page ?? clients.meta?.per_page ?? 20);
   const [perPage, setPerPage] = React.useState<number>(initialPerPage);
@@ -697,6 +699,8 @@ export default function ClientsIndex({ clients, filters, services = [], zones = 
               open={true}
               services={services}
               zones={zones}
+              supervisors={supervisors}
+              sergeants={sergeants}
               onClientUpdated={(c: any) => {
                 setViewingClient(c);
                 router.reload({ only: ['clients'] });

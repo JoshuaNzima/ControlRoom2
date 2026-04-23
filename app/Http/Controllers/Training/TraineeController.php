@@ -377,6 +377,6 @@ class TraineeController extends Controller
         if (!$user) return false;
         if ($user->hasRole('super_admin')) return true;
         if ($user->can('guards.assign')) return true;
-        return $user->hasAnyRole(['admin', 'manager', 'operations_officer', 'hr', 'human_resources']);
+        return $user->hasAnyRole(['admin', 'operations_officer', 'hr', 'human_resources']);
     }
 }

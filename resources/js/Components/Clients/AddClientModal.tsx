@@ -61,7 +61,6 @@ export default function AddClientModal({ open, onClose, services = [], zones = [
     user_name: '',
     user_email: '',
     user_phone: '',
-    user_password: '',
     user_role: 'primary' as 'primary' | 'contact' | 'viewer',
   });
   const [showSiteMap, setShowSiteMap] = React.useState(true);
@@ -302,12 +301,15 @@ export default function AddClientModal({ open, onClose, services = [], zones = [
                 </select>
               </div>
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Address</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Address *</label>
                 <textarea 
                   value={data.site.address} 
                   onChange={(e) => setData('site', { ...data.site, address: e.target.value })} 
                   className={clientFieldClassName}
+                  required
+                  placeholder="Enter site address"
                 />
+                {errors['site.address'] && <p className="text-red-600 text-sm mt-1">{(errors as any)['site.address']}</p>}
               </div>
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Location</label>
@@ -504,20 +506,10 @@ export default function AddClientModal({ open, onClose, services = [], zones = [
                   {errors.user_phone && <p className="text-red-600 text-sm mt-1">{errors.user_phone}</p>}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Password *</label>
-                  <input
-                    type="password"
-                    value={data.user_password}
-                    onChange={(e) => setData('user_password', e.target.value)}
-                    className={clientFieldClassName}
-                    placeholder="Min 8 characters"
-                    required={data.create_user}
-                    minLength={8}
-                  />
-                  {errors.user_password && <p className="text-red-600 text-sm mt-1">{errors.user_password}</p>}
-                </div>
-                <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Role</label>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                    A password reset email will be sent to set their password.
+                  </p>
                   <select
                     value={data.user_role}
                     onChange={(e) => setData('user_role', e.target.value as 'primary' | 'contact' | 'viewer')}

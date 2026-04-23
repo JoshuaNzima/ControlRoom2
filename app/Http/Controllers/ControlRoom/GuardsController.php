@@ -147,21 +147,21 @@ class GuardsController extends Controller
             'guards' => $guards,
             'inactiveGuards' => $view === 'inactive' ? $guards : null,
             'filters' => $request->only(['search','status','profile_status','zone_id','client_id','supervisor_id','on_duty','sort','dir','per_page','view']),
-            'supervisors' => User::role(['supervisor','manager','operations_officer','sergeant'])->where('status', 'active')->orderBy('name')->get(['id','name']),
+            'supervisors' => User::role(['supervisor','operations_officer','sergeant'])->where('status', 'active')->orderBy('name')->get(['id','name']),
             'leaders' => Guard::leaders()->where('status', 'active')->orderBy('name')->get(['id','name','position']),
             'clients' => Client::orderBy('name')->get(['id','name']),
             'zones' => Zone::orderBy('name')->get(['id','name']),
             'stats' => $stats,
             'can' => [
-                // Control room operators, managers, HR and super admins can perform status actions
-                'suspend' => auth()->user()?->hasAnyRole(['operations_officer','manager','super_admin','control_room_operator','hr','hr_manager']),
-                'dismiss' => auth()->user()?->hasAnyRole(['operations_officer','manager','super_admin','control_room_operator','hr','hr_manager']),
-                'reinstate' => auth()->user()?->hasAnyRole(['operations_officer','manager','super_admin','control_room_operator','hr','hr_manager']),
+                // Control room operators, HR and super admins can perform status actions
+                'suspend' => auth()->user()?->hasAnyRole(['operations_officer','super_admin','control_room_operator','hr','hr_manager']),
+                'dismiss' => auth()->user()?->hasAnyRole(['operations_officer','super_admin','control_room_operator','hr','hr_manager']),
+                'reinstate' => auth()->user()?->hasAnyRole(['operations_officer','super_admin','control_room_operator','hr','hr_manager']),
             ],
             'canAssignSupervisor' => (function(){
                 $u = auth()->user();
                 if (!$u) return false;
-                return $u->hasAnyRole(['operations_officer','manager','super_admin','control_room_operator'])
+                return $u->hasAnyRole(['operations_officer','super_admin','control_room_operator'])
                     || (method_exists($u, 'can') && $u->can('control_room_operator'));
             })(),
         ]);

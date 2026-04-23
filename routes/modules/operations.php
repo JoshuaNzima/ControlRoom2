@@ -4,11 +4,11 @@ use Illuminate\Support\Facades\Route;
 
 /**
  * Operations Module Routes
- * For operations_officer, manager, and related roles
+ * For operations_officer, operations_manager, and related roles
  * Provides view access to incentives and other operational data
  */
 
-Route::middleware(['auth', 'role_or_permission:operations_officer|operations_manager|manager|admin|super_admin|zone_commander'])->prefix('operations')->name('operations.')->group(function () {
+Route::middleware(['auth', 'role_or_permission:operations_officer|operations_manager|admin|super_admin|zone_commander'])->prefix('operations')->name('operations.')->group(function () {
 
     // Operations Dashboard - Field Operations Focus
     Route::get('/dashboard', [\App\Http\Controllers\ControlRoomDashboardController::class, 'index'])->name('dashboard');

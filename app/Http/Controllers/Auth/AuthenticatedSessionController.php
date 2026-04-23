@@ -62,12 +62,7 @@ class AuthenticatedSessionController extends Controller
         if ($user->hasRole('zone_commander')) {
             return route('zone.dashboard', absolute: false);
         }
-        
-        // Manager - Manages teams and operations
-        if ($user->hasRole('manager')) {
-            return route('manager.dashboard', absolute: false);
-        }
-        
+  
         // Business Development - Marketing/BDO module
         if (
             $user->hasRole('business_dev') ||

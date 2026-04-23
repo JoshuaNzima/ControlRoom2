@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import MarketingLayout from '@/Layouts/MarketingLayout';
 import { Card } from '@/Components/ui/card';
+import { Button } from '@/Components/ui/button';
 import IconMapper from '@/Components/IconMapper';
 import Modal from '@/Components/Modal';
 
@@ -110,33 +111,36 @@ export default function MarketingPage({
   return (
     <MarketingLayout title="Marketing" user={auth?.user as any}>
       <Head title="Marketing" />
-      <div className="py-6">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+      
+      {/* Hero Header */}
+      <div className="relative overflow-hidden bg-gradient-to-br from-coin-900 via-coin-800 to-coin-900 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg%20width%3D%2260%22%20height%3D%2260%22%20viewBox%3D%220%200%2060%2060%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%3E%3Cg%20fill%3D%22none%22%20fill-rule%3D%22evenodd%22%3E%3Cg%20fill%3D%22%23ffffff%22%20fill-opacity%3D%220.05%22%3E%3Cpath%20d%3D%22M36%2034v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6%2034v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6%204V0H4v4H0v2h4v4h2V6h4V4H6z%22/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] opacity-20" />
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div>
-              <h1 className="text-2xl md:text-3xl font-bold text-coin-700 dark:text-coin-300">Marketing Overview</h1>
-              <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
-                Monitor campaign pipeline, live activity, and media spend across channels.
-              </p>
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-white/10 rounded-xl backdrop-blur-sm">
+                <IconMapper name="Megaphone" size={28} />
+              </div>
+              <div>
+                <h1 className="text-2xl md:text-3xl font-bold text-white">Marketing Overview</h1>
+                <p className="text-coin-100 dark:text-gray-400 text-sm mt-1">Monitor campaign pipeline, live activity, and media spend across channels</p>
+              </div>
             </div>
             <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={() => setCreateOpen(true)}
-                className="inline-flex w-full sm:w-auto justify-center items-center px-4 py-2 rounded-lg text-sm font-medium bg-coin-700 text-white hover:bg-coin-600 focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950"
-              >
-                <IconMapper name="megaphone" className="w-4 h-4 mr-2" />
-                New Campaign
-              </button>
-              <Link
-                href={route('admin.modules.index')}
-                className="inline-flex w-full sm:w-auto justify-center items-center px-4 py-2 rounded-lg text-sm font-medium bg-white dark:bg-gray-900/60 text-gray-700 dark:text-gray-100 border border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/60"
-              >
-                <IconMapper name="grid-3x3" className="w-4 h-4 mr-2" />
-                Modules
+              <Button onClick={() => setCreateOpen(true)} className="bg-coin-600 hover:bg-coin-500">
+                <IconMapper name="Plus" size={16} className="mr-1" /> New Campaign
+              </Button>
+              <Link href={route('admin.modules.index')}>
+                <Button variant="outline" className="border-white/20 text-white hover:bg-white/10">
+                  <IconMapper name="LayoutGrid" size={16} className="mr-1" /> Modules
+                </Button>
               </Link>
             </div>
           </div>
+        </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
 
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <Card className="p-4 bg-gradient-to-br from-coin-50 to-coin-100 border-coin-200 dark:from-coin-900/20 dark:to-coin-900/10 dark:border-coin-900/30">
@@ -258,14 +262,9 @@ export default function MarketingPage({
           <Card className="p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">All Campaigns</h2>
-              <button
-                type="button"
-                onClick={() => setCreateOpen(true)}
-                className="inline-flex w-full sm:w-auto justify-center items-center px-3 py-2 rounded-md bg-coin-700 text-white text-sm hover:bg-coin-600 focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950"
-              >
-                <IconMapper name="plus" className="w-4 h-4 mr-1" />
-                New Campaign
-              </button>
+              <Button onClick={() => setCreateOpen(true)} className="bg-coin-600 hover:bg-coin-500">
+                <IconMapper name="Plus" size={16} className="mr-1" /> New Campaign
+              </Button>
             </div>
 
             <div className="md:hidden divide-y divide-gray-200 dark:divide-gray-800">
@@ -440,7 +439,6 @@ export default function MarketingPage({
               campaign={selected}
             />
           )}
-        </div>
       </div>
     </MarketingLayout>
   );

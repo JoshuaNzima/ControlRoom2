@@ -28,7 +28,9 @@ class DashboardTutorialController extends Controller
                     'content' => $tutorial->content,
                     'file_url' => $tutorial->file_url,
                     'video_url' => $tutorial->video_url,
+                    'video_type' => $tutorial->video_type,
                     'embed_url' => $tutorial->embed_url,
+                    'is_uploaded_video' => $tutorial->is_uploaded_video,
                     'order' => $tutorial->order,
                     'created_by' => $tutorial->creator?->name,
                     'created_at' => $tutorial->created_at->diffForHumans(),
@@ -53,7 +55,8 @@ class DashboardTutorialController extends Controller
             'content_type' => ['required', Rule::in([DashboardTutorial::TYPE_VIDEO, DashboardTutorial::TYPE_DOCUMENT, DashboardTutorial::TYPE_TEXT])],
             'content' => 'nullable|string',
             'video_url' => 'nullable|url|max:500',
-            'file' => 'nullable|file|max:51200', // 50MB max
+            'video_type' => ['nullable', Rule::in([DashboardTutorial::VIDEO_YOUTUBE, DashboardTutorial::VIDEO_VIMEO, DashboardTutorial::VIDEO_UPLOAD])],
+            'file' => 'nullable|file|max:512000', // 500MB max for videos
             'order' => 'nullable|integer|min:0',
         ]);
 
@@ -64,13 +67,18 @@ class DashboardTutorialController extends Controller
         $tutorial->content_type = $validated['content_type'];
         $tutorial->content = $validated['content'] ?? null;
         $tutorial->video_url = $validated['video_url'] ?? null;
+        $tutorial->video_type = $validated['video_type'] ?? DashboardTutorial::VIDEO_YOUTUBE;
         $tutorial->order = $validated['order'] ?? 0;
         $tutorial->created_by = $request->user()->id;
 
-        // Handle file upload
+        // Handle file upload (document or video)
         if ($request->hasFile('file')) {
             $path = $request->file('file')->store('tutorials', 'public');
             $tutorial->file_path = $path;
+            // If video type is upload, set video_type
+            if ($validated['content_type'] === DashboardTutorial::TYPE_VIDEO && empty($validated['video_type'])) {
+                $tutorial->video_type = DashboardTutorial::VIDEO_UPLOAD;
+            }
         }
 
         $tutorial->save();
@@ -82,6 +90,9 @@ class DashboardTutorialController extends Controller
                 'id' => $tutorial->id,
                 'title' => $tutorial->title,
                 'content_type' => $tutorial->content_type,
+                'video_type' => $tutorial->video_type,
+                'file_url' => $tutorial->file_url,
+                'embed_url' => $tutorial->embed_url,
             ],
         ]);
     }
@@ -102,7 +113,9 @@ class DashboardTutorialController extends Controller
                 'content' => $tutorial->content,
                 'file_url' => $tutorial->file_url,
                 'video_url' => $tutorial->video_url,
+                'video_type' => $tutorial->video_type,
                 'embed_url' => $tutorial->embed_url,
+                'is_uploaded_video' => $tutorial->is_uploaded_video,
                 'order' => $tutorial->order,
                 'is_active' => $tutorial->is_active,
                 'created_by' => $tutorial->creator?->name,
@@ -122,7 +135,8 @@ class DashboardTutorialController extends Controller
             'content_type' => ['sometimes', 'required', Rule::in([DashboardTutorial::TYPE_VIDEO, DashboardTutorial::TYPE_DOCUMENT, DashboardTutorial::TYPE_TEXT])],
             'content' => 'nullable|string',
             'video_url' => 'nullable|url|max:500',
-            'file' => 'nullable|file|max:51200',
+            'video_type' => ['nullable', Rule::in([DashboardTutorial::VIDEO_YOUTUBE, DashboardTutorial::VIDEO_VIMEO, DashboardTutorial::VIDEO_UPLOAD])],
+            'file' => 'nullable|file|max:512000', // 500MB max
             'order' => 'nullable|integer|min:0',
             'is_active' => 'nullable|boolean',
         ]);
@@ -142,6 +156,9 @@ class DashboardTutorialController extends Controller
         if (array_key_exists('video_url', $validated)) {
             $tutorial->video_url = $validated['video_url'];
         }
+        if (array_key_exists('video_type', $validated)) {
+            $tutorial->video_type = $validated['video_type'];
+        }
         if (array_key_exists('order', $validated)) {
             $tutorial->order = $validated['order'];
         }
@@ -149,7 +166,7 @@ class DashboardTutorialController extends Controller
             $tutorial->is_active = $validated['is_active'];
         }
 
-        // Handle file upload
+        // Handle file upload (document or video)
         if ($request->hasFile('file')) {
             // Delete old file
             if ($tutorial->file_path) {
@@ -157,6 +174,10 @@ class DashboardTutorialController extends Controller
             }
             $path = $request->file('file')->store('tutorials', 'public');
             $tutorial->file_path = $path;
+            // If video type is upload, set video_type
+            if (isset($validated['content_type']) && $validated['content_type'] === DashboardTutorial::TYPE_VIDEO && empty($validated['video_type'])) {
+                $tutorial->video_type = DashboardTutorial::VIDEO_UPLOAD;
+            }
         }
 
         $tutorial->save();

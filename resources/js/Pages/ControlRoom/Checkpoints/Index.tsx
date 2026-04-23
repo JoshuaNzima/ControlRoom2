@@ -412,6 +412,18 @@ export default function CheckpointsIndex() {
                               </span>
                             </div>
                             <div className="text-xs font-mono text-coin-600 dark:text-coin-400 mt-1">{cp.code}</div>
+                            <div className="flex flex-wrap gap-2 mt-1 text-xs text-gray-500 dark:text-gray-400">
+                              <span className="inline-flex items-center gap-1">
+                                <IconMapper name="Radio" size={12} />
+                                {cp.scan_radius_meters}m radius
+                              </span>
+                              {cp.latitude && cp.longitude && (
+                                <span className="inline-flex items-center gap-1">
+                                  <IconMapper name="MapPin" size={12} />
+                                  GPS
+                                </span>
+                              )}
+                            </div>
                             {groupBy !== 'site' && cp.site && (
                               <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 truncate">
                                 {cp.site.name}
@@ -512,7 +524,10 @@ export default function CheckpointsIndex() {
                   type="number"
                   className="w-full border border-gray-300 dark:border-gray-700 rounded-md p-2 text-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
                   value={addForm.data.scan_radius_meters}
-                  onChange={(e) => addForm.setData('scan_radius_meters', parseInt(e.target.value) || 50)}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value);
+                    addForm.setData('scan_radius_meters', Number.isNaN(val) ? 50 : val);
+                  }}
                   min={1}
                   max={1000}
                 />
@@ -634,7 +649,10 @@ export default function CheckpointsIndex() {
                   type="number"
                   className="w-full border border-gray-300 dark:border-gray-700 rounded-md p-2 text-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
                   value={editForm.data.scan_radius_meters}
-                  onChange={(e) => editForm.setData('scan_radius_meters', parseInt(e.target.value) || 50)}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value);
+                    editForm.setData('scan_radius_meters', Number.isNaN(val) ? 50 : val);
+                  }}
                   min={1}
                   max={1000}
                 />

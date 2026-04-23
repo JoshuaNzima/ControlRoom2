@@ -58,7 +58,7 @@ class GuardManageController extends Controller
             $validated['hire_date'] = now()->toDateString();
         }
 
-        if (!auth()->user()->hasAnyRole(['operations_officer','manager','super_admin'])) {
+        if (!auth()->user()->hasAnyRole(['operations_officer','super_admin'])) {
             unset($validated['supervisor_id']);
             unset($validated['reports_to_guard_id']);
         }
@@ -157,7 +157,7 @@ class GuardManageController extends Controller
             'photo' => 'nullable|image|max:5120',
         ]);
 
-        if (!auth()->user()->hasAnyRole(['operations_officer','manager','super_admin'])) {
+        if (!auth()->user()->hasAnyRole(['operations_officer','super_admin'])) {
             unset($validated['supervisor_id']);
             unset($validated['reports_to_guard_id']);
         }
@@ -324,7 +324,7 @@ class GuardManageController extends Controller
     {
         if (!auth()->check()) abort(403);
         $u = auth()->user();
-        if (!$u->hasAnyRole(['operations_officer','manager','super_admin','hr','hr_manager','zone_commander']) && !$u->can('hr.employees.manage')) {
+        if (!$u->hasAnyRole(['operations_officer','super_admin','hr','hr_manager','zone_commander','control_room_operator']) && !$u->can('hr.employees.manage')) {
             abort(403);
         }
     }
@@ -594,5 +594,30 @@ class GuardManageController extends Controller
         } catch (\Exception $e) {
             return back()->withErrors(['file' => 'Error processing file: ' . $e->getMessage()]);
         }
+    }
+
+    public function updateCompliance(Request $request, Guard $guard)
+    {
+        $this->authorize('update', $guard);
+
+        $validated = $request->validate([
+            'fingerprint_registered' => 'nullable|boolean',
+            'uniform_issued' => 'nullable|boolean',
+            'equipment_issued' => 'nullable|array',
+            'equipment_issued.*' => 'string|max:100',
+        ]);
+
+        $guard->update($validated);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Compliance updated successfully',
+            'guard' => [
+                'id' => $guard->id,
+                'fingerprint_registered' => $guard->fingerprint_registered,
+                'uniform_issued' => $guard->uniform_issued,
+                'equipment_issued' => $guard->equipment_issued,
+            ],
+        ]);
     }
 }

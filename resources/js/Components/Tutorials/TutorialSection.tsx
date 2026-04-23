@@ -4,6 +4,8 @@ import Modal from '@/Components/Modal';
 import IconMapper from '@/Components/IconMapper';
 import useNotification from '@/Providers/useNotifications';
 
+type VideoType = 'youtube' | 'vimeo' | 'upload';
+
 type Tutorial = {
   id: number;
   title: string;
@@ -12,14 +14,16 @@ type Tutorial = {
   content?: string;
   file_url?: string;
   video_url?: string;
+  video_type?: VideoType;
   embed_url?: string;
+  is_uploaded_video?: boolean;
   order: number;
   created_by?: string;
   created_at?: string;
 };
 
 type Props = {
-  dashboard: 'admin' | 'superadmin' | 'control-room' | 'assets' | 'client';
+  dashboard: 'admin' | 'superadmin' | 'control-room' | 'assets' | 'client' | 'hr' | 'finance' | 'operations' | 'marketing' | 'training' | 'front-office' | 'business-dev' | 'supervisor' | 'zone-commander';
   canManage?: boolean;
 };
 
@@ -39,6 +43,7 @@ export default function TutorialSection({ dashboard, canManage = false }: Props)
     content_type: 'text' as 'video' | 'document' | 'text',
     content: '',
     video_url: '',
+    video_type: 'youtube' as VideoType,
     file: null as File | null,
   });
 
@@ -84,6 +89,7 @@ export default function TutorialSection({ dashboard, canManage = false }: Props)
     formData.append('content_type', form.content_type);
     formData.append('content', form.content || '');
     formData.append('video_url', form.video_url || '');
+    formData.append('video_type', form.video_type);
     if (form.file) {
       formData.append('file', form.file);
     }
@@ -100,7 +106,7 @@ export default function TutorialSection({ dashboard, canManage = false }: Props)
       if (data.success) {
         push('Tutorial added successfully', 'success');
         setShowAddModal(false);
-        setForm({ title: '', description: '', content_type: 'text', content: '', video_url: '', file: null });
+        setForm({ title: '', description: '', content_type: 'text', content: '', video_url: '', video_type: 'youtube', file: null });
         fetchTutorials();
       } else {
         push(data.message || 'Failed to add tutorial', 'error');
@@ -262,15 +268,33 @@ export default function TutorialSection({ dashboard, canManage = false }: Props)
             </div>
 
             <div className="mt-4">
-              {activeTutorial.content_type === 'video' && activeTutorial.embed_url && (
-                <div className="aspect-video rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800">
-                  <iframe
-                    src={activeTutorial.embed_url}
-                    className="w-full h-full"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                  />
-                </div>
+              {activeTutorial.content_type === 'video' && (
+                <>
+                  {activeTutorial.is_uploaded_video && activeTutorial.embed_url ? (
+                    // Uploaded video - use native video player
+                    <div className="aspect-video rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800">
+                      <video
+                        src={activeTutorial.embed_url}
+                        className="w-full h-full"
+                        controls
+                        controlsList="nodownload"
+                        preload="metadata"
+                      >
+                        Your browser does not support the video tag.
+                      </video>
+                    </div>
+                  ) : activeTutorial.embed_url ? (
+                    // YouTube/Vimeo embed
+                    <div className="aspect-video rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800">
+                      <iframe
+                        src={activeTutorial.embed_url}
+                        className="w-full h-full"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                      />
+                    </div>
+                  ) : null}
+                </>
               )}
 
               {activeTutorial.content_type === 'document' && activeTutorial.file_url && (
@@ -375,18 +399,52 @@ export default function TutorialSection({ dashboard, canManage = false }: Props)
               )}
 
               {form.content_type === 'video' && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Video URL (YouTube or Vimeo)
-                  </label>
-                  <input
-                    type="url"
-                    value={form.video_url}
-                    onChange={(e) => setForm({ ...form, video_url: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500"
-                    placeholder="https://www.youtube.com/watch?v=..."
-                  />
-                </div>
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Video Type
+                    </label>
+                    <select
+                      value={form.video_type}
+                      onChange={(e) => setForm({ ...form, video_type: e.target.value as VideoType, video_url: '', file: null })}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="youtube">YouTube</option>
+                      <option value="vimeo">Vimeo</option>
+                      <option value="upload">Upload Video</option>
+                    </select>
+                  </div>
+
+                  {(form.video_type === 'youtube' || form.video_type === 'vimeo') && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Video URL ({form.video_type === 'youtube' ? 'YouTube' : 'Vimeo'})
+                      </label>
+                      <input
+                        type="url"
+                        value={form.video_url}
+                        onChange={(e) => setForm({ ...form, video_url: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500"
+                        placeholder={form.video_type === 'youtube' ? 'https://www.youtube.com/watch?v=...' : 'https://vimeo.com/...'}
+                      />
+                    </div>
+                  )}
+
+                  {form.video_type === 'upload' && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Video File
+                      </label>
+                      <input
+                        type="file"
+                        accept="video/*"
+                        onChange={(e) => setForm({ ...form, file: e.target.files?.[0] || null })}
+                        className="w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-gray-800 dark:file:text-gray-100"
+                      />
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Max 500MB. Supported: MP4, WebM, MOV</p>
+                    </div>
+                  )}
+                </>
               )}
 
               {form.content_type === 'document' && (
@@ -400,7 +458,7 @@ export default function TutorialSection({ dashboard, canManage = false }: Props)
                     onChange={(e) => setForm({ ...form, file: e.target.files?.[0] || null })}
                     className="w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-gray-800 dark:file:text-gray-100"
                   />
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Max 50MB</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Max 500MB</p>
                 </div>
               )}
             </div>

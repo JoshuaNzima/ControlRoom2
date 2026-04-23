@@ -3,6 +3,8 @@ import { Head, router, useForm, usePage } from '@inertiajs/react';
 import HRLayout from '@/Layouts/HRLayout';
 import IconMapper from '@/Components/IconMapper';
 import Modal from '@/Components/Modal';
+import { Card } from '@/Components/ui/card';
+import { Button } from '@/Components/ui/button';
 
 export default function HRBenefits() {
   const { auth, benefits, enrollments, guards = [], filters = {} } = usePage().props as any;
@@ -32,43 +34,60 @@ export default function HRBenefits() {
   return (
     <HRLayout title="HR - Benefits & Rewards" user={auth?.user as any}>
       <Head title="Benefits" />
-      <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        <div className="px-4 py-6 sm:px-0 space-y-6">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="min-w-0">
-              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-100">Benefits & Rewards</h1>
-              <p className="text-gray-600 dark:text-gray-400 mt-1">Manage benefits catalog and enroll guards.</p>
-            </div>
-            <div className="flex flex-wrap items-center justify-start sm:justify-end gap-2">
-              <button onClick={() => { setEditingBenefit(null); setOpenBenefit(true); }} className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white">
-                <IconMapper name="FilePlus" className="w-4 h-4" /> New Benefit
-              </button>
-            </div>
-          </div>
-
-          <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4">
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-              <div className="col-span-2 sm:col-span-3">
-                <input placeholder="Search name/code/description..." value={flt.q} onChange={(e) => setFlt((s: any) => ({ ...s, q: e.target.value }))} onKeyDown={(e) => { if (e.key === 'Enter') applyFilters(); }} className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100" />
+      
+      {/* Hero Header */}
+      <div className="relative overflow-hidden bg-gradient-to-br from-red-900 via-red-800 to-rose-900 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg%20width%3D%2260%22%20height%3D%2260%22%20viewBox%3D%220%200%2060%2060%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%3E%3Cg%20fill%3D%22none%22%20fill-rule%3D%22evenodd%22%3E%3Cg%20fill%3D%22%23ffffff%22%20fill-opacity%3D%220.05%22%3E%3Cpath%20d%3D%22M36%2034v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6%2034v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6%204V0H4v4H0v2h4v4h2V6h4V4H6z%22/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] opacity-20" />
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-white/10 rounded-xl backdrop-blur-sm">
+                <IconMapper name="Gift" size={28} />
               </div>
-              <input placeholder="Category" value={flt.category} onChange={(e) => setFlt((s: any) => ({ ...s, category: e.target.value }))} className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100" />
-              <select value={flt.active} onChange={(e) => setFlt((s: any) => ({ ...s, active: e.target.value }))} className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100">
-                <option value="">All</option>
-                <option value="1">Active</option>
-                <option value="0">Inactive</option>
-              </select>
-              <select value={flt.perPage} onChange={(e) => setFlt((s: any) => ({ ...s, perPage: Number(e.target.value) }))} className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100">
-                {[10,15,20,30].map(n => <option key={n} value={n}>{n}/page</option>)}
-              </select>
-              <div className="flex items-center gap-2">
-                <button onClick={applyFilters} className="px-3 py-2 rounded-md bg-indigo-600 hover:bg-indigo-700 text-white w-full">Apply</button>
-                <button onClick={resetFilters} className="px-3 py-2 rounded-md bg-gray-200 text-gray-800 hover:bg-gray-300 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700 w-full">Reset</button>
+              <div>
+                <h1 className="text-2xl md:text-3xl font-bold text-white">Benefits & Rewards</h1>
+                <p className="text-red-100 dark:text-gray-400 text-sm mt-1">Manage benefits catalog and enroll guards</p>
               </div>
             </div>
+            <div className="flex flex-wrap gap-2">
+              <Button onClick={() => { setEditingBenefit(null); setOpenBenefit(true); }} className="bg-indigo-600 hover:bg-indigo-700">
+                <IconMapper name="FilePlus" size={16} className="mr-1" /> New Benefit
+              </Button>
+            </div>
           </div>
+        </div>
+      </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2 rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+        {/* Filter Card */}
+        <Card className="p-4 dark:bg-gray-800 dark:border-gray-700">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
+            <div className="sm:col-span-2">
+              <div className="relative">
+                <IconMapper name="Search" size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <input placeholder="Search name/code/description..." value={flt.q} onChange={(e) => setFlt((s: any) => ({ ...s, q: e.target.value }))} onKeyDown={(e) => { if (e.key === 'Enter') applyFilters(); }} className="w-full border rounded-md pl-9 pr-3 py-2 dark:bg-gray-900 dark:border-gray-600 dark:text-gray-100 text-sm" />
+              </div>
+            </div>
+            <input placeholder="Category" value={flt.category} onChange={(e) => setFlt((s: any) => ({ ...s, category: e.target.value }))} className="w-full border rounded-md px-3 py-2 dark:bg-gray-900 dark:border-gray-600 dark:text-gray-100 text-sm" />
+            <select value={flt.active} onChange={(e) => setFlt((s: any) => ({ ...s, active: e.target.value }))} className="w-full border rounded-md px-3 py-2 dark:bg-gray-900 dark:border-gray-600 dark:text-gray-100 text-sm">
+              <option value="">All</option>
+              <option value="1">Active</option>
+              <option value="0">Inactive</option>
+            </select>
+            <select value={flt.perPage} onChange={(e) => setFlt((s: any) => ({ ...s, perPage: Number(e.target.value) }))} className="w-full border rounded-md px-3 py-2 dark:bg-gray-900 dark:border-gray-600 dark:text-gray-100 text-sm">
+              {[10,15,20,30].map(n => <option key={n} value={n}>{n}/page</option>)}
+            </select>
+            <div className="flex gap-2">
+              <Button onClick={applyFilters} className="flex-1">Apply</Button>
+              <Button onClick={resetFilters} variant="ghost">Reset</Button>
+            </div>
+          </div>
+        </Card>
+
+        {/* Content Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Benefits Column */}
+          <Card className="lg:col-span-2 p-4 dark:bg-gray-800 dark:border-gray-700">
               <div className="text-sm text-gray-500 dark:text-gray-400 mb-3">Benefits</div>
               <div className="divide-y divide-gray-200 dark:divide-gray-800">
                 {(!benefits || (benefits.data || []).length === 0) && (
@@ -101,9 +120,10 @@ export default function HRBenefits() {
                   </div>
                 </div>
               )}
-            </div>
+          </Card>
 
-            <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4">
+          {/* Enrollments Column */}
+          <Card className="p-4 dark:bg-gray-800 dark:border-gray-700">
               <div className="text-sm text-gray-500 dark:text-gray-400 mb-3 flex items-center justify-between">
                 <span>Recent Enrollments</span>
                 <a href={route('hr.benefits.enrollments.export')} className="inline-flex items-center gap-1 px-2 py-1 rounded bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100 text-xs">
@@ -140,12 +160,11 @@ export default function HRBenefits() {
                   </div>
                 </div>
               )}
-            </div>
-          </div>
-
-          <BenefitModal open={openBenefit} onClose={() => setOpenBenefit(false)} benefit={editingBenefit} />
-          <EnrollModal open={openEnroll} onClose={() => setOpenEnroll(false)} guards={guards} benefit={benefitForEnroll} />
+          </Card>
         </div>
+
+        <BenefitModal open={openBenefit} onClose={() => setOpenBenefit(false)} benefit={editingBenefit} />
+        <EnrollModal open={openEnroll} onClose={() => setOpenEnroll(false)} guards={guards} benefit={benefitForEnroll} />
       </div>
     </HRLayout>
   );

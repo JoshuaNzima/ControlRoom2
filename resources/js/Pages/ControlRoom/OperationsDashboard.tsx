@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Head, Link } from '@inertiajs/react';
 import OperationsLayout from '@/Layouts/OperationsLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card';
@@ -6,6 +6,8 @@ import { Button } from '@/Components/ui/button';
 import { Badge } from '@/Components/ui/badge';
 import EmptyState from '@/Components/ui/empty-state';
 import IconMapper from '@/Components/IconMapper';
+import QrScanDetailModal from '@/Components/ControlRoom/QrScanDetailModal';
+import CheckpointDetailModal from '@/Components/ControlRoom/CheckpointDetailModal';
 import { User } from '@/types';
 import { format, formatDistanceToNow } from 'date-fns';
 
@@ -244,10 +246,11 @@ interface QrScanSummary {
     id: number;
     guard_name: string;
     site_name: string;
+    checkpoint_name: string;
     type: 'check_in' | 'check_out' | 'patrol';
     status: 'success' | 'failed';
     scanned_at: string;
-  }>;
+ }>;
 }
 
 interface OperationsDashboardProps {
@@ -307,16 +310,71 @@ export default function OperationsDashboard({
   recentIncidents,
   escalatedIncidents = [],
   escalatedDowns = [],
-  qrScanSummary,
+  qrScanSummary: initialQrScanSummary,
   auth,
 }: OperationsDashboardProps) {
   const [activeTab, setActiveTab] = useState<'overview' | 'sites' | 'deployments' | 'personnel' | 'qr-scans'>('overview');
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [qrScanSummary, setQrScanSummary] = useState(initialQrScanSummary);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [lastRefresh, setLastRefresh] = useState(new Date());
 
+  // Modal state
+  const [selectedScanId, setSelectedScanId] = useState<number | null>(null);
+  const [selectedCheckpointId, setSelectedCheckpointId] = useState<number | null>(null);
+  const [showScanModal, setShowScanModal] = useState(false);
+  const [showCheckpointModal, setShowCheckpointModal] = useState(false);
+
+  // Live clock update
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
+
+  // Live data polling for QR scans (every 30 seconds when on QR tab)
+  const refreshQrData = useCallback(async () => {
+    if (isRefreshing) return;
+    setIsRefreshing(true);
+    try {
+      const response = await fetch(route('control-room.operations-data.qr-scans'));
+      if (response.ok) {
+        const data = await response.json();
+        setQrScanSummary(data);
+        setLastRefresh(new Date());
+      }
+    } catch (error) {
+      console.error('Failed to refresh QR data:', error);
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [isRefreshing]);
+
+  useEffect(() => {
+    if (activeTab === 'qr-scans') {
+      const interval = setInterval(refreshQrData, 30000); // Refresh every 30 seconds
+      return () => clearInterval(interval);
+    }
+  }, [activeTab, refreshQrData]);
+
+  const openScanDetail = (scanId: number) => {
+    setSelectedScanId(scanId);
+    setShowScanModal(true);
+  };
+
+  const openCheckpointDetail = (checkpointId: number) => {
+    setSelectedCheckpointId(checkpointId);
+    setShowCheckpointModal(true);
+  };
+
+  const closeScanModal = () => {
+    setShowScanModal(false);
+    setSelectedScanId(null);
+  };
+
+  const closeCheckpointModal = () => {
+    setShowCheckpointModal(false);
+    setSelectedCheckpointId(null);
+  };
 
   const safeRoute = useMemo(() => (name: string, params?: any) => {
     try {
@@ -341,13 +399,11 @@ export default function OperationsDashboard({
   // Quick actions for Operations Officer - focused on field ops
   const quickActions = useMemo(() => [
     { title: 'Site Coverage', description: 'View deployment across all sites', route: 'operations.coverage.index', icon: <IconMapper name="Building" size={20} />, color: 'bg-blue-600' },
-    { title: 'Guard Roster', description: 'Manage field personnel', route: 'control-room.guards', icon: <IconMapper name="Shield" size={20} />, color: 'bg-cyan-600' },
-    { title: 'Deployments', description: 'Assign guards to sites', route: 'control-room.assignments.index', icon: <IconMapper name="MapPin" size={20} />, color: 'bg-emerald-600' },
-    { title: 'Zone Map', description: 'Visual zone coverage', route: 'control-room.zones.index', icon: <IconMapper name="Map" size={20} />, color: 'bg-purple-600' },
-    { title: 'Shift Roster', description: 'Weekly guard scheduling', route: 'control-room.roster.index', icon: <IconMapper name="Calendar" size={20} />, color: 'bg-amber-600' },
+    { title: 'Guard Roster', description: 'Manage field personnel', route: 'operations.guards.index', icon: <IconMapper name="Shield" size={20} />, color: 'bg-cyan-600' },
+    { title: 'Deployments', description: 'Site deployment status', route: 'operations.coverage.sites', icon: <IconMapper name="MapPin" size={20} />, color: 'bg-emerald-600' },
+    { title: 'Shift Roster', description: 'Weekly guard scheduling', route: 'operations.shifts.index', icon: <IconMapper name="Calendar" size={20} />, color: 'bg-amber-600' },
     { title: 'Reports', description: 'Field operations reports', route: 'operations.reports.attendance', icon: <IconMapper name="FileText" size={20} />, color: 'bg-orange-600' },
-    { title: 'Incidents', description: 'Field incident management', route: 'control-room.downs.index', icon: <IconMapper name="AlertTriangle" size={20} />, color: 'bg-red-600' },
-    { title: 'Attendance', description: 'Daily attendance records', route: 'control-room.attendance.index', icon: <IconMapper name="UserCheck" size={20} />, color: 'bg-indigo-600' },
+    { title: 'Incidents', description: 'Field incident reports', route: 'operations.reports.incidents', icon: <IconMapper name="AlertTriangle" size={20} />, color: 'bg-red-600' },
   ], []);
 
   const getSeverityColor = (severity: string) => {
@@ -422,11 +478,12 @@ export default function OperationsDashboard({
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => window.location.reload()}
-                  className="bg-white/20 border-white/30 text-white hover:bg-white/30"
+                  onClick={() => { refreshQrData(); window.location.reload(); }}
+                  disabled={isRefreshing}
+                  className="bg-white/20 border-white/30 text-white hover:bg-white/30 disabled:opacity-50"
                 >
-                  <IconMapper name="RefreshCw" size={14} className="mr-1.5 sm:mr-2" />
-                  <span className="hidden sm:inline">Refresh</span>
+                  <IconMapper name="RefreshCw" size={14} className={`mr-1.5 sm:mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+                  <span className="hidden sm:inline">{isRefreshing ? 'Refreshing...' : 'Refresh'}</span>
                 </Button>
               </div>
             </div>
@@ -892,9 +949,34 @@ export default function OperationsDashboard({
         {/* QR Scans Tab */}
         {activeTab === 'qr-scans' && (
           <div className="space-y-4 sm:space-y-6 animate-in fade-in duration-300">
-            {/* QR Scan Stats */}
+            {/* Live indicator & Last refresh */}
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+                <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                <span>Live data</span>
+                <span className="text-slate-400">· Last updated {formatDistanceToNow(lastRefresh, { addSuffix: true })}</span>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={refreshQrData}
+                disabled={isRefreshing}
+                className="text-xs text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
+              >
+                <IconMapper name="RefreshCw" size={12} className={`mr-1 ${isRefreshing ? 'animate-spin' : ''}`} />
+                Refresh Now
+              </Button>
+            </div>
+
+            {/* QR Scan Stats - Clickable */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-              <Card className="p-3 sm:p-4 bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800">
+              <Card 
+                className="p-3 sm:p-4 bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800 cursor-pointer hover:shadow-lg transition-all"
+                onClick={() => {
+                  const firstScan = qrScanSummary?.recentScans?.[0];
+                  if (firstScan) openScanDetail(firstScan.id);
+                }}
+              >
                 <div className="flex items-center gap-2 sm:gap-3">
                   <div className="p-1.5 sm:p-2 bg-emerald-600 rounded-lg">
                     <IconMapper name="ScanLine" size={16} className="text-white" />
@@ -905,7 +987,13 @@ export default function OperationsDashboard({
                   </div>
                 </div>
               </Card>
-              <Card className="p-3 sm:p-4 bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800">
+              <Card 
+                className="p-3 sm:p-4 bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800 cursor-pointer hover:shadow-lg transition-all"
+                onClick={() => {
+                  const successScan = qrScanSummary?.recentScans?.find(s => s.status === 'success');
+                  if (successScan) openScanDetail(successScan.id);
+                }}
+              >
                 <div className="flex items-center gap-2 sm:gap-3">
                   <div className="p-1.5 sm:p-2 bg-green-600 rounded-lg">
                     <IconMapper name="CheckCircle" size={16} className="text-white" />
@@ -916,7 +1004,13 @@ export default function OperationsDashboard({
                   </div>
                 </div>
               </Card>
-              <Card className="p-3 sm:p-4 bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800">
+              <Card 
+                className="p-3 sm:p-4 bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800 cursor-pointer hover:shadow-lg transition-all"
+                onClick={() => {
+                  const failedScan = qrScanSummary?.recentScans?.find(s => s.status === 'failed');
+                  if (failedScan) openScanDetail(failedScan.id);
+                }}
+              >
                 <div className="flex items-center gap-2 sm:gap-3">
                   <div className="p-1.5 sm:p-2 bg-red-600 rounded-lg">
                     <IconMapper name="XCircle" size={16} className="text-white" />
@@ -954,7 +1048,11 @@ export default function OperationsDashboard({
                 <CardContent className="p-4 sm:p-6 pt-2 sm:pt-4">
                   <div className="space-y-3">
                     {qrScanSummary?.recentScans?.slice(0, 10).map((scan) => (
-                      <div key={scan.id} className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-800">
+                      <div 
+                        key={scan.id} 
+                        onClick={() => openScanDetail(scan.id)}
+                        className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-800 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors"
+                      >
                         <div className={`p-2 rounded-full ${scan.status === 'success' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200' : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200'}`}>
                           {getScanTypeIcon(scan.type)}
                         </div>
@@ -966,12 +1064,13 @@ export default function OperationsDashboard({
                             </Badge>
                           </div>
                           <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                            {scan.site_name} • {getScanTypeLabel(scan.type)}
+                            {scan.site_name} • <span className="font-medium text-gray-600 dark:text-gray-300">{scan.checkpoint_name}</span>
                           </p>
-                          <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-1">
-                            {formatDistanceToNow(new Date(scan.scanned_at), { addSuffix: true })}
+                          <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5">
+                            {getScanTypeLabel(scan.type)} · {formatDistanceToNow(new Date(scan.scanned_at), { addSuffix: true })}
                           </p>
                         </div>
+                        <IconMapper name="ChevronRight" size={16} className="text-gray-400 dark:text-gray-500" />
                       </div>
                     ))}
                     {(!qrScanSummary?.recentScans || qrScanSummary.recentScans.length === 0) && (
@@ -1065,6 +1164,18 @@ export default function OperationsDashboard({
           </div>
         )}
       </div>
+
+      {/* Modals */}
+      <QrScanDetailModal
+        isOpen={showScanModal}
+        scanId={selectedScanId}
+        onClose={closeScanModal}
+      />
+      <CheckpointDetailModal
+        isOpen={showCheckpointModal}
+        checkpointId={selectedCheckpointId}
+        onClose={closeCheckpointModal}
+      />
     </OperationsLayout>
   );
 }

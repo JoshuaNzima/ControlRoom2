@@ -182,7 +182,7 @@ export default function MarketingLayout({ title, children, user }: Props) {
                 className={`grid gap-4 ${tasksOpen ? 'grid-cols-1 xl:grid-cols-4' : 'grid-cols-1'}`}
               >
                 <div className={tasksOpen ? 'xl:col-span-3' : ''}>
-                  <TutorialSection dashboard="admin" canManage={false} />
+                  <TutorialSection dashboard="marketing" canManage={false} />
                   {children}
                 </div>
                 {tasksOpen && !isMobile && (

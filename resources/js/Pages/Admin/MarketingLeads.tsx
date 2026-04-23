@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import MarketingLayout from '@/Layouts/MarketingLayout';
+import { Card } from '@/Components/ui/card';
+import { Button } from '@/Components/ui/button';
+import IconMapper from '@/Components/IconMapper';
 import Modal from '@/Components/Modal';
 
 interface Lead {
@@ -61,79 +64,85 @@ export default function MarketingLeads({ auth = {}, leads, filters, summary = {}
   return (
     <MarketingLayout title="Marketing Leads" user={auth?.user as any}>
       <Head title="Marketing Leads" />
-      <div className="py-6">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+      
+      {/* Hero Header */}
+      <div className="relative overflow-hidden bg-gradient-to-br from-coin-900 via-coin-800 to-coin-900 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg%20width%3D%2260%22%20height%3D%2260%22%20viewBox%3D%220%200%2060%2060%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%3E%3Cg%20fill%3D%22none%22%20fill-rule%3D%22evenodd%22%3E%3Cg%20fill%3D%22%23ffffff%22%20fill-opacity%3D%220.05%22%3E%3Cpath%20d%3D%22M36%2034v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6%2034v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6%204V0H4v4H0v2h4v4h2V6h4V4H6z%22/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] opacity-20" />
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div>
-              <h1 className="text-2xl md:text-3xl font-bold text-coin-700 dark:text-coin-300">Leads</h1>
-              <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">Capture, qualify, and convert prospects.</p>
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-white/10 rounded-xl backdrop-blur-sm">
+                <IconMapper name="Users" size={28} />
+              </div>
+              <div>
+                <h1 className="text-2xl md:text-3xl font-bold text-white">Leads</h1>
+                <p className="text-coin-100 dark:text-gray-400 text-sm mt-1">Capture, qualify, and convert prospects</p>
+              </div>
             </div>
             <div className="flex flex-wrap gap-2">
-              <button
-                onClick={() => setCreateOpen(true)}
-                className="inline-flex w-full sm:w-auto justify-center items-center px-4 py-2 rounded-lg text-sm font-medium bg-coin-700 text-white hover:bg-coin-600 focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950"
-              >
-                New Lead
-              </button>
-              <Link
-                href={route('admin.marketing')}
-                className="inline-flex w-full sm:w-auto justify-center items-center px-4 py-2 rounded-lg text-sm font-medium bg-white dark:bg-gray-900/60 text-gray-700 dark:text-gray-100 border border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/60"
-              >
-                Marketing
+              <Button onClick={() => setCreateOpen(true)} className="bg-coin-600 hover:bg-coin-500">
+                <IconMapper name="Plus" size={16} className="mr-1" /> New Lead
+              </Button>
+              <Link href={route('admin.marketing')}>
+                <Button variant="outline" className="border-white/20 text-white hover:bg-white/10">
+                  <IconMapper name="Megaphone" size={16} className="mr-1" /> Marketing
+                </Button>
               </Link>
             </div>
           </div>
+        </div>
+      </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-            <StatCard label="Total" value={summary.total || 0} color="gray" />
-            <StatCard label="New" value={summary.new || 0} color="coin" />
-            <StatCard label="Contacted" value={summary.contacted || 0} color="coin" />
-            <StatCard label="Qualified" value={summary.qualified || 0} color="emerald" />
-            <StatCard label="Converted" value={summary.converted || 0} color="coin" />
-          </div>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+        {/* Stats */}
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          <StatCard label="Total" value={summary.total || 0} color="gray" />
+          <StatCard label="New" value={summary.new || 0} color="coin" />
+          <StatCard label="Contacted" value={summary.contacted || 0} color="coin" />
+          <StatCard label="Qualified" value={summary.qualified || 0} color="emerald" />
+          <StatCard label="Converted" value={summary.converted || 0} color="coin" />
+        </div>
 
-          <div className="bg-white dark:bg-gray-950 rounded-xl border border-gray-200 dark:border-gray-800 shadow p-4">
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
-              <input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search name, email, phone"
-                className="px-3 py-2 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:border-coin-500 focus:ring-1 focus:ring-coin-500"
-              />
-              <select
-                value={status}
-                onChange={(e) => setStatus(e.target.value)}
-                className="px-3 py-2 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:border-coin-500 focus:ring-1 focus:ring-coin-500"
-              >
-                <option value="">All Status</option>
-                {statuses.map(s => <option key={s} value={s}>{s}</option>)}
-              </select>
-              <select
-                value={source}
-                onChange={(e) => setSource(e.target.value)}
-                className="px-3 py-2 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:border-coin-500 focus:ring-1 focus:ring-coin-500"
-              >
-                <option value="">All Sources</option>
-                {sources.map(s => <option key={s} value={s}>{s}</option>)}
-              </select>
-              <div className="md:col-span-2 flex flex-col sm:flex-row gap-2">
-                <button
-                  onClick={applyFilters}
-                  className="w-full sm:w-auto px-4 py-2 bg-coin-700 text-white rounded-md hover:bg-coin-600 focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950"
-                >
-                  Apply
-                </button>
-                <button
-                  onClick={() => { setStatus(''); setSource(''); setSearch(''); router.get(route('admin.marketing.leads.index')); }}
-                  className="w-full sm:w-auto px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700"
-                >
-                  Reset
-                </button>
+        {/* Filter Card */}
+        <Card className="p-4 dark:bg-gray-800 dark:border-gray-700">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+            <div className="sm:col-span-2 lg:col-span-1">
+              <div className="relative">
+                <IconMapper name="Search" size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <input
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') applyFilters(); }}
+                  placeholder="Search name, email, phone"
+                  className="w-full pl-9 pr-3 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-sm focus:border-coin-500 focus:ring-1 focus:ring-coin-500"
+                />
               </div>
             </div>
+            <select
+              value={status}
+              onChange={(e) => setStatus(e.target.value)}
+              className="px-3 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-sm focus:border-coin-500 focus:ring-1 focus:ring-coin-500"
+            >
+              <option value="">All Status</option>
+              {statuses.map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
+            <select
+              value={source}
+              onChange={(e) => setSource(e.target.value)}
+              className="px-3 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-sm focus:border-coin-500 focus:ring-1 focus:ring-coin-500"
+            >
+              <option value="">All Sources</option>
+              {sources.map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
+            <div className="flex gap-2">
+              <Button onClick={applyFilters} className="flex-1">Apply</Button>
+              <Button onClick={() => { setStatus(''); setSource(''); setSearch(''); router.get(route('admin.marketing.leads.index')); }} variant="ghost">Reset</Button>
+            </div>
           </div>
+        </Card>
 
-          <div className="bg-white dark:bg-gray-950 rounded-xl border border-gray-200 dark:border-gray-800 shadow overflow-hidden">
+        {/* Leads Table Card */}
+        <Card className="overflow-hidden dark:bg-gray-800 dark:border-gray-700">
             <div className="md:hidden p-4 space-y-3">
               {leads?.data?.length ? (
                 leads.data.map((l) => (
@@ -241,13 +250,12 @@ export default function MarketingLeads({ auth = {}, leads, filters, summary = {}
                 ))}
               </div>
             )}
-          </div>
+        </Card>
 
-          <LeadModal open={createOpen} onClose={() => setCreateOpen(false)} campaigns={campaigns} statuses={statuses} />
-          {selected && (
-            <LeadModal open={editOpen} onClose={() => { setEditOpen(false); setSelected(null); }} campaigns={campaigns} statuses={statuses} lead={selected} />
-          )}
-        </div>
+        <LeadModal open={createOpen} onClose={() => setCreateOpen(false)} campaigns={campaigns} statuses={statuses} />
+        {selected && (
+          <LeadModal open={editOpen} onClose={() => { setEditOpen(false); setSelected(null); }} campaigns={campaigns} statuses={statuses} lead={selected} />
+        )}
       </div>
     </MarketingLayout>
   );
@@ -260,10 +268,10 @@ function StatCard({ label, value, color }: { label: string; value: number; color
     emerald: 'from-emerald-50 to-emerald-100 border-emerald-200 text-emerald-900 dark:from-emerald-900/20 dark:to-emerald-900/10 dark:border-emerald-900/30 dark:text-emerald-100',
   };
   return (
-    <div className={`p-4 rounded-xl border bg-gradient-to-br ${colors[color]}`}>
+    <Card className={`p-4 bg-gradient-to-br ${colors[color]}`}>
       <div className="text-sm font-medium">{label}</div>
       <div className="text-2xl font-bold">{value}</div>
-    </div>
+    </Card>
   );
 }
 

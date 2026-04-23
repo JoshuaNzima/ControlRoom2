@@ -27,6 +27,7 @@ class LiveMonitoringController extends Controller
                     'id' => $scan->id,
                     'supervisor_name' => $scan->supervisor?->name ?? 'Unknown',
                     'site_name' => $scan->checkpoint?->clientSite?->name ?? 'Unknown',
+                    'checkpoint_name' => $scan->checkpoint?->name ?? 'Unknown',
                     'client_name' => $scan->checkpoint?->clientSite?->client?->name ?? 'Unknown',
                     'scanned_at' => $scan->scanned_at ? $scan->scanned_at->toIso8601String() : $scan->updated_at?->toIso8601String(),
                     'location_verified' => $scan->location_verified,

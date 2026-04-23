@@ -417,7 +417,7 @@ class RosterController extends Controller
         $weekStart = Carbon::parse($request->query('start', $today->copy()->startOfWeek(Carbon::MONDAY)))->startOfWeek(Carbon::MONDAY);
 
         $zones = Zone::orderBy('name')->get(['id','name']);
-        $supervisors = User::role(['supervisor','manager'])->where('status','active')->orderBy('name')->get(['id','name']);
+        $supervisors = User::role(['supervisor'])->where('status','active')->orderBy('name')->get(['id','name']);
 
         return Inertia::render('ControlRoom/RosterWeekly', [
             'initial_week_start' => $weekStart->toDateString(),

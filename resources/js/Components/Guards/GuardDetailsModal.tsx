@@ -6,6 +6,7 @@ import { Button } from '@/Components/ui/button';
 import { Badge } from '@/Components/ui/badge';
 import { Card } from '@/Components/ui/card';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/Components/ui/tabs';
+import AddToAssetsPromptModal from './AddToAssetsPromptModal';
 
 interface GuardDetailsModalProps {
   open: boolean;
@@ -15,7 +16,7 @@ interface GuardDetailsModalProps {
   onEdit?: () => void;
   onAssign?: () => void;
   scope?: 'admin' | 'superadmin' | 'control-room' | 'hr';
-  onComplianceUpdate?: (guardId: number, data: { fingerprint_registered?: boolean; uniform_issued?: boolean; equipment_issued?: string[] }) => void;
+  onComplianceUpdate?: (guardId: number, data: { fingerprint_registered?: boolean; uniform_issued?: boolean; equipment_issued?: string[] }) => Promise<void> | void;
 }
 
 interface GuardDetails {
@@ -133,6 +134,11 @@ export default function GuardDetailsModal({
   const [activeTab, setActiveTab] = React.useState('overview');
   const [complianceLoading, setComplianceLoading] = React.useState<Record<string, boolean>>({});
   
+  // Add to assets prompt state
+  const [showAddToAssetsPrompt, setShowAddToAssetsPrompt] = React.useState(false);
+  const [pendingItem, setPendingItem] = React.useState<{ item: string; type: 'equipment' | 'uniform' } | null>(null);
+  const [inventoryInfo, setInventoryInfo] = React.useState<{ available_count: number; total_count: number; issued_count: number } | null>(null);
+  
   // Equipment checklist options
   const equipmentOptions = [
     'Boots',
@@ -147,24 +153,163 @@ export default function GuardDetailsModal({
     'Vest',
   ];
   
-  const handleComplianceToggle = (field: 'fingerprint_registered' | 'uniform_issued', value: boolean) => {
+  const handleComplianceToggle = async (field: 'fingerprint_registered' | 'uniform_issued', value: boolean) => {
     if (!guard || !onComplianceUpdate) return;
     const key = `${field}_${guard.id}`;
     setComplianceLoading(prev => ({ ...prev, [key]: true }));
-    onComplianceUpdate(guard.id, { [field]: value });
-    setTimeout(() => setComplianceLoading(prev => ({ ...prev, [key]: false })), 500);
+    try {
+      await onComplianceUpdate(guard.id, { [field]: value });
+    } catch (error) {
+      console.error('Failed to update compliance:', error);
+    } finally {
+      setComplianceLoading(prev => ({ ...prev, [key]: false }));
+    }
   };
   
-  const handleEquipmentToggle = (item: string, checked: boolean) => {
+  const checkInventory = async (item: string, type: 'equipment' | 'uniform'): Promise<{ needs_creation: boolean; available_count: number; total_count: number; issued_count: number }> => {
+    try {
+      const res = await fetch(route('assets.equipment.check-inventory'), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '',
+        },
+        credentials: 'same-origin',
+        body: JSON.stringify({ item, type }),
+      });
+      const data = await res.json();
+      return data;
+    } catch (error) {
+      console.error('Failed to check inventory:', error);
+      return { needs_creation: false, available_count: 0, total_count: 0, issued_count: 0 };
+    }
+  };
+
+  const quickCreateEquipment = async (item: string, type: 'equipment' | 'uniform'): Promise<boolean> => {
+    const res = await fetch(route('assets.equipment.quick-create'), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '',
+      },
+      credentials: 'same-origin',
+      body: JSON.stringify({ item, type, guard_id: guard?.id }),
+    });
+    
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({}));
+      throw new Error(errorData?.message || `Failed to add ${item} to assets (${res.status})`);
+    }
+    
+    const data = await res.json();
+    if (!data.success) {
+      throw new Error(data?.message || `Failed to add ${item} to assets`);
+    }
+    return true;
+  };
+
+  const handleEquipmentToggle = async (item: string, checked: boolean) => {
     if (!guard || !onComplianceUpdate) return;
-    const currentEquipment = guard.equipment_issued || [];
-    const newEquipment = checked
-      ? [...currentEquipment, item]
-      : currentEquipment.filter(e => e !== item);
-    const key = `equipment_${guard.id}`;
-    setComplianceLoading(prev => ({ ...prev, [key]: true }));
-    onComplianceUpdate(guard.id, { equipment_issued: newEquipment });
-    setTimeout(() => setComplianceLoading(prev => ({ ...prev, [key]: false })), 500);
+    
+    // Only check inventory when marking as issued (checked = true)
+    if (checked) {
+      const key = `equipment_${item}_${guard.id}`;
+      setComplianceLoading(prev => ({ ...prev, [key]: true }));
+      
+      try {
+        const inventoryResult = await checkInventory(item, 'equipment');
+        
+        if (inventoryResult.needs_creation) {
+          // Show prompt to add to assets
+          setInventoryInfo({
+            available_count: inventoryResult.available_count,
+            total_count: inventoryResult.total_count,
+            issued_count: inventoryResult.issued_count,
+          });
+          setPendingItem({ item, type: 'equipment' });
+          setShowAddToAssetsPrompt(true);
+          setComplianceLoading(prev => ({ ...prev, [key]: false }));
+          return;
+        }
+        
+        // Proceed with compliance update
+        const currentEquipment = guard.equipment_issued || [];
+        const newEquipment = [...currentEquipment, item];
+        await onComplianceUpdate(guard.id, { equipment_issued: newEquipment });
+      } catch (error) {
+        console.error('Failed to update equipment:', error);
+      } finally {
+        setComplianceLoading(prev => ({ ...prev, [key]: false }));
+      }
+    } else {
+      // Unchecking - just remove from equipment list
+      const currentEquipment = guard.equipment_issued || [];
+      const newEquipment = currentEquipment.filter(e => e !== item);
+      const key = `equipment_${item}_${guard.id}`;
+      setComplianceLoading(prev => ({ ...prev, [key]: true }));
+      try {
+        await onComplianceUpdate(guard.id, { equipment_issued: newEquipment });
+      } catch (error) {
+        console.error('Failed to update equipment:', error);
+      } finally {
+        setComplianceLoading(prev => ({ ...prev, [key]: false }));
+      }
+    }
+  };
+
+  const handleUniformToggle = async (value: boolean) => {
+    if (!guard || !onComplianceUpdate) return;
+    
+    // Only check inventory when marking as issued (value = true)
+    if (value) {
+      const key = `uniform_issued_${guard.id}`;
+      setComplianceLoading(prev => ({ ...prev, [key]: true }));
+      
+      try {
+        const inventoryResult = await checkInventory('Uniform', 'uniform');
+        
+        if (inventoryResult.needs_creation) {
+          // Show prompt to add to assets
+          setInventoryInfo({
+            available_count: inventoryResult.available_count,
+            total_count: inventoryResult.total_count,
+            issued_count: inventoryResult.issued_count,
+          });
+          setPendingItem({ item: 'Uniform', type: 'uniform' });
+          setShowAddToAssetsPrompt(true);
+          setComplianceLoading(prev => ({ ...prev, [key]: false }));
+          return;
+        }
+        
+        // Proceed with compliance update
+        await onComplianceUpdate(guard.id, { uniform_issued: value });
+      } catch (error) {
+        console.error('Failed to update uniform:', error);
+      } finally {
+        setComplianceLoading(prev => ({ ...prev, [key]: false }));
+      }
+    } else {
+      // Unchecking - just update
+      await handleComplianceToggle('uniform_issued', value);
+    }
+  };
+
+  const handleAddToAssetsConfirm = async () => {
+    if (!pendingItem || !guard || !onComplianceUpdate) return;
+    
+    // quickCreateEquipment throws on failure, so if we get past this, it succeeded
+    await quickCreateEquipment(pendingItem.item, pendingItem.type);
+    
+    // Now proceed with compliance update
+    if (pendingItem.type === 'uniform') {
+      await onComplianceUpdate(guard.id, { uniform_issued: true });
+    } else {
+      const currentEquipment = guard.equipment_issued || [];
+      const newEquipment = [...currentEquipment, pendingItem.item];
+      await onComplianceUpdate(guard.id, { equipment_issued: newEquipment });
+    }
   };
 
   const getStatusColor = (status?: string) => {
@@ -224,6 +369,7 @@ export default function GuardDetailsModal({
   );
 
   return (
+    <>
     <Modal show={open} onClose={onClose} maxWidth="2xl">
       <div className="bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
@@ -515,7 +661,7 @@ export default function GuardDetailsModal({
                       <input
                         type="checkbox"
                         checked={guard.uniform_issued || false}
-                        onChange={(e) => handleComplianceToggle('uniform_issued', e.target.checked)}
+                        onChange={(e) => handleUniformToggle(e.target.checked)}
                         disabled={!onComplianceUpdate || complianceLoading[`uniform_issued_${guard.id}`]}
                         className="w-4 h-4 sm:w-5 sm:h-5 rounded border-gray-300 dark:border-gray-600 text-red-600 focus:ring-red-500 disabled:opacity-50 touch-target-min"
                       />
@@ -534,20 +680,22 @@ export default function GuardDetailsModal({
                     <div className="grid grid-cols-2 gap-1 sm:gap-2">
                       {equipmentOptions.map((item) => {
                         const isChecked = (guard.equipment_issued || []).includes(item);
+                        const itemLoading = complianceLoading[`equipment_${item}_${guard.id}`];
                         return (
-                          <label 
-                            key={item} 
+                          <label
+                            key={item}
                             className={`flex items-center gap-1.5 sm:gap-2 p-1.5 sm:p-2 rounded cursor-pointer transition-colors text-xs sm:text-sm ${
-                              isChecked 
-                                ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' 
+                              isChecked
+                                ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
                                 : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-600'
-                            } ${!onComplianceUpdate ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            } ${!onComplianceUpdate || itemLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
                           >
+                            {itemLoading && <IconMapper name="Loader2" size={12} className="animate-spin" />}
                             <input
                               type="checkbox"
                               checked={isChecked}
                               onChange={(e) => handleEquipmentToggle(item, e.target.checked)}
-                              disabled={!onComplianceUpdate || complianceLoading[`equipment_${guard.id}`]}
+                              disabled={!onComplianceUpdate || itemLoading}
                               className="w-3 h-3 sm:w-4 sm:h-4 rounded border-gray-300 dark:border-gray-500 text-red-600 focus:ring-red-500"
                             />
                             <span className="truncate">{item}</span>
@@ -834,7 +982,7 @@ export default function GuardDetailsModal({
         {/* Footer */}
         <div className="flex items-center justify-between gap-4 p-4 border-t border-gray-200 dark:border-gray-800">
           <div className="text-xs text-gray-500 dark:text-gray-400">
-            ID: {guard.id} • Employee ID: {guard.employee_id}
+            ID: {guard.id} · Employee ID: {guard.employee_id}
           </div>
           <Button variant="outline" onClick={onClose}>
             Close
@@ -842,5 +990,21 @@ export default function GuardDetailsModal({
         </div>
       </div>
     </Modal>
+
+    {/* Add to Assets Prompt Modal */}
+    <AddToAssetsPromptModal
+      open={showAddToAssetsPrompt}
+      onClose={() => {
+        setShowAddToAssetsPrompt(false);
+        setPendingItem(null);
+        setInventoryInfo(null);
+      }}
+      item={pendingItem?.item || ''}
+      type={pendingItem?.type || 'equipment'}
+      guardId={guard?.id}
+      inventoryInfo={inventoryInfo || undefined}
+      onConfirm={handleAddToAssetsConfirm}
+    />
+  </>
   );
 }

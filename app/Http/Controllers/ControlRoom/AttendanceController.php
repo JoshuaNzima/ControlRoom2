@@ -327,6 +327,64 @@ class AttendanceController extends Controller
 	}
 
     /**
+     * Check out a guard who is currently on duty.
+     */
+    public function checkOut(Request $request)
+    {
+        $validated = $request->validate([
+            'guard_id' => ['required', 'integer', 'exists:guards,id'],
+            'notes' => ['nullable', 'string', 'max:500'],
+            'time' => ['nullable', 'date_format:H:i'],
+            'reason_code' => ['nullable', 'string', 'max:100'],
+        ]);
+
+        $guard = Guard::findOrFail($validated['guard_id']);
+
+        // Find today's attendance record with check-in but no check-out
+        $attendance = Attendance::where('guard_id', $validated['guard_id'])
+            ->whereDate('date', Carbon::today())
+            ->whereNotNull('check_in_time')
+            ->whereNull('check_out_time')
+            ->first();
+
+        if (!$attendance) {
+            return back()->withErrors(['guard_id' => 'No active check-in found for this guard today.']);
+        }
+
+        // Determine check-out time
+        $checkOutTime = $validated['time']
+            ? Carbon::parse(Carbon::today()->format('Y-m-d') . ' ' . $validated['time'])
+            : now();
+
+        // Update attendance record
+        $attendance->check_out_time = $checkOutTime;
+        $attendance->check_out_notes = trim(($validated['notes'] ?? '') . ($validated['reason_code'] ? ' [Reason: ' . $validated['reason_code'] . ']' : ''));
+        $attendance->source = $attendance->source ?: 'control_room_manual_checkout';
+
+        // Calculate hours
+        if (method_exists($attendance, 'calculateHours')) {
+            $attendance->calculateHours();
+        }
+
+        $attendance->save();
+
+        // Dispatch event for real-time updates
+        try {
+            event(new \App\Events\AttendanceUpdated($attendance->id, 'Checked out by control room', [
+                'supervisor_id' => Auth::id(),
+                'guard_id' => $attendance->guard_id,
+                'client_site_id' => $attendance->client_site_id,
+                'date' => $attendance->date?->toDateString(),
+                'status' => $attendance->status,
+                'source' => $attendance->source,
+                'check_out_time' => $checkOutTime->toIsoString(),
+            ]));
+        } catch (\Throwable $e) {}
+
+        return back()->with('success', 'Guard checked out successfully.');
+    }
+
+    /**
      * Display previous week's attendance records for Control Room editing.
      * Only shows records from the previous week (Mon-Sun).
      */

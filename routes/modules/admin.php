@@ -30,13 +30,6 @@ Route::middleware(['auth', 'role:admin,super_admin,marketing,marketing_officer,m
         });
     });
 
-Route::middleware(['auth', 'role:manager,admin,super_admin'])
-    ->prefix('manager')
-    ->name('manager.')
-    ->group(function () {
-        Route::get('/dashboard', [\App\Http\Controllers\Manager\DashboardController::class, 'index'])->name('dashboard');
-    });
-
 // Admin module-scoped routes
 Route::middleware(['auth', 'role:admin,super_admin,finance_officer'])
     ->prefix('admin')

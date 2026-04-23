@@ -36,7 +36,6 @@ class GPSMismatchNotificationListener
                 'operations_officer',
                 'admin',
                 'super_admin',
-                'manager',
             ])->get();
 
             if ($recipients->isEmpty()) {

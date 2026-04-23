@@ -3,6 +3,8 @@ import { Head, router, useForm, usePage } from '@inertiajs/react';
 import HRLayout from '@/Layouts/HRLayout';
 import IconMapper from '@/Components/IconMapper';
 import Modal from '@/Components/Modal';
+import { Card } from '@/Components/ui/card';
+import { Button } from '@/Components/ui/button';
 
 export default function HRTraining() {
   const { auth, courses, sessions, enrollments, guards = [], filters = {} } = (usePage().props as any);
@@ -24,47 +26,64 @@ export default function HRTraining() {
   return (
     <HRLayout title="Training" user={auth?.user as any}>
       <Head title="Training" />
-      <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        <div className="px-4 py-6 sm:px-0 space-y-6">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="min-w-0">
-              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-slate-100">Training</h1>
-              <p className="text-gray-600 dark:text-slate-400 mt-1">Manage training courses, sessions and enrollments.</p>
-            </div>
-            <div className="flex flex-wrap items-center justify-start sm:justify-end gap-2">
-              <button onClick={() => { setEditCourse(null); setOpenCourse(true); }} className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white">
-                <IconMapper name="Plus" className="w-4 h-4" /> New Course
-              </button>
-              <button onClick={() => setOpenSession(true)} className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white">
-                <IconMapper name="CalendarPlus" className="w-4 h-4" /> New Session
-              </button>
-              <button onClick={() => setOpenEnroll(true)} className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-rose-600 hover:bg-rose-700 text-white">
-                <IconMapper name="UserPlus" className="w-4 h-4" /> Enroll
-              </button>
-            </div>
-          </div>
-
-          <div className="rounded-2xl border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4">
-            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
-              <input placeholder="Search title/code/category..." value={flt.q} onChange={(e) => setFlt((s: any) => ({ ...s, q: e.target.value }))} onKeyDown={(e) => { if (e.key === 'Enter') applyFilters(); }} className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100" />
-              <select value={flt.course_id} onChange={(e) => setFlt((s: any) => ({ ...s, course_id: Number(e.target.value) }))} className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100">
-                <option value={0}>All Courses</option>
-                {(courses?.data || []).map((c: any) => (
-                  <option key={c.id} value={c.id}>{c.title}{c.code ? ` (${c.code})` : ''}</option>
-                ))}
-              </select>
-              <select value={flt.perPage} onChange={(e) => setFlt((s: any) => ({ ...s, perPage: Number(e.target.value) }))} className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100">
-                {[10,15,20,30].map(n => <option key={n} value={n}>{n}/page</option>)}
-              </select>
-              <div className="flex items-center gap-2">
-                <button onClick={applyFilters} className="px-3 py-2 rounded-md bg-indigo-600 hover:bg-indigo-700 text-white w-full">Apply</button>
-                <button onClick={resetFilters} className="px-3 py-2 rounded-md bg-gray-200 text-gray-800 hover:bg-gray-300 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700 w-full">Reset</button>
+      
+      {/* Hero Header */}
+      <div className="relative overflow-hidden bg-gradient-to-br from-red-900 via-red-800 to-rose-900 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg%20width%3D%2260%22%20height%3D%2260%22%20viewBox%3D%220%200%2060%2060%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%3E%3Cg%20fill%3D%22none%22%20fill-rule%3D%22evenodd%22%3E%3Cg%20fill%3D%22%23ffffff%22%20fill-opacity%3D%220.05%22%3E%3Cpath%20d%3D%22M36%2034v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6%2034v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6%204V0H4v4H0v2h4v4h2V6h4V4H6z%22/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] opacity-20" />
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-white/10 rounded-xl backdrop-blur-sm">
+                <IconMapper name="GraduationCap" size={28} />
+              </div>
+              <div>
+                <h1 className="text-2xl md:text-3xl font-bold text-white">Training</h1>
+                <p className="text-red-100 dark:text-gray-400 text-sm mt-1">Manage courses, sessions, and enrollments</p>
               </div>
             </div>
+            <div className="flex flex-wrap gap-2">
+              <Button onClick={() => { setEditCourse(null); setOpenCourse(true); }} className="bg-emerald-600 hover:bg-emerald-700">
+                <IconMapper name="Plus" size={16} className="mr-1" /> New Course
+              </Button>
+              <Button onClick={() => setOpenSession(true)} className="bg-indigo-600 hover:bg-indigo-700">
+                <IconMapper name="CalendarPlus" size={16} className="mr-1" /> New Session
+              </Button>
+              <Button onClick={() => setOpenEnroll(true)} className="bg-rose-600 hover:bg-rose-700">
+                <IconMapper name="UserPlus" size={16} className="mr-1" /> Enroll
+              </Button>
+            </div>
           </div>
+        </div>
+      </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="rounded-2xl border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+        {/* Filter Card */}
+        <Card className="p-4 dark:bg-gray-800 dark:border-gray-700">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <div className="relative">
+              <IconMapper name="Search" size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <input placeholder="Search title/code/category..." value={flt.q} onChange={(e) => setFlt((s: any) => ({ ...s, q: e.target.value }))} onKeyDown={(e) => { if (e.key === 'Enter') applyFilters(); }} className="w-full border rounded-md pl-9 pr-3 py-2 dark:bg-gray-900 dark:border-gray-600 dark:text-gray-100 text-sm" />
+            </div>
+            <select value={flt.course_id} onChange={(e) => setFlt((s: any) => ({ ...s, course_id: Number(e.target.value) }))} className="w-full border rounded-md px-3 py-2 dark:bg-gray-900 dark:border-gray-600 dark:text-gray-100 text-sm">
+              <option value={0}>All Courses</option>
+              {(courses?.data || []).map((c: any) => (
+                <option key={c.id} value={c.id}>{c.title}{c.code ? ` (${c.code})` : ''}</option>
+              ))}
+            </select>
+            <select value={flt.perPage} onChange={(e) => setFlt((s: any) => ({ ...s, perPage: Number(e.target.value) }))} className="w-full border rounded-md px-3 py-2 dark:bg-gray-900 dark:border-gray-600 dark:text-gray-100 text-sm">
+              {[10,15,20,30].map(n => <option key={n} value={n}>{n}/page</option>)}
+            </select>
+            <div className="flex gap-2">
+              <Button onClick={applyFilters} className="flex-1">Apply</Button>
+              <Button onClick={resetFilters} variant="ghost">Reset</Button>
+            </div>
+          </div>
+        </Card>
+
+        {/* Content Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Courses Column */}
+          <Card className="p-4 dark:bg-gray-800 dark:border-gray-700">
               <div className="text-sm text-gray-500 dark:text-slate-400 mb-3 flex items-center justify-between">
                 <span>Courses</span>
               </div>
@@ -96,10 +115,11 @@ export default function HRTraining() {
                   </div>
                 </div>
               )}
-            </div>
+          </Card>
 
-            <div className="rounded-2xl border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4">
-              <div className="text-sm text-gray-500 dark:text-slate-400 mb-3 flex items-center justify-between">
+          {/* Sessions Column */}
+          <Card className="p-4 dark:bg-gray-800 dark:border-gray-700">
+              <div className="text-sm text-gray-500 dark:text-gray-400 mb-3 flex items-center justify-between">
                 <span>Sessions</span>
               </div>
               <div className="divide-y divide-gray-200 dark:divide-slate-800">
@@ -129,10 +149,11 @@ export default function HRTraining() {
                   </div>
                 </div>
               )}
-            </div>
+          </Card>
 
-            <div className="rounded-2xl border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4">
-              <div className="text-sm text-gray-500 dark:text-slate-400 mb-3 flex items-center justify-between">
+          {/* Enrollments Column */}
+          <Card className="p-4 dark:bg-gray-800 dark:border-gray-700">
+              <div className="text-sm text-gray-500 dark:text-gray-400 mb-3 flex items-center justify-between">
                 <span>Enrollments</span>
               </div>
               <div className="divide-y divide-gray-200 dark:divide-slate-800">
@@ -168,13 +189,12 @@ export default function HRTraining() {
                   </div>
                 </div>
               )}
-            </div>
-          </div>
-
-          <CourseModal open={openCourse} onClose={() => setOpenCourse(false)} edit={editCourse} />
-          <SessionModal open={openSession} onClose={() => setOpenSession(false)} defaultCourseId={flt.course_id} courses={courses?.data || []} />
-          <EnrollModal open={openEnroll} onClose={() => setOpenEnroll(false)} defaultCourseId={flt.course_id} courses={courses?.data || []} guards={guards} sessions={sessions?.data || []} />
+          </Card>
         </div>
+
+        <CourseModal open={openCourse} onClose={() => setOpenCourse(false)} edit={editCourse} />
+        <SessionModal open={openSession} onClose={() => setOpenSession(false)} defaultCourseId={flt.course_id} courses={courses?.data || []} />
+        <EnrollModal open={openEnroll} onClose={() => setOpenEnroll(false)} defaultCourseId={flt.course_id} courses={courses?.data || []} guards={guards} sessions={sessions?.data || []} />
       </div>
     </HRLayout>
   );

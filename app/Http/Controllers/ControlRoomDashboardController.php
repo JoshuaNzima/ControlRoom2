@@ -314,6 +314,9 @@ class ControlRoomDashboardController extends Controller
                             ?? $tag->checkpointScan?->supervisor?->name
                             ?? 'Unknown',
                         'site_name' => $tags['site_name'] ?? 'Unknown',
+                        'checkpoint_name' => $tags['checkpoint_name']
+                            ?? $tag->checkpointScan?->checkpoint?->name
+                            ?? '',
                         'client_name' => $tags['client_name'] ?? '',
                         'scanned_at' => $tags['scanned_at'] ?? $tag->created_at?->toIso8601String(),
                         'location_quality' => $tags['location_quality'] ?? 'unknown',
@@ -640,6 +643,9 @@ class ControlRoomDashboardController extends Controller
                         ?? $scan->checkpointScan?->supervisor?->name 
                         ?? 'Unknown',
                     'site_name' => $tags['site_name'] ?? 'Unknown',
+                    'checkpoint_name' => $tags['checkpoint_name'] 
+                        ?? $scan->checkpointScan?->checkpoint?->name 
+                        ?? 'Unknown',
                     'type' => $tags['scan_type'] ?? 'check_in',
                     'status' => ($tags['location_verified'] ?? false) || ($scan->checkpointScan?->location_verified ?? false) ? 'success' : 'failed',
                     'scanned_at' => $scan->created_at->toIso8601String(),
@@ -846,6 +852,292 @@ class ControlRoomDashboardController extends Controller
                 'today' => ['total' => 0, 'successful' => 0, 'failed' => 0, 'bySite' => [], 'byHour' => [], 'byType' => []],
                 'week' => ['total' => 0, 'dailyTrend' => [], 'byGuard' => []],
                 'issues' => ['failedScans' => 0, 'gpsMismatches' => 0, 'duplicateScans' => 0, 'suspiciousActivity' => []],
+            ];
+        }
+    }
+
+    /**
+     * Get QR scans data for live polling (JSON response)
+     */
+    public function getQrScansData()
+    {
+        try {
+            $today = Carbon::today();
+
+            $todayScans = ScanTag::with(['checkpointScan.supervisor', 'checkpointScan.checkpoint.clientSite.client'])
+                ->whereDate('created_at', $today)
+                ->orderByDesc('created_at')
+                ->get();
+
+            $successful = $todayScans->filter(function ($scan) {
+                return ($scan->tags['location_verified'] ?? false) || ($scan->checkpointScan?->location_verified ?? false);
+            })->count();
+            $failed = $todayScans->count() - $successful;
+
+            $bySite = $todayScans
+                ->groupBy(function ($scan) {
+                    return $scan->tags['site_name'] ?? $scan->checkpointScan?->checkpoint?->clientSite?->name ?? 'Unknown Site';
+                })
+                ->map(function ($scans, $siteName) {
+                    return [
+                        'site_name' => $siteName,
+                        'scan_count' => $scans->count(),
+                        'last_scan' => $scans->first()?->created_at?->toIso8601String(),
+                    ];
+                })
+                ->sortByDesc('scan_count')
+                ->values()
+                ->toArray();
+
+            $byHour = collect(range(0, 23))->map(function ($hour) use ($todayScans) {
+                $count = $todayScans->filter(function ($scan) use ($hour) {
+                    return $scan->created_at->hour === $hour;
+                })->count();
+                return [
+                    'hour' => sprintf('%02d:00', $hour),
+                    'count' => $count,
+                ];
+            })->toArray();
+
+            $recentScans = $todayScans->take(20)->map(function ($scan) {
+                $tags = $scan->tags ?? [];
+                $checkpointScan = $scan->checkpointScan;
+                return [
+                    'id' => $scan->id,
+                    'checkpoint_scan_id' => $checkpointScan?->id,
+                    'guard_name' => $tags['guard_name'] 
+                        ?? $tags['supervisor_name'] 
+                        ?? $checkpointScan?->supervisor?->name 
+                        ?? 'Unknown',
+                    'site_name' => $tags['site_name'] 
+                        ?? $checkpointScan?->checkpoint?->clientSite?->name 
+                        ?? 'Unknown',
+                    'checkpoint_name' => $tags['checkpoint_name'] 
+                        ?? $checkpointScan?->checkpoint?->name 
+                        ?? 'Unknown',
+                    'type' => $tags['scan_type'] ?? 'check_in',
+                    'status' => ($tags['location_verified'] ?? false) || ($checkpointScan?->location_verified ?? false) ? 'success' : 'failed',
+                    'scanned_at' => $scan->created_at->toIso8601String(),
+                    'latitude' => $checkpointScan?->latitude ?? $tags['latitude'] ?? null,
+                    'longitude' => $checkpointScan?->longitude ?? $tags['longitude'] ?? null,
+                    'location_verified' => $tags['location_verified'] ?? $checkpointScan?->location_verified ?? false,
+                ];
+            })->toArray();
+
+            return response()->json([
+                'totalToday' => $todayScans->count(),
+                'successful' => $successful,
+                'failed' => $failed,
+                'bySite' => $bySite,
+                'byHour' => $byHour,
+                'recentScans' => $recentScans,
+            ]);
+        } catch (\Throwable $e) {
+            Log::warning('Failed to load QR scans data: ' . $e->getMessage());
+            return response()->json([
+                'totalToday' => 0,
+                'successful' => 0,
+                'failed' => 0,
+                'bySite' => [],
+                'byHour' => [],
+                'recentScans' => [],
+            ]);
+        }
+    }
+
+    /**
+     * Get detailed QR scan information
+     */
+    public function getQrScanDetail($scanId)
+    {
+        try {
+            $scanTag = ScanTag::with(['checkpointScan.supervisor', 'checkpointScan.checkpoint.clientSite.client'])
+                ->where('id', $scanId)
+                ->firstOrFail();
+
+            $checkpointScan = $scanTag->checkpointScan;
+            $checkpoint = $checkpointScan?->checkpoint;
+            $site = $checkpoint?->clientSite;
+            $client = $site?->client;
+            $supervisor = $checkpointScan?->supervisor;
+            $tags = $scanTag->tags ?? [];
+
+            return response()->json([
+                'id' => $scanTag->id,
+                'checkpoint_scan_id' => $checkpointScan?->id,
+                'scanned_at' => $scanTag->created_at?->toIso8601String(),
+                'guard' => [
+                    'name' => $tags['guard_name'] ?? $tags['supervisor_name'] ?? $supervisor?->name ?? 'Unknown',
+                    'phone' => $supervisor?->phone ?? null,
+                    'position' => $supervisor?->position ?? 'Guard',
+                ],
+                'checkpoint' => [
+                    'id' => $checkpoint?->id,
+                    'name' => $checkpoint?->name ?? $tags['checkpoint_name'] ?? 'Unknown',
+                    'code' => $checkpoint?->code ?? null,
+                    'type' => $checkpoint?->type ?? 'qr',
+                    'scan_radius_meters' => $checkpoint?->scan_radius_meters ?? 50,
+                ],
+                'site' => [
+                    'id' => $site?->id,
+                    'name' => $site?->name ?? $tags['site_name'] ?? 'Unknown',
+                    'address' => $site?->address ?? null,
+                ],
+                'client' => [
+                    'id' => $client?->id,
+                    'name' => $client?->name ?? $tags['client_name'] ?? 'Unknown',
+                ],
+                'scan_type' => $tags['scan_type'] ?? 'check_in',
+                'location' => [
+                    'latitude' => $checkpointScan?->latitude ?? $tags['latitude'] ?? null,
+                    'longitude' => $checkpointScan?->longitude ?? $tags['longitude'] ?? null,
+                    'verified' => $tags['location_verified'] ?? $checkpointScan?->location_verified ?? false,
+                    'quality' => $tags['location_quality'] ?? 'unknown',
+                ],
+                'device_info' => $checkpointScan?->device_info ?? null,
+                'notes' => $checkpointScan?->notes ?? $tags['notes'] ?? null,
+                'tags' => $tags,
+            ]);
+        } catch (\Throwable $e) {
+            Log::warning('Failed to load QR scan detail: ' . $e->getMessage());
+            return response()->json(['error' => 'Scan not found'], 404);
+        }
+    }
+
+    /**
+     * Get checkpoint information with scan history
+     */
+    public function getCheckpointInfo($checkpointId)
+    {
+        try {
+            $checkpoint = \App\Models\Guards\Checkpoint::with(['clientSite.client', 'clientSite.zone'])
+                ->findOrFail($checkpointId);
+
+            $todayScans = \App\Models\Guards\CheckpointScan::where('checkpoint_id', $checkpointId)
+                ->whereDate('scanned_at', Carbon::today())
+                ->count();
+
+            $weekScans = \App\Models\Guards\CheckpointScan::where('checkpoint_id', $checkpointId)
+                ->whereDate('scanned_at', '>=', Carbon::today()->subDays(7))
+                ->count();
+
+            $lastScan = \App\Models\Guards\CheckpointScan::with('supervisor')
+                ->where('checkpoint_id', $checkpointId)
+                ->orderByDesc('scanned_at')
+                ->first();
+
+            return response()->json([
+                'id' => $checkpoint->id,
+                'name' => $checkpoint->name,
+                'code' => $checkpoint->code,
+                'type' => $checkpoint->type,
+                'description' => $checkpoint->description,
+                'is_active' => $checkpoint->is_active,
+                'requires_photo' => $checkpoint->requires_photo,
+                'scan_radius_meters' => $checkpoint->scan_radius_meters,
+                'latitude' => $checkpoint->latitude,
+                'longitude' => $checkpoint->longitude,
+                'site' => [
+                    'id' => $checkpoint->clientSite?->id,
+                    'name' => $checkpoint->clientSite?->name,
+                    'address' => $checkpoint->clientSite?->address,
+                    'status' => $checkpoint->clientSite?->status,
+                ],
+                'client' => $checkpoint->clientSite?->client ? [
+                    'id' => $checkpoint->clientSite->client->id,
+                    'name' => $checkpoint->clientSite->client->name,
+                ] : null,
+                'zone' => $checkpoint->clientSite?->zone ? [
+                    'id' => $checkpoint->clientSite->zone->id,
+                    'name' => $checkpoint->clientSite->zone->name,
+                ] : null,
+                'stats' => [
+                    'today_scans' => $todayScans,
+                    'week_scans' => $weekScans,
+                    'last_scan_at' => $lastScan?->scanned_at?->toIso8601String(),
+                    'last_scan_by' => $lastScan?->supervisor?->name,
+                ],
+            ]);
+        } catch (\Throwable $e) {
+            Log::warning('Failed to load checkpoint info: ' . $e->getMessage());
+            return response()->json(['error' => 'Checkpoint not found'], 404);
+        }
+    }
+
+    /**
+     * Get scan history for a specific checkpoint
+     */
+    public function getCheckpointScanHistory($checkpointId)
+    {
+        try {
+            $scans = \App\Models\Guards\CheckpointScan::with(['supervisor'])
+                ->where('checkpoint_id', $checkpointId)
+                ->whereDate('scanned_at', '>=', Carbon::today()->subDays(7))
+                ->orderByDesc('scanned_at')
+                ->limit(50)
+                ->get()
+                ->map(function ($scan) {
+                    return [
+                        'id' => $scan->id,
+                        'scanned_at' => $scan->scanned_at?->toIso8601String(),
+                        'supervisor_name' => $scan->supervisor?->name ?? 'Unknown',
+                        'latitude' => $scan->latitude,
+                        'longitude' => $scan->longitude,
+                        'location_verified' => $scan->location_verified,
+                        'device_info' => $scan->device_info,
+                    ];
+                });
+
+            return response()->json([
+                'checkpoint_id' => (int) $checkpointId,
+                'scans' => $scans,
+            ]);
+        } catch (\Throwable $e) {
+            Log::warning('Failed to load checkpoint scan history: ' . $e->getMessage());
+            return response()->json(['error' => 'Failed to load scan history'], 500);
+        }
+    }
+
+    /**
+     * Get dashboard stats for live polling (JSON response)
+     */
+    public function getLiveStats()
+    {
+        return response()->json($this->buildDashboardStats());
+    }
+
+    /**
+     * Build dashboard stats array
+     */
+    private function buildDashboardStats(): array
+    {
+        try {
+            $today = Carbon::today();
+
+            return [
+                'coverage' => $this->calculateOverallCoverage(),
+                'active_alerts' => $this->getActiveAlerts(),
+                'personnel' => $this->getPersonnelSummary(),
+                'qr_summary' => [
+                    'total_today' => ScanTag::whereDate('created_at', $today)->count(),
+                    'successful' => ScanTag::whereDate('created_at', $today)
+                        ->where(function ($q) {
+                            $q->whereJsonContains('tags->location_verified', true)
+                                ->orWhereHas('checkpointScan', function ($q) {
+                                    $q->where('location_verified', true);
+                                });
+                        })->count(),
+                ],
+                'updated_at' => now()->toIso8601String(),
+            ];
+        } catch (\Throwable $e) {
+            Log::warning('Failed to build dashboard stats: ' . $e->getMessage());
+            return [
+                'coverage' => 0,
+                'active_alerts' => [],
+                'personnel' => [],
+                'qr_summary' => ['total_today' => 0, 'successful' => 0],
+                'updated_at' => now()->toIso8601String(),
             ];
         }
     }

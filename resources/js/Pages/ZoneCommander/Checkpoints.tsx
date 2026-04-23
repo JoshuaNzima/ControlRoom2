@@ -303,6 +303,18 @@ export default function ZoneCommanderCheckpoints() {
                               </span>
                             </div>
                             <div className="text-xs font-mono text-coin-600 dark:text-coin-400 mt-1">{cp.code}</div>
+                            <div className="flex flex-wrap gap-2 mt-1 text-xs text-gray-500 dark:text-gray-400">
+                              <span className="inline-flex items-center gap-1">
+                                <IconMapper name="Radio" size={12} />
+                                {cp.scan_radius_meters}m radius
+                              </span>
+                              {cp.latitude && cp.longitude && (
+                                <span className="inline-flex items-center gap-1">
+                                  <IconMapper name="MapPin" size={12} />
+                                  GPS
+                                </span>
+                              )}
+                            </div>
                             {groupBy !== 'site' && cp.site && (
                               <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 truncate">
                                 {cp.site.name}

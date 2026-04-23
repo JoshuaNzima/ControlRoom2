@@ -11,9 +11,50 @@ use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Inertia\Inertia;
 
 class AssetHandoverController extends Controller
 {
+    public function index()
+    {
+        $status = request('status', 'active');
+        
+        $query = AssetHandover::query()
+            ->with(['handedBy:id,name', 'handedTo:id,name'])
+            ->orderBy('created_at', 'desc');
+
+        if ($status === 'active') {
+            $query->whereNull('returned_at');
+        } elseif ($status === 'returned') {
+            $query->whereNotNull('returned_at');
+        }
+
+        $handovers = $query->paginate(20)->appends(request()->only('status'));
+
+        // Enrich with asset details
+        $handovers->getCollection()->transform(function ($handover) {
+            $asset = $this->findAsset($handover->asset_type, $handover->asset_id);
+            $handover->asset = $asset ? [
+                'id' => $asset->id,
+                'tag' => $asset->tag,
+                'name' => $asset->name ?? trim(($asset->make ?? '') . ' ' . ($asset->model ?? '')),
+            ] : null;
+            return $handover;
+        });
+
+        $user = auth()->user();
+
+        return Inertia::render('Admin/AssetHandovers', [
+            'handovers' => $handovers,
+            'filters' => ['status' => $status],
+            'auth' => [
+                'user' => [
+                    'name' => $user?->name,
+                ],
+            ],
+        ]);
+    }
+
     public function store(Request $request): RedirectResponse
     {
         $data = $request->validate([

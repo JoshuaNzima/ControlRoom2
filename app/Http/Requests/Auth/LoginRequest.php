@@ -45,10 +45,10 @@ class LoginRequest extends FormRequest
         $field = filter_var($login, FILTER_VALIDATE_EMAIL) ? 'email' : 'phone';
 
         // Try primary field first
-        if (!Auth::attempt([$field => $login, 'password' => $this->password], $this->boolean('remember'))) {
+        if (!Auth::attempt([$field => $login, 'password' => $this->password, 'status' => 'active'], $this->boolean('remember'))) {
             // If phone login failed, try email as fallback (in case phone is stored differently)
             if ($field === 'phone') {
-                if (!Auth::attempt(['email' => $login, 'password' => $this->password], $this->boolean('remember'))) {
+                if (!Auth::attempt(['email' => $login, 'password' => $this->password, 'status' => 'active'], $this->boolean('remember'))) {
                     RateLimiter::hit($this->throttleKey());
                     throw ValidationException::withMessages([
                         'login' => trans('auth.failed'),

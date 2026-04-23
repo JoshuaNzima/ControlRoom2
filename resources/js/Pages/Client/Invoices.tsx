@@ -4,6 +4,7 @@ import AdminLayout from '@/Layouts/AdminLayout';
 import { Card } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import { Badge } from '@/Components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/Components/ui/dialog';
 import IconMapper from '@/Components/IconMapper';
 
 interface Invoice {
@@ -77,6 +78,13 @@ const formatDate = (dateString: string | null) => {
 
 export default function ClientInvoices({ auth, client, invoices, paymentSummary }: ClientInvoicesProps) {
   const [filter, setFilter] = useState<string>('all');
+  const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+
+  const handleViewInvoice = (invoice: Invoice) => {
+    setSelectedInvoice(invoice);
+    setIsDetailModalOpen(true);
+  };
 
   const filteredInvoices = filter === 'all'
     ? invoices
@@ -137,54 +145,54 @@ export default function ClientInvoices({ auth, client, invoices, paymentSummary 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
           {/* Payment Summary */}
           {paymentSummary && (
-            <Card className="p-6 dark:bg-gray-800 dark:border-gray-700">
+            <Card className="p-4 sm:p-6 dark:bg-gray-800 dark:border-gray-700">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
                   <IconMapper name="Wallet" size={20} />
                   Payment Summary ({new Date().getFullYear()})
                 </h3>
                 <StatusBadge status={paymentSummary.is_overdue ? 'overdue' : 'paid'} />
               </div>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
-                  <p className="text-sm text-gray-500 dark:text-gray-400">Total Due</p>
-                  <p className="text-xl font-bold text-gray-900 dark:text-gray-100">{formatCurrency(paymentSummary.total_due)}</p>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+                <div className="p-3 sm:p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
+                  <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">Total Due</p>
+                  <p className="text-lg sm:text-xl font-bold text-gray-900 dark:text-gray-100">{formatCurrency(paymentSummary.total_due)}</p>
                 </div>
-                <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
-                  <p className="text-sm text-gray-500 dark:text-gray-400">Total Paid</p>
-                  <p className="text-xl font-bold text-emerald-600 dark:text-emerald-400">{formatCurrency(paymentSummary.total_paid)}</p>
+                <div className="p-3 sm:p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
+                  <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">Total Paid</p>
+                  <p className="text-lg sm:text-xl font-bold text-emerald-600 dark:text-emerald-400">{formatCurrency(paymentSummary.total_paid)}</p>
                 </div>
-                <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
-                  <p className="text-sm text-gray-500 dark:text-gray-400">Outstanding</p>
-                  <p className={`text-xl font-bold ${paymentSummary.outstanding_amount > 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-gray-100'}`}>
+                <div className="p-3 sm:p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
+                  <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">Outstanding</p>
+                  <p className={`text-lg sm:text-xl font-bold ${paymentSummary.outstanding_amount > 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-gray-100'}`}>
                     {formatCurrency(paymentSummary.outstanding_amount)}
                   </p>
                 </div>
-                <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
-                  <p className="text-sm text-gray-500 dark:text-gray-400">Monthly Rate</p>
-                  <p className="text-xl font-bold text-gray-900 dark:text-gray-100">{formatCurrency(client.monthly_rate)}</p>
+                <div className="p-3 sm:p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
+                  <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">Monthly Rate</p>
+                  <p className="text-lg sm:text-xl font-bold text-gray-900 dark:text-gray-100">{formatCurrency(client.monthly_rate)}</p>
                 </div>
               </div>
             </Card>
           )}
 
           {/* Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <Card className="p-4 dark:bg-gray-800 dark:border-gray-700">
-              <p className="text-sm text-gray-500 dark:text-gray-400">Total Invoices</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{stats.total}</p>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+            <Card className="p-3 sm:p-4 dark:bg-gray-800 dark:border-gray-700">
+              <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">Total Invoices</p>
+              <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">{stats.total}</p>
             </Card>
-            <Card className="p-4 dark:bg-gray-800 dark:border-gray-700">
-              <p className="text-sm text-gray-500 dark:text-gray-400">Paid</p>
-              <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{stats.paid}</p>
+            <Card className="p-3 sm:p-4 dark:bg-gray-800 dark:border-gray-700">
+              <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">Paid</p>
+              <p className="text-xl sm:text-2xl font-bold text-emerald-600 dark:text-emerald-400">{stats.paid}</p>
             </Card>
-            <Card className="p-4 dark:bg-gray-800 dark:border-gray-700">
-              <p className="text-sm text-gray-500 dark:text-gray-400">Outstanding</p>
-              <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">{stats.outstanding}</p>
+            <Card className="p-3 sm:p-4 dark:bg-gray-800 dark:border-gray-700">
+              <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">Outstanding</p>
+              <p className="text-xl sm:text-2xl font-bold text-amber-600 dark:text-amber-400">{stats.outstanding}</p>
             </Card>
-            <Card className="p-4 dark:bg-gray-800 dark:border-gray-700">
-              <p className="text-sm text-gray-500 dark:text-gray-400">Overdue</p>
-              <p className="text-2xl font-bold text-red-600 dark:text-red-400">{stats.overdue}</p>
+            <Card className="p-3 sm:p-4 dark:bg-gray-800 dark:border-gray-700">
+              <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">Overdue</p>
+              <p className="text-xl sm:text-2xl font-bold text-red-600 dark:text-red-400">{stats.overdue}</p>
             </Card>
           </div>
 
@@ -220,8 +228,8 @@ export default function ClientInvoices({ auth, client, invoices, paymentSummary 
             </Button>
           </div>
 
-          {/* Invoices Table */}
-          <Card className="dark:bg-gray-800 dark:border-gray-700">
+          {/* Invoices Table - Desktop */}
+          <Card className="hidden sm:block dark:bg-gray-800 dark:border-gray-700">
             {filteredInvoices.length === 0 ? (
               <div className="p-8 text-center">
                 <IconMapper name="FileText" size={48} className="mx-auto text-gray-300 dark:text-gray-600 mb-4" />
@@ -242,7 +250,11 @@ export default function ClientInvoices({ auth, client, invoices, paymentSummary 
                   </thead>
                   <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                     {filteredInvoices.map((invoice) => (
-                      <tr key={invoice.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                      <tr 
+                        key={invoice.id} 
+                        className="hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer"
+                        onClick={() => handleViewInvoice(invoice)}
+                      >
                         <td className="py-3 px-4 text-sm font-medium text-gray-900 dark:text-gray-100">
                           {invoice.invoice_number}
                         </td>
@@ -270,8 +282,123 @@ export default function ClientInvoices({ auth, client, invoices, paymentSummary 
               </div>
             )}
           </Card>
+
+          {/* Invoices List - Mobile */}
+          <div className="sm:hidden space-y-3">
+            {filteredInvoices.length === 0 ? (
+              <Card className="p-6 text-center dark:bg-gray-800 dark:border-gray-700">
+                <IconMapper name="FileText" size={32} className="mx-auto text-gray-300 dark:text-gray-600 mb-2" />
+                <p className="text-sm text-gray-500 dark:text-gray-400">No invoices found</p>
+              </Card>
+            ) : (
+              filteredInvoices.map((invoice) => (
+                <Card 
+                  key={invoice.id}
+                  className="p-4 dark:bg-gray-800 dark:border-gray-700 cursor-pointer"
+                  onClick={() => handleViewInvoice(invoice)}
+                >
+                  <div className="flex items-start justify-between mb-2">
+                    <div>
+                      <p className="font-medium text-gray-900 dark:text-gray-100">{invoice.invoice_number}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        {invoice.billing_period || 'N/A'}
+                      </p>
+                    </div>
+                    <StatusBadge status={invoice.status} />
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="font-medium text-gray-900 dark:text-gray-100">
+                      {formatCurrency(invoice.total_amount)}
+                    </span>
+                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                      Due: {formatDate(invoice.due_date)}
+                    </span>
+                  </div>
+                </Card>
+              ))
+            )}
+          </div>
         </div>
       </div>
+
+      {/* Invoice Detail Modal */}
+      <Dialog open={isDetailModalOpen} onOpenChange={setIsDetailModalOpen}>
+        <DialogContent className="max-w-lg dark:bg-gray-800 dark:border-gray-700">
+          {selectedInvoice && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2 text-gray-900 dark:text-gray-100">
+                  <IconMapper name="FileText" size={20} className="text-red-600 dark:text-red-400" />
+                  Invoice Details
+                </DialogTitle>
+              </DialogHeader>
+
+              <div className="space-y-4 mt-4">
+                {/* Invoice Number & Status */}
+                <div className="flex items-center justify-between">
+                  <p className="text-lg font-bold text-gray-900 dark:text-gray-100">{selectedInvoice.invoice_number}</p>
+                  <StatusBadge status={selectedInvoice.status} />
+                </div>
+
+                {/* Amount */}
+                <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-lg text-center">
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Amount</p>
+                  <p className="text-2xl font-bold text-red-600 dark:text-red-400">{formatCurrency(selectedInvoice.total_amount)}</p>
+                </div>
+
+                {/* Details Grid */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="p-3 bg-gray-50 dark:bg-gray-900 rounded-lg">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Billing Period</p>
+                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                      {selectedInvoice.billing_period || (selectedInvoice.billing_month && selectedInvoice.billing_year
+                        ? `${new Date(0, selectedInvoice.billing_month - 1).toLocaleString('default', { month: 'long' })} ${selectedInvoice.billing_year}`
+                        : 'N/A')}
+                    </p>
+                  </div>
+                  <div className="p-3 bg-gray-50 dark:bg-gray-900 rounded-lg">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Due Date</p>
+                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{formatDate(selectedInvoice.due_date)}</p>
+                  </div>
+                  <div className="p-3 bg-gray-50 dark:bg-gray-900 rounded-lg">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Created</p>
+                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{formatDate(selectedInvoice.created_at)}</p>
+                  </div>
+                  {selectedInvoice.paid_date && (
+                    <div className="p-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg">
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Paid Date</p>
+                      <p className="text-sm font-medium text-emerald-600 dark:text-emerald-400">{formatDate(selectedInvoice.paid_date)}</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Actions */}
+                <div className="flex gap-3">
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsDetailModalOpen(false)}
+                    className="flex-1 dark:border-gray-600 dark:text-gray-300"
+                  >
+                    Close
+                  </Button>
+                  {selectedInvoice.status !== 'paid' && (
+                    <Button
+                      className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+                      onClick={() => {
+                        // TODO: Add payment link or contact support
+                        setIsDetailModalOpen(false);
+                      }}
+                    >
+                      <IconMapper name="CreditCard" size={16} className="mr-2" />
+                      Pay Now
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </AdminLayout>
   );
 }

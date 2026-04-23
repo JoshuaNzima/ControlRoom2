@@ -25,14 +25,14 @@ Broadcast::channel('emergencies', function ($user) {
 Broadcast::channel('control-room', function ($user) {
     if (!$user) return false;
     return method_exists($user, 'hasAnyRole')
-        ? $user->hasAnyRole(['super_admin', 'admin', 'control_room_operator', 'operations_officer', 'manager'])
+        ? $user->hasAnyRole(['super_admin', 'admin', 'control_room_operator', 'operations_officer'])
         : true;
 });
 
 Broadcast::channel('admins', function ($user) {
     if (!$user) return false;
     return method_exists($user, 'hasAnyRole')
-        ? $user->hasAnyRole(['super_admin', 'admin', 'manager'])
+        ? $user->hasAnyRole(['super_admin', 'admin'])
         : true;
 });
 
@@ -48,6 +48,6 @@ Broadcast::channel('supervisor.{id}', function ($user, $id) {
 Broadcast::channel('gps-alerts', function ($user) {
     if (!$user) return false;
     return method_exists($user, 'hasAnyRole')
-        ? $user->hasAnyRole(['super_admin', 'admin', 'control_room_operator', 'operations_officer', 'manager'])
+        ? $user->hasAnyRole(['super_admin', 'admin', 'control_room_operator', 'operations_officer'])
         : true;
 });

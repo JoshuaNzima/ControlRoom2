@@ -143,6 +143,7 @@ interface RecentScan {
   id: number;
   supervisor_name: string;
   site_name: string;
+  checkpoint_name: string;
   client_name: string;
   scanned_at: string;
   location_quality: string;
@@ -477,7 +478,11 @@ export default function ControlRoomDashboard({
                           </div>
                           <div>
                             <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{scan.supervisor_name}</p>
-                            <p className="text-xs text-gray-500 dark:text-gray-400">{scan.site_name}{scan.client_name ? ` • ${scan.client_name}` : ''}</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                              {scan.site_name}
+                              {scan.checkpoint_name && <> · <span className="font-medium text-gray-600 dark:text-gray-300">{scan.checkpoint_name}</span></>}
+                              {scan.client_name && <> · {scan.client_name}</>}
+                            </p>
                           </div>
                         </div>
                         <div className="text-right">

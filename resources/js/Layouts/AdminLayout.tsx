@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link, Head, usePage } from '@inertiajs/react';
+import { Head, usePage } from '@inertiajs/react';
 import IconMapper from '@/Components/IconMapper';
 import { User } from '@/types';
 import NotificationBell from '@/Components/Common/NotificationBell';
@@ -8,9 +8,10 @@ import useCounters from '@/Hooks/useCounters';
 import { useTheme } from '@/Providers/ThemeProvider';
 import useGpsAlerts from '@/Hooks/useGpsAlerts';
 import { useRealtimeNotifications } from '@/Hooks/useRealtimeNotifications';
-import FloatingNavButton from '@/Components/FloatingNavButton';
 import WeeklyTasks from '@/Components/WeeklyTasks';
 import TutorialSection from '@/Components/Tutorials/TutorialSection';
+import AIAssistant from '@/Components/AI/AIAssistant';
+import { NavSection, SidebarHeader, UserSection, QuickStats } from '@/Components/Layout';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface Props {
@@ -25,28 +26,6 @@ interface NavItem {
     icon: React.ReactNode;
     badge?: string | number;
 }
-
-// Quick Stats Component for Header
-const QuickStats: React.FC = () => {
-    const { counters } = useCounters();
-    const stats = [
-        { label: 'Approvals', value: (Number(counters?.requisitions_pending_admin || 0) + Number(counters?.finance_approvals_pending || 0)), color: 'bg-amber-500' },
-        { label: 'Open Downs', value: counters?.control_downs_active || 0, color: 'bg-red-500' },
-        { label: 'Messages', value: counters?.notifications_unread || 0, color: 'bg-blue-500' },
-    ].filter(s => s.value > 0);
-
-    if (stats.length === 0) return null;
-
-    return (
-        <div className="hidden lg:flex items-center gap-2 mr-4">
-            {stats.map((stat) => (
-                <div key={stat.label} className={`${stat.color} text-white px-3 py-1 rounded-full text-xs font-medium`}>
-                    {stat.value} {stat.label}
-                </div>
-            ))}
-        </div>
-    );
-};
 
 export default function AdminLayout({ title, children }: Props) {
     const [sidebarOpen, setSidebarOpen] = React.useState(false);
@@ -87,6 +66,7 @@ export default function AdminLayout({ title, children }: Props) {
     })();
 
     const isClient = roles.includes('client');
+    const isSuperAdmin = roles.includes('super_admin');
 
     // Client Portal Navigation
     const clientNav: NavItem[] = isClient ? [
@@ -220,38 +200,6 @@ export default function AdminLayout({ title, children }: Props) {
         },
     ];
 
-    const NavSection: React.FC<{ title: string; items: NavItem[] }> = ({ title, items }) => (
-        <div className="space-y-1">
-            <h3 className="px-3 text-xs font-semibold text-red-200 dark:text-gray-400 uppercase tracking-wider">
-                {title}
-            </h3>
-            {items.map((item) => (
-                <Link
-                    key={item.name}
-                    href={item.href}
-                    className={`group flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-                        isCurrent(item.href)
-                            ? 'bg-red-800 text-white dark:bg-gray-800'
-                            : 'text-red-100 hover:bg-red-800 hover:text-white dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white'
-                    }`}
-                >
-                    <span className="flex-shrink-0">{item.icon}</span>
-                    <span className="ml-3 flex-1 truncate">{item.name}</span>
-                    {item.badge ? (
-                        <span className="ml-2 inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full bg-red-600 text-white">
-                            {item.badge}
-                        </span>
-                    ) : null}
-                </Link>
-            ))}
-        </div>
-    );
-
-    const hasSuperAdmin = (() => {
-        const roles = (user as any)?.roles ?? [];
-        return Array.isArray(roles) ? roles.includes('super_admin') : roles === 'super_admin';
-    })();
-
     return (
         <div className="min-h-screen bg-red-50 dark:bg-gray-900 overflow-x-hidden">
             <Head title={title} />
@@ -268,75 +216,30 @@ export default function AdminLayout({ title, children }: Props) {
                     sidebarOpen ? 'translate-x-0' : '-translate-x-full'
                 } md:translate-x-0 transition-transform duration-300 ease-in-out z-50`}
             >
-                {/* Logo / App Name */}
-                <div className="flex items-center flex-shrink-0 px-4 py-5 border-b border-red-800 dark:border-gray-800">
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-red-500 to-red-700 flex items-center justify-center">
-                            <IconMapper name="layout-dashboard" className="w-5 h-5 text-white" />
-                        </div>
-                        <div>
-                            <h1 className="font-bold text-lg tracking-tight text-white">Admin</h1>
-                            <p className="text-xs text-red-200 dark:text-gray-400">{appName}</p>
-                        </div>
-                    </div>
-                </div>
+                <SidebarHeader title="Admin" appName={appName} iconName="LayoutDashboard" />
 
                 {/* Navigation - Client gets simplified navigation */}
                 <nav className="flex-1 px-3 py-2 space-y-6 overflow-y-auto">
                     {isClient ? (
-                        <NavSection title="Client Portal" items={clientNav} />
+                        <NavSection title="Client Portal" items={clientNav} isCurrent={isCurrent} />
                     ) : (
                         <>
-                            <NavSection title="Main" items={mainNav} />
-                            <NavSection title="Operations" items={operationsNav} />
-                            <NavSection title="Finance" items={financeNav} />
-                            <NavSection title="Management" items={managementNav} />
-                            <NavSection title="Tools" items={toolsNav} />
+                            <NavSection title="Main" items={mainNav} isCurrent={isCurrent} />
+                            <NavSection title="Operations" items={operationsNav} isCurrent={isCurrent} />
+                            <NavSection title="Finance" items={financeNav} isCurrent={isCurrent} />
+                            <NavSection title="Management" items={managementNav} isCurrent={isCurrent} />
+                            <NavSection title="Tools" items={toolsNav} isCurrent={isCurrent} />
                         </>
                     )}
                 </nav>
 
-                {/* User Menu - Bottom */}
-                <div className="flex-shrink-0 border-t border-red-800 dark:border-gray-800 p-4 bg-red-900 dark:bg-gray-950">
-                    <div className="flex items-center gap-3 mb-3">
-                        <div className="w-10 h-10 rounded-full bg-red-800 dark:bg-gray-800 border-2 border-red-700 dark:border-gray-700 flex items-center justify-center text-white font-semibold text-sm">
-                            {user?.name?.charAt(0) || 'A'}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                            <p className="text-sm font-semibold text-white truncate">{user?.name}</p>
-                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs border font-medium bg-red-500/20 text-red-200 border-red-500/30">
-                                {roleDisplay}
-                            </span>
-                        </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <Link
-                            href={route('admin.profile')}
-                            className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-md bg-gray-800 px-3 py-2 text-xs font-medium text-white hover:bg-gray-700 transition-colors"
-                        >
-                            <IconMapper name="User" size={14} />
-                            Profile
-                        </Link>
-                        {hasSuperAdmin && (
-                            <Link
-                                href={route('superadmin.dashboard')}
-                                className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-md bg-amber-600 px-3 py-2 text-xs font-medium text-white hover:bg-amber-500 transition-colors"
-                            >
-                                <IconMapper name="Shield" size={14} />
-                                SA
-                            </Link>
-                        )}
-                        <Link
-                            href={route('logout')}
-                            method="post"
-                            as="button"
-                            className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-md bg-red-700 px-3 py-2 text-xs font-medium text-white hover:bg-red-600 transition-colors"
-                        >
-                            <IconMapper name="LogOut" size={14} />
-                            Logout
-                        </Link>
-                    </div>
-                </div>
+                <UserSection
+                    user={user}
+                    roleDisplay={roleDisplay}
+                    profileRoute="admin.profile"
+                    showSuperAdmin={isSuperAdmin}
+                    superAdminRoute="superadmin.dashboard"
+                />
             </div>
 
             {/* Main Content */}
@@ -348,7 +251,7 @@ export default function AdminLayout({ title, children }: Props) {
                             <div className="flex items-center gap-2 sm:gap-3 min-w-0">
                                 <button
                                     type="button"
-                                    className="h-10 w-10 inline-flex items-center justify-center rounded-md text-red-700 hover:bg-red-100 hover:text-red-900 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-red-600 md:hidden"
+                                    className="h-10 w-10 inline-flex items-center justify-center rounded-md text-red-700 hover:bg-red-100 hover:text-red-900 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-red-600 md:hidden touch-target-min"
                                     onClick={() => setSidebarOpen(true)}
                                 >
                                     <span className="sr-only">Open sidebar</span>
@@ -409,7 +312,7 @@ export default function AdminLayout({ title, children }: Props) {
                         </div>
                     </div>
                 </BaseShell>
-                <FloatingNavButton />
+                <AIAssistant context="admin" />
             </div>
         </div>
     );
