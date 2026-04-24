@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Head, router, useForm } from '@inertiajs/react';
-import AdminLayout from '@/Layouts/AdminLayout';
+import ClientLayout from '@/Layouts/ClientLayout';
 import { Card } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import IconMapper from '@/Components/IconMapper';
@@ -93,8 +93,8 @@ export default function ClientProfile({ auth, client }: ClientProfileProps) {
   };
 
   return (
-    <AdminLayout title="Profile & Settings" user={auth?.user}>
-      <Head title="Profile & Settings" />
+    <ClientLayout title="Profile" user={auth?.user}>
+      <Head title="Profile" />
 
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
         {/* Header */}
@@ -309,6 +309,6 @@ export default function ClientProfile({ auth, client }: ClientProfileProps) {
           )}
         </div>
       </div>
-    </AdminLayout>
+    </ClientLayout>
   );
 }

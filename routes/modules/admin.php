@@ -64,6 +64,16 @@ Route::middleware(['auth', 'role:admin,super_admin,finance_officer'])
         Route::get('/modules', [\App\Http\Controllers\Admin\ModuleController::class, 'index'])->name('modules.index');
         Route::get('/modules/{module}', [\App\Http\Controllers\Admin\ModuleSummaryController::class, 'show'])->name('modules.summary');
         Route::resource('users', \App\Http\Controllers\Admin\UserController::class);
+
+        // Client Users Management (super_admin only)
+        Route::middleware(['role:super_admin'])->prefix('client-users')->name('client-users.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Admin\ClientUserController::class, 'index'])->name('index');
+            Route::post('/', [\App\Http\Controllers\Admin\ClientUserController::class, 'store'])->name('store');
+            Route::post('/{user}/toggle-status', [\App\Http\Controllers\Admin\ClientUserController::class, 'toggleStatus'])->name('toggle-status');
+            Route::post('/{user}/send-reset-link', [\App\Http\Controllers\Admin\ClientUserController::class, 'sendResetLink'])->name('send-reset-link');
+            Route::delete('/{user}', [\App\Http\Controllers\Admin\ClientUserController::class, 'destroy'])->name('destroy');
+        });
+
         Route::get('/clients/dashboard', [\App\Http\Controllers\Admin\ClientController::class, 'dashboard'])->name('clients.dashboard');
         // Clients Management
         Route::prefix('clients')->name('clients.')->group(function () {

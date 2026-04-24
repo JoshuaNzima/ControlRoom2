@@ -8,6 +8,7 @@ import IconMapper from '@/Components/IconMapper';
 import LiveMonitoring from '@/Components/ControlRoom/LiveMonitoring';
 import RequisitionSummary from '@/Components/Requisitions/RequisitionSummary';
 import IncentiveSummary from '@/Components/IncentiveSummary';
+import QrScanDetailModal from '@/Components/ControlRoom/QrScanDetailModal';
 import useControlRoomEcho from '@/Hooks/useControlRoomEcho';
 import { User } from '@/types';
 
@@ -220,6 +221,20 @@ export default function ControlRoomDashboard({
 
   const [activeTab, setActiveTab] = useState<'overview' | 'zones' | 'incidents' | 'analytics'>('overview');
   const [currentTime, setCurrentTime] = useState(new Date());
+
+  // Scan detail modal state
+  const [selectedScanId, setSelectedScanId] = useState<number | null>(null);
+  const [showScanModal, setShowScanModal] = useState(false);
+
+  const openScanDetail = (scanId: number) => {
+    setSelectedScanId(scanId);
+    setShowScanModal(true);
+  };
+
+  const closeScanModal = () => {
+    setShowScanModal(false);
+    setSelectedScanId(null);
+  };
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
@@ -471,7 +486,11 @@ export default function ControlRoomDashboard({
                       return `${Math.floor(hrs / 24)}d ago`;
                     })() : '';
                     return (
-                      <div key={scan.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                      <div 
+                        key={scan.id} 
+                        onClick={() => openScanDetail(scan.id)}
+                        className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors"
+                      >
                         <div className="flex items-center gap-3">
                           <div className={`p-1.5 rounded-full ${scan.location_verified ? 'bg-emerald-100 dark:bg-emerald-900/30' : 'bg-amber-100 dark:bg-amber-900/30'}`}>
                             <IconMapper name={scan.location_verified ? 'CheckCircle' : 'MapPin'} size={14} className={scan.location_verified ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'} />
@@ -496,6 +515,7 @@ export default function ControlRoomDashboard({
                               {scan.location_quality} GPS
                             </span>
                           )}
+                          <IconMapper name="ChevronRight" size={14} className="text-gray-400 dark:text-gray-500 mt-1" />
                         </div>
                       </div>
                     );
@@ -742,6 +762,13 @@ export default function ControlRoomDashboard({
           </div>
         )}
       </div>
+
+      {/* QR Scan Detail Modal */}
+      <QrScanDetailModal
+        isOpen={showScanModal}
+        scanId={selectedScanId}
+        onClose={closeScanModal}
+      />
     </ControlRoomLayout>
   );
 }

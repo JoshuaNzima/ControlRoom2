@@ -9,7 +9,6 @@ import { useTheme } from '@/Providers/ThemeProvider';
 import useGpsAlerts from '@/Hooks/useGpsAlerts';
 import { useRealtimeNotifications } from '@/Hooks/useRealtimeNotifications';
 import WeeklyTasks from '@/Components/WeeklyTasks';
-import TutorialSection from '@/Components/Tutorials/TutorialSection';
 import AIAssistant from '@/Components/AI/AIAssistant';
 import { NavSection, SidebarHeader, UserSection, QuickStats } from '@/Components/Layout';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -289,7 +288,6 @@ export default function AdminLayout({ title, children }: Props) {
                     <div className="transition-all ease-out duration-500">
                         <div className={`grid gap-4 ${tasksOpen ? 'grid-cols-1 xl:grid-cols-4' : 'grid-cols-1'}`}>
                             <div className={tasksOpen ? 'xl:col-span-3' : ''}>
-                                <TutorialSection dashboard="admin" canManage={true} />
                                 {children}
                             </div>
                             <AnimatePresence>

@@ -10,7 +10,6 @@ import NotificationBell from '@/Components/Common/NotificationBell';
 import QuickBudgetButton from '@/Components/Budgets/QuickBudgetButton';
 import WeeklyTasks from '@/Components/WeeklyTasks';
 import AIAssistant from '@/Components/AI/AIAssistant';
-import TutorialSection from '@/Components/Tutorials/TutorialSection';
 import { NavSection, SidebarHeader, UserSection, QuickStats } from '@/Components/Layout';
 
 interface NavItem {
@@ -205,7 +204,6 @@ export default function SupervisorLayout({ children, title }: SupervisorLayoutPr
             <div className="transition-all ease-out duration-500">
               <div className={`grid gap-4 ${tasksOpen ? 'grid-cols-1 xl:grid-cols-4' : 'grid-cols-1'}`}>
                 <div className={tasksOpen ? 'xl:col-span-3' : ''}>
-                  <TutorialSection dashboard="supervisor" canManage={false} />
                   {children}
                 </div>
                 <AnimatePresence>

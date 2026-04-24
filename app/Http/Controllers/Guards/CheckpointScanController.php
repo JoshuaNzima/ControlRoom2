@@ -23,6 +23,7 @@ class CheckpointScanController extends Controller
             'code' => 'required|string',
             'latitude' => ($requireGps ? 'required' : 'nullable') . '|numeric',
             'longitude' => ($requireGps ? 'required' : 'nullable') . '|numeric',
+            'accuracy' => 'nullable|numeric|min:0', // GPS accuracy in meters
         ]);
 
         $checkpoint = Checkpoint::where('code', $validated['code'])
@@ -40,17 +41,22 @@ class CheckpointScanController extends Controller
 
         // Verify location if GPS coordinates provided
         $locationVerified = false;
+        $verificationResult = null;
         if (isset($validated['latitude']) && isset($validated['longitude'])) {
-            $locationVerified = $checkpoint->verifyLocation(
+            $accuracy = $validated['accuracy'] ?? null;
+            $verificationResult = $checkpoint->verifyLocation(
                 $validated['latitude'],
-                $validated['longitude']
+                $validated['longitude'],
+                $accuracy
             );
+            $locationVerified = $verificationResult['verified'];
 
             if (!$locationVerified && $checkpoint->latitude && $checkpoint->longitude) {
                 $radiusMeters = (int) ($checkpoint->scan_radius_meters ?: 0);
                 if ($radiusMeters <= 0) {
-                    $radiusMeters = (int) config('scanner.checkpoint_radius_meters', 10);
+                    $radiusMeters = (int) config('scanner.checkpoint_radius_meters', 100);
                 }
+                $effectiveRadius = $verificationResult['effective_radius'] ?? $radiusMeters;
 
                 $threshold = (int) config('scanner.gps_mismatch_alert_threshold', 3);
                 $windowMinutes = (int) config('scanner.gps_mismatch_alert_window_minutes', 10);
@@ -60,19 +66,8 @@ class CheckpointScanController extends Controller
                 Cache::put($cacheKey, $mismatchCount, now()->addMinutes($windowMinutes));
                 $escalated = $mismatchCount >= $threshold;
 
-                $distance = null;
-                try {
-                    $earthRadius = 6371000;
-                    $latFrom = deg2rad((float) $checkpoint->latitude);
-                    $lonFrom = deg2rad((float) $checkpoint->longitude);
-                    $latTo = deg2rad((float) $validated['latitude']);
-                    $lonTo = deg2rad((float) $validated['longitude']);
-                    $latDelta = $latTo - $latFrom;
-                    $lonDelta = $lonTo - $lonFrom;
-                    $angle = 2 * asin(sqrt(pow(sin($latDelta / 2), 2) + cos($latFrom) * cos($latTo) * pow(sin($lonDelta / 2), 2)));
-                    $distance = $earthRadius * $angle;
-                } catch (\Throwable $e) {
-                }
+                $distance = $verificationResult['distance'] ?? 0;
+                $accuracyUsed = $verificationResult['accuracy_used'] ?? null;
 
                 event(new \App\Events\GPSMismatchAlert(
                     (int) auth()->id(),
@@ -86,7 +81,9 @@ class CheckpointScanController extends Controller
                     $mismatchCount,
                     $threshold,
                     $windowMinutes,
-                    $escalated
+                    $escalated,
+                    $accuracyUsed,
+                    $effectiveRadius
                 ));
 
                 try {
@@ -101,6 +98,8 @@ class CheckpointScanController extends Controller
                         'expected_longitude' => $checkpoint->longitude !== null ? (float) $checkpoint->longitude : null,
                         'distance_meters' => $distance !== null ? (int) round($distance, 0) : null,
                         'radius_meters' => $radiusMeters,
+                        'gps_accuracy' => $accuracyUsed,
+                        'effective_radius_meters' => $effectiveRadius,
                         'mismatch_count' => $mismatchCount,
                         'threshold' => $threshold,
                         'window_minutes' => $windowMinutes,
@@ -111,7 +110,8 @@ class CheckpointScanController extends Controller
                 } catch (\Throwable $e) {
                 }
 
-                $errorMessage = 'Location verification failed. You are too far from the checkpoint.\n\nYou must be within ' . $radiusMeters . ' meters to scan.\n\nTo fix this:\n1. Make sure you are at the correct checkpoint location\n2. Ensure GPS signal is strong (move outdoors if needed)\n3. Wait a moment for GPS to stabilize and try again\n4. Contact your supervisor if you are at the correct location';
+                $accuracyMsg = $accuracyUsed ? "\nGPS accuracy: ±" . round($accuracyUsed) . 'm' : '';
+                $errorMessage = 'Location verification failed. You are ' . round($distance) . 'm away (allowed: ' . $effectiveRadius . 'm' . $accuracyMsg . ').\n\nTo fix this:\n1. Make sure you are at the correct checkpoint location\n2. Move outdoors for better GPS signal\n3. Wait 10-30 seconds for GPS to stabilize\n4. Try refreshing your location before scanning\n5. Contact your supervisor if you are at the correct location';
                 if ($request->header('X-Inertia')) {
                     throw ValidationException::withMessages(['gps' => $errorMessage]);
                 }
@@ -145,14 +145,9 @@ class CheckpointScanController extends Controller
 
         session(['active_checkpoint_scan' => $scanData]);
 
-        // Tag the scan — runs synchronously if queue is 'sync', otherwise queued
-        // This ensures the scan always appears in the control-room dashboard
-        if (config('queue.default') === 'sync') {
-            // Run immediately (no queue worker needed)
-            TagScanJob::dispatchSync($scan->id);
-        } else {
-            TagScanJob::dispatch($scan->id)->onQueue('default');
-        }
+        // Tag the scan immediately (synchronous) to ensure it appears in control-room dashboard
+        // This avoids requiring a queue worker on the live server
+        TagScanJob::dispatchSync($scan->id);
 
         // Dispatch event for real-time notifications (comprehensive payload)
         event(new \App\Events\QRScanned(

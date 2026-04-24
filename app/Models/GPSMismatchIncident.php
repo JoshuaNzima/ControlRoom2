@@ -23,6 +23,8 @@ class GPSMismatchIncident extends Model
         'expected_longitude',
         'distance_meters',
         'radius_meters',
+        'gps_accuracy',
+        'effective_radius_meters',
         'mismatch_count',
         'threshold',
         'window_minutes',

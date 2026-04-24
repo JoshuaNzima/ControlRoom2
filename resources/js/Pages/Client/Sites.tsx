@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Head } from '@inertiajs/react';
-import AdminLayout from '@/Layouts/AdminLayout';
+import ClientLayout from '@/Layouts/ClientLayout';
 import { Card } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import { Badge } from '@/Components/ui/badge';
@@ -109,7 +109,7 @@ export default function ClientSites({ auth, client, sites }: ClientSitesProps) {
 
   if (!client) {
     return (
-      <AdminLayout title="My Sites" user={auth?.user}>
+      <ClientLayout title="My Sites" user={auth?.user}>
         <Head title="My Sites" />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <Card className="p-8 text-center dark:bg-gray-800 dark:border-gray-700">
@@ -126,12 +126,12 @@ export default function ClientSites({ auth, client, sites }: ClientSitesProps) {
             </div>
           </Card>
         </div>
-      </AdminLayout>
+      </ClientLayout>
     );
   }
 
   return (
-    <AdminLayout title="My Sites" user={auth?.user}>
+    <ClientLayout title="My Sites" user={auth?.user}>
       <Head title="My Sites" />
 
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -412,6 +412,6 @@ export default function ClientSites({ auth, client, sites }: ClientSitesProps) {
           )}
         </DialogContent>
       </Dialog>
-    </AdminLayout>
+    </ClientLayout>
   );
 }

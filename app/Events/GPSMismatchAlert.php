@@ -24,6 +24,8 @@ class GPSMismatchAlert implements ShouldBroadcast
     public int $threshold;
     public int $windowMinutes;
     public bool $escalated;
+    public ?float $gpsAccuracy;
+    public ?int $effectiveRadius;
 
     public function __construct(
         int $userId,
@@ -37,7 +39,9 @@ class GPSMismatchAlert implements ShouldBroadcast
         int $mismatchCount = 1,
         int $threshold = 3,
         int $windowMinutes = 10,
-        bool $escalated = false
+        bool $escalated = false,
+        ?float $gpsAccuracy = null,
+        ?int $effectiveRadius = null
     ) {
         $this->userId = $userId;
         $this->siteId = $siteId;
@@ -51,6 +55,8 @@ class GPSMismatchAlert implements ShouldBroadcast
         $this->threshold = $threshold;
         $this->windowMinutes = $windowMinutes;
         $this->escalated = $escalated;
+        $this->gpsAccuracy = $gpsAccuracy;
+        $this->effectiveRadius = $effectiveRadius;
     }
 
     public function broadcastOn(): array
@@ -88,6 +94,8 @@ class GPSMismatchAlert implements ShouldBroadcast
                 'lng' => $this->siteLongitude,
             ],
             'distance_meters' => $this->distance,
+            'gps_accuracy' => $this->gpsAccuracy,
+            'effective_radius_meters' => $this->effectiveRadius,
             'mismatch_count' => $this->mismatchCount,
             'threshold' => $this->threshold,
             'window_minutes' => $this->windowMinutes,

@@ -7,7 +7,6 @@ import { useRealtimeNotifications } from '@/Hooks/useRealtimeNotifications';
 import { motion } from 'framer-motion';
 import { useTheme } from '@/Providers/ThemeProvider';
 import QuickBudgetButton from '@/Components/Budgets/QuickBudgetButton';
-import TutorialSection from '@/Components/Tutorials/TutorialSection';
 import AIAssistant from '@/Components/AI/AIAssistant';
 import { NavSection, SidebarHeader, UserSection, QuickStats } from '@/Components/Layout';
 
@@ -172,7 +171,6 @@ export default function ZoneCommanderLayout({ title, children }: Props) {
 				{/* Page Content */}
 				<div className="flex-1 bg-red-50 dark:bg-gray-900 overflow-y-auto">
 					<div className="animate-slideUp transition-all-smooth p-2 sm:p-4 md:p-6">
-						<TutorialSection dashboard="zone-commander" canManage={false} />
 						{children}
 					</div>
 				</div>

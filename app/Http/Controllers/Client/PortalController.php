@@ -498,4 +498,70 @@ class PortalController extends Controller
 
         return redirect()->back()->with('success', 'Reply added successfully.');
     }
+
+    /**
+     * Client settings page
+     */
+    public function settings()
+    {
+        $user = auth()->user();
+        $clientId = $this->getClientId();
+
+        $client = $clientId ? Client::find($clientId) : null;
+
+        // Get user's notification preferences (stored in settings JSON column or separate table)
+        $settings = $user->settings ?? [];
+
+        return Inertia::render('Client/Settings', [
+            'auth' => ['user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'phone' => $user->phone,
+            ]],
+            'client' => $client ? [
+                'id' => $client->id,
+                'name' => $client->name,
+            ] : null,
+            'settings' => [
+                'email_notifications' => $settings['email_notifications'] ?? true,
+                'sms_notifications' => $settings['sms_notifications'] ?? false,
+                'push_notifications' => $settings['push_notifications'] ?? true,
+                'incident_alerts' => $settings['incident_alerts'] ?? true,
+                'shift_reminders' => $settings['shift_reminders'] ?? true,
+                'invoice_reminders' => $settings['invoice_reminders'] ?? true,
+                'report_notifications' => $settings['report_notifications'] ?? true,
+                'language' => $settings['language'] ?? 'en',
+                'timezone' => $settings['timezone'] ?? 'Africa/Blantyre',
+                'date_format' => $settings['date_format'] ?? 'd/m/Y',
+            ],
+        ]);
+    }
+
+    /**
+     * Update client user settings
+     */
+    public function updateSettings(Request $request)
+    {
+        $user = auth()->user();
+
+        $validated = $request->validate([
+            'email_notifications' => 'boolean',
+            'sms_notifications' => 'boolean',
+            'push_notifications' => 'boolean',
+            'incident_alerts' => 'boolean',
+            'shift_reminders' => 'boolean',
+            'invoice_reminders' => 'boolean',
+            'report_notifications' => 'boolean',
+            'language' => 'string|in:en',
+            'timezone' => 'string|timezone',
+            'date_format' => 'string|in:d/m/Y,m/d/Y,Y-m-d',
+        ]);
+
+        // Store settings in user's settings JSON column
+        $user->settings = array_merge($user->settings ?? [], $validated);
+        $user->save();
+
+        return redirect()->back()->with('success', 'Settings updated successfully.');
+    }
 }

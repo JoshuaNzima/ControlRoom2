@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use App\Models\Guards\Checkpoint;
 use App\Models\Guards\CheckpointScan;
+use App\Jobs\TagScanJob;
 
 class PatrolController extends Controller
 {
@@ -93,7 +94,7 @@ class PatrolController extends Controller
 			$locationVerified = $checkpoint->verifyLocation($validated['latitude'], $validated['longitude']);
 		}
 
-		CheckpointScan::create([
+		$scan = CheckpointScan::create([
 			'checkpoint_id' => $checkpoint->id,
 			'supervisor_id' => $user->id, // zone commander acting as supervisor for patrols
 			'scanned_at' => now(),
@@ -103,6 +104,9 @@ class PatrolController extends Controller
 			'location_verified' => $locationVerified,
 			'notes' => $validated['notes'] ?? null,
 		]);
+
+		// Tag the scan immediately (synchronous) to ensure it appears in control-room dashboard
+		TagScanJob::dispatchSync($scan->id);
 
 		return back()->with('success', 'Scan recorded');
 	}

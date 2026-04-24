@@ -766,6 +766,7 @@ class ClientController extends Controller
     /**
      * Toggle client status between active and inactive.
      * Deactivating a client preserves all data but prevents new assignments.
+     * Also updates all associated client users' status.
      */
     public function toggleStatus(Request $request, Client $client)
     {
@@ -783,6 +784,9 @@ class ClientController extends Controller
         // Also update all sites to match client status
         $client->sites()->update(['status' => $newStatus]);
 
+        // Update all associated client users' status
+        $client->users()->update(['status' => $newStatus]);
+
         // Log the status change (optional audit trail)
         if (class_exists(\App\Models\AuditLog::class)) {
             \App\Models\AuditLog::create([
@@ -798,7 +802,7 @@ class ClientController extends Controller
 
         $message = $newStatus === 'active' 
             ? "Client '{$client->name}' has been activated." 
-            : "Client '{$client->name}' has been deactivated. All sites are now inactive.";
+            : "Client '{$client->name}' has been deactivated. All sites and users are now inactive.";
 
         if ($request->wantsJson() || $request->ajax()) {
             return response()->json([

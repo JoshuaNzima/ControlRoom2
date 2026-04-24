@@ -1,6 +1,6 @@
 import React from 'react';
 import { Head, Link, useForm } from '@inertiajs/react';
-import AdminLayout from '@/Layouts/AdminLayout';
+import ClientLayout from '@/Layouts/ClientLayout';
 import { Card } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import IconMapper from '@/Components/IconMapper';
@@ -105,7 +105,7 @@ export default function ClientSupportDetail({ auth, ticket }: ClientSupportDetai
   };
 
   return (
-    <AdminLayout title={`Ticket ${ticket.ticket_number}`} user={auth?.user}>
+    <ClientLayout title={`Ticket ${ticket.ticket_number}`} user={auth?.user}>
       <Head title={`Ticket ${ticket.ticket_number}`} />
 
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -230,6 +230,6 @@ export default function ClientSupportDetail({ auth, ticket }: ClientSupportDetai
           )}
         </div>
       </div>
-    </AdminLayout>
+    </ClientLayout>
   );
 }

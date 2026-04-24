@@ -543,6 +543,10 @@ class GuardController extends Controller
             'recent_attendance' => $recentAttendance,
             'recent_infractions' => $recentInfractions,
             'documents' => $documents,
+            // Explicit compliance fields
+            'fingerprint_registered' => (bool) $guard->fingerprint_registered,
+            'uniform_issued' => (bool) $guard->uniform_issued,
+            'equipment_issued' => $guard->equipment_issued ?? [],
             'current_assignment' => $currentAssignment ? [
                 'site' => $currentAssignment->site ? [
                     'id' => $currentAssignment->site->id,

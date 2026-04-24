@@ -9,6 +9,7 @@ import QuickBudgetButton from '@/Components/Budgets/QuickBudgetButton';
 import NotificationBell from '@/Components/Common/NotificationBell';
 import useCounters from '@/Hooks/useCounters';
 import { useRealtimeNotifications } from '@/Hooks/useRealtimeNotifications';
+import AIAssistant from '@/Components/AI/AIAssistant';
 
 interface Props {
   title: string;
@@ -143,6 +144,7 @@ export default function FrontDeskLayout({ title, children, user }: Props) {
           </div>
         </BaseShell>
       </div>
+      <AIAssistant />
     </div>
   );
 }

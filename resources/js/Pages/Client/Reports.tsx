@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Head } from '@inertiajs/react';
-import AdminLayout from '@/Layouts/AdminLayout';
+import ClientLayout from '@/Layouts/ClientLayout';
 import { Card } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import { Badge } from '@/Components/ui/badge';
@@ -116,7 +116,7 @@ export default function ClientReports({ auth, client, incidents }: ClientReports
 
   if (!client) {
     return (
-      <AdminLayout title="Reports" user={auth?.user}>
+      <ClientLayout title="Reports" user={auth?.user}>
         <Head title="Reports" />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <Card className="p-8 text-center dark:bg-gray-800 dark:border-gray-700">
@@ -133,12 +133,12 @@ export default function ClientReports({ auth, client, incidents }: ClientReports
             </div>
           </Card>
         </div>
-      </AdminLayout>
+      </ClientLayout>
     );
   }
 
   return (
-    <AdminLayout title="Security Reports" user={auth?.user}>
+    <ClientLayout title="Reports" user={auth?.user}>
       <Head title="Reports" />
 
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -361,6 +361,6 @@ export default function ClientReports({ auth, client, incidents }: ClientReports
           )}
         </DialogContent>
       </Dialog>
-    </AdminLayout>
+    </ClientLayout>
   );
 }

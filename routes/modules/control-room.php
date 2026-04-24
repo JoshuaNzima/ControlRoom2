@@ -263,7 +263,7 @@ Route::middleware(['auth'])->group(function () {
 			->name('gps-mismatch-incidents.index');
 
 		// Operations Dashboard Live Data Endpoints
-		Route::prefix('operations-data')->name('operations-data.')->middleware(['role_or_permission:control_room_operator|operations_officer|super_admin'])->group(function () {
+		Route::prefix('operations-data')->name('operations-data.')->middleware(['role_or_permission:control_room_operator|operations_officer|operations_manager|super_admin'])->group(function () {
 			Route::get('/qr-scans', [\App\Http\Controllers\ControlRoomDashboardController::class, 'getQrScansData'])->name('qr-scans');
 			Route::get('/qr-scans/{scanId}', [\App\Http\Controllers\ControlRoomDashboardController::class, 'getQrScanDetail'])->name('qr-scan-detail');
 			Route::get('/checkpoints/{checkpointId}/scans', [\App\Http\Controllers\ControlRoomDashboardController::class, 'getCheckpointScanHistory'])->name('checkpoint-scans');

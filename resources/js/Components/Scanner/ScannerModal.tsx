@@ -57,9 +57,11 @@ interface Props {
 export default function ScannerModal({ open, onClose, activeScan }: Props) {
   const [scanning, setScanning] = useState(false);
   const [manualCode, setManualCode] = useState('');
-  const [location, setLocation] = useState<{lat: number; lon: number} | null>(null);
+  const [location, setLocation] = useState<{lat: number; lon: number; accuracy: number | null} | null>(null);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [gpsStatus, setGpsStatus] = useState<'acquiring' | 'ready' | 'retrying' | 'error'>('acquiring');
+  const [gpsRetryCount, setGpsRetryCount] = useState(0);
   const [downOpen, setDownOpen] = useState(false);
   const [downReason, setDownReason] = useState('');
   const [downPhoto, setDownPhoto] = useState<File | null>(null);
@@ -67,6 +69,7 @@ export default function ScannerModal({ open, onClose, activeScan }: Props) {
   const [scanError, setScanError] = useState<string | null>(null);
   const [showSuccess, setShowSuccess] = useState(false);
   const audioContextRef = useRef<AudioContext | null>(null);
+  const gpsWatchIdRef = useRef<number | null>(null);
 
   // Initialize audio context for feedback sounds
   useEffect(() => {
@@ -131,22 +134,90 @@ export default function ScannerModal({ open, onClose, activeScan }: Props) {
     }
   }, []);
 
-  useEffect(() => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setLocation({
+  // GPS acquisition with retry logic using watchPosition for better accuracy
+  const acquireGps = useCallback(() => {
+    if (!navigator.geolocation) {
+      setGpsStatus('error');
+      return;
+    }
+
+    const maxRetries = 3;
+    const maxAccuracy = 100; // meters - reject if accuracy worse than this
+    let attempts = 0;
+    let bestPosition: {lat: number; lon: number; accuracy: number} | null = null;
+
+    setGpsStatus('acquiring');
+
+    // Use watchPosition for continuous updates until we get good accuracy
+    const watchId = navigator.geolocation.watchPosition(
+      (position) => {
+        const accuracy = position.coords.accuracy || 999;
+        attempts++;
+        setGpsRetryCount(attempts);
+
+        // Track best position seen
+        if (!bestPosition || accuracy < bestPosition.accuracy) {
+          bestPosition = {
             lat: position.coords.latitude,
             lon: position.coords.longitude,
-          });
-        },
-        (error) => {
-          console.warn('Location access error:', error.message);
-        },
-        { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
-      );
-    }
+            accuracy: accuracy,
+          };
+        }
+
+        // Accept if accuracy is good enough or we've tried enough times
+        if (accuracy <= maxAccuracy || attempts >= maxRetries) {
+          if (gpsWatchIdRef.current !== null) {
+            navigator.geolocation.clearWatch(gpsWatchIdRef.current);
+            gpsWatchIdRef.current = null;
+          }
+
+          setLocation(bestPosition);
+          setGpsStatus(accuracy <= maxAccuracy ? 'ready' : 'retrying');
+        }
+      },
+      (error) => {
+        console.warn('GPS error:', error.message);
+        setGpsStatus('error');
+        if (gpsWatchIdRef.current !== null) {
+          navigator.geolocation.clearWatch(gpsWatchIdRef.current);
+          gpsWatchIdRef.current = null;
+        }
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 15000,
+        maximumAge: 0,
+      }
+    );
+
+    gpsWatchIdRef.current = watchId;
+
+    // Fallback: stop watching after 15 seconds and use best position
+    setTimeout(() => {
+      if (gpsWatchIdRef.current === watchId) {
+        navigator.geolocation.clearWatch(watchId);
+        gpsWatchIdRef.current = null;
+        if (bestPosition) {
+          setLocation(bestPosition);
+          setGpsStatus(bestPosition.accuracy <= maxAccuracy ? 'ready' : 'retrying');
+        } else {
+          setGpsStatus('error');
+        }
+      }
+    }, 15000);
   }, []);
+
+  useEffect(() => {
+    if (open) {
+      acquireGps();
+    }
+    return () => {
+      if (gpsWatchIdRef.current !== null) {
+        navigator.geolocation.clearWatch(gpsWatchIdRef.current);
+        gpsWatchIdRef.current = null;
+      }
+    };
+  }, [open, acquireGps]);
 
   // Auto-start scanner once modal opens and we have a location fix
   useEffect(() => {
@@ -227,6 +298,7 @@ export default function ScannerModal({ open, onClose, activeScan }: Props) {
       code: code,
       latitude: location?.lat,
       longitude: location?.lon,
+      accuracy: location?.accuracy,
     }, {
       preserveState: true,
       onSuccess: (page) => {
@@ -441,7 +513,7 @@ export default function ScannerModal({ open, onClose, activeScan }: Props) {
       toast.error('Location is required to submit manual scan. Please enable GPS and try again.');
       if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
-          (position) => setLocation({ lat: position.coords.latitude, lon: position.coords.longitude }),
+          (position) => setLocation({ lat: position.coords.latitude, lon: position.coords.longitude, accuracy: position.coords.accuracy || null }),
           (err) => {
             console.warn('Location access error:', err.message);
             toast.error('Unable to acquire location.');
@@ -672,7 +744,7 @@ export default function ScannerModal({ open, onClose, activeScan }: Props) {
                   if (navigator.geolocation) {
                     navigator.geolocation.getCurrentPosition(
                       (position) => {
-                        setLocation({ lat: position.coords.latitude, lon: position.coords.longitude });
+                        setLocation({ lat: position.coords.latitude, lon: position.coords.longitude, accuracy: position.coords.accuracy || null });
                         toast.success('Location acquired. You can now scan.');
                       },
                       (err) => {
@@ -753,61 +825,60 @@ export default function ScannerModal({ open, onClose, activeScan }: Props) {
 
           {/* Location Status */}
           <div className="mt-6 pt-6 border-t">
-            <div className="flex items-center gap-2 text-sm">
-              {location ? (
-                <>
-                  <span className="text-green-600">●</span>
-                  <span className="text-gray-600">GPS Location: Enabled</span>
-                  <button
-                    onClick={() => {
-                      if (navigator.geolocation) {
-                        navigator.geolocation.getCurrentPosition(
-                          (position) => {
-                            setLocation({
-                              lat: position.coords.latitude,
-                              lon: position.coords.longitude,
-                            });
-                          },
-                          (error) => {
-                            console.warn('Location access error:', error.message);
-                            alert('Please enable location access in your browser settings.');
-                          }
-                        );
-                      }
-                    }}
-                    className="text-yellow-600 hover:text-yellow-800 ml-2"
-                  >
-                    Refresh
-                  </button>
-                </>
-              ) : (
-                <>
-                  <span className="text-yellow-600">●</span>
-                  <span className="text-gray-600">GPS Location: Not Available</span>
-                  <button
-                    onClick={() => {
-                      if (navigator.geolocation) {
-                        navigator.geolocation.getCurrentPosition(
-                          (position) => {
-                            setLocation({
-                              lat: position.coords.latitude,
-                              lon: position.coords.longitude,
-                            });
-                          },
-                          (error) => {
-                            console.warn('Location access error:', error.message);
-                            alert('Please enable location access in your browser settings.');
-                          }
-                        );
-                      }
-                    }}
-                    className="text-indigo-600 hover:text-indigo-800"
-                  >
-                    Enable Location
-                  </button>
-                </>
-              )}
+            <div className="flex items-center justify-between text-sm">
+              <div className="flex items-center gap-2">
+                {gpsStatus === 'acquiring' && (
+                  <>
+                    <span className="animate-pulse text-yellow-600">●</span>
+                    <span className="text-gray-600 dark:text-gray-400">Acquiring GPS...</span>
+                    {gpsRetryCount > 0 && (
+                      <span className="text-xs text-gray-500">(attempt {gpsRetryCount})</span>
+                    )}
+                  </>
+                )}
+                {gpsStatus === 'ready' && location && (
+                  <>
+                    <span className="text-green-600 dark:text-green-400">●</span>
+                    <span className="text-gray-600 dark:text-gray-400">GPS Ready</span>
+                    {location.accuracy && (
+                      <span className="text-xs text-gray-500 dark:text-gray-500">
+                        (±{Math.round(location.accuracy)}m)
+                      </span>
+                    )}
+                  </>
+                )}
+                {gpsStatus === 'retrying' && location && (
+                  <>
+                    <span className="text-yellow-600 dark:text-yellow-400">●</span>
+                    <span className="text-gray-600 dark:text-gray-400">GPS Low Accuracy</span>
+                    {location.accuracy && (
+                      <span className="text-xs text-yellow-600 dark:text-yellow-400">
+                        (±{Math.round(location.accuracy)}m - may cause issues)
+                      </span>
+                    )}
+                  </>
+                )}
+                {gpsStatus === 'error' && (
+                  <>
+                    <span className="text-red-600 dark:text-red-400">●</span>
+                    <span className="text-gray-600 dark:text-gray-400">GPS Unavailable</span>
+                  </>
+                )}
+              </div>
+              <button
+                onClick={() => acquireGps()}
+                disabled={gpsStatus === 'acquiring'}
+                className="text-coin-600 hover:text-coin-700 dark:text-coin-400 dark:hover:text-coin-300 text-xs font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+              >
+                <IconMapper name="RefreshCw" size={12} className={gpsStatus === 'acquiring' ? 'animate-spin' : ''} />
+                Refresh GPS
+              </button>
             </div>
+            {location && location.accuracy && location.accuracy > 50 && (
+              <div className="mt-2 p-2 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded text-xs text-yellow-700 dark:text-yellow-300">
+                ⚠ GPS accuracy is low. For best results, move outdoors and wait 10-30 seconds before scanning.
+              </div>
+            )}
           </div>
 
           {/* Instructions */}

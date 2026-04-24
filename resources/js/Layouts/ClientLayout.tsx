@@ -1,20 +1,17 @@
-import React, { useState } from 'react';
-import { Head, usePage } from '@inertiajs/react';
+import React from 'react';
+import { Link, Head, usePage } from '@inertiajs/react';
 import IconMapper from '@/Components/IconMapper';
 import NotificationBell from '@/Components/Common/NotificationBell';
-import { User } from '@/types';
+import { User, PageProps } from '@/types';
 import { useTheme } from '@/Providers/ThemeProvider';
-import useCounters from '@/Hooks/useCounters';
-import AIAssistant from '@/Components/AI/AIAssistant';
-import { useRealtimeNotifications } from '@/Hooks/useRealtimeNotifications';
-import ScannerModal from '@/Components/Scanner/ScannerModal';
+import BaseShell from './BaseShell';
 import { NavSection, SidebarHeader, UserSection, QuickStats } from '@/Components/Layout';
+import { useRealtimeNotifications } from '@/Hooks/useRealtimeNotifications';
 
 interface Props {
   title: string;
   children: React.ReactNode;
   user?: User;
-  showQrScanner?: boolean;
 }
 
 interface NavItem {
@@ -24,13 +21,12 @@ interface NavItem {
   badge?: string | number;
 }
 
-export default function OperationsLayout({ title, children, user, showQrScanner = true }: Props) {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [scannerOpen, setScannerOpen] = useState(false);
+export default function ClientLayout({ title, children, user }: Props) {
+  const [sidebarOpen, setSidebarOpen] = React.useState(false);
+  const [isMobile, setIsMobile] = React.useState(false);
   const { theme, toggle } = useTheme();
-  const { counters } = useCounters();
-  const page = usePage<any>();
-  const { appName } = page.props;
+  const page = usePage<PageProps>();
+  const { appName } = page.props as any;
 
   const isCurrent = (href: string) => {
     try {
@@ -41,6 +37,13 @@ export default function OperationsLayout({ title, children, user, showQrScanner 
     }
   };
 
+  React.useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 1024);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
   const rawRoles = ((user as any)?.roles ?? (page?.props as any)?.auth?.user?.roles ?? []) as (string | { id: number; name: string })[];
   const roles = rawRoles.map((r) => (typeof r === 'string' ? r : r.name));
   const userId = (user as any)?.id ?? (page?.props as any)?.auth?.user?.id;
@@ -48,19 +51,30 @@ export default function OperationsLayout({ title, children, user, showQrScanner 
   // Initialize real-time notifications
   useRealtimeNotifications({ userId, userRoles: roles });
 
-  const isSuperAdmin = roles.includes('super_admin');
-  const isOperationsManager = roles.includes('operations_manager');
-  const roleDisplay = roles.length > 0 ? roles[0].replace(/_/g, ' ') : 'Operations';
+  const roleDisplay = roles.length > 0 ? roles[0].replace(/_/g, ' ') : 'Client';
 
-  const operationsLinks: NavItem[] = [
-    { name: 'Dashboard', href: route('operations.dashboard'), icon: <IconMapper name="LayoutDashboard" size={20} /> },
-    { name: 'Site Coverage', href: route('operations.coverage.index'), icon: <IconMapper name="Building" size={20} /> },
-    { name: 'Deployments', href: route('operations.coverage.sites'), icon: <IconMapper name="MapPin" size={20} /> },
-    { name: 'Guard Roster', href: route('operations.guards.index'), icon: <IconMapper name="Shield" size={20} /> },
-    { name: 'Shift Roster', href: route('operations.shifts.index'), icon: <IconMapper name="Calendar" size={20} /> },
-    { name: 'Incidents', href: route('operations.reports.incidents'), icon: <IconMapper name="AlertTriangle" size={20} /> },
-    { name: 'Reports', href: route('operations.reports.attendance'), icon: <IconMapper name="FileText" size={20} /> },
-    { name: 'Requisitions', href: route('requisitions.index'), icon: <IconMapper name="ClipboardList" size={20} /> },
+  // Main Navigation
+  const mainLinks: NavItem[] = [
+    { name: 'Dashboard', href: route('client.dashboard'), icon: <IconMapper name="LayoutDashboard" size={20} /> },
+    { name: 'My Sites', href: route('client.sites'), icon: <IconMapper name="Building" size={20} /> },
+    { name: 'Reports', href: route('client.reports'), icon: <IconMapper name="FileText" size={20} /> },
+    { name: 'Schedules', href: route('client.schedules'), icon: <IconMapper name="Calendar" size={20} /> },
+  ];
+
+  // Financial Navigation
+  const financialLinks: NavItem[] = [
+    { name: 'Invoices', href: route('client.invoices'), icon: <IconMapper name="Receipt" size={20} /> },
+  ];
+
+  // Support Navigation
+  const supportLinks: NavItem[] = [
+    { name: 'Support', href: route('client.support'), icon: <IconMapper name="Headphones" size={20} /> },
+  ];
+
+  // Account Navigation
+  const accountLinks: NavItem[] = [
+    { name: 'Profile', href: route('client.profile'), icon: <IconMapper name="User" size={20} /> },
+    { name: 'Settings', href: route('client.settings'), icon: <IconMapper name="Settings" size={20} /> },
   ];
 
   return (
@@ -79,18 +93,19 @@ export default function OperationsLayout({ title, children, user, showQrScanner 
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         } md:translate-x-0 transition-transform duration-300 ease-in-out z-50`}
       >
-        <SidebarHeader title="Field Ops" appName={appName} iconName="MapPin" />
+        <SidebarHeader title="Client Portal" appName={appName} iconName="Building2" />
 
         <nav className="flex-1 px-3 py-2 space-y-6 overflow-y-auto">
-          <NavSection title="Field Operations" items={operationsLinks} isCurrent={isCurrent} />
+          <NavSection title="Main" items={mainLinks} isCurrent={isCurrent} />
+          <NavSection title="Financial" items={financialLinks} isCurrent={isCurrent} />
+          <NavSection title="Support" items={supportLinks} isCurrent={isCurrent} />
+          <NavSection title="Account" items={accountLinks} isCurrent={isCurrent} />
         </nav>
 
         <UserSection
           user={user}
           roleDisplay={roleDisplay}
-          profileRoute="operations.profile"
-          showSuperAdmin={isSuperAdmin}
-          superAdminRoute="superadmin.dashboard"
+          profileRoute="client.profile"
         />
       </div>
 
@@ -114,26 +129,6 @@ export default function OperationsLayout({ title, children, user, showQrScanner 
               <div className="flex items-center justify-end gap-1 sm:gap-3">
                 <QuickStats />
                 <NotificationBell />
-
-                {/* Operations Manager Badge */}
-                {isOperationsManager && (
-                  <span className="hidden sm:inline-flex items-center px-2.5 py-1 rounded-md bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200 text-xs font-medium">
-                    Manager View
-                  </span>
-                )}
-
-                {/* Scan QR - Mobile only */}
-                {showQrScanner && (
-                  <button
-                    onClick={() => setScannerOpen(true)}
-                    className="flex sm:hidden items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-red-600 text-white hover:bg-red-700 transition-colors touch-target-min"
-                    aria-label="Scan QR Code"
-                  >
-                    <IconMapper name="ScanLine" size={16} />
-                    <span className="text-xs font-medium">Scan</span>
-                  </button>
-                )}
-
                 <button
                   onClick={toggle}
                   className="text-xs sm:text-sm px-2 sm:px-3 py-1.5 rounded-md bg-red-100 text-red-800 hover:bg-red-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700 transition-colors touch-target-min"
@@ -147,26 +142,12 @@ export default function OperationsLayout({ title, children, user, showQrScanner 
         </div>
 
         {/* Page Content */}
-        <main className="flex-1">
-          <div className="py-4 sm:py-6">
-            <div className="max-w-7xl mx-auto px-2 sm:px-4 md:px-8 text-gray-900 dark:text-gray-100">
-              {children}
-            </div>
+        <BaseShell noHeader fullScreen={false}>
+          <div className="transition-all ease-out duration-500">
+            {children}
           </div>
-        </main>
-
-        {/* AI Assistant */}
-        <AIAssistant context="operations" />
-
+        </BaseShell>
       </div>
-
-      {/* QR Scanner Modal */}
-      {showQrScanner && (
-        <ScannerModal
-          open={scannerOpen}
-          onClose={() => setScannerOpen(false)}
-        />
-      )}
     </div>
   );
 }

@@ -9,7 +9,6 @@ import { useTheme } from '@/Providers/ThemeProvider';
 import useGpsAlerts from '@/Hooks/useGpsAlerts';
 import { useRealtimeNotifications } from '@/Hooks/useRealtimeNotifications';
 import WeeklyTasks from '@/Components/WeeklyTasks';
-import TutorialSection from '@/Components/Tutorials/TutorialSection';
 import AIAssistant from '@/Components/AI/AIAssistant';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -137,6 +136,11 @@ export default function SuperAdminLayout({ title, children, user }: Props) {
             name: 'Users', 
             href: route('superadmin.users'), 
             icon: <IconMapper name="Users" size={20} />,
+        },
+        { 
+            name: 'Client Users', 
+            href: route('admin.client-users.index'), 
+            icon: <IconMapper name="UserCog" size={20} />,
         },
         { 
             name: 'Security', 
@@ -332,7 +336,6 @@ export default function SuperAdminLayout({ title, children, user }: Props) {
                     <div className="transition-all ease-out duration-500">
                         <div className={`grid gap-4 ${tasksOpen ? 'grid-cols-1 xl:grid-cols-4' : 'grid-cols-1'}`}>
                             <div className={tasksOpen ? 'xl:col-span-3' : ''}>
-                                <TutorialSection dashboard="superadmin" canManage={true} />
                                 {children}
                             </div>
                             <AnimatePresence>

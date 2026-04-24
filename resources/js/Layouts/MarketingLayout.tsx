@@ -10,7 +10,7 @@ import QuickBudgetButton from '@/Components/Budgets/QuickBudgetButton';
 import useCounters from '@/Hooks/useCounters';
 import { useRealtimeNotifications } from '@/Hooks/useRealtimeNotifications';
 import WeeklyTasks from '@/Components/WeeklyTasks';
-import TutorialSection from '@/Components/Tutorials/TutorialSection';
+import AIAssistant from '@/Components/AI/AIAssistant';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface Props {
@@ -182,7 +182,6 @@ export default function MarketingLayout({ title, children, user }: Props) {
                 className={`grid gap-4 ${tasksOpen ? 'grid-cols-1 xl:grid-cols-4' : 'grid-cols-1'}`}
               >
                 <div className={tasksOpen ? 'xl:col-span-3' : ''}>
-                  <TutorialSection dashboard="marketing" canManage={false} />
                   {children}
                 </div>
                 {tasksOpen && !isMobile && (
@@ -214,6 +213,7 @@ export default function MarketingLayout({ title, children, user }: Props) {
           />
         )}
       </div>
+      <AIAssistant />
     </div>
   );
 }

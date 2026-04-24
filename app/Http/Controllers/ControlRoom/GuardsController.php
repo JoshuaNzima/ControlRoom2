@@ -263,7 +263,7 @@ class GuardsController extends Controller
 
     public function showJson(Guard $guard)
     {
-        $guard->load(['supervisor', 'zone', 'grade', 'activeAssignments', 'assignments.clientSite.client']);
+        $guard->load(['supervisor', 'zone', 'grade', 'activeAssignments.clientSite.client', 'assignments.clientSite.client']);
 
         $monthStart = now()->startOfMonth()->toDateString();
         $monthEnd = now()->endOfMonth()->toDateString();
@@ -286,6 +286,14 @@ class GuardsController extends Controller
             )
             ->first();
 
+        // Get current assignment
+        $currentAssignment = $guard->activeAssignments->first();
+
+        // Calculate attendance rate
+        $totalDays = array_sum($byStatus);
+        $presentDays = ($byStatus['present'] ?? 0) + ($byStatus['late'] ?? 0);
+        $ratePercent = $totalDays > 0 ? round(($presentDays / $totalDays) * 100) : null;
+
         return response()->json([
             'id' => $guard->id,
             'employee_id' => $guard->employee_id,
@@ -293,6 +301,7 @@ class GuardsController extends Controller
             'phone' => $guard->phone,
             'email' => $guard->email,
             'status' => $guard->status,
+            'position' => $guard->position,
             'employee_role' => $guard->employee_role,
             'guard_type' => $guard->guard_type,
             'hire_date' => optional($guard->hire_date)->format('Y-m-d'),
@@ -329,12 +338,34 @@ class GuardsController extends Controller
             'supervisor' => $guard->supervisor ? ['id' => $guard->supervisor->id, 'name' => $guard->supervisor->name] : null,
             'photo_url' => $guard->photo ? url('storage/'.$guard->photo) : null,
             'edit_count' => $guard->edit_count ?? 0,
+            // Compliance fields
+            'fingerprint_registered' => (bool) $guard->fingerprint_registered,
+            'uniform_issued' => (bool) $guard->uniform_issued,
+            'equipment_issued' => $guard->equipment_issued ?? [],
+            // Profile completeness
+            'is_profile_complete' => (bool) $guard->is_profile_complete,
+            'profile_missing_fields' => $guard->profile_missing_fields,
+            // Current assignment
+            'current_assignment' => $currentAssignment ? [
+                'site' => $currentAssignment->clientSite ? [
+                    'id' => $currentAssignment->clientSite->id,
+                    'name' => $currentAssignment->clientSite->name,
+                    'client' => $currentAssignment->clientSite->client ? [
+                        'id' => $currentAssignment->clientSite->client->id,
+                        'name' => $currentAssignment->clientSite->client->name,
+                    ] : null,
+                ] : null,
+                'start_date' => $currentAssignment->start_date,
+                'end_date' => $currentAssignment->end_date,
+                'assignment_type' => $currentAssignment->assignment_type,
+            ] : null,
             'attendance_tally' => [
                 'range' => ['start' => $monthStart, 'end' => $monthEnd],
                 'by_status' => $byStatus,
-                'total' => array_sum($byStatus),
+                'total' => $totalDays,
                 'hours_worked' => (float) ($hoursRow->hours_worked ?? 0),
                 'overtime_hours' => (float) ($hoursRow->overtime_hours ?? 0),
+                'rate_percent' => $ratePercent,
             ],
             'assignments' => $guard->assignments->map(function ($a) {
                 return [

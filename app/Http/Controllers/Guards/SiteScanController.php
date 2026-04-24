@@ -178,13 +178,9 @@ class SiteScanController extends Controller
             'notes' => 'Site QR scan via ' . $roleName,
         ]);
 
-        // Tag the scan — runs synchronously if queue is 'sync', otherwise queued
-        // This ensures the scan always appears in the control-room dashboard
-        if (config('queue.default') === 'sync') {
-            TagScanJob::dispatchSync($scan->id);
-        } else {
-            TagScanJob::dispatch($scan->id)->onQueue('default');
-        }
+        // Tag the scan immediately (synchronous) to ensure it appears in control-room dashboard
+        // This avoids requiring a queue worker on the live server
+        TagScanJob::dispatchSync($scan->id);
 
         // Dispatch event for real-time notifications (control-room + supervisor private channel)
         event(new QRScanned(

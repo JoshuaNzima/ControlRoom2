@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Head, Link, useForm } from '@inertiajs/react';
-import AdminLayout from '@/Layouts/AdminLayout';
+import ClientLayout from '@/Layouts/ClientLayout';
 import { Card } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/Components/ui/dialog';
@@ -120,7 +120,7 @@ export default function ClientSupport({ auth, client, tickets }: ClientSupportPr
 
   if (!client) {
     return (
-      <AdminLayout title="Support" user={auth?.user}>
+      <ClientLayout title="Support" user={auth?.user}>
         <Head title="Support" />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <Card className="p-8 text-center dark:bg-gray-800 dark:border-gray-700">
@@ -137,12 +137,12 @@ export default function ClientSupport({ auth, client, tickets }: ClientSupportPr
             </div>
           </Card>
         </div>
-      </AdminLayout>
+      </ClientLayout>
     );
   }
 
   return (
-    <AdminLayout title="Support" user={auth?.user}>
+    <ClientLayout title="Support" user={auth?.user}>
       <Head title="Support" />
 
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -316,6 +316,6 @@ export default function ClientSupport({ auth, client, tickets }: ClientSupportPr
           </form>
         </DialogContent>
       </Dialog>
-    </AdminLayout>
+    </ClientLayout>
   );
 }

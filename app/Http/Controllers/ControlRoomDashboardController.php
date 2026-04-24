@@ -592,11 +592,9 @@ class ControlRoomDashboardController extends Controller
     private function getQrScanSummary(): array
     {
         try {
-            $today = Carbon::today();
-
-            // Get today's scans from checkpoint_scans via ScanTag
+            // Get today's scans from checkpoint_scans via ScanTag - use last 24 hours for timezone safety
             $todayScans = ScanTag::with(['checkpointScan.supervisor'])
-                ->whereDate('created_at', $today)
+                ->whereRaw('created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)')
                 ->orderByDesc('created_at')
                 ->get();
 
@@ -682,9 +680,10 @@ class ControlRoomDashboardController extends Controller
             $today = Carbon::today();
             $weekStart = $today->copy()->subDays(6);
 
-            // Today's scans
-            $todayScans = ScanTag::with(['checkpointScan.supervisor'])
-                ->whereDate('created_at', $today)
+            // Today's scans - use last 24 hours for better timezone handling
+            $todayScans = ScanTag::with(['checkpointScan.supervisor', 'checkpointScan.checkpoint.clientSite'])
+                ->whereRaw('created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)')
+                ->orderByDesc('created_at')
                 ->get();
 
             // Determine success based on location_verified in tags or checkpointScan
@@ -741,8 +740,9 @@ class ControlRoomDashboardController extends Controller
             })->toArray();
 
             // Week data - successful scans only
-            $weekScans = ScanTag::with(['checkpointScan.supervisor'])
-                ->whereDate('created_at', '>=', $weekStart)
+            $weekScans = ScanTag::with(['checkpointScan.supervisor', 'checkpointScan.checkpoint.clientSite'])
+                ->whereRaw('DATE(created_at) >= DATE_SUB(CURDATE(), INTERVAL 6 DAY)')
+                ->orderByDesc('created_at')
                 ->get()
                 ->filter(function ($scan) {
                     return ($scan->tags['location_verified'] ?? false) || ($scan->checkpointScan?->location_verified ?? false);
@@ -825,6 +825,28 @@ class ControlRoomDashboardController extends Controller
                 }
             }
 
+            // Recent scans for today
+            $recentScans = $todayScans->take(20)->map(function ($scan) {
+                $tags = $scan->tags ?? [];
+                $checkpointScan = $scan->checkpointScan;
+                return [
+                    'id' => $scan->id,
+                    'guard_name' => $tags['guard_name'] 
+                        ?? $tags['supervisor_name'] 
+                        ?? $checkpointScan?->supervisor?->name 
+                        ?? 'Unknown',
+                    'site_name' => $tags['site_name'] 
+                        ?? $checkpointScan?->checkpoint?->clientSite?->name 
+                        ?? 'Unknown',
+                    'checkpoint_name' => $tags['checkpoint_name'] 
+                        ?? $checkpointScan?->checkpoint?->name 
+                        ?? 'Unknown',
+                    'type' => $tags['scan_type'] ?? 'check_in',
+                    'status' => ($tags['location_verified'] ?? false) || ($checkpointScan?->location_verified ?? false) ? 'success' : 'failed',
+                    'scanned_at' => $scan->created_at->toIso8601String(),
+                ];
+            })->toArray();
+
             return [
                 'today' => [
                     'total' => $todayScans->count(),
@@ -833,6 +855,7 @@ class ControlRoomDashboardController extends Controller
                     'bySite' => $bySiteToday,
                     'byHour' => $byHourToday,
                     'byType' => $byType,
+                    'recentScans' => $recentScans,
                 ],
                 'week' => [
                     'total' => $weekScans->count(),
@@ -849,7 +872,7 @@ class ControlRoomDashboardController extends Controller
         } catch (\Throwable $e) {
             Log::warning('Failed to load QR analytics: ' . $e->getMessage());
             return [
-                'today' => ['total' => 0, 'successful' => 0, 'failed' => 0, 'bySite' => [], 'byHour' => [], 'byType' => []],
+                'today' => ['total' => 0, 'successful' => 0, 'failed' => 0, 'bySite' => [], 'byHour' => [], 'byType' => [], 'recentScans' => []],
                 'week' => ['total' => 0, 'dailyTrend' => [], 'byGuard' => []],
                 'issues' => ['failedScans' => 0, 'gpsMismatches' => 0, 'duplicateScans' => 0, 'suspiciousActivity' => []],
             ];
@@ -862,10 +885,9 @@ class ControlRoomDashboardController extends Controller
     public function getQrScansData()
     {
         try {
-            $today = Carbon::today();
-
+            // Use last 24 hours for better timezone handling
             $todayScans = ScanTag::with(['checkpointScan.supervisor', 'checkpointScan.checkpoint.clientSite.client'])
-                ->whereDate('created_at', $today)
+                ->whereRaw('created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)')
                 ->orderByDesc('created_at')
                 ->get();
 
@@ -924,13 +946,90 @@ class ControlRoomDashboardController extends Controller
                 ];
             })->toArray();
 
+            // By type today
+            $byType = $todayScans
+                ->groupBy(function ($scan) {
+                    return $scan->tags['scan_type'] ?? 'check_in';
+                })
+                ->map(function ($scans, $type) {
+                    return [
+                        'type' => $type ?: 'check_in',
+                        'count' => $scans->count(),
+                    ];
+                })
+                ->values()
+                ->toArray();
+
+            // Week data for trends and top scanners
+            $weekScans = ScanTag::with(['checkpointScan.supervisor'])
+                ->whereRaw('DATE(created_at) >= DATE_SUB(CURDATE(), INTERVAL 6 DAY)')
+                ->orderByDesc('created_at')
+                ->get();
+
+            // Daily trend for week
+            $dailyTrend = collect(range(0, 6))->map(function ($dayOffset) use ($weekScans) {
+                $date = Carbon::today()->subDays($dayOffset);
+                $count = $weekScans->filter(function ($scan) use ($date) {
+                    return $scan->created_at->toDateString() === $date->toDateString();
+                })->count();
+                return [
+                    'date' => $date->toDateString(),
+                    'count' => $count,
+                ];
+            })->reverse()->values()->toArray();
+
+            // Top guards for week
+            $byGuard = $weekScans
+                ->filter(function ($scan) {
+                    return ($scan->tags['location_verified'] ?? false) || ($scan->checkpointScan?->location_verified ?? false);
+                })
+                ->groupBy(function ($scan) {
+                    return $scan->tags['guard_name'] 
+                        ?? $scan->tags['supervisor_name'] 
+                        ?? $scan->checkpointScan?->supervisor?->name 
+                        ?? 'Unknown';
+                })
+                ->map(function ($scans, $guardName) {
+                    return [
+                        'guard_name' => $guardName,
+                        'scan_count' => $scans->count(),
+                        'site_name' => $scans->first()?->tags['site_name'] ?? 'Unknown',
+                    ];
+                })
+                ->sortByDesc('scan_count')
+                ->take(10)
+                ->values()
+                ->toArray();
+
+            // Issues
+            $failedScans = $todayScans->filter(function ($scan) {
+                return !($scan->tags['location_verified'] ?? false) && !($scan->checkpointScan?->location_verified ?? false);
+            })->count();
+
+            $gpsMismatches = $todayScans->filter(function ($scan) {
+                return ($scan->tags['location_quality'] ?? '') === 'poor' 
+                    || ($scan->tags['gps_mismatch'] ?? false);
+            })->count();
+
             return response()->json([
                 'totalToday' => $todayScans->count(),
                 'successful' => $successful,
                 'failed' => $failed,
                 'bySite' => $bySite,
                 'byHour' => $byHour,
+                'byType' => $byType,
                 'recentScans' => $recentScans,
+                'week' => [
+                    'total' => $weekScans->count(),
+                    'dailyTrend' => $dailyTrend,
+                    'byGuard' => $byGuard,
+                ],
+                'issues' => [
+                    'failedScans' => $failedScans,
+                    'gpsMismatches' => $gpsMismatches,
+                    'duplicateScans' => 0,
+                    'suspiciousActivity' => [],
+                ],
             ]);
         } catch (\Throwable $e) {
             Log::warning('Failed to load QR scans data: ' . $e->getMessage());
@@ -940,7 +1039,19 @@ class ControlRoomDashboardController extends Controller
                 'failed' => 0,
                 'bySite' => [],
                 'byHour' => [],
+                'byType' => [],
                 'recentScans' => [],
+                'week' => [
+                    'total' => 0,
+                    'dailyTrend' => [],
+                    'byGuard' => [],
+                ],
+                'issues' => [
+                    'failedScans' => 0,
+                    'gpsMismatches' => 0,
+                    'duplicateScans' => 0,
+                    'suspiciousActivity' => [],
+                ],
             ]);
         }
     }
@@ -1119,8 +1230,8 @@ class ControlRoomDashboardController extends Controller
                 'active_alerts' => $this->getActiveAlerts(),
                 'personnel' => $this->getPersonnelSummary(),
                 'qr_summary' => [
-                    'total_today' => ScanTag::whereDate('created_at', $today)->count(),
-                    'successful' => ScanTag::whereDate('created_at', $today)
+                    'total_today' => ScanTag::whereRaw('created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)')->count(),
+                    'successful' => ScanTag::whereRaw('created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)')
                         ->where(function ($q) {
                             $q->whereJsonContains('tags->location_verified', true)
                                 ->orWhereHas('checkpointScan', function ($q) {

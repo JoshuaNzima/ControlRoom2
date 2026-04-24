@@ -11,7 +11,6 @@ import useCounters from '@/Hooks/useCounters';
 import useGpsAlerts from '@/Hooks/useGpsAlerts';
 import { useRealtimeNotifications } from '@/Hooks/useRealtimeNotifications';
 import WeeklyTasks from '@/Components/WeeklyTasks';
-import TutorialSection from '@/Components/Tutorials/TutorialSection';
 import { NavSection, SidebarHeader, UserSection, QuickStats } from '@/Components/Layout';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -186,7 +185,6 @@ export default function ControlRoomLayout({ title, children, user }: Props) {
             <div className="max-w-7xl mx-auto px-2 sm:px-4 md:px-8 text-gray-900 dark:text-gray-100">
               <div className={`grid gap-4 ${tasksOpen ? 'grid-cols-1 xl:grid-cols-4' : 'grid-cols-1'}`}>
                 <div className={tasksOpen ? 'xl:col-span-3' : ''}>
-                  <TutorialSection dashboard="control-room" canManage={false} />
                   {children}
                 </div>
                 <AnimatePresence>

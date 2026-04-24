@@ -9,7 +9,6 @@ import QuickBudgetButton from '@/Components/Budgets/QuickBudgetButton';
 import useCounters from '@/Hooks/useCounters';
 import WeeklyTasks from '@/Components/WeeklyTasks';
 import AIAssistant from '@/Components/AI/AIAssistant';
-import TutorialSection from '@/Components/Tutorials/TutorialSection';
 import BaseShell from './BaseShell';
 import { NavSection, SidebarHeader, UserSection, QuickStats } from '@/Components/Layout';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -180,7 +179,6 @@ export default function FinanceLayout({ title, children, user }: Props) {
           <div className="transition-all ease-out duration-500">
             <div className={`grid gap-4 ${tasksOpen ? 'grid-cols-1 xl:grid-cols-4' : 'grid-cols-1'}`}>
               <div className={tasksOpen ? 'xl:col-span-3' : ''}>
-                <TutorialSection dashboard="finance" canManage={false} />
                 {children}
               </div>
               <AnimatePresence>

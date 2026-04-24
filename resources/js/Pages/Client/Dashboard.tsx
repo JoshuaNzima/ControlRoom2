@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Head, Link } from '@inertiajs/react';
-import AdminLayout from '@/Layouts/AdminLayout';
+import ClientLayout from '@/Layouts/ClientLayout';
 import { Card } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import IconMapper from '@/Components/IconMapper';
@@ -322,8 +322,8 @@ export default function ClientDashboard({
 
   if (!client) {
     return (
-      <AdminLayout title="Client Dashboard" user={auth?.user}>
-        <Head title="Client Dashboard" />
+      <ClientLayout title="Dashboard" user={auth?.user}>
+        <Head title="Dashboard" />
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <Card className="p-8 text-center">
@@ -340,12 +340,12 @@ export default function ClientDashboard({
             </div>
           </Card>
         </div>
-      </AdminLayout>
+      </ClientLayout>
     );
   }
 
   return (
-    <AdminLayout title="Client Dashboard" user={auth?.user}>
+    <ClientLayout title="Dashboard" user={auth?.user}>
       <Head title="Client Dashboard" />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
@@ -826,6 +826,6 @@ export default function ClientDashboard({
           </div>
         </Card>
       </div>
-    </AdminLayout>
+    </ClientLayout>
   );
 }

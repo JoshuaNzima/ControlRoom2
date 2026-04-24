@@ -34,8 +34,8 @@ interface ScanDetail {
   } | null;
   scan_type: string;
   location: {
-    latitude: number | null;
-    longitude: number | null;
+    latitude: number | string | null;
+    longitude: number | string | null;
     verified: boolean;
     quality: string;
   };
@@ -249,20 +249,20 @@ export default function QrScanDetailModal({ isOpen, scanId, onClose }: QrScanDet
                   <Navigation className="w-4 h-4 text-red-400" />
                   <h3 className="text-sm font-medium text-white">GPS Coordinates</h3>
                 </div>
-                {scanDetail.location.latitude && scanDetail.location.longitude ? (
+                {scanDetail.location.latitude != null && scanDetail.location.longitude != null ? (
                   <div className="space-y-2">
                     <div className="grid grid-cols-2 gap-3 sm:gap-4">
                       <div>
                         <p className="text-xs text-slate-500">Latitude</p>
-                        <p className="text-xs sm:text-sm text-slate-300 font-mono">{scanDetail.location.latitude.toFixed(6)}</p>
+                        <p className="text-xs sm:text-sm text-slate-300 font-mono">{Number(scanDetail.location.latitude).toFixed(6)}</p>
                       </div>
                       <div>
                         <p className="text-xs text-slate-500">Longitude</p>
-                        <p className="text-xs sm:text-sm text-slate-300 font-mono">{scanDetail.location.longitude.toFixed(6)}</p>
+                        <p className="text-xs sm:text-sm text-slate-300 font-mono">{Number(scanDetail.location.longitude).toFixed(6)}</p>
                       </div>
                     </div>
                     <a
-                      href={`https://www.google.com/maps?q=${scanDetail.location.latitude},${scanDetail.location.longitude}`}
+                      href={`https://www.google.com/maps?q=${Number(scanDetail.location.latitude)},${Number(scanDetail.location.longitude)}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-2 text-xs sm:text-sm text-red-400 hover:text-red-300 transition-colors"

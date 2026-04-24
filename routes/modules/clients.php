@@ -17,10 +17,14 @@ Route::middleware(['auth', 'role:client'])->prefix('client')->name('client.')->g
     // Shift Schedules
     Route::get('/schedules', [PortalController::class, 'schedules'])->name('schedules');
 
-    // Profile & Settings
+    // Profile
     Route::get('/profile', [PortalController::class, 'profile'])->name('profile');
     Route::put('/profile', [PortalController::class, 'updateProfile'])->name('profile.update');
     Route::put('/profile/password', [PortalController::class, 'updatePassword'])->name('profile.password');
+
+    // Settings
+    Route::get('/settings', [PortalController::class, 'settings'])->name('settings');
+    Route::put('/settings', [PortalController::class, 'updateSettings'])->name('settings.update');
 
     // Support Tickets
     Route::get('/support', [PortalController::class, 'support'])->name('support');

@@ -7,13 +7,18 @@ use App\Models\ChatMessage;
 use App\Models\HelpArticle;
 use App\Models\Guards\Guard;
 use App\Models\Guards\ClientSite as Site;
+use App\Models\Guards\Assignment;
 use App\Models\Client;
 use App\Models\User;
 use App\Models\AiSetting;
+use App\Models\Incident;
+use App\Models\Vehicle;
+use App\Models\Equipment;
 use App\Notifications\ChatTransferRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 
 class ChatController extends Controller
 {
@@ -64,9 +69,15 @@ class ChatController extends Controller
             return $this->handleTransferRequest($session, $sessionId);
         }
 
+        // Get role-based system data access
+        $systemData = $this->getRoleBasedSystemData($userRole, $context, $message);
+
         // Build comprehensive system prompt with user context
-        $systemPrompt = $this->buildEnhancedSystemPrompt($context, $userRole, $pageData);
+        $systemPrompt = $this->buildEnhancedSystemPrompt($context, $userRole, $pageData, $message, $systemData);
         $messages = $this->buildMessagesArray($systemPrompt, $history, $message);
+
+        // Get relevant help articles to include in response metadata
+        $relevantArticles = $this->getRelevantHelpArticles($context, $userRole, $message);
 
         try {
             // Get active AI provider from database (cached)
@@ -92,6 +103,7 @@ class ChatController extends Controller
                 'success' => true,
                 'response' => $response,
                 'session_id' => $sessionId,
+                'help_articles' => $relevantArticles,
             ]);
 
         } catch (\Exception $e) {
@@ -104,6 +116,7 @@ class ChatController extends Controller
                 'success' => true,
                 'response' => $fallback,
                 'session_id' => $sessionId,
+                'help_articles' => $relevantArticles,
             ]);
         }
     }
@@ -494,7 +507,7 @@ class ChatController extends Controller
     /**
      * Build enhanced system prompt with full context.
      */
-    protected function buildEnhancedSystemPrompt(string $context, string $userRole, array $pageData): string
+    protected function buildEnhancedSystemPrompt(string $context, string $userRole, array $pageData, string $userMessage = '', array $systemData = []): string
     {
         $user = Auth::user();
         $userName = $user ? $user->name : 'User';
@@ -507,6 +520,9 @@ class ChatController extends Controller
 
         // Build context-specific information
         $contextInfo = $this->getDetailedContextInfo($context, $userRole);
+
+        // Get relevant help articles based on context and message
+        $helpArticles = $this->getRelevantHelpArticles($context, $userRole, $userMessage);
 
         $prompt = "You are a helpful AI assistant for ControlRoom, a security management system used by Coin Security.\n\n";
 
@@ -524,6 +540,41 @@ class ChatController extends Controller
         $prompt .= "## System Statistics\n";
         $prompt .= $stats . "\n\n";
 
+        // Add role-based system data if available
+        if (!empty($systemData)) {
+            $prompt .= "## Current System Data\n";
+            $prompt .= "The following real-time data is available based on your role permissions:\n\n";
+            foreach ($systemData as $key => $value) {
+                $prompt .= "### " . ucwords(str_replace('_', ' ', $key)) . "\n";
+                if (is_array($value)) {
+                    foreach ($value as $item) {
+                        if (is_array($item)) {
+                            $prompt .= "- " . json_encode($item) . "\n";
+                        } else {
+                            $prompt .= "- {$item}\n";
+                        }
+                    }
+                } else {
+                    $prompt .= "{$value}\n";
+                }
+                $prompt .= "\n";
+            }
+        }
+
+        if (!empty($helpArticles)) {
+            $prompt .= "## Relevant Help Articles\n";
+            $prompt .= "The following help articles may be relevant to the user's question. Reference them when appropriate:\n\n";
+            foreach ($helpArticles as $article) {
+                $prompt .= "### {$article['title']}\n";
+                $prompt .= "Slug: {$article['slug']}\n";
+                $prompt .= "Category: {$article['category']}\n";
+                if (!empty($article['video_url'])) {
+                    $prompt .= "Video Tutorial: Available\n";
+                }
+                $prompt .= "\n";
+            }
+        }
+
         $prompt .= "## Guidelines\n";
         $prompt .= "- Be concise and helpful. Answer questions directly.\n";
         $prompt .= "- Provide step-by-step instructions when explaining how to do something.\n";
@@ -533,6 +584,8 @@ class ChatController extends Controller
         $prompt .= "- If asked about data you don't have, direct them to the appropriate page.\n";
         $prompt .= "- For complex issues, offer to connect them with a human agent.\n";
         $prompt .= "- Never make up information. If unsure, say so and offer alternatives.\n";
+        $prompt .= "- When relevant, mention that detailed guides are available in the Help Center.\n";
+        $prompt .= "- If a help article is relevant, mention it: 'See our help article on [Topic] in the Help Center for detailed steps.'\n";
 
         return $prompt;
     }
@@ -629,6 +682,513 @@ class ChatController extends Controller
             return implode("\n", $stats);
         } catch (\Exception $e) {
             return "System statistics temporarily unavailable.";
+        }
+    }
+
+    /**
+     * Get relevant help articles based on context and user message.
+     */
+    protected function getRelevantHelpArticles(string $context, string $userRole, string $message = ''): array
+    {
+        try {
+            // Map context to category
+            $categoryMap = [
+                'admin' => ['getting-started', 'guards', 'sites', 'settings'],
+                'superadmin' => ['getting-started', 'settings', 'troubleshooting'],
+                'control-room' => ['control-room', 'attendance', 'sites'],
+                'hr' => ['hr', 'training', 'guards'],
+                'finance' => ['finance', 'reports'],
+                'assets' => ['assets'],
+                'operations' => ['guards', 'control-room', 'attendance'],
+                'supervisor' => ['supervisor', 'attendance', 'guards'],
+                'zone-commander' => ['supervisor', 'guards', 'control-room'],
+                'client' => ['client', 'general'],
+                'landing' => ['general'],
+                'dashboard' => ['getting-started'],
+            ];
+
+            $categories = $categoryMap[$context] ?? ['getting-started'];
+
+            // Build query for relevant articles
+            $query = \App\Models\HelpArticle::published()
+                ->where(function ($q) use ($userRole) {
+                    $q->whereNull('target_roles')
+                        ->orWhereJsonLength('target_roles', 0)
+                        ->orWhereJsonContains('target_roles', $userRole);
+                });
+
+            // Search by message keywords if provided
+            if (!empty($message)) {
+                $keywords = $this->extractKeywords($message);
+                if (!empty($keywords)) {
+                    $query->where(function ($q) use ($keywords, $categories) {
+                        // Search in title
+                        $q->where(function ($q2) use ($keywords) {
+                            foreach ($keywords as $keyword) {
+                                $q2->orWhere('title', 'LIKE', "%{$keyword}%");
+                            }
+                        });
+                        // Search in tags
+                        $q->orWhere(function ($q2) use ($keywords) {
+                            foreach ($keywords as $keyword) {
+                                $q2->orWhereJsonContains('tags', $keyword);
+                            }
+                        });
+                        // Search in category
+                        $q->orWhereIn('category', $categories);
+                    });
+                }
+            } else {
+                // No message, just get context-relevant articles
+                $query->whereIn('category', $categories);
+            }
+
+            $articles = $query->orderBy('featured', 'desc')
+                ->orderBy('view_count', 'desc')
+                ->limit(3)
+                ->get(['title', 'slug', 'category', 'video_url', 'tags']);
+
+            return $articles->map(function ($article) {
+                return [
+                    'title' => $article->title,
+                    'slug' => $article->slug,
+                    'category' => $article->category,
+                    'video_url' => $article->video_url,
+                    'has_video' => !empty($article->video_url),
+                ];
+            })->toArray();
+        } catch (\Exception $e) {
+            \Log::error('Help article search error: ' . $e->getMessage());
+            return [];
+        }
+    }
+
+    /**
+     * Extract keywords from user message for article search.
+     */
+    protected function extractKeywords(string $message): array
+    {
+        // Common action keywords
+        $actionKeywords = ['add', 'create', 'new', 'edit', 'update', 'delete', 'remove', 'assign', 'dispatch', 'check-in', 'check-out', 'scan', 'process', 'generate', 'export', 'import', 'upload', 'download', 'print', 'view', 'manage', 'configure', 'setup', 'reset', 'approve', 'reject', 'submit', 'send', 'report', 'incident', 'payroll', 'invoice', 'requisition', 'vehicle', 'equipment', 'guard', 'client', 'site', 'user', 'training', 'leave', 'off-day', 'holiday', 'qr', 'gps', 'attendance', 'profile', 'password', 'role', 'permission', 'settings', 'dashboard', 'report', 'help', 'tutorial', 'guide', 'how', 'what', 'where', 'when', 'why', 'troubleshoot', 'error', 'issue', 'problem', 'fix'];
+
+        $words = array_map('strtolower', preg_split('/\s+/', strtolower($message)));
+        $keywords = [];
+
+        foreach ($words as $word) {
+            $word = preg_replace('/[^a-z0-9-]/', '', $word);
+            if (strlen($word) >= 3 && in_array($word, $actionKeywords)) {
+                $keywords[] = $word;
+            }
+        }
+
+        return array_unique($keywords);
+    }
+
+    /**
+     * Get role-based system data based on user permissions.
+     * Returns actual system data the user is allowed to access.
+     */
+    protected function getRoleBasedSystemData(string $role, string $context, string $message): array
+    {
+        $data = [];
+        $user = Auth::user();
+        $lowerMessage = strtolower($message);
+
+        try {
+            // Define what data each role can access
+            $dataAccess = $this->getRoleDataPermissions($role);
+
+            // Fetch data based on context and message keywords
+            if ($dataAccess['can_view_guards'] && $this->isRelevantToData($message, ['guard', 'employee', 'staff', 'officer', 'assignment', 'schedule'])) {
+                $data['guards'] = $this->getGuardData($role, $user);
+            }
+
+            if ($dataAccess['can_view_sites'] && $this->isRelevantToData($message, ['site', 'location', 'checkpoint', 'client'])) {
+                $data['sites'] = $this->getSiteData($role, $user);
+            }
+
+            if ($dataAccess['can_view_attendance'] && $this->isRelevantToData($message, ['attendance', 'check-in', 'check-out', 'present', 'absent', 'late'])) {
+                $data['attendance'] = $this->getAttendanceData($role, $user);
+            }
+
+            if ($dataAccess['can_view_incidents'] && $this->isRelevantToData($message, ['incident', 'accident', 'emergency', 'alert', 'issue', 'problem'])) {
+                $data['incidents'] = $this->getIncidentData($role, $user);
+            }
+
+            if ($dataAccess['can_view_vehicles'] && $this->isRelevantToData($message, ['vehicle', 'car', 'truck', 'motorcycle', 'dispatch', 'driver'])) {
+                $data['vehicles'] = $this->getVehicleData($role, $user);
+            }
+
+            if ($dataAccess['can_view_equipment'] && $this->isRelevantToData($message, ['equipment', 'radio', 'uniform', 'flashlight', 'gear'])) {
+                $data['equipment'] = $this->getEquipmentData($role, $user);
+            }
+
+            if ($dataAccess['can_view_clients'] && $this->isRelevantToData($message, ['client', 'customer', 'contract', 'billing'])) {
+                $data['clients'] = $this->getClientData($role, $user);
+            }
+
+            if ($dataAccess['can_view_users'] && $this->isRelevantToData($message, ['user', 'account', 'login', 'password', 'role'])) {
+                $data['users'] = $this->getUserData($role);
+            }
+
+            // Always include today's summary for relevant contexts
+            if (in_array($context, ['control-room', 'dashboard', 'admin', 'superadmin', 'operations'])) {
+                $data['today_summary'] = $this->getTodaySummary($role, $user);
+            }
+
+        } catch (\Exception $e) {
+            \Log::error('Role-based data fetch error: ' . $e->getMessage());
+        }
+
+        return $data;
+    }
+
+    /**
+     * Get data access permissions for each role.
+     */
+    protected function getRoleDataPermissions(string $role): array
+    {
+        $permissions = [
+            'super_admin' => [
+                'can_view_guards' => true,
+                'can_view_sites' => true,
+                'can_view_attendance' => true,
+                'can_view_incidents' => true,
+                'can_view_vehicles' => true,
+                'can_view_equipment' => true,
+                'can_view_clients' => true,
+                'can_view_users' => true,
+            ],
+            'admin' => [
+                'can_view_guards' => true,
+                'can_view_sites' => true,
+                'can_view_attendance' => true,
+                'can_view_incidents' => true,
+                'can_view_vehicles' => true,
+                'can_view_equipment' => true,
+                'can_view_clients' => true,
+                'can_view_users' => true,
+            ],
+            'hr' => [
+                'can_view_guards' => true,
+                'can_view_sites' => false,
+                'can_view_attendance' => true,
+                'can_view_incidents' => false,
+                'can_view_vehicles' => false,
+                'can_view_equipment' => false,
+                'can_view_clients' => false,
+                'can_view_users' => true,
+            ],
+            'finance' => [
+                'can_view_guards' => true,
+                'can_view_sites' => true,
+                'can_view_attendance' => true,
+                'can_view_incidents' => false,
+                'can_view_vehicles' => false,
+                'can_view_equipment' => false,
+                'can_view_clients' => true,
+                'can_view_users' => false,
+            ],
+            'asset_manager' => [
+                'can_view_guards' => true,
+                'can_view_sites' => true,
+                'can_view_attendance' => false,
+                'can_view_incidents' => false,
+                'can_view_vehicles' => true,
+                'can_view_equipment' => true,
+                'can_view_clients' => false,
+                'can_view_users' => false,
+            ],
+            'control_room' => [
+                'can_view_guards' => true,
+                'can_view_sites' => true,
+                'can_view_attendance' => true,
+                'can_view_incidents' => true,
+                'can_view_vehicles' => true,
+                'can_view_equipment' => true,
+                'can_view_clients' => false,
+                'can_view_users' => false,
+            ],
+            'supervisor' => [
+                'can_view_guards' => true,
+                'can_view_sites' => true,
+                'can_view_attendance' => true,
+                'can_view_incidents' => true,
+                'can_view_vehicles' => false,
+                'can_view_equipment' => false,
+                'can_view_clients' => false,
+                'can_view_users' => false,
+            ],
+            'zone_commander' => [
+                'can_view_guards' => true,
+                'can_view_sites' => true,
+                'can_view_attendance' => true,
+                'can_view_incidents' => true,
+                'can_view_vehicles' => false,
+                'can_view_equipment' => false,
+                'can_view_clients' => false,
+                'can_view_users' => false,
+            ],
+            'operations_manager' => [
+                'can_view_guards' => true,
+                'can_view_sites' => true,
+                'can_view_attendance' => true,
+                'can_view_incidents' => true,
+                'can_view_vehicles' => true,
+                'can_view_equipment' => true,
+                'can_view_clients' => true,
+                'can_view_users' => false,
+            ],
+            'client' => [
+                'can_view_guards' => true,
+                'can_view_sites' => true,
+                'can_view_attendance' => true,
+                'can_view_incidents' => false,
+                'can_view_vehicles' => false,
+                'can_view_equipment' => false,
+                'can_view_clients' => false,
+                'can_view_users' => false,
+            ],
+            'marketing' => [
+                'can_view_guards' => false,
+                'can_view_sites' => false,
+                'can_view_attendance' => false,
+                'can_view_incidents' => false,
+                'can_view_vehicles' => false,
+                'can_view_equipment' => false,
+                'can_view_clients' => true,
+                'can_view_users' => false,
+            ],
+            'training' => [
+                'can_view_guards' => true,
+                'can_view_sites' => false,
+                'can_view_attendance' => true,
+                'can_view_incidents' => false,
+                'can_view_vehicles' => false,
+                'can_view_equipment' => false,
+                'can_view_clients' => false,
+                'can_view_users' => false,
+            ],
+            'guard' => [
+                'can_view_guards' => false,
+                'can_view_sites' => true,
+                'can_view_attendance' => true,
+                'can_view_incidents' => false,
+                'can_view_vehicles' => false,
+                'can_view_equipment' => false,
+                'can_view_clients' => false,
+                'can_view_users' => false,
+            ],
+        ];
+
+        return $permissions[$role] ?? $permissions['user'] ?? [
+            'can_view_guards' => false,
+            'can_view_sites' => false,
+            'can_view_attendance' => false,
+            'can_view_incidents' => false,
+            'can_view_vehicles' => false,
+            'can_view_equipment' => false,
+            'can_view_clients' => false,
+            'can_view_users' => false,
+        ];
+    }
+
+    /**
+     * Check if message is relevant to specific data types.
+     */
+    protected function isRelevantToData(string $message, array $keywords): bool
+    {
+        $lowerMessage = strtolower($message);
+        foreach ($keywords as $keyword) {
+            if (str_contains($lowerMessage, $keyword)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Get guard data based on role.
+     */
+    protected function getGuardData(string $role, $user): array
+    {
+        $query = Guard::query()->where('status', 'active');
+
+        // Zone-based filtering for zone_commander and supervisor
+        if (in_array($role, ['zone_commander', 'supervisor']) && $user?->zone_id) {
+            $query->where('zone_id', $user->zone_id);
+        }
+
+        $guards = $query->limit(10)->get(['id', 'name', 'phone', 'status', 'zone_id']);
+
+        return $guards->map(fn($g) => [
+            'name' => $g->name,
+            'status' => $g->status,
+        ])->toArray();
+    }
+
+    /**
+     * Get site data based on role.
+     */
+    protected function getSiteData(string $role, $user): array
+    {
+        $query = Site::query()->where('status', 'active');
+
+        // Client can only see their own sites
+        if ($role === 'client' && $user?->client_id) {
+            $query->where('client_id', $user->client_id);
+        }
+
+        $sites = $query->limit(10)->get(['id', 'name', 'address', 'status']);
+
+        return $sites->map(fn($s) => [
+            'name' => $s->name,
+            'status' => $s->status,
+        ])->toArray();
+    }
+
+    /**
+     * Get attendance data based on role.
+     */
+    protected function getAttendanceData(string $role, $user): array
+    {
+        $today = now()->toDateString();
+
+        $query = DB::table('attendance')
+            ->whereDate('date', $today)
+            ->whereNotNull('check_in_time');
+
+        // Filter by zone for zone_commander and supervisor
+        if (in_array($role, ['zone_commander', 'supervisor']) && $user?->zone_id) {
+            $query->whereHas('guard', fn($q) => $q->where('zone_id', $user->zone_id));
+        }
+
+        $attendance = $query->limit(10)->get();
+
+        $checkedIn = $attendance->count();
+        $total = Guard::where('status', 'active')->count();
+
+        return [
+            "Checked in today: {$checkedIn} out of {$total} guards",
+            "Attendance rate: " . round(($checkedIn / max($total, 1)) * 100, 1) . "%",
+        ];
+    }
+
+    /**
+     * Get incident data based on role.
+     */
+    protected function getIncidentData(string $role, $user): array
+    {
+        $query = Incident::query()->whereIn('status', ['open', 'in_progress']);
+
+        // Filter by zone for zone_commander and supervisor
+        if (in_array($role, ['zone_commander', 'supervisor']) && $user?->zone_id) {
+            $query->where('zone_id', $user->zone_id);
+        }
+
+        $incidents = $query->limit(5)->get(['id', 'title', 'status', 'severity']);
+
+        return $incidents->map(fn($i) => [
+            'title' => $i->title,
+            'status' => $i->status,
+            'severity' => $i->severity,
+        ])->toArray();
+    }
+
+    /**
+     * Get vehicle data based on role.
+     */
+    protected function getVehicleData(string $role, $user): array
+    {
+        $vehicles = Vehicle::whereIn('status', ['active', 'dispatched'])
+            ->limit(10)
+            ->get(['id', 'registration_number', 'make', 'model', 'status']);
+
+        return $vehicles->map(fn($v) => [
+            'registration' => $v->registration_number,
+            'type' => "{$v->make} {$v->model}",
+            'status' => $v->status,
+        ])->toArray();
+    }
+
+    /**
+     * Get equipment data based on role.
+     */
+    protected function getEquipmentData(string $role, $user): array
+    {
+        $equipment = Equipment::where('status', 'active')
+            ->limit(10)
+            ->get(['id', 'name', 'type', 'status']);
+
+        return $equipment->map(fn($e) => [
+            'name' => $e->name,
+            'type' => $e->type,
+            'status' => $e->status,
+        ])->toArray();
+    }
+
+    /**
+     * Get client data based on role.
+     */
+    protected function getClientData(string $role, $user): array
+    {
+        $query = Client::query()->where('status', 'active');
+
+        // Client can only see their own info
+        if ($role === 'client' && $user?->client_id) {
+            $query->where('id', $user->client_id);
+        }
+
+        // Marketing can see leads
+        if ($role === 'marketing') {
+            $query->orWhere('status', 'lead');
+        }
+
+        $clients = $query->limit(10)->get(['id', 'name', 'status']);
+
+        return $clients->map(fn($c) => [
+            'name' => $c->name,
+            'status' => $c->status,
+        ])->toArray();
+    }
+
+    /**
+     * Get user data based on role.
+     */
+    protected function getUserData(string $role): array
+    {
+        if (!in_array($role, ['super_admin', 'admin', 'hr'])) {
+            return [];
+        }
+
+        $users = User::limit(10)->get(['id', 'name', 'email']);
+
+        return $users->map(fn($u) => [
+            'name' => $u->name,
+            'email' => $u->email,
+        ])->toArray();
+    }
+
+    /**
+     * Get today's summary for the user's role.
+     */
+    protected function getTodaySummary(string $role, $user): string
+    {
+        $today = now()->toDateString();
+
+        try {
+            $checkedIn = DB::table('attendance')
+                ->whereDate('date', $today)
+                ->whereNotNull('check_in_time')
+                ->count();
+
+            $openIncidents = Incident::whereIn('status', ['open', 'in_progress'])->count();
+
+            $activeVehicles = Vehicle::where('status', 'dispatched')->count();
+
+            return "Today: {$checkedIn} guards checked in, {$openIncidents} open incidents, {$activeVehicles} vehicles dispatched";
+        } catch (\Exception $e) {
+            return "Today's summary temporarily unavailable";
         }
     }
 
@@ -860,18 +1420,23 @@ class ChatController extends Controller
         // Greeting responses
         if ($this->matchesKeywords($lowerMessage, ['hello', 'hi', 'hey', 'good morning', 'good afternoon'])) {
             $greeting = "Hello! I'm here to help you with the {$context} area. ";
-            $greeting .= "What would you like to know or do today?";
+            $greeting .= "What would you like to know or do today?\n\n";
+            $greeting .= "You can also check our Help Center for detailed guides and tutorials.";
             return $greeting;
         }
 
         // Help request
         if ($this->matchesKeywords($lowerMessage, ['help', 'what can', 'how do', 'guide', 'tutorial'])) {
-            return $this->getContextualHelp($context, $role, $message);
+            $help = $this->getContextualHelp($context, $role, $message);
+            $help .= "\n\nFor more detailed instructions, visit the Help Center.";
+            return $help;
         }
 
         // Guard-related queries
         if ($this->matchesKeywords($lowerMessage, ['guard', 'employee', 'staff', 'officer'])) {
-            return $this->getGuardHelp($lowerMessage, $role);
+            $help = $this->getGuardHelp($lowerMessage, $role);
+            $help .= "\n\nSee the Help Center for our guard management guides.";
+            return $help;
         }
 
         // Site-related queries
@@ -881,12 +1446,16 @@ class ChatController extends Controller
 
         // Attendance-related queries
         if ($this->matchesKeywords($lowerMessage, ['attendance', 'check-in', 'check-out', 'clock', 'scan', 'qr'])) {
-            return $this->getAttendanceHelp($lowerMessage, $role);
+            $help = $this->getAttendanceHelp($lowerMessage, $role);
+            $help .= "\n\nCheck the Help Center for our attendance and check-in guides.";
+            return $help;
         }
 
         // Payroll-related queries
         if ($this->matchesKeywords($lowerMessage, ['payroll', 'salary', 'pay', 'payslip', 'deduction', 'overtime'])) {
-            return $this->getPayrollHelp($role);
+            $help = $this->getPayrollHelp($role);
+            $help .= "\n\nSee the Help Center for our payroll processing guide.";
+            return $help;
         }
 
         // Report-related queries
@@ -896,7 +1465,9 @@ class ChatController extends Controller
 
         // Vehicle/Asset queries
         if ($this->matchesKeywords($lowerMessage, ['vehicle', 'car', 'truck', 'motorcycle', 'equipment', 'asset'])) {
-            return $this->getAssetHelp($lowerMessage, $role);
+            $help = $this->getAssetHelp($lowerMessage, $role);
+            $help .= "\n\nVisit the Help Center for vehicle and equipment management guides.";
+            return $help;
         }
 
         // Assignment queries
@@ -920,7 +1491,9 @@ class ChatController extends Controller
         }
 
         // Default contextual response
-        return $this->getDefaultResponse($context, $role);
+        $response = $this->getDefaultResponse($context, $role);
+        $response .= "\n\nFor detailed guides, visit the Help Center or ask me a specific question.";
+        return $response;
     }
 
     /**

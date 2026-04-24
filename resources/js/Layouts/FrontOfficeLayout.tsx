@@ -20,7 +20,7 @@ import {
     Wallet,
     ShoppingCart,
 } from 'lucide-react';
-import TutorialSection from '@/Components/Tutorials/TutorialSection';
+import AIAssistant from '@/Components/AI/AIAssistant';
 import { cn } from '@/lib/utils';
 import { useRealtimeNotifications } from '@/Hooks/useRealtimeNotifications';
 import { Button } from '@/Components/ui/button';
@@ -284,10 +284,10 @@ export default function FrontOfficeLayout({ children, title }: FrontOfficeLayout
 
                 {/* Page Content */}
                 <div className="p-4 lg:p-8 pt-20 lg:pt-8">
-                    <TutorialSection dashboard="front-office" canManage={false} />
                     {children}
                 </div>
             </main>
+            <AIAssistant />
         </div>
     );
 }
