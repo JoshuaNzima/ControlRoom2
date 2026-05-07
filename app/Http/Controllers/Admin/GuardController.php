@@ -75,7 +75,7 @@ class GuardController extends Controller
         
         $guards->getCollection()->transform(function ($g) use ($monthStart, $monthEnd) {
             // Get current site assignment
-            $currentAssignment = $g->assignments->firstWhere('status', 'active');
+            $currentAssignment = $g->assignments->firstWhere('is_active', true);
             
             // Calculate attendance rate for this month
             $totalDays = Attendance::where('guard_id', $g->id)
@@ -220,7 +220,7 @@ class GuardController extends Controller
             'dependents_count' => 'nullable|integer|min:0',
             'children_names' => 'nullable|string',
             'notes' => 'nullable|string',
-            'status' => 'required|in:active,inactive,suspended,dismissed,absconded',
+            'status' => 'required|in:active,inactive,suspended,dismissed,absconded,resigned,retired',
             'employee_role' => 'nullable|in:guard,driver',
             'photo' => 'nullable|image|max:5120',
             // Optional quick assignment by client only
@@ -356,7 +356,7 @@ class GuardController extends Controller
             'dependents_count' => 'nullable|integer|min:0',
             'children_names' => 'nullable|string',
             'notes' => 'nullable|string',
-            'status' => 'required|in:active,inactive,suspended,dismissed,absconded',
+            'status' => 'required|in:active,inactive,suspended,dismissed,absconded,resigned,retired',
             'employee_role' => 'nullable|in:guard,driver',
             'photo' => 'nullable|image|max:5120',
         ];
@@ -398,14 +398,17 @@ class GuardController extends Controller
             ->withSuccess('Guard updated successfully.');
     }
 
-    public function suspend(Guard $guard)
+    public function suspend(Request $request, Guard $guard)
     {
-        // Admins can set status directly
-        $guard->update(['status' => 'suspended']);
+        $request->validate(['reason' => ['nullable','string','max:500']]);
+        $guard->update([
+            'status' => 'suspended',
+            'notes' => trim(($guard->notes ? ($guard->notes."\n") : '') . 'Suspended: ' . ($request->input('reason') ?? '')),
+        ]);
         return redirect()->back()->withSuccess('Guard suspended.');
     }
 
-    public function reinstate(Guard $guard)
+    public function reinstate(Request $request, Guard $guard)
     {
         $guard->update(['status' => 'active']);
         return redirect()->back()->withSuccess('Guard reinstated.');
@@ -437,12 +440,16 @@ class GuardController extends Controller
 
     public function resign(Request $request, Guard $guard)
     {
-        $request->validate(['reason' => ['nullable','string','max:500']]);
-        $guard->update([
-            'status' => 'inactive',
-            'notes' => trim(($guard->notes ? ($guard->notes."\n") : '') . 'Resigned: ' . ($request->input('reason') ?? '')),
+        $request->validate([
+            'reason' => ['nullable','string','max:500'],
+            'status' => ['nullable','in:inactive,retired'],
         ]);
-        return redirect()->back()->withSuccess('Guard marked as resigned.');
+        $status = $request->input('status', 'inactive');
+        $guard->update([
+            'status' => $status,
+            'notes' => trim(($guard->notes ? ($guard->notes."\n") : '') . ucfirst($status) . ': ' . ($request->input('reason') ?? '')),
+        ]);
+        return redirect()->back()->withSuccess('Guard marked as ' . $status . '.');
     }
 
     public function apiShow(Guard $guard)
@@ -766,7 +773,7 @@ class GuardController extends Controller
                         'gender' => 'nullable|in:male,female,other',
                         'address' => 'nullable|string',
                         'guard_type' => 'nullable|in:permanent,standby,reliever',
-                        'status' => 'nullable|in:active,inactive,suspended,dismissed,absconded',
+                        'status' => 'nullable|in:active,inactive,suspended,dismissed,absconded,resigned,retired',
                         'hire_date' => 'nullable|date',
                         'emergency_contact_name' => 'nullable|string|max:255',
                         'emergency_contact_phone' => 'nullable|string|max:20',

@@ -14,10 +14,10 @@ class SupervisorIncentiveController extends Controller
 {
     public function index(Request $request)
     {
-        $profiles = SupervisorIncentiveProfile::with(['guard' => function($q) {
+        $profiles = SupervisorIncentiveProfile::with(['guardRelation' => function($q) {
                 $q->select('id', 'name', 'employee_id', 'position', 'status');
             }])
-            ->whereHas('guard', function($q) {
+            ->whereHas('guardRelation', function($q) {
                 $q->whereIn('position', ['supervisor', 'sergeant']);
             })
             ->get();
@@ -85,7 +85,7 @@ class SupervisorIncentiveController extends Controller
         $periodStart = Carbon::parse($validated['period_start']);
         $periodEnd = Carbon::parse($validated['period_end']);
 
-        $profiles = SupervisorIncentiveProfile::with('guard')
+        $profiles = SupervisorIncentiveProfile::with('guardRelation')
             ->where('is_active', true)
             ->when(!empty($validated['guard_ids']), function($q) use ($validated) {
                 $q->whereIn('guard_id', $validated['guard_ids']);
@@ -104,7 +104,7 @@ class SupervisorIncentiveController extends Controller
 
     private function calculateForGuard(SupervisorIncentiveProfile $profile, Carbon $periodStart, Carbon $periodEnd): SupervisorIncentiveRecord
     {
-        $guard = $profile->guard;
+        $guard = $profile->guardRelation;
 
         // Get guards under this supervisor/sergeant
         $subordinateIds = Guard::where('reports_to_guard_id', $guard->id)
@@ -174,7 +174,7 @@ class SupervisorIncentiveController extends Controller
             'status' => 'nullable|in:pending,approved,paid,rejected',
         ]);
 
-        $records = SupervisorIncentiveRecord::with(['guard' => function($q) {
+        $records = SupervisorIncentiveRecord::with(['guardRelation' => function($q) {
                 $q->select('id', 'name', 'employee_id', 'position');
             }, 'calculator', 'approver'])
             ->when(!empty($validated['period_start']), function($q) use ($validated) {
@@ -193,7 +193,7 @@ class SupervisorIncentiveController extends Controller
             ->orderBy('created_at', 'desc')
             ->get();
 
-        return response()->json(['records' => $records]);
+        return response()->json(['success' => true, 'records' => $records]);
     }
 
     public function approveRecord(Request $request, SupervisorIncentiveRecord $record)

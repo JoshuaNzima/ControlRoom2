@@ -405,6 +405,7 @@ class SupervisorQRCodesController extends Controller
         };
 
         return response()->json([
+            'success' => true,
             'zones' => $toListing($zones),
             'checkpoints' => $toListing($checkpoints),
             'sites' => $toListing($sites),

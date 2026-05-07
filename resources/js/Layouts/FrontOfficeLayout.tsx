@@ -82,7 +82,7 @@ export default function FrontOfficeLayout({ children, title }: FrontOfficeLayout
         { label: 'Dashboard', href: route('front-office.dashboard'), icon: LayoutDashboard },
         ...(can?.manage_calendar ? [{ label: 'Calendar', href: route('front-office.calendar.index'), icon: Calendar }] : []),
         { label: 'Visitors', href: route('front-office.visitors.index'), icon: Users },
-        ...(can?.manage_tasks ? [{ label: 'Tasks', href: route('front-office.tasks.index'), icon: CheckSquare }] : []),
+        ...(can?.manage_tasks ? [{ label: 'Tasks', href: route('tasks.dashboard'), icon: CheckSquare }] : []),
         ...(role === 'executive_assistant' || role === 'super_admin' || role === 'admin' ? [{ label: 'Requisitions', href: route('front-office.requisitions.index'), icon: ShoppingCart }] : []),
         ...(role === 'executive_assistant' || role === 'super_admin' ? [{ label: 'Petty Cash', href: route('executive.petty-cash.index'), icon: Wallet }] : []),
         { label: 'Messages', href: route('front-office.messages.index'), icon: MessageSquare },

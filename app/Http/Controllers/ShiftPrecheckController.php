@@ -47,6 +47,7 @@ class ShiftPrecheckController extends Controller
             ->exists();
 
         return response()->json([
+            'success' => true,
             'ok' => !$offDay && !$overlap && $assigned,
             'conflicts' => [
                 'off_day' => (bool) $offDay,

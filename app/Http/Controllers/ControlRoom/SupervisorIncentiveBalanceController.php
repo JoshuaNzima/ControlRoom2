@@ -107,7 +107,7 @@ class SupervisorIncentiveBalanceController extends Controller
         $month = $request->input('month', now()->month);
 
         $balances = \App\Models\SupervisorIncentiveBalance::forPeriod($year, $month)
-            ->with('guard')
+            ->with('guardRelation')
             ->orderByDesc('current_balance')
             ->paginate(20);
 

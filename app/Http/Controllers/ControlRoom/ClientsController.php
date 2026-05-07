@@ -192,7 +192,7 @@ class ClientsController extends Controller
 		$url = 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=' . urlencode(json_encode($payload));
 		$png = @file_get_contents($url);
 		if ($png === false) {
-			return response('QR generation failed', 502);
+			return $this->errorResponse('QR generation failed.', 502);
 		}
 
 		return response($png, 200, ['Content-Type' => 'image/png']);

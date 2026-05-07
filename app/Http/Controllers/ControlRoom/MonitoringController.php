@@ -61,6 +61,7 @@ class MonitoringController extends Controller
         $rangeMinutes = $this->resolveRangeMinutes($range);
 
         return response()->json([
+            'success' => true,
             'metrics' => $this->getMetrics(),
             'liveStatus' => $this->getLiveSiteStatus(),
             'recentActivity' => $this->getRecentActivityFormatted($rangeMinutes),
@@ -142,6 +143,7 @@ class MonitoringController extends Controller
         })->values();
 
         return response()->json([
+            'success' => true,
             'id' => $site->id,
             'name' => $site->name,
             'client' => $site->client?->name,

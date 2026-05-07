@@ -67,14 +67,12 @@ class RosterController extends Controller
         $weekEnd = $weekStart->copy()->endOfWeek(Carbon::SUNDAY);
         $shiftType = $validated['shift_type'] ?? 'day';
 
-        $plan = WeeklyRosterPlan::firstOrCreate([
-            'week_start' => $weekStart->toDateString(),
-            'supervisor_id' => (int) $validated['supervisor_id'],
-            'shift_type' => $shiftType,
-        ], [
-            'created_by' => $request->user()?->id,
-            'status' => 'draft',
-        ]);
+        $plan = $this->getOrCreatePlan(
+            $weekStart->toDateString(),
+            (int) $validated['supervisor_id'],
+            $shiftType,
+            $request->user()?->id
+        );
 
         $entries = WeeklyRosterPlanEntry::query()
             ->where('weekly_roster_plan_id', $plan->id)
@@ -93,6 +91,7 @@ class RosterController extends Controller
         }
 
         return response()->json([
+            'success' => true,
             'plan' => [
                 'id' => $plan->id,
                 'week_start' => $plan->week_start?->toDateString(),
@@ -127,14 +126,12 @@ class RosterController extends Controller
 
         $shiftType = $data['shift_type'] ?? 'day';
 
-        $plan = WeeklyRosterPlan::firstOrCreate([
-            'week_start' => $weekStart->toDateString(),
-            'supervisor_id' => (int) $data['supervisor_id'],
-            'shift_type' => $shiftType,
-        ], [
-            'created_by' => $request->user()?->id,
-            'status' => 'draft',
-        ]);
+        $plan = $this->getOrCreatePlan(
+            $weekStart->toDateString(),
+            (int) $data['supervisor_id'],
+            $shiftType,
+            $request->user()?->id
+        );
 
         if ($plan->status === 'published') {
             return back()->withErrors(['start' => 'This week plan is already published and locked.']);
@@ -155,7 +152,7 @@ class RosterController extends Controller
         ]);
 
         if ($request->wantsJson() && !$request->header('X-Inertia')) {
-            return response()->json(['saved' => true, 'entry_id' => $entry->id, 'plan_id' => $plan->id]);
+            return response()->json(['success' => true, 'saved' => true, 'entry_id' => $entry->id, 'plan_id' => $plan->id]);
         }
 
         return back()->with('success', 'Plan entry saved.');
@@ -181,14 +178,12 @@ class RosterController extends Controller
         $weekEnd = $weekStart->copy()->endOfWeek(Carbon::SUNDAY);
         $shiftType = $data['shift_type'] ?? 'day';
 
-        $plan = WeeklyRosterPlan::firstOrCreate([
-            'week_start' => $weekStart->toDateString(),
-            'supervisor_id' => (int) $data['supervisor_id'],
-            'shift_type' => $shiftType,
-        ], [
-            'created_by' => $request->user()?->id,
-            'status' => 'draft',
-        ]);
+        $plan = $this->getOrCreatePlan(
+            $weekStart->toDateString(),
+            (int) $data['supervisor_id'],
+            $shiftType,
+            $request->user()?->id
+        );
 
         if ($plan->status === 'published') {
             return back()->withErrors(['start' => 'This week plan is already published and locked.']);
@@ -235,7 +230,7 @@ class RosterController extends Controller
         });
 
         if ($request->wantsJson() && !$request->header('X-Inertia')) {
-            return response()->json(['saved' => true, 'plan_id' => $plan->id, 'saved_count' => $saved, 'deleted_count' => $deleted]);
+            return response()->json(['success' => true, 'saved' => true, 'plan_id' => $plan->id, 'saved_count' => $saved, 'deleted_count' => $deleted]);
         }
 
         return back()->with('success', "Draft saved ({$saved} entries, {$deleted} removed). ");
@@ -634,6 +629,7 @@ class RosterController extends Controller
         }
 
         return response()->json([
+            'success' => true,
             'shift_type' => $shiftType,
             'today' => $today,
             'days' => $days,
@@ -741,7 +737,7 @@ class RosterController extends Controller
         }
 
         if ($request->wantsJson() && !$request->header('X-Inertia')) {
-            return response()->json(['saved' => true, 'shift_id' => $shift->id]);
+            return response()->json(['success' => true, 'saved' => true, 'shift_id' => $shift->id]);
         }
 
         return back()->with('success', 'Roster shift saved.');
@@ -757,7 +753,7 @@ class RosterController extends Controller
         $shift->delete();
 
         if ($request->wantsJson() && !$request->header('X-Inertia')) {
-            return response()->json(['deleted' => true]);
+            return response()->json(['success' => true, 'deleted' => true]);
         }
 
         return back()->with('success', 'Roster shift removed.');
@@ -888,6 +884,7 @@ class RosterController extends Controller
         $relieverIds = $relieversQuery->pluck('id');
         if ($relieverIds->isEmpty()) {
             return response()->json([
+                'success' => true,
                 'reused' => false,
                 'copied' => 0,
                 'reason' => 'no_relievers_in_scope',
@@ -902,6 +899,7 @@ class RosterController extends Controller
 
         if ($existingCount > 0 && !$force) {
             return response()->json([
+                'success' => true,
                 'reused' => false,
                 'copied' => 0,
                 'reason' => 'week_already_has_data',
@@ -932,6 +930,7 @@ class RosterController extends Controller
 
             if (!$lastRotationDate) {
                 return response()->json([
+                    'success' => true,
                     'reused' => false,
                     'copied' => 0,
                     'reason' => 'no_source_week_found',
@@ -949,6 +948,7 @@ class RosterController extends Controller
 
         if ($sourceRotations->isEmpty()) {
             return response()->json([
+                'success' => true,
                 'reused' => false,
                 'copied' => 0,
                 'reason' => 'source_week_empty',
@@ -974,6 +974,7 @@ class RosterController extends Controller
         });
 
         return response()->json([
+            'success' => true,
             'reused' => $copied > 0,
             'copied' => $copied,
             'source_week_start' => $sourceWeekStart->toDateString(),
@@ -1132,7 +1133,7 @@ class RosterController extends Controller
             ];
         });
 
-        return response()->json(['bundles' => $bundles]);
+        return response()->json(['success' => true, 'bundles' => $bundles]);
     }
 
     public function storeBundle(Request $request)
@@ -1484,5 +1485,32 @@ class RosterController extends Controller
         }
 
         return back()->with('success', $msg);
+    }
+
+    private function getOrCreatePlan(string $weekStart, int $supervisorId, string $shiftType, ?int $createdBy): WeeklyRosterPlan
+    {
+        $plan = WeeklyRosterPlan::where('week_start', $weekStart)
+            ->where('supervisor_id', $supervisorId)
+            ->where('shift_type', $shiftType)
+            ->first();
+
+        if ($plan) {
+            return $plan;
+        }
+
+        try {
+            return WeeklyRosterPlan::create([
+                'week_start' => $weekStart,
+                'supervisor_id' => $supervisorId,
+                'shift_type' => $shiftType,
+                'created_by' => $createdBy,
+                'status' => 'draft',
+            ]);
+        } catch (\Illuminate\Database\QueryException $e) {
+            return WeeklyRosterPlan::where('week_start', $weekStart)
+                ->where('supervisor_id', $supervisorId)
+                ->where('shift_type', $shiftType)
+                ->first();
+        }
     }
 }

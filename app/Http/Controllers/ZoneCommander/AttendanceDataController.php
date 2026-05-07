@@ -15,9 +15,7 @@ class AttendanceDataController extends Controller
     {
         $user = Auth::user();
         if (!$user->zone_id) {
-            return response()->json([
-                'error' => 'No zone assigned',
-            ], 400);
+            return $this->errorResponse('No zone assigned.', 400);
         }
 
         $dates = [];
@@ -60,6 +58,7 @@ class AttendanceDataController extends Controller
         }
 
         return response()->json([
+            'success' => true,
             'labels' => $dates,
             'data' => $attendanceData,
         ]);
@@ -69,9 +68,7 @@ class AttendanceDataController extends Controller
     {
         $user = Auth::user();
         if (!$user->zone_id) {
-            return response()->json([
-                'error' => 'No zone assigned',
-            ], 400);
+            return $this->errorResponse('No zone assigned.', 400);
         }
 
         $guards = \App\Models\Guards\Guard::query()
@@ -98,6 +95,7 @@ class AttendanceDataController extends Controller
         }
 
         return response()->json([
+            'success' => true,
             'labels' => ['Normal', 'Warning', 'High Risk'],
             'data' => array_values($distribution),
         ]);

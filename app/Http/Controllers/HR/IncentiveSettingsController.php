@@ -216,7 +216,7 @@ class IncentiveSettingsController extends Controller
             ->orderBy('created_at', 'desc')
             ->paginate(50);
 
-        return response()->json(['entries' => $entries]);
+        return response()->json(['success' => true, 'entries' => $entries]);
     }
 
     public function approveEntry(Request $request, IncentiveEntry $entry)

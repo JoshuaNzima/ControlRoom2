@@ -135,7 +135,7 @@ class LeaveController extends Controller
             }
         }
 
-        return response()->json(['events' => $events]);
+        return response()->json(['success' => true, 'events' => $events]);
     }
 
     public function storeHoliday(Request $request)

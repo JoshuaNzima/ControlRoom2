@@ -70,30 +70,26 @@ export default function FinanceLayout({ title, children, user }: Props) {
     { name: 'Invoices', href: route('finance.invoices.index'), icon: <IconMapper name="FileText" size={20} /> },
     { name: 'Expenses', href: route('finance.expenses.index'), icon: <IconMapper name="CreditCard" size={20} /> },
     { name: 'Payroll', href: route('finance.payroll.index'), icon: <IconMapper name="Banknote" size={20} /> },
-    { name: 'Tax & Compliance', href: route('finance.tax.index'), icon: <IconMapper name="ShieldCheck" size={20} /> },
-    { name: 'Reconciliations', href: route('finance.reconciliations.index'), icon: <IconMapper name="GitCompare" size={20} /> },
+    // { name: 'Tax & Compliance', href: route('finance.tax.index'), icon: <IconMapper name="ShieldCheck" size={20} /> },
+    // { name: 'Reconciliations', href: route('finance.reconciliations.index'), icon: <IconMapper name="GitCompare" size={20} /> },
   ];
 
   // Management Navigation
   const managementLinks: NavItem[] = [
     { name: 'Approvals', href: route('finance.approvals.index'), icon: <IconMapper name="CheckCircle" size={20} />, badge: counters?.finance_approvals_pending },
-    { name: 'Budgets', href: route('budgets.index'), icon: <IconMapper name="PieChart" size={20} /> },
-    { name: 'Reports', href: route('finance.reports.index'), icon: <IconMapper name="BarChart3" size={20} /> },
+    { name: 'Budgets', href: route('finance.budgets.index'), icon: <IconMapper name="PieChart" size={20} /> },
+    // { name: 'Reports', href: route('finance.reports.index'), icon: <IconMapper name="BarChart3" size={20} /> },
   ];
 
-  // Directory Navigation
-  const directoryLinks: NavItem[] = [
-    { name: 'Clients', href: route('finance.clients.index'), icon: <IconMapper name="Building" size={20} /> },
-    { name: 'Vendors', href: route('finance.vendors.index'), icon: <IconMapper name="Truck" size={20} /> },
-    { name: 'Accounts', href: route('finance.accounts.index'), icon: <IconMapper name="Wallet" size={20} /> },
-  ];
+  // Directory Navigation (placeholder until routes are added)
+  const directoryLinks: NavItem[] = [];
 
   // Tools Navigation
   const toolsLinks: NavItem[] = [
     ...(!isAdminUser ? ([
       { name: 'My Requisitions', href: route('requisitions.index'), icon: <IconMapper name="ClipboardList" size={20} />, badge: counters?.requisitions_my_open },
     ] as NavItem[]) : []),
-    { name: 'Settings', href: route('finance.settings'), icon: <IconMapper name="Settings" size={20} /> },
+    // { name: 'Settings', href: route('finance.settings'), icon: <IconMapper name="Settings" size={20} /> },
   ];
 
   return (

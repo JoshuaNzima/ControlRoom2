@@ -170,6 +170,7 @@ class AttendanceController extends Controller
         ];
 
         return response()->json([
+            'success' => true,
             'attendance' => $attendance,
             'summary' => $summary,
         ]);

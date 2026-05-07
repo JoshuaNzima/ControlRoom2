@@ -82,7 +82,6 @@ export default function SupervisorLayout({ children, title }: SupervisorLayoutPr
     { name: "Guards", href: route('supervisor.guards'), icon: <IconMapper name="Users" size={20} /> },
     { name: "Analytics", href: route('supervisor.analytics'), icon: <IconMapper name="BarChart3" size={20} /> },
     { name: "Attendance", href: route('supervisor.attendance'), icon: <IconMapper name="ClipboardList" size={20} /> },
-    { name: "Assignments", href: route('supervisor.assignments'), icon: <IconMapper name="MapPin" size={20} /> },
     { name: "Requisitions", href: route('requisitions.index'), icon: <IconMapper name="FileText" size={20} /> },
   ];
 

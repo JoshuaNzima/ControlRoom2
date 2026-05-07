@@ -14,6 +14,7 @@ class PushSubscriptionController extends Controller
     public function vapidPublicKey()
     {
         return response()->json([
+            'success' => true,
             'publicKey' => config('webpush.vapid.public_key'),
         ]);
     }
@@ -46,6 +47,7 @@ class PushSubscriptionController extends Controller
             ]);
 
             return response()->json([
+                'success' => true,
                 'message' => 'Subscription updated',
                 'subscription' => $existingSubscription->only(['id', 'endpoint', 'is_active']),
             ]);
@@ -64,6 +66,7 @@ class PushSubscriptionController extends Controller
         ]);
 
         return response()->json([
+            'success' => true,
             'message' => 'Subscription created',
             'subscription' => $subscription->only(['id', 'endpoint', 'is_active']),
         ], 201);
@@ -87,6 +90,7 @@ class PushSubscriptionController extends Controller
         }
 
         return response()->json([
+            'success' => true,
             'message' => 'Subscription deactivated',
         ]);
     }
@@ -102,6 +106,7 @@ class PushSubscriptionController extends Controller
             ->get(['id', 'endpoint', 'device_type', 'user_agent', 'subscribed_at', 'created_at']);
 
         return response()->json([
+            'success' => true,
             'subscriptions' => $subscriptions,
         ]);
     }
@@ -127,6 +132,7 @@ class PushSubscriptionController extends Controller
         $result = $service->sendToUser($user, $payload);
 
         return response()->json([
+            'success' => true,
             'message' => 'Test notification sent',
             'result' => $result,
         ]);

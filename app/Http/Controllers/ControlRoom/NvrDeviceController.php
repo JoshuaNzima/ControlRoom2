@@ -300,6 +300,7 @@ class NvrDeviceController extends Controller
         }
 
         return response()->json([
+            'success' => true,
             'channels' => $availableChannels,
             'total' => $channelCount,
             'existing' => count($existingChannels),
@@ -360,6 +361,7 @@ class NvrDeviceController extends Controller
         ]);
 
         return response()->json([
+            'success' => true,
             'imported' => $imported,
             'total_channels' => $channelCount,
             'message' => "Imported {$imported} cameras from NVR.",

@@ -55,7 +55,7 @@ class DisburseSupervisorIncentives extends Command
         // Get all active balances for the period
         $balances = \App\Models\SupervisorIncentiveBalance::forPeriod($year, $month)
             ->where('status', 'active')
-            ->with('guard')
+            ->with('guardRelation')
             ->get();
 
         if ($balances->isEmpty()) {

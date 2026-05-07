@@ -73,11 +73,10 @@ class RequisitionBatchController extends Controller
         }
 
         if ($request->wantsJson()) {
-            return response()->json([
-                'ok' => true,
+            return $this->successResponse([
                 'batch_id' => $batch->id,
                 'mail_failures' => $mailFailures,
-            ]);
+            ], 'Batch compiled successfully.');
         }
 
         return back();
@@ -118,7 +117,7 @@ class RequisitionBatchController extends Controller
             ]);
 
         if ($request->wantsJson()) {
-            return response()->json(['ok' => true, 'batch_id' => $batch->id]);
+            return $this->successResponse(['batch_id' => $batch->id], 'Batch funded successfully.');
         }
 
         return back();
@@ -137,7 +136,7 @@ class RequisitionBatchController extends Controller
             ->first();
 
         if (!$batch) {
-            return response()->json([
+            return $this->successResponse([
                 'batch' => null,
                 'requisitions' => [],
             ]);
@@ -148,7 +147,7 @@ class RequisitionBatchController extends Controller
             ->orderBy('created_at')
             ->get();
 
-        return response()->json([
+        return $this->successResponse([
             'batch' => $batch,
             'requisitions' => $requisitions,
         ]);
@@ -238,7 +237,7 @@ class RequisitionBatchController extends Controller
         }
 
         if ($request->wantsJson()) {
-            return response()->json(['ok' => true, 'batch_id' => $batch?->id]);
+            return $this->successResponse(['batch_id' => $batch?->id], 'Batch acknowledged successfully.');
         }
 
         return back();
@@ -252,7 +251,7 @@ class RequisitionBatchController extends Controller
         $today = Carbon::today();
         $batch = RequisitionBatch::whereDate('batch_date', $today)->latest('id')->first();
         if (!$batch) {
-            return response('No batch compiled today', 404);
+            return $this->errorResponse('No batch compiled today.', 404);
         }
 
         $rows = Requisition::with(['requestedBy:id,name','approvedBy:id,name'])
@@ -352,9 +351,7 @@ class RequisitionBatchController extends Controller
             return $batch;
         });
 
-        return response()->json([
-            'batches' => $batches,
-        ]);
+        return $this->successResponse(['batches' => $batches]);
     }
 
     public function show(Request $request, RequisitionBatch $batch): JsonResponse
@@ -368,7 +365,7 @@ class RequisitionBatchController extends Controller
             ->orderBy('created_at')
             ->get();
 
-        return response()->json([
+        return $this->successResponse([
             'batch' => $batch,
             'requisitions' => $requisitions,
         ]);
@@ -453,7 +450,7 @@ class RequisitionBatchController extends Controller
                 ->whereBetween('batch_date', [$startDate, $endDate])
                 ->get();
 
-            return response()->json([
+            return $this->successResponse([
                 'period' => $startDate->format('F Y'),
                 'summary' => $stats,
                 'requisitions' => $requisitions,

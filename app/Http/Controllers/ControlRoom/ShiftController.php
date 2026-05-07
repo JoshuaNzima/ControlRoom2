@@ -194,6 +194,7 @@ class ShiftController extends Controller
 
         if ($request->wantsJson() || $request->ajax()) {
             return response()->json([
+                'success' => true,
                 'shift' => $shift,
                 'availableGuards' => $availableGuards,
                 'sitesMap' => $sitesMap,
@@ -288,7 +289,7 @@ class ShiftController extends Controller
             $count = GuardAssignment::active()->current()->whereIn('client_site_id', $siteIds)->count();
         }
 
-        return response()->json(['required_guards' => (int) $count]);
+        return response()->json(['success' => true, 'required_guards' => (int) $count]);
     }
 
     public function assignGuard(Request $request, Shift $shift)

@@ -90,14 +90,14 @@ export default function HRLayout({ title, children, user }: Props) {
     { name: 'Benefits', href: route('hr.benefits.index'), icon: <IconMapper name="Gift" size={20} /> },
     { name: 'Medical', href: route('hr.medical.index'), icon: <IconMapper name="Stethoscope" size={20} /> },
     { name: 'Pensions', href: route('hr.pensions.index'), icon: <IconMapper name="Banknote" size={20} /> },
-    { name: 'Compensation', href: route('hr.compensation.index'), icon: <IconMapper name="DollarSign" size={20} /> },
+    // { name: 'Compensation', href: route('hr.compensation.index'), icon: <IconMapper name="DollarSign" size={20} /> },
   ];
 
   // Management & Compliance
   const managementLinks: NavItem[] = [
-    { name: 'Incentive Settings', href: route('hr.incentive-settings.index'), icon: <IconMapper name="Settings" size={20} /> },
-    { name: 'Supervisor Incentives', href: route('hr.supervisor-incentives.index'), icon: <IconMapper name="Award" size={20} /> },
-    { name: 'Safety', href: route('hr.safety.index'), icon: <IconMapper name="Shield" size={20} /> },
+    // { name: 'Incentive Settings', href: route('hr.incentive-settings.index'), icon: <IconMapper name="Settings" size={20} /> },
+    // { name: 'Supervisor Incentives', href: route('hr.supervisor-incentives.index'), icon: <IconMapper name="Award" size={20} /> },
+    // { name: 'Safety', href: route('hr.safety.index'), icon: <IconMapper name="Shield" size={20} /> },
     { name: 'Policies', href: route('hr.policies.index'), icon: <IconMapper name="FileText" size={20} /> },
     { name: 'Disciplinary', href: route('hr.disciplinary.index'), icon: <IconMapper name="AlertTriangle" size={20} /> },
   ];

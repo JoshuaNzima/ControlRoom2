@@ -38,6 +38,7 @@ class MessageReactionController extends Controller
         broadcast(new \App\Events\MessageReacted($reaction))->toOthers();
 
         return response()->json([
+            'success' => true,
             'id' => $reaction->id,
             'reaction' => $reaction->reaction,
             'user' => ['id' => Auth::id(), 'name' => Auth::user()->name],
@@ -62,6 +63,6 @@ class MessageReactionController extends Controller
             'reaction' => $validated['reaction'],
         ]))->toOthers();
 
-        return response()->json(['deleted' => $deleted > 0]);
+        return response()->json(['success' => true, 'deleted' => $deleted > 0]);
     }
 }

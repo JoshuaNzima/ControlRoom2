@@ -23,6 +23,8 @@ class GuardPolicy
      */
     public function view(User $user, Guard $guard): bool
     {
+        // super_admin and admin can view any guard
+        if ($user->hasAnyRole(['super_admin', 'admin'])) return true;
         // zone commanders and supervisors can view guards in their zone/supervision
         if ($user->hasRole('zone_commander')) return true;
         if ($user->hasRole('supervisor') && $guard->supervisor_id === $user->id) return true;

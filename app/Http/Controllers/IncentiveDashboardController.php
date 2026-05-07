@@ -35,7 +35,7 @@ class IncentiveDashboardController extends Controller
             ],
         ];
 
-        return response()->json(['stats' => $stats, 'period' => ['year' => $year, 'month' => $month]]);
+        return response()->json(['success' => true, 'stats' => $stats, 'period' => ['year' => $year, 'month' => $month]]);
     }
 
     // Quick calculate for current period

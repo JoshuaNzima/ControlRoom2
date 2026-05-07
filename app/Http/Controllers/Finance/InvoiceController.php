@@ -388,7 +388,7 @@ class InvoiceController extends Controller
      */
     public function nextNumber()
     {
-        return response()->json(['invoice_number' => $this->generateInvoiceNumber()]);
+        return response()->json(['success' => true, 'invoice_number' => $this->generateInvoiceNumber()]);
     }
 
     /**
@@ -405,7 +405,7 @@ class InvoiceController extends Controller
         }])->find($request->client_id);
 
         if (! $client) {
-            return response()->json(['items' => []]);
+            return response()->json(['success' => true, 'items' => []]);
         }
 
         $items = [];
@@ -426,7 +426,7 @@ class InvoiceController extends Controller
             'unit_price' => 0,
         ];
 
-        return response()->json(['items' => $items]);
+        return response()->json(['success' => true, 'items' => $items]);
     }
 
     private function generateInvoiceNumber(): string

@@ -129,6 +129,7 @@ class BudgetRequestController extends Controller
         }
 
         return response()->json([
+            'success' => true,
             'my_open' => $myOpen,
             'my_needs_revision' => $myNeedsRevision,
             'pending_admin' => $pendingAdmin,

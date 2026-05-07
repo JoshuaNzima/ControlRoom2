@@ -105,6 +105,7 @@ class ForumReplyController extends Controller
         $result = $reply->vote($user, $validated['type']);
 
         return response()->json([
+            'success' => true,
             'upvotes_count' => $reply->upvotes_count,
             'user_vote' => $result,
         ]);
@@ -129,6 +130,7 @@ class ForumReplyController extends Controller
         $thread->update(['is_solved' => true]);
 
         return response()->json([
+            'success' => true,
             'message' => 'Reply marked as solution.',
             'reply_id' => $reply->id,
         ]);

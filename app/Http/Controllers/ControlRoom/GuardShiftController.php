@@ -45,6 +45,7 @@ class GuardShiftController extends Controller
 
         if ($request->wantsJson() || $request->ajax()) {
             return response()->json([
+                'success' => true,
                 'shift' => $shift,
             ]);
         }

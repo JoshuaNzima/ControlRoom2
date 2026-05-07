@@ -749,7 +749,7 @@ HTML;
             ->get();
 
         if ($checkpoints->isEmpty()) {
-            return response('<html><body><h2>No checkpoints selected</h2></body></html>', 200, ['Content-Type' => 'text/html']);
+            return $this->errorResponse('No checkpoints selected.', 422);
         }
 
         $logoUrl = asset('images/Coin-logo.png');

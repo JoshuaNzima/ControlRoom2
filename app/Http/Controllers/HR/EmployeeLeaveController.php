@@ -67,7 +67,7 @@ class EmployeeLeaveController extends Controller
             }
         }
 
-        return response()->json(['events' => $events]);
+        return response()->json(['success' => true, 'events' => $events]);
     }
 
     public function index(Request $request)
@@ -278,6 +278,7 @@ class EmployeeLeaveController extends Controller
         $employees = array_slice($employees, 0, $perPage);
 
         return response()->json([
+            'success' => true,
             'employees' => $employees,
             'meta' => [
                 'page' => $page,

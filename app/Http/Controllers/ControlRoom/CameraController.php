@@ -191,7 +191,7 @@ class CameraController extends Controller
             ->latest()
             ->paginate(20);
 
-        return response()->json(['recordings' => $recordings]);
+        return response()->json(['success' => true, 'recordings' => $recordings]);
     }
 
     public function downloadRecording(CameraRecording $recording)

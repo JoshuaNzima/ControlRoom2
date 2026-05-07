@@ -289,6 +289,7 @@ class DashboardController extends Controller
             });
 
         return response()->json([
+            'success' => true,
             'year' => (int) $year,
             'month' => (int) $month,
             'invoices' => $invoices,
@@ -324,6 +325,7 @@ class DashboardController extends Controller
             });
 
         return response()->json([
+            'success' => true,
             'budget' => [
                 'id' => $budget->id,
                 'name' => $budget->name,

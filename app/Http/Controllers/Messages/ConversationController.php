@@ -199,6 +199,7 @@ class ConversationController extends Controller
         }
 
         return response()->json([
+            'success' => true,
             'id' => $message->id,
             'conversation_id' => $message->conversation_id,
             'sender_id' => $message->sender_id,
@@ -220,13 +221,13 @@ class ConversationController extends Controller
             userName: Auth::user()->name
         ))->toOthers();
 
-        return response()->json(['status' => 'ok']);
+        return response()->json(['success' => true]);
     }
 
     public function markRead(Request $request, Conversation $conversation)
     {
         abort_unless($conversation->participants()->where('user_id', Auth::id())->exists(), 403);
         $conversation->markAsRead(Auth::user());
-        return response()->json(['status' => 'ok']);
+        return response()->json(['success' => true]);
     }
 }

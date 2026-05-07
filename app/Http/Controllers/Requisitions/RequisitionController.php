@@ -309,6 +309,7 @@ class RequisitionController extends Controller
         }
 
         return response()->json([
+            'success' => true,
             'my_open' => $myOpen,
             'my_needs_revision' => $myNeedsRevision,
             'my_expired' => $myExpired,

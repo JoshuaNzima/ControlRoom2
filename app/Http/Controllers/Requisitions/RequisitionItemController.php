@@ -44,7 +44,7 @@ class RequisitionItemController extends Controller
         $this->recalculateTotal($requisition);
 
         if ($request->wantsJson()) {
-            return response()->json(['ok' => true, 'item' => $item]);
+            return $this->successResponse(['item' => $item], 'Item added successfully.');
         }
 
         return back();
@@ -85,7 +85,7 @@ class RequisitionItemController extends Controller
         $this->recalculateTotal($requisition);
 
         if ($request->wantsJson()) {
-            return response()->json(['ok' => true, 'item' => $item]);
+            return $this->successResponse(['item' => $item], 'Item updated successfully.');
         }
 
         return back();
@@ -111,7 +111,7 @@ class RequisitionItemController extends Controller
         $this->recalculateTotal($requisition);
 
         if ($request->wantsJson()) {
-            return response()->json(['ok' => true]);
+            return $this->successResponse([], 'Item deleted successfully.');
         }
 
         return back();
@@ -146,7 +146,7 @@ class RequisitionItemController extends Controller
         $this->updateParentStatus($requisition);
 
         if ($request->wantsJson()) {
-            return response()->json(['ok' => true, 'item' => $item]);
+            return $this->successResponse(['item' => $item], 'Item approved successfully.');
         }
 
         return back();
@@ -181,7 +181,7 @@ class RequisitionItemController extends Controller
         $this->updateParentStatus($requisition);
 
         if ($request->wantsJson()) {
-            return response()->json(['ok' => true, 'item' => $item]);
+            return $this->successResponse(['item' => $item], 'Item declined successfully.');
         }
 
         return back();
@@ -216,7 +216,7 @@ class RequisitionItemController extends Controller
         $this->checkAllDisbursed($requisition);
 
         if ($request->wantsJson()) {
-            return response()->json(['ok' => true, 'item' => $item]);
+            return $this->successResponse(['item' => $item], 'Item disbursed successfully.');
         }
 
         return back();

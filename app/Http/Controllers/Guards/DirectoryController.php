@@ -114,6 +114,7 @@ class DirectoryController extends Controller
         $guard->load(['supervisor', 'zone', 'grade', 'activeAssignments', 'assignments.clientSite.client']);
 
         return response()->json([
+            'success' => true,
             'id' => $guard->id,
             'employee_id' => $guard->employee_id,
             'name' => $guard->name,

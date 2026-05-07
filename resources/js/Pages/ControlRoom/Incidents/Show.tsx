@@ -1,9 +1,12 @@
-import React from 'react';
-import { Head, Link, router } from '@inertiajs/react';
+import React, { useState, useCallback } from 'react';
+import { Head, Link, router, useForm } from '@inertiajs/react';
 import ControlRoomLayout from '@/Layouts/ControlRoomLayout';
+import Modal from '@/Components/Modal';
 import { Card, CardContent, CardHeader } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import { Badge } from '@/Components/ui/badge';
+import { Input } from '@/Components/ui/input';
+import { Label } from '@/Components/ui/label';
 import IconMapper from '@/Components/IconMapper';
 
 interface Incident {
@@ -15,6 +18,8 @@ interface Incident {
   description: string;
   location: string;
   escalation_level: number;
+  client_id?: number | null;
+  client_site_id?: number | null;
   reporter?: { name: string };
   assigned_to?: { name: string };
   client?: { name: string };
@@ -30,6 +35,50 @@ interface ShowIncidentProps {
 }
 
 const ShowIncident = ({ auth, incident }: ShowIncidentProps) => {
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [siteSearch, setSiteSearch] = useState('');
+  const [siteResults, setSiteResults] = useState<Array<{ id: number; name: string; client_name: string }>>([]);
+  const [loadingSites, setLoadingSites] = useState(false);
+  const [selectedSiteName, setSelectedSiteName] = useState<string>(
+    incident.client?.name && incident.client_site?.name ? `${incident.client?.name} • ${incident.client_site?.name}` : ''
+  );
+
+  const { data, setData, put, processing, errors } = useForm({
+    title: incident.title || '',
+    type: incident.type || '',
+    severity: incident.severity || '',
+    description: incident.description || '',
+    location: incident.location || '',
+    status: incident.status || 'open',
+    client_id: incident.client_id ? String(incident.client_id) : '',
+    client_site_id: incident.client_site_id ? String(incident.client_site_id) : '',
+  });
+
+  const loadSites = useCallback(async () => {
+    try {
+      setLoadingSites(true);
+      const params = new URLSearchParams();
+      if (siteSearch) params.set('search', siteSearch);
+      const url = `${route('control-room.clients.sites.json')}?${params.toString()}`;
+      const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+      const list = await res.json();
+      setSiteResults(Array.isArray(list) ? list : []);
+    } catch {
+      setSiteResults([]);
+    } finally {
+      setLoadingSites(false);
+    }
+  }, [siteSearch]);
+
+  const handleEditSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    put(route('control-room.incidents.update', incident.id), {
+      onSuccess: () => {
+        setShowEditModal(false);
+      },
+    });
+  };
+
   const getSeverityColor = (severity: string) => {
     switch (severity) {
       case 'critical': return 'bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100';
@@ -107,11 +156,9 @@ const ShowIncident = ({ auth, incident }: ShowIncidentProps) => {
                   Download PDF
                 </Button>
               </Link>
-              <Link href={route('control-room.incidents.edit', incident.id)}>
-                <Button variant="outline" className="dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-600">
+              <Button onClick={() => setShowEditModal(true)} variant="outline" className="dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-600">
                   Edit
                 </Button>
-              </Link>
               {incident.status !== 'resolved' && incident.status !== 'closed' && (
                 <>
                   <Button
@@ -240,6 +287,146 @@ const ShowIncident = ({ auth, incident }: ShowIncidentProps) => {
           </div>
         </div>
       </div>
+
+      {/* Edit Incident Modal */}
+      <Modal show={showEditModal} onClose={() => setShowEditModal(false)} maxWidth="2xl">
+        <div className="p-4 sm:p-6 bg-white dark:bg-gray-900">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Edit Incident</h2>
+          <form onSubmit={handleEditSubmit} className="space-y-4">
+            <div>
+              <Label className="text-gray-700 dark:text-gray-300">Title *</Label>
+              <Input
+                value={data.title}
+                onChange={(e) => setData('title', e.target.value)}
+                className="mt-1 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100"
+              />
+              {errors.title && <p className="text-red-500 text-sm mt-1">{errors.title}</p>}
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <Label className="text-gray-700 dark:text-gray-300">Type *</Label>
+                <select
+                  value={data.type}
+                  onChange={(e) => setData('type', e.target.value)}
+                  className="w-full mt-1 px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-coin-500"
+                >
+                  <option value="security_breach">Security Breach</option>
+                  <option value="equipment_failure">Equipment Failure</option>
+                  <option value="personnel_issue">Personnel Issue</option>
+                  <option value="other">Other</option>
+                </select>
+                {errors.type && <p className="text-red-500 text-sm mt-1">{errors.type}</p>}
+              </div>
+
+              <div>
+                <Label className="text-gray-700 dark:text-gray-300">Severity *</Label>
+                <select
+                  value={data.severity}
+                  onChange={(e) => setData('severity', e.target.value)}
+                  className="w-full mt-1 px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-coin-500"
+                >
+                  <option value="low">Low</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                  <option value="critical">Critical</option>
+                </select>
+                {errors.severity && <p className="text-red-500 text-sm mt-1">{errors.severity}</p>}
+              </div>
+            </div>
+
+            <div>
+              <Label className="text-gray-700 dark:text-gray-300">Status *</Label>
+              <select
+                value={data.status}
+                onChange={(e) => setData('status', e.target.value)}
+                className="w-full mt-1 px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-coin-500"
+              >
+                <option value="open">Open</option>
+                <option value="in_progress">In Progress</option>
+                <option value="escalated">Escalated</option>
+                <option value="resolved">Resolved</option>
+                <option value="closed">Closed</option>
+              </select>
+              {errors.status && <p className="text-red-500 text-sm mt-1">{errors.status}</p>}
+            </div>
+
+            <div>
+              <Label className="text-gray-700 dark:text-gray-300">Location *</Label>
+              <Input
+                value={data.location}
+                onChange={(e) => setData('location', e.target.value)}
+                className="mt-1 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100"
+              />
+              {errors.location && <p className="text-red-500 text-sm mt-1">{errors.location}</p>}
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-end gap-2">
+                <div className="flex-1">
+                  <Label className="text-gray-700 dark:text-gray-300">Link Site (optional)</Label>
+                  <Input
+                    value={siteSearch}
+                    onChange={(e) => setSiteSearch(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), loadSites())}
+                    placeholder="Search site or client name"
+                    className="mt-1 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100"
+                  />
+                </div>
+                <Button type="button" onClick={loadSites} variant="outline" className="h-9 dark:border-gray-700 dark:text-gray-300">
+                  {loadingSites ? 'Loading…' : 'Search'}
+                </Button>
+              </div>
+              {selectedSiteName && (
+                <div className="text-xs text-gray-500">Selected site: <span className="font-medium text-gray-800 dark:text-gray-200">{selectedSiteName}</span></div>
+              )}
+              <div className="max-h-32 overflow-y-auto rounded border border-gray-200 dark:border-gray-700">
+                {siteResults.length === 0 ? (
+                  <div className="p-2 text-sm text-gray-500">{loadingSites ? 'Loading…' : 'No sites found'}</div>
+                ) : (
+                  <ul>
+                    {siteResults.map((s) => (
+                      <li key={s.id}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setData('client_site_id', String(s.id));
+                            setSelectedSiteName(`${s.client_name} • ${s.name}`);
+                          }}
+                          className="w-full text-left px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                        >
+                          <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{s.client_name}</div>
+                          <div className="text-xs text-gray-500">{s.name}</div>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
+
+            <div>
+              <Label className="text-gray-700 dark:text-gray-300">Description *</Label>
+              <textarea
+                value={data.description}
+                onChange={(e) => setData('description', e.target.value)}
+                rows={5}
+                className="w-full mt-1 px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-coin-500"
+              />
+              {errors.description && <p className="text-red-500 text-sm mt-1">{errors.description}</p>}
+            </div>
+
+            <div className="flex flex-col sm:flex-row justify-end gap-2 pt-2">
+              <Button type="button" variant="outline" onClick={() => setShowEditModal(false)} className="dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800 w-full sm:w-auto">
+                Cancel
+              </Button>
+              <Button type="submit" disabled={processing} className="bg-coin-600 hover:bg-coin-700 text-white w-full sm:w-auto">
+                {processing ? 'Saving...' : 'Save Changes'}
+              </Button>
+            </div>
+          </form>
+        </div>
+      </Modal>
     </ControlRoomLayout>
   );
 };

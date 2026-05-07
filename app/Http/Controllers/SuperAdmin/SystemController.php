@@ -32,6 +32,7 @@ class SystemController extends Controller
         $limit = (int) $request->get('limit', 200);
         $limit = max(20, min($limit, 2000));
         return response()->json([
+            'success' => true,
             'lines' => $this->tailLog($limit),
         ]);
     }
@@ -60,6 +61,7 @@ class SystemController extends Controller
     public function auditData(Request $request)
     {
         return response()->json([
+            'success' => true,
             'entries' => $this->getAuditEntries(),
         ]);
     }
@@ -145,7 +147,7 @@ class SystemController extends Controller
                 'modified_at' => date('c', $f->getMTime()),
             ])->values()->all();
 
-        return response()->json(['files' => $files]);
+        return response()->json(['success' => true, 'files' => $files]);
     }
 
     public function backupDownload(string $file)
@@ -196,6 +198,7 @@ class SystemController extends Controller
         $apiTokensCount = $hasPersonalAccessTokens ? (int) DB::table('personal_access_tokens')->count() : null;
 
         return response()->json([
+            'success' => true,
             'app' => [
                 'env' => (string) config('app.env'),
                 'debug' => (bool) config('app.debug'),

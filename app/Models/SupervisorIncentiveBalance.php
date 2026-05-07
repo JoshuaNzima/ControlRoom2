@@ -37,7 +37,7 @@ class SupervisorIncentiveBalance extends Model
         'disbursed_at' => 'datetime',
     ];
 
-    public function guard(): BelongsTo
+    public function guardRelation(): BelongsTo
     {
         return $this->belongsTo(Guard::class);
     }

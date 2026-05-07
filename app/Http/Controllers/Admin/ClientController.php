@@ -31,15 +31,24 @@ class ClientController extends Controller
     {
         abort_unless($site->client_id === $client->id, 404);
 
+        // Convert empty strings to null for numeric/integer fields
+        $input = $request->all();
+        foreach (['zone_id', 'latitude', 'longitude'] as $key) {
+            if (isset($input[$key]) && $input[$key] === '') {
+                $input[$key] = null;
+            }
+        }
+        $request->merge($input);
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'address' => 'required|string',
+            'address' => 'nullable|string',
             'contact_person' => 'nullable|string|max:255',
             'phone' => 'nullable|string|max:20',
             'latitude' => 'nullable|numeric|between:-90,90',
             'longitude' => 'nullable|numeric|between:-180,180',
             'special_instructions' => 'nullable|string',
-            'required_guards' => 'required|integer|min:1',
+            'required_guards' => 'nullable|integer|min:1',
             'services_requested' => 'nullable|string',
             'status' => 'required|in:active,inactive',
             'zone_id' => 'nullable|integer|exists:zones,id',
@@ -141,6 +150,23 @@ class ClientController extends Controller
 
     public function store(Request $request)
     {
+        // Convert empty strings to null for numeric/integer fields before validation
+        $input = $request->all();
+        foreach (['site.zone_id', 'site.latitude', 'site.longitude', 'site.required_guards'] as $key) {
+            if (isset($input[$key]) && $input[$key] === '') {
+                $input[$key] = null;
+            }
+        }
+        // Also handle nested site array
+        if (isset($input['site']) && is_array($input['site'])) {
+            foreach (['zone_id', 'latitude', 'longitude', 'required_guards'] as $key) {
+                if (isset($input['site'][$key]) && $input['site'][$key] === '') {
+                    $input['site'][$key] = null;
+                }
+            }
+        }
+        $request->merge($input);
+
         $validated = $request->validate([
             'name' => 'required|string|max:255|unique:clients,name',
             'contact_person' => 'nullable|string|max:255',
@@ -159,7 +185,7 @@ class ClientController extends Controller
             'services.*.quantity' => 'nullable|integer|min:1',
             // Optional initial site
             'site.name' => 'nullable|string|max:255',
-            'site.address' => 'required|string',
+            'site.address' => 'nullable|string',
             'site.required_guards' => 'nullable|integer|min:1',
             'site.services_requested' => 'nullable|string',
             'site.status' => 'nullable|in:active,inactive',
@@ -493,15 +519,24 @@ class ClientController extends Controller
 
     public function storeSite(Request $request, Client $client)
     {
+        // Convert empty strings to null for numeric/integer fields
+        $input = $request->all();
+        foreach (['zone_id', 'latitude', 'longitude'] as $key) {
+            if (isset($input[$key]) && $input[$key] === '') {
+                $input[$key] = null;
+            }
+        }
+        $request->merge($input);
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'address' => 'required|string',
+            'address' => 'nullable|string',
             'contact_person' => 'nullable|string|max:255',
             'phone' => 'nullable|string|max:20',
             'latitude' => 'nullable|numeric|between:-90,90',
             'longitude' => 'nullable|numeric|between:-180,180',
             'special_instructions' => 'nullable|string',
-            'required_guards' => 'required|integer|min:1',
+            'required_guards' => 'nullable|integer|min:1',
             'services_requested' => 'nullable|string',
             'status' => 'required|in:active,inactive',
             'zone_id' => 'nullable|integer|exists:zones,id',
@@ -510,6 +545,11 @@ class ClientController extends Controller
 
         if (!isset($validated['site_type']) || $validated['site_type'] === null || $validated['site_type'] === '') {
             $validated['site_type'] = 'residential';
+        }
+
+        // Ensure address is never null (database NOT NULL constraint)
+        if (empty($validated['address'])) {
+            $validated['address'] = $client->address ?: 'Address not specified';
         }
 
         $client->sites()->create($validated);

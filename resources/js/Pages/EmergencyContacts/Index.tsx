@@ -1,8 +1,11 @@
-import { Head, Link, router } from '@inertiajs/react';
-import { useState } from 'react';
+import { Head, Link, router, useForm } from '@inertiajs/react';
+import { useState, useEffect } from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import Modal from '@/Components/Modal';
 import { Card } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
+import { Input } from '@/Components/ui/input';
+import { Label } from '@/Components/ui/label';
 import {
   Phone,
   MapPin,
@@ -15,6 +18,7 @@ import {
   Plus,
   Pencil,
   Trash2,
+  Save,
 } from 'lucide-react';
 
 interface Contact {
@@ -39,6 +43,7 @@ interface Props {
       canManage?: boolean;
     };
   };
+  show_add?: number;
 }
 
 const typeIcons: Record<string, any> = {
@@ -63,8 +68,85 @@ const typeColors: Record<string, string> = {
   other: 'bg-gray-600',
 };
 
-export default function EmergencyContactsIndex({ contacts, typeOptions, auth }: Props) {
+export default function EmergencyContactsIndex({ contacts, typeOptions, auth, show_add }: Props) {
   const [expandedTypes, setExpandedTypes] = useState<string[]>(Object.keys(contacts));
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingContact, setEditingContact] = useState<Contact | null>(null);
+
+  const { data, setData, post, processing, errors, reset } = useForm({
+    name: '',
+    type: '',
+    phone: '',
+    alternative_phone: '',
+    email: '',
+    address: '',
+    latitude: '',
+    longitude: '',
+    notes: '',
+    display_order: '0',
+  });
+
+  const editForm = useForm({
+    name: '',
+    type: '',
+    phone: '',
+    alternative_phone: '',
+    email: '',
+    address: '',
+    latitude: '',
+    longitude: '',
+    notes: '',
+    display_order: '0',
+    is_active: true,
+  });
+
+  // Open add modal if show_add query param is present
+  useEffect(() => {
+    if (show_add) {
+      setShowAddModal(true);
+    }
+  }, [show_add]);
+
+  const handleAddSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    post(route('emergency-contacts.store'), {
+      onSuccess: () => {
+        setShowAddModal(false);
+        reset();
+      },
+    });
+  };
+
+  const openEditModal = (contact: Contact) => {
+    setEditingContact(contact);
+    editForm.setData({
+      name: contact.name,
+      type: contact.type,
+      phone: contact.phone || '',
+      alternative_phone: contact.alternative_phone || '',
+      email: contact.email || '',
+      address: contact.address || '',
+      latitude: contact.latitude?.toString() || '',
+      longitude: contact.longitude?.toString() || '',
+      notes: contact.notes || '',
+      display_order: '0',
+      is_active: true,
+    });
+    setShowEditModal(true);
+  };
+
+  const handleEditSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingContact) return;
+    
+    router.put(route('emergency-contacts.update', editingContact.id), editForm.data, {
+      onSuccess: () => {
+        setShowEditModal(false);
+        setEditingContact(null);
+      },
+    });
+  };
 
   const toggleType = (type: string) => {
     setExpandedTypes(prev =>
@@ -103,12 +185,10 @@ export default function EmergencyContactsIndex({ contacts, typeOptions, auth }: 
               </div>
 
               {auth.user?.canManage && (
-                <Link href={route('emergency-contacts.create')}>
-                  <Button className="bg-white text-red-900 hover:bg-red-50 w-full sm:w-auto">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Contact
-                  </Button>
-                </Link>
+                <Button onClick={() => setShowAddModal(true)} className="bg-white text-red-900 hover:bg-red-50 w-full sm:w-auto">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Contact
+                </Button>
               )}
             </div>
           </div>
@@ -217,12 +297,12 @@ export default function EmergencyContactsIndex({ contacts, typeOptions, auth }: 
                                 {/* Edit/Delete for managers */}
                                 {auth.user?.canManage && (
                                   <div className="flex items-center gap-2 mt-2">
-                                    <Link
-                                      href={route('emergency-contacts.edit', contact.id)}
+                                    <button
+                                      onClick={() => openEditModal(contact)}
                                       className="p-1.5 text-gray-500 hover:text-blue-400 hover:bg-blue-400/10 rounded transition-colors"
                                     >
                                       <Pencil className="h-4 w-4" />
-                                    </Link>
+                                    </button>
                                     <button
                                       onClick={() => {
                                         if (confirm('Delete this contact?')) {
@@ -258,17 +338,278 @@ export default function EmergencyContactsIndex({ contacts, typeOptions, auth }: 
                 Emergency contacts will appear here once added.
               </p>
               {auth.user?.canManage && (
-                <Link href={route('emergency-contacts.create')} className="mt-4 inline-block">
-                  <Button className="bg-red-600 hover:bg-red-700">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add First Contact
-                  </Button>
-                </Link>
+                <Button onClick={() => setShowAddModal(true)} className="mt-4 bg-red-600 hover:bg-red-700">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add First Contact
+                </Button>
               )}
             </div>
           )}
         </div>
       </div>
+
+      {/* Add Contact Modal */}
+      <Modal show={showAddModal} onClose={() => setShowAddModal(false)} maxWidth="2xl">
+        <div className="p-4 sm:p-6 bg-gray-900">
+          <h2 className="text-lg font-semibold text-gray-100 mb-4">Add Emergency Contact</h2>
+          <form onSubmit={handleAddSubmit} className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <Label className="text-gray-300">Contact Name *</Label>
+                <Input
+                  value={data.name}
+                  onChange={(e) => setData('name', e.target.value)}
+                  placeholder="e.g., Kamuzu Central Hospital"
+                  className="bg-gray-800 border-gray-700 text-gray-100 mt-1"
+                />
+                {errors.name && <p className="text-red-400 text-sm mt-1">{errors.name}</p>}
+              </div>
+
+              <div>
+                <Label className="text-gray-300">Type *</Label>
+                <select
+                  value={data.type}
+                  onChange={(e) => setData('type', e.target.value)}
+                  className="w-full mt-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded-md text-gray-100 focus:ring-2 focus:ring-red-500"
+                >
+                  <option value="">Select type</option>
+                  {Object.entries(typeOptions).map(([value, label]) => (
+                    <option key={value} value={value}>{label}</option>
+                  ))}
+                </select>
+                {errors.type && <p className="text-red-400 text-sm mt-1">{errors.type}</p>}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <Label className="text-gray-300 flex items-center gap-2">
+                  <Phone className="h-4 w-4" /> Primary Phone
+                </Label>
+                <Input
+                  value={data.phone}
+                  onChange={(e) => setData('phone', e.target.value)}
+                  placeholder="e.g., +265 1 234 567"
+                  className="bg-gray-800 border-gray-700 text-gray-100 mt-1"
+                />
+              </div>
+
+              <div>
+                <Label className="text-gray-300">Alternative Phone</Label>
+                <Input
+                  value={data.alternative_phone}
+                  onChange={(e) => setData('alternative_phone', e.target.value)}
+                  placeholder="e.g., +265 9 876 543"
+                  className="bg-gray-800 border-gray-700 text-gray-100 mt-1"
+                />
+              </div>
+            </div>
+
+            <div>
+              <Label className="text-gray-300">Email Address</Label>
+              <Input
+                type="email"
+                value={data.email}
+                onChange={(e) => setData('email', e.target.value)}
+                placeholder="contact@example.com"
+                className="bg-gray-800 border-gray-700 text-gray-100 mt-1"
+              />
+            </div>
+
+            <div>
+              <Label className="text-gray-300 flex items-center gap-2">
+                <MapPin className="h-4 w-4" /> Physical Address
+              </Label>
+              <textarea
+                value={data.address}
+                onChange={(e) => setData('address', e.target.value)}
+                placeholder="Enter the full address..."
+                rows={2}
+                className="w-full mt-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded-md text-gray-100 focus:ring-2 focus:ring-red-500"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <Label className="text-gray-300">Latitude</Label>
+                <Input
+                  type="number"
+                  step="any"
+                  min="-90"
+                  max="90"
+                  value={data.latitude}
+                  onChange={(e) => setData('latitude', e.target.value)}
+                  placeholder="-13.9626"
+                  className="bg-gray-800 border-gray-700 text-gray-100 mt-1"
+                />
+              </div>
+
+              <div>
+                <Label className="text-gray-300">Longitude</Label>
+                <Input
+                  type="number"
+                  step="any"
+                  min="-180"
+                  max="180"
+                  value={data.longitude}
+                  onChange={(e) => setData('longitude', e.target.value)}
+                  placeholder="33.7741"
+                  className="bg-gray-800 border-gray-700 text-gray-100 mt-1"
+                />
+              </div>
+            </div>
+
+            <div>
+              <Label className="text-gray-300 flex items-center gap-2">
+                <AlertCircle className="h-4 w-4" /> Notes
+              </Label>
+              <textarea
+                value={data.notes}
+                onChange={(e) => setData('notes', e.target.value)}
+                placeholder="Additional information..."
+                rows={2}
+                className="w-full mt-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded-md text-gray-100 focus:ring-2 focus:ring-red-500"
+              />
+            </div>
+
+            <div className="flex flex-col sm:flex-row justify-end gap-2 pt-2">
+              <Button type="button" variant="outline" onClick={() => setShowAddModal(false)} className="border-gray-700 text-gray-300 hover:bg-gray-800 w-full sm:w-auto">
+                Cancel
+              </Button>
+              <Button type="submit" disabled={processing} className="bg-red-600 hover:bg-red-700 w-full sm:w-auto">
+                <Save className="h-4 w-4 mr-2" />
+                {processing ? 'Saving...' : 'Save Contact'}
+              </Button>
+            </div>
+          </form>
+        </div>
+      </Modal>
+
+      {/* Edit Contact Modal */}
+      <Modal show={showEditModal} onClose={() => setShowEditModal(false)} maxWidth="2xl">
+        <div className="p-4 sm:p-6 bg-gray-900">
+          <h2 className="text-lg font-semibold text-gray-100 mb-4">Edit Emergency Contact</h2>
+          <form onSubmit={handleEditSubmit} className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <Label className="text-gray-300">Contact Name *</Label>
+                <Input
+                  value={editForm.data.name}
+                  onChange={(e) => editForm.setData('name', e.target.value)}
+                  className="bg-gray-800 border-gray-700 text-gray-100 mt-1"
+                />
+              </div>
+
+              <div>
+                <Label className="text-gray-300">Type *</Label>
+                <select
+                  value={editForm.data.type}
+                  onChange={(e) => editForm.setData('type', e.target.value)}
+                  className="w-full mt-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded-md text-gray-100 focus:ring-2 focus:ring-red-500"
+                >
+                  {Object.entries(typeOptions).map(([value, label]) => (
+                    <option key={value} value={value}>{label}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <Label className="text-gray-300 flex items-center gap-2">
+                  <Phone className="h-4 w-4" /> Primary Phone
+                </Label>
+                <Input
+                  value={editForm.data.phone}
+                  onChange={(e) => editForm.setData('phone', e.target.value)}
+                  className="bg-gray-800 border-gray-700 text-gray-100 mt-1"
+                />
+              </div>
+
+              <div>
+                <Label className="text-gray-300">Alternative Phone</Label>
+                <Input
+                  value={editForm.data.alternative_phone}
+                  onChange={(e) => editForm.setData('alternative_phone', e.target.value)}
+                  className="bg-gray-800 border-gray-700 text-gray-100 mt-1"
+                />
+              </div>
+            </div>
+
+            <div>
+              <Label className="text-gray-300">Email Address</Label>
+              <Input
+                type="email"
+                value={editForm.data.email}
+                onChange={(e) => editForm.setData('email', e.target.value)}
+                className="bg-gray-800 border-gray-700 text-gray-100 mt-1"
+              />
+            </div>
+
+            <div>
+              <Label className="text-gray-300 flex items-center gap-2">
+                <MapPin className="h-4 w-4" /> Physical Address
+              </Label>
+              <textarea
+                value={editForm.data.address}
+                onChange={(e) => editForm.setData('address', e.target.value)}
+                rows={2}
+                className="w-full mt-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded-md text-gray-100 focus:ring-2 focus:ring-red-500"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <Label className="text-gray-300">Latitude</Label>
+                <Input
+                  type="number"
+                  step="any"
+                  min="-90"
+                  max="90"
+                  value={editForm.data.latitude}
+                  onChange={(e) => editForm.setData('latitude', e.target.value)}
+                  className="bg-gray-800 border-gray-700 text-gray-100 mt-1"
+                />
+              </div>
+
+              <div>
+                <Label className="text-gray-300">Longitude</Label>
+                <Input
+                  type="number"
+                  step="any"
+                  min="-180"
+                  max="180"
+                  value={editForm.data.longitude}
+                  onChange={(e) => editForm.setData('longitude', e.target.value)}
+                  className="bg-gray-800 border-gray-700 text-gray-100 mt-1"
+                />
+              </div>
+            </div>
+
+            <div>
+              <Label className="text-gray-300 flex items-center gap-2">
+                <AlertCircle className="h-4 w-4" /> Notes
+              </Label>
+              <textarea
+                value={editForm.data.notes}
+                onChange={(e) => editForm.setData('notes', e.target.value)}
+                rows={2}
+                className="w-full mt-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded-md text-gray-100 focus:ring-2 focus:ring-red-500"
+              />
+            </div>
+
+            <div className="flex flex-col sm:flex-row justify-end gap-2 pt-2">
+              <Button type="button" variant="outline" onClick={() => setShowEditModal(false)} className="border-gray-700 text-gray-300 hover:bg-gray-800 w-full sm:w-auto">
+                Cancel
+              </Button>
+              <Button type="submit" disabled={editForm.processing} className="bg-red-600 hover:bg-red-700 w-full sm:w-auto">
+                <Save className="h-4 w-4 mr-2" />
+                {editForm.processing ? 'Saving...' : 'Save Changes'}
+              </Button>
+            </div>
+          </form>
+        </div>
+      </Modal>
     </AuthenticatedLayout>
   );
 }

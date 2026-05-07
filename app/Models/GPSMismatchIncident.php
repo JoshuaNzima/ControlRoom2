@@ -12,6 +12,8 @@ class GPSMismatchIncident extends Model
 {
     use HasFactory;
 
+    protected $table = 'gps_mismatch_incidents';
+
     protected $fillable = [
         'user_id',
         'site_id',

@@ -214,6 +214,7 @@ class AiSettingsController extends Controller
         $setting = AiSetting::where('provider', $provider)->firstOrFail();
 
         return response()->json([
+            'success' => true,
             'models' => $setting->free_models ?? [],
             'current' => $setting->model,
         ]);

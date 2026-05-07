@@ -144,7 +144,7 @@ class IncentiveViewController extends Controller
         ];
 
         $profiles = SupervisorIncentiveProfile::where('is_active', true)
-            ->with('guard')
+            ->with('guardRelation')
             ->get();
 
         return Inertia::render('ControlRoom/Incentives/Supervisor', [

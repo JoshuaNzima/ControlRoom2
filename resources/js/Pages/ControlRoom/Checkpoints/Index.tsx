@@ -64,6 +64,29 @@ export default function CheckpointsIndex() {
   
   const [loading, setLoading] = useState<Record<string, boolean>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [geoLoading, setGeoLoading] = useState(false);
+  const [geoError, setGeoError] = useState<string | null>(null);
+
+  const useCurrentLocation = (form: typeof addForm | typeof editForm) => {
+    if (!navigator.geolocation) {
+      setGeoError('Geolocation not supported');
+      return;
+    }
+    setGeoLoading(true);
+    setGeoError(null);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        (form as any).setData('latitude', pos.coords.latitude.toFixed(6));
+        (form as any).setData('longitude', pos.coords.longitude.toFixed(6));
+        setGeoLoading(false);
+      },
+      () => {
+        setGeoError('Unable to get current location');
+        setGeoLoading(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
+  };
 
   const addForm = useForm({
     client_site_id: '',
@@ -517,21 +540,22 @@ export default function CheckpointsIndex() {
               />
             </div>
             
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Scan Radius (m)</label>
-                <input
-                  type="number"
-                  className="w-full border border-gray-300 dark:border-gray-700 rounded-md p-2 text-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
-                  value={addForm.data.scan_radius_meters}
-                  onChange={(e) => {
-                    const val = parseInt(e.target.value);
-                    addForm.setData('scan_radius_meters', Number.isNaN(val) ? 50 : val);
-                  }}
-                  min={1}
-                  max={1000}
-                />
-              </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Scan Radius (m)</label>
+              <input
+                type="number"
+                className="w-full border border-gray-300 dark:border-gray-700 rounded-md p-2 text-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
+                value={addForm.data.scan_radius_meters}
+                onChange={(e) => {
+                  const val = parseInt(e.target.value);
+                  addForm.setData('scan_radius_meters', Number.isNaN(val) ? 50 : val);
+                }}
+                min={1}
+                max={1000}
+              />
+            </div>
+            
+            <div className="grid grid-cols-2 gap-2 sm:gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Latitude</label>
                 <input
@@ -543,18 +567,29 @@ export default function CheckpointsIndex() {
                   placeholder="-13.9626"
                 />
               </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Longitude</label>
+                <input
+                  type="number"
+                  step="any"
+                  className="w-full border border-gray-300 dark:border-gray-700 rounded-md p-2 text-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
+                  value={addForm.data.longitude}
+                  onChange={(e) => addForm.setData('longitude', e.target.value)}
+                  placeholder="33.7741"
+                />
+              </div>
             </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Longitude</label>
-              <input
-                type="number"
-                step="any"
-                className="w-full border border-gray-300 dark:border-gray-700 rounded-md p-2 text-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
-                value={addForm.data.longitude}
-                onChange={(e) => addForm.setData('longitude', e.target.value)}
-                placeholder="33.7741"
-              />
+            <div className="flex items-center gap-2">
+              <button type="button" onClick={() => useCurrentLocation(addForm)} disabled={geoLoading} className="px-3 py-1.5 text-xs rounded-md border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-60 flex items-center gap-1">
+                <IconMapper name="MapPin" size={12} />
+                {geoLoading ? 'Locating…' : 'Use my location'}
+              </button>
+              {addForm.data.latitude && addForm.data.longitude && (
+                <span className="text-xs text-gray-500 dark:text-gray-400">{Number(addForm.data.latitude).toFixed(4)}, {Number(addForm.data.longitude).toFixed(4)}</span>
+              )}
+              {geoError && (
+                <span className="text-xs text-red-500">{geoError}</span>
+              )}
             </div>
             
             <div className="flex flex-col gap-2">
@@ -642,21 +677,22 @@ export default function CheckpointsIndex() {
               />
             </div>
             
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Scan Radius (m)</label>
-                <input
-                  type="number"
-                  className="w-full border border-gray-300 dark:border-gray-700 rounded-md p-2 text-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
-                  value={editForm.data.scan_radius_meters}
-                  onChange={(e) => {
-                    const val = parseInt(e.target.value);
-                    editForm.setData('scan_radius_meters', Number.isNaN(val) ? 50 : val);
-                  }}
-                  min={1}
-                  max={1000}
-                />
-              </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Scan Radius (m)</label>
+              <input
+                type="number"
+                className="w-full border border-gray-300 dark:border-gray-700 rounded-md p-2 text-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
+                value={editForm.data.scan_radius_meters}
+                onChange={(e) => {
+                  const val = parseInt(e.target.value);
+                  editForm.setData('scan_radius_meters', Number.isNaN(val) ? 50 : val);
+                }}
+                min={1}
+                max={1000}
+              />
+            </div>
+            
+            <div className="grid grid-cols-2 gap-2 sm:gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Latitude</label>
                 <input
@@ -667,17 +703,28 @@ export default function CheckpointsIndex() {
                   onChange={(e) => editForm.setData('latitude', e.target.value)}
                 />
               </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Longitude</label>
+                <input
+                  type="number"
+                  step="any"
+                  className="w-full border border-gray-300 dark:border-gray-700 rounded-md p-2 text-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
+                  value={editForm.data.longitude}
+                  onChange={(e) => editForm.setData('longitude', e.target.value)}
+                />
+              </div>
             </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Longitude</label>
-              <input
-                type="number"
-                step="any"
-                className="w-full border border-gray-300 dark:border-gray-700 rounded-md p-2 text-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
-                value={editForm.data.longitude}
-                onChange={(e) => editForm.setData('longitude', e.target.value)}
-              />
+            <div className="flex items-center gap-2">
+              <button type="button" onClick={() => useCurrentLocation(editForm)} disabled={geoLoading} className="px-3 py-1.5 text-xs rounded-md border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-60 flex items-center gap-1">
+                <IconMapper name="MapPin" size={12} />
+                {geoLoading ? 'Locating…' : 'Use my location'}
+              </button>
+              {editForm.data.latitude && editForm.data.longitude && (
+                <span className="text-xs text-gray-500 dark:text-gray-400">{Number(editForm.data.latitude).toFixed(4)}, {Number(editForm.data.longitude).toFixed(4)}</span>
+              )}
+              {geoError && (
+                <span className="text-xs text-red-500">{geoError}</span>
+              )}
             </div>
             
             <div className="flex flex-col gap-2">

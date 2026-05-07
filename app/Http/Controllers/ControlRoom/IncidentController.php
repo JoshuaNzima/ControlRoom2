@@ -23,7 +23,8 @@ class IncidentController extends Controller
 
     public function create()
     {
-        return Inertia::render('ControlRoom/Incidents/Create');
+        // Deprecated: redirect to index with modal trigger
+        return redirect()->route('control-room.incidents.index', ['show_add' => 1]);
     }
 
     public function store(Request $request)

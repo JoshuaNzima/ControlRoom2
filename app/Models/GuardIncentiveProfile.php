@@ -27,7 +27,7 @@ class GuardIncentiveProfile extends Model
         'effective_until' => 'date',
     ];
 
-    public function guard(): BelongsTo
+    public function guardRelation(): BelongsTo
     {
         return $this->belongsTo(Guard::class);
     }

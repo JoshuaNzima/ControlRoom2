@@ -31,7 +31,7 @@ const clientInlineFieldClassName =
   'rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 px-3 py-1 focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950';
 
 export default function AddClientModal({ open, onClose, services = [], zones = [] }: AddClientModalPropsExtended) {
-  const { data, setData, post, processing, errors, reset } = useForm({
+  const { data, setData, post, processing, errors, reset, transform } = useForm({
     name: '',
     contact_person: '',
     phone: '',
@@ -81,13 +81,29 @@ export default function AddClientModal({ open, onClose, services = [], zones = [
     setData('monthly_rate', totalMonthlyRate);
   }, [data.services]);
 
+  // Transform data before submission to convert empty strings to null
+  transform((data) => ({
+    ...data,
+    site: {
+      ...data.site,
+      zone_id: data.site.zone_id === '' ? null : data.site.zone_id,
+      latitude: data.site.latitude === '' ? null : data.site.latitude,
+      longitude: data.site.longitude === '' ? null : data.site.longitude,
+    },
+  }));
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('Submitting client form...', data);
     post(route('admin.clients.store'), {
       onSuccess: () => {
+        console.log('Client created successfully');
         reset();
         onClose();
         router.reload({ only: ['clients'] });
+      },
+      onError: (err) => {
+        console.error('Client creation error:', err);
       },
     });
   };
@@ -99,7 +115,7 @@ export default function AddClientModal({ open, onClose, services = [], zones = [
           <DialogTitle>Add New Client</DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-6" noValidate>
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Client Name *</label>
             <input
@@ -301,13 +317,12 @@ export default function AddClientModal({ open, onClose, services = [], zones = [
                 </select>
               </div>
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Address *</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Address</label>
                 <textarea 
                   value={data.site.address} 
                   onChange={(e) => setData('site', { ...data.site, address: e.target.value })} 
                   className={clientFieldClassName}
-                  required
-                  placeholder="Enter site address"
+                  placeholder="Enter site address (defaults to client address if empty)"
                 />
                 {errors['site.address'] && <p className="text-red-600 text-sm mt-1">{(errors as any)['site.address']}</p>}
               </div>

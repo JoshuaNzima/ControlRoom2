@@ -75,6 +75,7 @@ class CheckpointController extends Controller
 
         if ($request->wantsJson()) {
             return response()->json([
+                'success' => true,
                 'checkpoints' => $checkpoints,
                 'sites' => $sites,
             ]);
@@ -245,7 +246,7 @@ class CheckpointController extends Controller
             ->get();
 
         if ($checkpoints->isEmpty()) {
-            return response('<html><body><h2>No checkpoints selected</h2></body></html>', 200, ['Content-Type' => 'text/html']);
+            return $this->errorResponse('No checkpoints selected.', 422);
         }
 
         $logoUrl = asset('images/Coin-logo.png');

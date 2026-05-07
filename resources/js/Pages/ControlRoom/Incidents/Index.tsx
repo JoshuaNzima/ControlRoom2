@@ -1,9 +1,12 @@
-import React from 'react';
-import { Head, Link } from '@inertiajs/react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Head, Link, useForm, router } from '@inertiajs/react';
 import ControlRoomLayout from '@/Layouts/ControlRoomLayout';
+import Modal from '@/Components/Modal';
 import { Card, CardContent, CardHeader } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import { Badge } from '@/Components/ui/badge';
+import { Input } from '@/Components/ui/input';
+import { Label } from '@/Components/ui/label';
 import IconMapper from '@/Components/IconMapper';
 
 interface Incident {
@@ -23,9 +26,86 @@ interface Incident {
 interface IncidentsIndexProps {
   auth?: { user?: { name?: string } };
   incidents: { data: Incident[] };
+  show_add?: number;
 }
 
-const IncidentsIndex = ({ auth, incidents }: IncidentsIndexProps) => {
+const IncidentsIndex = ({ auth, incidents, show_add }: IncidentsIndexProps) => {
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [siteSearch, setSiteSearch] = useState('');
+  const [siteResults, setSiteResults] = useState<Array<{ id: number; name: string; client_name: string }>>([]);
+  const [loadingSites, setLoadingSites] = useState(false);
+  const [selectedSiteName, setSelectedSiteName] = useState<string>('');
+
+  const [guardSearch, setGuardSearch] = useState('');
+  const [guardResults, setGuardResults] = useState<Array<{ id: number; name: string; employee_id?: string }>>([]);
+  const [loadingGuards, setLoadingGuards] = useState(false);
+  const [selectedGuardName, setSelectedGuardName] = useState<string>('');
+
+  const { data, setData, post, processing, errors, reset } = useForm({
+    title: '',
+    type: '',
+    severity: '',
+    description: '',
+    location: '',
+    client_id: '',
+    client_site_id: '',
+    guard_id: '',
+    flag_guard: false as boolean,
+    flag_reason: '',
+    flag_details: '',
+  });
+
+  // Open add modal if show_add query param is present
+  useEffect(() => {
+    if (show_add) {
+      setShowAddModal(true);
+    }
+  }, [show_add]);
+
+  const loadSites = useCallback(async () => {
+    try {
+      setLoadingSites(true);
+      const params = new URLSearchParams();
+      if (siteSearch) params.set('search', siteSearch);
+      const url = `${route('control-room.clients.sites.json')}?${params.toString()}`;
+      const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+      const list = await res.json();
+      setSiteResults(Array.isArray(list) ? list : []);
+    } catch {
+      setSiteResults([]);
+    } finally {
+      setLoadingSites(false);
+    }
+  }, [siteSearch]);
+
+  const loadGuards = useCallback(async () => {
+    try {
+      setLoadingGuards(true);
+      const params = new URLSearchParams();
+      if (guardSearch) params.set('q', guardSearch);
+      const url = `${route('control-room.guards.search')}?${params.toString()}`;
+      const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+      const list = await res.json();
+      setGuardResults(Array.isArray(list) ? list : []);
+    } catch {
+      setGuardResults([]);
+    } finally {
+      setLoadingGuards(false);
+    }
+  }, [guardSearch]);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    post(route('control-room.incidents.store'), {
+      onSuccess: () => {
+        setShowAddModal(false);
+        reset();
+        setSelectedSiteName('');
+        setSelectedGuardName('');
+      },
+    });
+  };
+
   const getSeverityColor = (severity: string) => {
     switch (severity) {
       case 'critical': return 'bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100';
@@ -64,12 +144,10 @@ const IncidentsIndex = ({ auth, incidents }: IncidentsIndexProps) => {
                 Track, manage, and resolve security incidents
               </p>
             </div>
-            <Link href={route('control-room.incidents.create')}>
-              <Button className="w-full sm:w-auto bg-white text-coin-700 hover:bg-coin-50">
+            <Button onClick={() => setShowAddModal(true)} className="w-full sm:w-auto bg-white text-coin-700 hover:bg-coin-50">
                 <IconMapper name="Plus" size={16} className="mr-2" />
                 New Incident
               </Button>
-            </Link>
           </div>
 
           {/* Stats Row */}
@@ -173,6 +251,199 @@ const IncidentsIndex = ({ auth, incidents }: IncidentsIndexProps) => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Add Incident Modal */}
+      <Modal show={showAddModal} onClose={() => setShowAddModal(false)} maxWidth="2xl">
+        <div className="p-4 sm:p-6 bg-white dark:bg-gray-900">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Create New Incident</h2>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <Label className="text-gray-700 dark:text-gray-300">Incident Title *</Label>
+              <Input
+                value={data.title}
+                onChange={(e) => setData('title', e.target.value)}
+                placeholder="Enter incident title"
+                className="mt-1 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100"
+              />
+              {errors.title && <p className="text-red-500 text-sm mt-1">{errors.title}</p>}
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <Label className="text-gray-700 dark:text-gray-300">Incident Type *</Label>
+                <select
+                  value={data.type}
+                  onChange={(e) => setData('type', e.target.value)}
+                  className="w-full mt-1 px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-coin-500"
+                >
+                  <option value="">Select type</option>
+                  <option value="security_breach">Security Breach</option>
+                  <option value="equipment_failure">Equipment Failure</option>
+                  <option value="personnel_issue">Personnel Issue</option>
+                  <option value="other">Other</option>
+                </select>
+                {errors.type && <p className="text-red-500 text-sm mt-1">{errors.type}</p>}
+              </div>
+
+              <div>
+                <Label className="text-gray-700 dark:text-gray-300">Severity Level *</Label>
+                <select
+                  value={data.severity}
+                  onChange={(e) => setData('severity', e.target.value)}
+                  className="w-full mt-1 px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-coin-500"
+                >
+                  <option value="">Select severity</option>
+                  <option value="low">Low</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                  <option value="critical">Critical</option>
+                </select>
+                {errors.severity && <p className="text-red-500 text-sm mt-1">{errors.severity}</p>}
+              </div>
+            </div>
+
+            <div>
+              <Label className="text-gray-700 dark:text-gray-300">Location *</Label>
+              <Input
+                value={data.location}
+                onChange={(e) => setData('location', e.target.value)}
+                placeholder="Enter incident location"
+                className="mt-1 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100"
+              />
+              {errors.location && <p className="text-red-500 text-sm mt-1">{errors.location}</p>}
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-end gap-2">
+                <div className="flex-1">
+                  <Label className="text-gray-700 dark:text-gray-300">Link Site</Label>
+                  <Input
+                    value={siteSearch}
+                    onChange={(e) => setSiteSearch(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), loadSites())}
+                    placeholder="Search site or client name"
+                    className="mt-1 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100"
+                  />
+                </div>
+                <Button type="button" onClick={loadSites} variant="outline" className="h-9 dark:border-gray-700 dark:text-gray-300">{loadingSites ? 'Loading…' : 'Search'}</Button>
+              </div>
+              {selectedSiteName && (
+                <div className="text-xs text-gray-500">Selected site: <span className="font-medium text-gray-800 dark:text-gray-200">{selectedSiteName}</span></div>
+              )}
+              <div className="max-h-32 overflow-y-auto rounded border border-gray-200 dark:border-gray-700">
+                {siteResults.length === 0 ? (
+                  <div className="p-2 text-sm text-gray-500">{loadingSites ? 'Loading…' : 'No sites found'}</div>
+                ) : (
+                  <ul>
+                    {siteResults.map((s) => (
+                      <li key={s.id}>
+                        <button
+                          type="button"
+                          onClick={() => { setData('client_site_id', String(s.id)); setSelectedSiteName(`${s.client_name} • ${s.name}`); }}
+                          className="w-full text-left px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                        >
+                          <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{s.client_name}</div>
+                          <div className="text-xs text-gray-500">{s.name}</div>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-end gap-2">
+                <div className="flex-1">
+                  <Label className="text-gray-700 dark:text-gray-300">Link Guard</Label>
+                  <Input
+                    value={guardSearch}
+                    onChange={(e) => setGuardSearch(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), loadGuards())}
+                    placeholder="Search guard name or employee ID"
+                    className="mt-1 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100"
+                  />
+                </div>
+                <Button type="button" onClick={loadGuards} variant="outline" className="h-9 dark:border-gray-700 dark:text-gray-300">{loadingGuards ? 'Loading…' : 'Search'}</Button>
+              </div>
+              {selectedGuardName && (
+                <div className="text-xs text-gray-500">Selected guard: <span className="font-medium text-gray-800 dark:text-gray-200">{selectedGuardName}</span></div>
+              )}
+              <div className="max-h-32 overflow-y-auto rounded border border-gray-200 dark:border-gray-700">
+                {guardResults.length === 0 ? (
+                  <div className="p-2 text-sm text-gray-500">{loadingGuards ? 'Loading…' : 'No guards found'}</div>
+                ) : (
+                  <ul>
+                    {guardResults.map((g) => (
+                      <li key={g.id}>
+                        <button
+                          type="button"
+                          onClick={() => { setData('guard_id', String(g.id)); setSelectedGuardName(`${g.name}${g.employee_id ? ' • ' + g.employee_id : ''}`); }}
+                          className="w-full text-left px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                        >
+                          <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{g.name}</div>
+                          {g.employee_id && (<div className="text-xs text-gray-500">{g.employee_id}</div>)}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
+
+            <div>
+              <Label className="text-gray-700 dark:text-gray-300">Description *</Label>
+              <textarea
+                value={data.description}
+                onChange={(e) => setData('description', e.target.value)}
+                placeholder="Provide detailed description of the incident"
+                rows={4}
+                className="w-full mt-1 px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-coin-500"
+              />
+              {errors.description && <p className="text-red-500 text-sm mt-1">{errors.description}</p>}
+            </div>
+
+            <div className="space-y-2">
+              <label className="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                <input type="checkbox" checked={data.flag_guard} onChange={(e) => setData('flag_guard', e.target.checked)} className="rounded border-gray-300" />
+                Flag involved guard now
+              </label>
+              {data.flag_guard && (
+                <div className="grid grid-cols-1 gap-3 pl-6">
+                  <div>
+                    <Label className="text-gray-700 dark:text-gray-300">Flag Reason</Label>
+                    <Input
+                      value={data.flag_reason}
+                      onChange={(e) => setData('flag_reason', e.target.value)}
+                      placeholder="Reason for flag"
+                      className="mt-1 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-gray-700 dark:text-gray-300">Flag Details</Label>
+                    <textarea
+                      value={data.flag_details}
+                      onChange={(e) => setData('flag_details', e.target.value)}
+                      placeholder="Additional details"
+                      rows={2}
+                      className="w-full mt-1 px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-coin-500"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="flex flex-col sm:flex-row justify-end gap-2 pt-2">
+              <Button type="button" variant="outline" onClick={() => setShowAddModal(false)} className="dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800 w-full sm:w-auto">
+                Cancel
+              </Button>
+              <Button type="submit" disabled={processing} className="bg-coin-600 hover:bg-coin-700 text-white w-full sm:w-auto">
+                {processing ? 'Creating...' : 'Create Incident'}
+              </Button>
+            </div>
+          </form>
+        </div>
+      </Modal>
     </ControlRoomLayout>
   );
 };

@@ -367,7 +367,7 @@ export default function SuperAdminGuards({ guards, inactiveGuards, filters, supe
   const submitUpdate = async (formData: FormData) => {
     if (!selectedGuard) return;
     setSaving(true);
-    router.post(route('admin.guards.update', { guard: selectedGuard.id }), formData, {
+    router.put(route('admin.guards.update', { guard: selectedGuard.id }), formData, {
       preserveScroll: true,
       onFinish: () => setSaving(false),
       onSuccess: () => { setShowEdit(false); push('Guard updated successfully', 'success'); },

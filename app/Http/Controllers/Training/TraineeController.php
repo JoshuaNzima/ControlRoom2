@@ -147,6 +147,7 @@ class TraineeController extends Controller
         $trainee->load(['trainers:id,name', 'regimen:id,title,track,default_days', 'primaryTrainer:id,name']);
 
         return response()->json([
+            'success' => true,
             'id' => $trainee->id,
             'name' => $trainee->name,
             'phone' => $trainee->phone,

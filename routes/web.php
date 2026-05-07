@@ -248,7 +248,7 @@ Route::middleware(['auth', 'role:super_admin'])->prefix('superadmin')->name('sup
             'total' => $statsQuery->count(),
             'active' => (clone $statsQuery)->whereIn('status', $activeStatuses)->count(),
             'inactive' => (clone $statsQuery)->whereIn('status', $inactiveStatuses)->count(),
-            'assigned' => (clone $statsQuery)->whereIn('status', $activeStatuses)->whereHas('assignments', fn($q) => $q->where('status', 'active'))->count(),
+            'assigned' => (clone $statsQuery)->whereIn('status', $activeStatuses)->whereHas('assignments', fn($q) => $q->where('is_active', true))->count(),
             'incomplete' => (clone $statsQuery)->where(function ($q) {
                 $q->whereNull('id_number')->orWhere('id_number', '')
                   ->orWhereNull('emergency_contact_name')->orWhere('emergency_contact_name', '')
@@ -638,9 +638,9 @@ Route::middleware(['auth'])->group(function () {
     // Client routes are now moved to the admin group
     
     // Admin Guard Assignments
-    Route::get('/guard-assignments', [App\Http\Controllers\Admin\GuardAssignmentController::class, 'index'])->name('guard-assignments');
-    Route::post('/guards/assign-supervisor', [App\Http\Controllers\Admin\GuardAssignmentController::class, 'assignToSupervisor'])->name('guards.assign-supervisor');
-    Route::post('/guards/unassign-supervisor', [App\Http\Controllers\Admin\GuardAssignmentController::class, 'unassignFromSupervisor'])->name('guards.unassign-supervisor');
+    Route::get('/guard-assignments', [App\Http\Controllers\Admin\GuardAssignmentController::class, 'index'])->middleware('role:admin,super_admin,zone_commander')->name('guard-assignments');
+    Route::post('/guards/assign-supervisor', [App\Http\Controllers\Admin\GuardAssignmentController::class, 'assignToSupervisor'])->middleware('role:admin,super_admin,zone_commander')->name('guards.assign-supervisor');
+    Route::post('/guards/unassign-supervisor', [App\Http\Controllers\Admin\GuardAssignmentController::class, 'unassignFromSupervisor'])->middleware('role:admin,super_admin,zone_commander')->name('guards.unassign-supervisor');
     
     // Admin User Management routes exist under the admin prefix in routes/modules/admin.php
 

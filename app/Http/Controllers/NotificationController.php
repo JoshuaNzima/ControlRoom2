@@ -23,25 +23,25 @@ class NotificationController extends Controller
                 ];
             });
 
-        return response()->json(['notifications' => $notifications]);
+        return response()->json(['success' => true, 'notifications' => $notifications]);
     }
 
     public function unreadCount(Request $request)
     {
         $count = $request->user()->unreadNotifications()->count();
-        return response()->json(['count' => $count]);
+        return response()->json(['success' => true, 'count' => $count]);
     }
 
     public function markAsRead(Request $request, string $id)
     {
         $notification = $request->user()->notifications()->where('id', $id)->firstOrFail();
         $notification->markAsRead();
-        return response()->json(['ok' => true]);
+        return $this->successResponse([], 'Notification marked as read.');
     }
 
     public function markAllAsRead(Request $request)
     {
         $request->user()->unreadNotifications->markAsRead();
-        return response()->json(['ok' => true]);
+        return $this->successResponse([], 'Notification marked as read.');
     }
 }

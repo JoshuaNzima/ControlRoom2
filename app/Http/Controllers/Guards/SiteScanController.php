@@ -41,7 +41,7 @@ class SiteScanController extends Controller
                         'site' => 'No site specified. Please scan a valid QR code at the client site.',
                     ]);
                 }
-                return response()->json(['error' => 'No site specified. Please scan a valid QR code at the client site.'], 400);
+                return $this->errorResponse('No site specified. Please scan a valid QR code at the client site.', 400);
             }
             $site = ClientSite::find($siteId);
             if (!$site) {
@@ -50,7 +50,7 @@ class SiteScanController extends Controller
                         'site' => 'Site not found. The QR code may be expired or invalid. Please contact your supervisor or try scanning again.',
                     ]);
                 }
-                return response()->json(['error' => 'Site not found. The QR code may be expired or invalid. Please contact your supervisor or try scanning again.'], 404);
+                return $this->errorResponse('Site not found. The QR code may be expired or invalid. Please contact your supervisor or try scanning again.', 404);
             }
         }
 
@@ -69,7 +69,7 @@ class SiteScanController extends Controller
                     'gps' => $errorMessage,
                 ]);
             }
-            return response()->json(['error' => $errorMessage], 400);
+            return $this->errorResponse($errorMessage, 400);
         }
 
         // Location verification (within configurable radius of site)
@@ -143,12 +143,11 @@ class SiteScanController extends Controller
                     'gps' => $errorMessage,
                 ]);
             }
-            return response()->json([
-                'error' => $errorMessage,
+            return $this->errorResponse($errorMessage, 403, [
                 'distance_meters' => $distance,
                 'required_radius' => $siteRadius,
-                'location_verified' => false
-            ], 403);
+                'location_verified' => false,
+            ]);
         }
 
         // Get or create default checkpoint for this site

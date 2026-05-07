@@ -88,6 +88,15 @@ Route::middleware(['auth', 'role:super_admin|finance_officer|accountant|finance|
             ->name('payments.toggle')
             ->middleware('permission:finance.manage');
 
+        // Petty Cash Management
+        Route::prefix('petty-cash')->name('petty-cash.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Finance\PettyCashController::class, 'index'])->name('index');
+            Route::post('/', [\App\Http\Controllers\Finance\PettyCashController::class, 'store'])->name('store');
+            Route::post('/{entry}/approve', [\App\Http\Controllers\Finance\PettyCashController::class, 'approve'])->name('approve');
+            Route::post('/{entry}/reject', [\App\Http\Controllers\Finance\PettyCashController::class, 'reject'])->name('reject');
+            Route::delete('/{entry}', [\App\Http\Controllers\Finance\PettyCashController::class, 'destroy'])->name('destroy');
+        });
+
         // Approval Management (admins only)
         Route::middleware(['role:super_admin|admin'])->group(function () {
             Route::get('approvals', [\App\Http\Controllers\Finance\ApprovalController::class, 'index'])

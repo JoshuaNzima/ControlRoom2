@@ -99,6 +99,7 @@ class CounterController extends Controller
             : 0;
 
         return response()->json([
+            'success' => true,
             'notifications_unread' => $notificationsUnread,
             'requisitions_my_open' => $requisitionsMyOpen,
             'requisitions_needs_revision' => $requisitionsNeedsRevision,

@@ -27,11 +27,8 @@ class EmergencyContactController extends Controller
 
     public function create()
     {
-        $this->authorize('manage', EmergencyContact::class);
-
-        return Inertia::render('EmergencyContacts/Create', [
-            'typeOptions' => EmergencyContact::getTypeOptions(),
-        ]);
+        // Deprecated: redirect to index with modal trigger
+        return redirect()->route('emergency-contacts.index', ['show_add' => 1]);
     }
 
     public function store(Request $request)

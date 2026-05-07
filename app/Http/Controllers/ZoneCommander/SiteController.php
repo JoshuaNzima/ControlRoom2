@@ -103,7 +103,7 @@ class SiteController extends Controller
 	{
 		$user = Auth::user();
 		if (!$user->zone_id) {
-			return response()->json([]);
+			return response()->json(['success' => true, 'sites' => []]);
 		}
 
 		$search = trim((string) $request->query('search', ''));
@@ -122,13 +122,14 @@ class SiteController extends Controller
 			->limit(200)
 			->get(['id', 'name', 'client_id']);
 
-		return response()->json(
-			$sites->map(fn ($s) => [
+		return response()->json([
+			'success' => true,
+			'sites' => $sites->map(fn ($s) => [
 				'id' => $s->id,
 				'name' => $s->name,
 				'client_name' => (string) (optional($s->client)->name ?? ''),
-			])->values()
-		);
+			])->values(),
+		]);
 	}
 }
 

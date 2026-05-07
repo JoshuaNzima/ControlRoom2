@@ -41,22 +41,6 @@ class BudgetController extends Controller
             'budgets_exceeded' => 0,
         ];
 
-        return Inertia::render('Finance/Budgets/Index', [
-            'budgets' => $budgets,
-            'summary' => $summary,
-            'filters' => [
-                'fiscal_year' => $request->fiscal_year ?? now()->year,
-                'status' => $request->status,
-            ],
-            'years' => range(now()->year - 3, now()->year + 1),
-        ]);
-    }
-
-    /**
-     * Show the form for creating a new budget
-     */
-    public function create()
-    {
         $expenseCategories = [
             'general',
             'office_supplies',
@@ -69,10 +53,26 @@ class BudgetController extends Controller
             'other',
         ];
 
-        return Inertia::render('Finance/Budgets/Create', [
+        return Inertia::render('Finance/Budgets/Index', [
+            'budgets' => $budgets,
+            'summary' => $summary,
+            'filters' => [
+                'fiscal_year' => $request->fiscal_year ?? now()->year,
+                'status' => $request->status,
+            ],
+            'years' => range(now()->year - 3, now()->year + 1),
             'categories' => $expenseCategories,
             'currentYear' => now()->year,
         ]);
+    }
+
+    /**
+     * Show the form for creating a new budget
+     */
+    public function create()
+    {
+        // Deprecated: redirect to index with modal trigger
+        return redirect()->route('finance.budgets.index', ['show_add' => 1]);
     }
 
     /**

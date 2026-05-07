@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
-import { Head, Link, router } from '@inertiajs/react';
+import React, { useState, useEffect } from 'react';
+import { Head, Link, router, useForm } from '@inertiajs/react';
 import FinanceLayout from '@/Layouts/FinanceLayout';
+import Modal from '@/Components/Modal';
 import { formatCurrency } from '@/utils/formatters';
 
 interface Budget {
@@ -34,13 +35,58 @@ interface Props {
     status?: string;
   };
   years: number[];
+  categories: string[];
+  currentYear: number;
+  show_add?: number;
 }
 
 const statuses = ['active', 'inactive', 'archived'];
 
-export default function BudgetIndex({ budgets, summary, filters, years }: Props) {
+const months = [
+  { value: 1, label: 'January' },
+  { value: 2, label: 'February' },
+  { value: 3, label: 'March' },
+  { value: 4, label: 'April' },
+  { value: 5, label: 'May' },
+  { value: 6, label: 'June' },
+  { value: 7, label: 'July' },
+  { value: 8, label: 'August' },
+  { value: 9, label: 'September' },
+  { value: 10, label: 'October' },
+  { value: 11, label: 'November' },
+  { value: 12, label: 'December' },
+];
+
+export default function BudgetIndex({ budgets, summary, filters, years, categories, currentYear, show_add }: Props) {
   const [filterYear, setFilterYear] = useState(filters.fiscal_year || new Date().getFullYear());
   const [filterStatus, setFilterStatus] = useState(filters.status || '');
+  const [showAddModal, setShowAddModal] = useState(false);
+
+  const { data, setData, post, processing, errors, reset } = useForm({
+    name: '',
+    category: categories[0] || 'general',
+    budgeted_amount: '',
+    fiscal_year: currentYear.toString(),
+    fiscal_month: '',
+    description: '',
+  });
+
+  // Open add modal if show_add query param is present
+  useEffect(() => {
+    if (show_add) {
+      setShowAddModal(true);
+    }
+  }, [show_add]);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    post(route('finance.budgets.store'), {
+      onSuccess: () => {
+        setShowAddModal(false);
+        reset();
+      },
+    });
+  };
 
   const handleFilter = () => {
     const params: any = { fiscal_year: filterYear };
@@ -72,12 +118,12 @@ export default function BudgetIndex({ budgets, summary, filters, years }: Props)
           {/* Header */}
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
             <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Budgets</h1>
-            <Link
-              href={route('finance.budgets.create')}
+            <button
+              onClick={() => setShowAddModal(true)}
               className="w-full sm:w-auto inline-flex items-center justify-center px-4 py-2 bg-coin-600 text-white rounded-lg hover:bg-coin-700 transition"
             >
               + New Budget
-            </Link>
+            </button>
           </div>
 
           {/* Summary Cards */}
@@ -206,12 +252,12 @@ export default function BudgetIndex({ budgets, summary, filters, years }: Props)
           ) : (
             <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg shadow p-12 text-center">
               <p className="text-gray-500 dark:text-gray-400 mb-4">No budgets found for the selected year.</p>
-              <Link
-                href={route('finance.budgets.create')}
+              <button
+                onClick={() => setShowAddModal(true)}
                 className="inline-flex items-center px-4 py-2 bg-coin-600 text-white rounded-lg hover:bg-coin-700 transition"
               >
                 + Create First Budget
-              </Link>
+              </button>
             </div>
           )}
 
@@ -234,6 +280,137 @@ export default function BudgetIndex({ budgets, summary, filters, years }: Props)
           )}
         </div>
       </div>
+
+      {/* Add Budget Modal */}
+      <Modal show={showAddModal} onClose={() => setShowAddModal(false)} maxWidth="2xl">
+        <div className="p-4 sm:p-6 bg-white dark:bg-gray-950">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Create New Budget</h2>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Budget Name *
+              </label>
+              <input
+                type="text"
+                required
+                value={data.name}
+                onChange={(e) => setData('name', e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-coin-500 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
+                placeholder="e.g., Marketing Q1 2025"
+              />
+              {errors.name && <p className="mt-1 text-sm text-red-600">{errors.name}</p>}
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Category *
+                </label>
+                <select
+                  value={data.category}
+                  onChange={(e) => setData('category', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-coin-500 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
+                >
+                  {categories.map((cat) => (
+                    <option key={cat} value={cat}>
+                      {cat.replace(/_/g, ' ')}
+                    </option>
+                  ))}
+                </select>
+                {errors.category && <p className="mt-1 text-sm text-red-600">{errors.category}</p>}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Budgeted Amount *
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3 top-2 text-gray-500 dark:text-gray-400">MWK</span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    required
+                    value={data.budgeted_amount}
+                    onChange={(e) => setData('budgeted_amount', e.target.value)}
+                    className="w-full pl-14 px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-coin-500 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
+                    placeholder="0.00"
+                  />
+                </div>
+                {errors.budgeted_amount && <p className="mt-1 text-sm text-red-600">{errors.budgeted_amount}</p>}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Fiscal Year *
+                </label>
+                <select
+                  value={data.fiscal_year}
+                  onChange={(e) => setData('fiscal_year', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-coin-500 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
+                >
+                  {years.map((year) => (
+                    <option key={year} value={year}>
+                      {year}
+                    </option>
+                  ))}
+                </select>
+                {errors.fiscal_year && <p className="mt-1 text-sm text-red-600">{errors.fiscal_year}</p>}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Fiscal Month (Optional)
+                </label>
+                <select
+                  value={data.fiscal_month}
+                  onChange={(e) => setData('fiscal_month', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-coin-500 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
+                >
+                  <option value="">Annual Budget</option>
+                  {months.map((month) => (
+                    <option key={month.value} value={month.value.toString()}>
+                      {month.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Description
+              </label>
+              <textarea
+                value={data.description}
+                onChange={(e) => setData('description', e.target.value)}
+                rows={3}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-coin-500 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
+                placeholder="Add notes about this budget..."
+              />
+            </div>
+
+            <div className="flex flex-col sm:flex-row justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowAddModal(false)}
+                className="w-full sm:w-auto px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition font-medium dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={processing}
+                className="w-full sm:w-auto px-4 py-2 bg-coin-600 text-white rounded-lg hover:bg-coin-700 disabled:bg-gray-400 transition font-medium"
+              >
+                {processing ? 'Creating...' : 'Create Budget'}
+              </button>
+            </div>
+          </form>
+        </div>
+      </Modal>
     </FinanceLayout>
   );
 }

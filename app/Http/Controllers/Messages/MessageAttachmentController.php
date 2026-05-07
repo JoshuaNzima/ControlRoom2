@@ -33,6 +33,7 @@ class MessageAttachmentController extends Controller
         ]);
 
         return response()->json([
+            'success' => true,
             'id' => $attachment->id,
             'file_name' => $attachment->file_name,
             'file_type' => $attachment->file_type,
@@ -74,6 +75,6 @@ class MessageAttachmentController extends Controller
         Storage::disk('private')->delete($attachment->file_path);
         $attachment->delete();
 
-        return response()->json(['deleted' => true]);
+        return response()->json(['success' => true, 'deleted' => true]);
     }
 }

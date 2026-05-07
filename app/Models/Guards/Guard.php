@@ -324,6 +324,8 @@ class Guard extends Model
             'suspended' => 'red',
             'dismissed' => 'gray',
             'absconded' => 'red',
+            'resigned' => 'gray',
+            'retired' => 'gray',
             default => 'gray',
         };
     }

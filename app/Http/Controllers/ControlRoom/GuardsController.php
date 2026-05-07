@@ -295,6 +295,7 @@ class GuardsController extends Controller
         $ratePercent = $totalDays > 0 ? round(($presentDays / $totalDays) * 100) : null;
 
         return response()->json([
+            'success' => true,
             'id' => $guard->id,
             'employee_id' => $guard->employee_id,
             'name' => $guard->name,
