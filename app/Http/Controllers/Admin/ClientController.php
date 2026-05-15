@@ -42,7 +42,7 @@ class ClientController extends Controller
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'address' => 'nullable|string',
+            'address' => 'required|string',
             'contact_person' => 'nullable|string|max:255',
             'phone' => 'nullable|string|max:20',
             'latitude' => 'nullable|numeric|between:-90,90',
@@ -530,7 +530,7 @@ class ClientController extends Controller
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'address' => 'nullable|string',
+            'address' => 'required|string',
             'contact_person' => 'nullable|string|max:255',
             'phone' => 'nullable|string|max:20',
             'latitude' => 'nullable|numeric|between:-90,90',

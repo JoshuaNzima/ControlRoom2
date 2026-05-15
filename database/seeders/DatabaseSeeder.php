@@ -23,6 +23,25 @@ class DatabaseSeeder extends Seeder
             ]);
         }
 
+        // Default AI assistants
+        \App\Models\AiAssistantSetting::query()->firstOrCreate(
+            ['assistant' => 'control-room'],
+            ['enabled' => true, 'title' => 'Control Room Assistant', 'description' => 'Helps with control-room usage and guides.']
+        );
+
+        \App\Models\AiAssistantSetting::query()->firstOrCreate(
+            ['assistant' => 'help-center'],
+            ['enabled' => false, 'title' => 'Help Center Assistant', 'description' => 'Helps find Help Center articles and create guides.']
+        );
+
+        // If both somehow ended up enabled, force control-room as active
+        \App\Models\AiAssistantSetting::query()
+            ->where('assistant', 'help-center')
+            ->update(['enabled' => false]);
+        \App\Models\AiAssistantSetting::query()
+            ->where('assistant', 'control-room')
+            ->update(['enabled' => true]);
+
          $this->call([
             RolesAndPermissionsSeeder::class,
             AdminUserSeeder::class,

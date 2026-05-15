@@ -12,6 +12,11 @@ return new class extends Migration
      */
     public function up(): void
     {
+        // Only migrate if the source table exists
+        if (!Schema::hasTable('front_office_tasks')) {
+            return;
+        }
+
         // Migrate FrontOfficeTask data to main tasks table
         $frontOfficeTasks = DB::table('front_office_tasks')->get();
 

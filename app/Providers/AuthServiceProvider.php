@@ -10,12 +10,16 @@ use App\Models\Expense;
 use App\Models\Invoice;
 use App\Models\Guards\Guard;
 use App\Models\Approval;
+use App\Models\Document;
+use App\Models\DocumentComment;
 use App\Policies\BudgetPolicy;
 use App\Policies\DownPolicy;
 use App\Policies\ExpensePolicy;
 use App\Policies\GuardPolicy;
 use App\Policies\InvoicePolicy;
 use App\Policies\ApprovalPolicy;
+use App\Policies\DocumentPolicy;
+use App\Policies\DocumentCommentPolicy;
 
 class AuthServiceProvider extends ServiceProvider
 {
@@ -31,6 +35,8 @@ class AuthServiceProvider extends ServiceProvider
         Expense::class => ExpensePolicy::class,
         Guard::class => GuardPolicy::class,
         Invoice::class => InvoicePolicy::class,
+        Document::class => DocumentPolicy::class,
+        DocumentComment::class => DocumentCommentPolicy::class,
     ];
 
     /**

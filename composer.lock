@@ -4,8 +4,83 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "4bb461c866a7a5c15b0bb0e2c6720f81",
+    "content-hash": "bf9075c0112e71e2a5e055d4bc5e37d5",
     "packages": [
+        {
+            "name": "alidaaer/laravel-ai-agent",
+            "version": "v1.0.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/alidaaer/laravel-ai-agent.git",
+                "reference": "18119b42a207c490dde5f82a7b1bd49efad6ee08"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/alidaaer/laravel-ai-agent/zipball/18119b42a207c490dde5f82a7b1bd49efad6ee08",
+                "reference": "18119b42a207c490dde5f82a7b1bd49efad6ee08",
+                "shasum": ""
+            },
+            "require": {
+                "illuminate/cache": "^10.0|^11.0|^12.0",
+                "illuminate/http": "^10.0|^11.0|^12.0",
+                "illuminate/support": "^10.0|^11.0|^12.0",
+                "illuminate/validation": "^10.0|^11.0|^12.0",
+                "php": "^8.2"
+            },
+            "require-dev": {
+                "orchestra/testbench": "^8.0|^9.0|^10.0",
+                "phpunit/phpunit": "^10.0|^11.0"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "aliases": {
+                        "Agent": "LaravelAIAgent\\Facades\\Agent"
+                    },
+                    "providers": [
+                        "LaravelAIAgent\\AgentServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "files": [
+                    "src/helpers.php"
+                ],
+                "psr-4": {
+                    "LaravelAIAgent\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Ali Daaer",
+                    "email": "alidaaer@gmail.com",
+                    "homepage": "https://github.com/alidaaer"
+                }
+            ],
+            "description": "Give your Laravel app a brain, safely. Build AI Agents that can execute real actions in your application.",
+            "homepage": "https://github.com/alidaaer/laravel-ai-agent",
+            "keywords": [
+                "Agent",
+                "Gemini",
+                "ai",
+                "anthropic",
+                "deepseek",
+                "function-calling",
+                "laravel",
+                "llm",
+                "openai",
+                "tools"
+            ],
+            "support": {
+                "issues": "https://github.com/alidaaer/laravel-ai-agent/issues",
+                "source": "https://github.com/alidaaer/laravel-ai-agent"
+            },
+            "time": "2026-02-21T18:42:35+00:00"
+        },
         {
             "name": "barryvdh/laravel-dompdf",
             "version": "v3.1.2",

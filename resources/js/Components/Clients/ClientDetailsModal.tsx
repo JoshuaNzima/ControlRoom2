@@ -1063,7 +1063,9 @@ export default function ClientDetailsModal({
                       </div>
                       <div className="text-center p-2 sm:p-3 rounded-lg bg-gray-50 dark:bg-gray-900/50">
                         <p className="text-xs text-gray-500 dark:text-gray-400">Months Behind</p>
-                        <p className={`text-sm sm:text-base font-semibold ${((client.payment_summary?.outstanding_months ?? 0) >= 3) ? 'text-red-700 dark:text-red-400' : 'text-gray-900 dark:text-gray-100'}`}>
+                        <p
+                          className={`text-sm sm:text-base font-semibold ${(((client.payment_summary?.outstanding_months ?? 0) ?? 0) >= 3) ? 'text-red-700 dark:text-red-400' : 'text-gray-900 dark:text-gray-100'}`}
+                        >
                           {client.payment_summary?.outstanding_months ?? 0}
                         </p>
                       </div>

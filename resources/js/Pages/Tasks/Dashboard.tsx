@@ -89,19 +89,8 @@ interface PageProps {
     in_progress: number;
     completed: number;
     overdue: number;
-  }>;
-  overdueAnalytics?: {
-    total_overdue: number;
-    overdue_by_priority: {
-      urgent: number;
-      high: number;
-      medium: number;
-      low: number;
-    };
-    overdue_by_department: Record<string, number>;
-  };
+  }>
   isExecutiveAssistant: boolean;
-  isFrontOffice: boolean;
   filters: {
     filter: string;
     module: string | null;
@@ -117,7 +106,7 @@ interface PageProps {
   users: { id: number; name: string }[];
 }
 
-export default function TaskDashboard({ auth, tasks, stats, isExecutiveAssistant, isFrontOffice, filters, modules, statuses, priorities, users, pettyCash, assigneeStats, departmentStats, overdueAnalytics, taskCategories, taskTemplates }: PageProps) {
+export default function TaskDashboard({ auth, tasks, stats, isExecutiveAssistant, filters, modules, statuses, priorities, users, pettyCash, assigneeStats, departmentStats, taskCategories, taskTemplates }: PageProps) {
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [editTask, setEditTask] = useState<Task | null>(null);
   const [completeTask, setCompleteTask] = useState<Task | null>(null);
@@ -150,24 +139,6 @@ export default function TaskDashboard({ auth, tasks, stats, isExecutiveAssistant
   const isOverdue = (task: Task) => {
     if (!task.due_date || task.status === 'completed' || task.status === 'cancelled') return false;
     return new Date(task.due_date) < new Date();
-  };
-
-  const getOverduePriorityColor = (count: number) => {
-    if (count === 0) return 'bg-green-500/10 text-green-500 border-green-500/20';
-    if (count <= 2) return 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20';
-    if (count <= 5) return 'bg-orange-500/10 text-orange-500 border-orange-500/20';
-    return 'bg-red-500/10 text-red-500 border-red-500/20';
-  };
-
-  const getRowColor = (task: Task) => {
-    if (isOverdue(task)) {
-      if (task.priority === 'urgent') return 'bg-red-50 dark:bg-red-950/30 border-l-4 border-l-red-600';
-      if (task.priority === 'high') return 'bg-orange-50 dark:bg-orange-950/30 border-l-4 border-l-orange-500';
-      return 'bg-yellow-50 dark:bg-yellow-950/20 border-l-4 border-l-yellow-500';
-    }
-    if (task.priority === 'urgent') return 'bg-red-50/50 dark:bg-red-950/20 border-l-4 border-l-red-400';
-    if (task.priority === 'high') return 'bg-orange-50/50 dark:bg-orange-950/20 border-l-4 border-l-orange-400';
-    return '';
   };
 
   return (
@@ -297,7 +268,7 @@ export default function TaskDashboard({ auth, tasks, stats, isExecutiveAssistant
 
       {isExecutiveAssistant && departmentStats && departmentStats.length > 0 && (
         <div className="mb-6">
-          <h2 className="text-lg font-semibold text-red-900 dark:text-white mb-3">Department Progress</h2>
+          <h2 className="text-lg font-semibold text-red-900 dark:text-white mb-3">Department / Module Progress</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {departmentStats.map((dept) => (
               <Card key={dept.module} className="bg-white dark:bg-gray-800 border-red-100 dark:border-gray-700">
@@ -320,55 +291,6 @@ export default function TaskDashboard({ auth, tasks, stats, isExecutiveAssistant
         </div>
       )}
 
-      {/* Overdue Analytics */}
-      {overdueAnalytics && (
-        <div className="mb-6">
-          <h2 className="text-lg font-semibold text-red-900 dark:text-white mb-3">Overdue Analytics</h2>
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-            <Card className="bg-white dark:bg-gray-800 border-red-100 dark:border-gray-700">
-              <CardContent className="p-4">
-                <div className="text-2xl font-bold text-red-600 dark:text-red-400">{overdueAnalytics.total_overdue}</div>
-                <div className="text-sm text-gray-500 dark:text-gray-400">Total Overdue</div>
-              </CardContent>
-            </Card>
-            <Card className={`border-red-100 dark:border-gray-700 ${getOverduePriorityColor(overdueAnalytics.overdue_by_priority.urgent)}`}>
-              <CardContent className="p-4">
-                <div className="text-2xl font-bold">{overdueAnalytics.overdue_by_priority.urgent}</div>
-                <div className="text-sm opacity-80">Urgent Overdue</div>
-              </CardContent>
-            </Card>
-            <Card className={`border-red-100 dark:border-gray-700 ${getOverduePriorityColor(overdueAnalytics.overdue_by_priority.high)}`}>
-              <CardContent className="p-4">
-                <div className="text-2xl font-bold">{overdueAnalytics.overdue_by_priority.high}</div>
-                <div className="text-sm opacity-80">High Overdue</div>
-              </CardContent>
-            </Card>
-            <Card className={`border-red-100 dark:border-gray-700 ${getOverduePriorityColor(overdueAnalytics.overdue_by_priority.medium)}`}>
-              <CardContent className="p-4">
-                <div className="text-2xl font-bold">{overdueAnalytics.overdue_by_priority.medium}</div>
-                <div className="text-sm opacity-80">Medium Overdue</div>
-              </CardContent>
-            </Card>
-            <Card className={`border-red-100 dark:border-gray-700 ${getOverduePriorityColor(overdueAnalytics.overdue_by_priority.low)}`}>
-              <CardContent className="p-4">
-                <div className="text-2xl font-bold">{overdueAnalytics.overdue_by_priority.low}</div>
-                <div className="text-sm opacity-80">Low Overdue</div>
-              </CardContent>
-            </Card>
-          </div>
-          {overdueAnalytics.overdue_by_department && Object.keys(overdueAnalytics.overdue_by_department).length > 0 && (
-            <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-2">
-              {Object.entries(overdueAnalytics.overdue_by_department).map(([module, count]) => (
-                <div key={module} className="flex items-center justify-between p-2 bg-red-50 dark:bg-red-950/20 rounded border border-red-100 dark:border-red-900">
-                  <span className="text-sm text-gray-700 dark:text-gray-300">{modules[module] || module}</span>
-                  <Badge className={`${getOverduePriorityColor(count as number)} border-0`}>{count}</Badge>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
       {/* Filters */}
       <Card className="mb-6 bg-white dark:bg-gray-800 border-red-100 dark:border-gray-700">
         <CardContent className="p-4">
@@ -387,10 +309,10 @@ export default function TaskDashboard({ auth, tasks, stats, isExecutiveAssistant
 
               <Select value={filters.module ?? 'all'} onValueChange={(v) => handleFilterChange('module', v === 'all' ? null : v)}>
                 <SelectTrigger className="w-[150px] dark:bg-gray-700 dark:border-gray-600">
-                  <SelectValue placeholder="Department" />
+                  <SelectValue placeholder="Module" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Departments</SelectItem>
+                  <SelectItem value="all">All Modules</SelectItem>
                   {Object.entries(modules).map(([key, label]) => (
                     <SelectItem key={key} value={key}>{label}</SelectItem>
                   ))}
@@ -429,25 +351,21 @@ export default function TaskDashboard({ auth, tasks, stats, isExecutiveAssistant
               />
             </div>
 
-            {isFrontOffice && (
-              <>
-                <Button
-                  onClick={() => setAddModalOpen(true)}
-                  className="bg-red-600 hover:bg-red-700 text-white"
-                >
-                  <IconMapper name="plus" className="h-4 w-4 mr-2" />
-                  Add Task
-                </Button>
-                <Button
-                  onClick={() => router.visit(route('tasks.templates'))}
-                  variant="outline"
-                  className="border-gray-300 text-gray-700 dark:text-gray-300"
-                >
-                  <IconMapper name="layers" className="h-4 w-4 mr-2" />
-                  Templates
-                </Button>
-              </>
-            )}
+            <Button
+              onClick={() => setAddModalOpen(true)}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              <IconMapper name="plus" className="h-4 w-4 mr-2" />
+              Add Task
+            </Button>
+            <Button
+              onClick={() => router.visit(route('tasks.templates'))}
+              variant="outline"
+              className="border-gray-300 text-gray-700 dark:text-gray-300"
+            >
+              <IconMapper name="layers" className="h-4 w-4 mr-2" />
+              Templates
+            </Button>
           </div>
         </CardContent>
       </Card>
@@ -465,7 +383,7 @@ export default function TaskDashboard({ auth, tasks, stats, isExecutiveAssistant
               <TableHeader>
                 <TableRow className="border-red-100 dark:border-gray-700">
                   <TableHead className="text-red-900 dark:text-gray-200">Task</TableHead>
-                  <TableHead className="text-red-900 dark:text-gray-200">Department</TableHead>
+                  <TableHead className="text-red-900 dark:text-gray-200">Module</TableHead>
                   <TableHead className="text-red-900 dark:text-gray-200">Priority</TableHead>
                   <TableHead className="text-red-900 dark:text-gray-200">Status</TableHead>
                   <TableHead className="text-red-900 dark:text-gray-200">Assigned To</TableHead>
@@ -482,7 +400,7 @@ export default function TaskDashboard({ auth, tasks, stats, isExecutiveAssistant
                   </TableRow>
                 ) : (
                   tasks.data.map((task) => (
-                    <TableRow key={task.id} className={`border-red-100 dark:border-gray-700 ${getRowColor(task)}`}>
+                    <TableRow key={task.id} className="border-red-100 dark:border-gray-700">
                       <TableCell>
                         <div className="font-medium text-red-900 dark:text-white">{task.title}</div>
                         {task.description && (
@@ -522,10 +440,10 @@ export default function TaskDashboard({ auth, tasks, stats, isExecutiveAssistant
                       </TableCell>
                       <TableCell>
                         {task.due_date ? (
-                          <div className={isOverdue(task) ? 'text-red-600 font-semibold dark:text-red-400' : 'text-gray-600 dark:text-gray-300'}>
+                          <div className={isOverdue(task) ? 'text-red-500 font-medium' : 'text-gray-600 dark:text-gray-300'}>
                             {format(new Date(task.due_date), 'MMM dd, yyyy')}
                             {isOverdue(task) && (
-                              <span className="text-xs ml-1 text-red-600 dark:text-red-400 font-bold">(Overdue)</span>
+                              <span className="text-xs ml-1">(Overdue)</span>
                             )}
                           </div>
                         ) : (
@@ -544,55 +462,51 @@ export default function TaskDashboard({ auth, tasks, stats, isExecutiveAssistant
                               <IconMapper name="check" className="h-4 w-4" />
                             </Button>
                           )}
-                          {isFrontOffice && (
-                            <>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => setEditTask(task)}
-                                className="border-blue-500 text-blue-600 hover:bg-blue-50 dark:border-blue-400 dark:text-blue-400 dark:hover:bg-blue-900/20"
-                              >
-                                <IconMapper name="pencil" className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => {
-                                  const comment = prompt('Enter comment');
-                                  if (!comment) {
-                                    return;
-                                  }
-                                  router.post(route('tasks.comment.add', task.id), { comment }, { preserveState: true });
-                                }}
-                                className="border-gray-500 text-gray-600 hover:bg-gray-100 dark:border-gray-400 dark:text-gray-300 dark:hover:bg-gray-700/20"
-                              >
-                                <IconMapper name="message-circle" className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => {
-                                  const hours = prompt('Enter hours spent (decimal)');
-                                  if (!hours || isNaN(Number(hours)) || Number(hours) <= 0) {
-                                    return;
-                                  }
-                                  const notes = prompt('Optional notes');
-                                  router.post(route('tasks.time.log', task.id), { hours: Number(hours), notes }, { preserveState: true });
-                                }}
-                                className="border-gray-500 text-gray-600 hover:bg-gray-100 dark:border-gray-400 dark:text-gray-300 dark:hover:bg-gray-700/20"
-                              >
-                                <IconMapper name="clock" className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => setDeleteTask(task)}
-                                className="border-red-500 text-red-600 hover:bg-red-50 dark:border-red-400 dark:text-red-400 dark:hover:bg-red-900/20"
-                              >
-                                <IconMapper name="trash-2" className="h-4 w-4" />
-                              </Button>
-                            </>
-                          )}
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setEditTask(task)}
+                            className="border-blue-500 text-blue-600 hover:bg-blue-50 dark:border-blue-400 dark:text-blue-400 dark:hover:bg-blue-900/20"
+                          >
+                            <IconMapper name="pencil" className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              const comment = prompt('Enter comment');
+                              if (!comment) {
+                                return;
+                              }
+                              router.post(route('tasks.comment.add', task.id), { comment }, { preserveState: true });
+                            }}
+                            className="border-gray-500 text-gray-600 hover:bg-gray-100 dark:border-gray-400 dark:text-gray-300 dark:hover:bg-gray-700/20"
+                          >
+                            <IconMapper name="message-circle" className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              const hours = prompt('Enter hours spent (decimal)');
+                              if (!hours || isNaN(Number(hours)) || Number(hours) <= 0) {
+                                return;
+                              }
+                              const notes = prompt('Optional notes');
+                              router.post(route('tasks.time.log', task.id), { hours: Number(hours), notes }, { preserveState: true });
+                            }}
+                            className="border-gray-500 text-gray-600 hover:bg-gray-100 dark:border-gray-400 dark:text-gray-300 dark:hover:bg-gray-700/20"
+                          >
+                            <IconMapper name="clock" className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setDeleteTask(task)}
+                            className="border-red-500 text-red-600 hover:bg-red-50 dark:border-red-400 dark:text-red-400 dark:hover:bg-red-900/20"
+                          >
+                            <IconMapper name="trash-2" className="h-4 w-4" />
+                          </Button>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -612,6 +526,30 @@ export default function TaskDashboard({ auth, tasks, stats, isExecutiveAssistant
       </Card>
 
       {/* Modals */}
+      <AddTaskModal
+        open={addModalOpen}
+        onClose={() => setAddModalOpen(false)}
+        modules={modules}
+        priorities={priorities}
+        users={users}
+        categories={taskCategories}
+        templates={taskTemplates}
+      />
+
+      {editTask && (
+        <EditTaskModal
+          task={editTask}
+          open={!!editTask}
+          onClose={() => setEditTask(null)}
+          modules={modules}
+          priorities={priorities}
+          statuses={statuses}
+          users={users}
+          categories={taskCategories}
+          templates={taskTemplates}
+        />
+      )}
+
       {completeTask && (
         <CompleteTaskModal
           task={completeTask}
@@ -620,40 +558,12 @@ export default function TaskDashboard({ auth, tasks, stats, isExecutiveAssistant
         />
       )}
 
-      {isFrontOffice && (
-        <>
-          <AddTaskModal
-            open={addModalOpen}
-            onClose={() => setAddModalOpen(false)}
-            modules={modules}
-            priorities={priorities}
-            users={users}
-            categories={taskCategories}
-            templates={taskTemplates}
-          />
-
-          {editTask && (
-            <EditTaskModal
-              task={editTask}
-              open={!!editTask}
-              onClose={() => setEditTask(null)}
-              modules={modules}
-              priorities={priorities}
-              statuses={statuses}
-              users={users}
-              categories={taskCategories}
-              templates={taskTemplates}
-            />
-          )}
-
-          {deleteTask && (
-            <DeleteTaskModal
-              task={deleteTask}
-              open={!!deleteTask}
-              onClose={() => setDeleteTask(null)}
-            />
-          )}
-        </>
+      {deleteTask && (
+        <DeleteTaskModal
+          task={deleteTask}
+          open={!!deleteTask}
+          onClose={() => setDeleteTask(null)}
+        />
       )}
     </TaskTrackerLayout>
   );

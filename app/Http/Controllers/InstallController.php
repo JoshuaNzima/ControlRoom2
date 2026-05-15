@@ -49,7 +49,31 @@ class InstallController extends Controller
             $this->fallbackStorageLink();
         }
 
-        // TODO: Create admin user here or via seeder using $data
+        // Create initial admin user
+        // (Required so the app is usable right after installation.)
+        $adminPassword = $data['admin_password'];
+
+        $user = \App\Models\User::create([
+            'name' => $data['admin_name'],
+            'email' => $data['admin_email'],
+            'password' => \Illuminate\Support\Facades\Hash::make($adminPassword),
+        ]);
+
+        // Assign role(s) if Spatie permissions is installed/configured
+        try {
+            $superAdminRole = \Spatie\Permission\Models\Role::firstOrCreate(['name' => 'super_admin']);
+
+            // Ensure role has permissions if permissions already exist (safe no-op if they don't)
+            if (class_exists(\Spatie\Permission\Models\Permission::class)) {
+                $superAdminRole->givePermissionTo(\Spatie\Permission\Models\Permission::all());
+            }
+
+            if (method_exists($user, 'assignRole')) {
+                $user->assignRole('super_admin');
+            }
+        } catch (\Throwable $e) {
+            // Installation should still succeed even if roles/permissions are not ready yet.
+        }
 
         $this->markInstalled();
 
@@ -129,5 +153,3 @@ class InstallController extends Controller
         }
     }
 }
-
-

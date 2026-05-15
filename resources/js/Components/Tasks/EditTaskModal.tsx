@@ -103,7 +103,7 @@ export default function EditTaskModal({ task, open, onClose, modules, priorities
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="edit-module" className="text-red-900 dark:text-gray-200">
-                Department <span className="text-red-500">*</span>
+                Module <span className="text-red-500">*</span>
               </Label>
               <Select value={data.module} onValueChange={(v) => setData('module', v)}>
                 <SelectTrigger className="mt-1 dark:bg-gray-700 dark:border-gray-600">

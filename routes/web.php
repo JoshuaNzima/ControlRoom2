@@ -99,11 +99,9 @@ Route::middleware('auth')->group(function () {
     Route::post('/tutorials/{tutorial}', [\App\Http\Controllers\DashboardTutorialController::class, 'update'])->name('tutorials.update.post');
     Route::delete('/tutorials/{tutorial}', [\App\Http\Controllers\DashboardTutorialController::class, 'destroy'])->name('tutorials.destroy');
 
-    // AI Assistant API (transfer and history require auth)
-    Route::post('/ai/transfer', [\App\Http\Controllers\ChatController::class, 'requestTransfer'])->name('ai.transfer');
-    Route::get('/ai/history', [\App\Http\Controllers\ChatController::class, 'history'])->name('ai.history');
-    
     // Agent Chat Management (super_admin, control_room_operator, admin)
+    // NOTE: The AI chatbot UI now uses laravel-ai-agent widget endpoints (/ai-agent/*).
+    // We keep agent chat transfer/resolve routes for human handoff.
     Route::prefix('agent/chats')->name('agent.chats.')->group(function () {
         Route::get('/pending', [\App\Http\Controllers\ChatController::class, 'pendingTransfers'])->name('pending');
         Route::get('/active', [\App\Http\Controllers\ChatController::class, 'agentChats'])->name('active');
@@ -114,8 +112,8 @@ Route::middleware('auth')->group(function () {
     });
 });
 
-// Public AI Assistant API (accessible to guests on landing page)
-Route::post('/ai/chat', [\App\Http\Controllers\ChatController::class, 'chat'])->name('ai.chat');
+// Old AI assistant endpoints (POST /ai/chat, POST /ai/transfer, GET /ai/history) removed.
+// The app now uses laravel-ai-agent widget routes under /ai-agent/*.
 
 // Help Center (public)
 Route::get('/help', [\App\Http\Controllers\HelpController::class, 'index'])->name('help.index');
@@ -430,6 +428,12 @@ Route::middleware(['auth', 'role:super_admin'])->prefix('superadmin')->name('sup
     Route::post('/ai-settings/{provider}/disable', [\App\Http\Controllers\SuperAdmin\AiSettingsController::class, 'disable'])->name('ai-settings.disable');
     Route::post('/ai-settings/{provider}/test', [\App\Http\Controllers\SuperAdmin\AiSettingsController::class, 'test'])->name('ai-settings.test');
     Route::get('/ai-settings/{provider}/models', [\App\Http\Controllers\SuperAdmin\AiSettingsController::class, 'models'])->name('ai-settings.models');
+
+    // AI Assistants
+    Route::get('/ai-settings/assistants', [\App\Http\Controllers\SuperAdmin\AiSettingsController::class, 'assistants'])->name('ai-settings.assistants');
+    Route::post('/ai-settings/assistants/{assistant}/enable', [\App\Http\Controllers\SuperAdmin\AiSettingsController::class, 'enableAssistant'])->name('ai-settings.assistants.enable');
+    Route::post('/ai-settings/assistants/{assistant}/disable', [\App\Http\Controllers\SuperAdmin\AiSettingsController::class, 'disableAssistant'])->name('ai-settings.assistants.disable');
+    Route::post('/ai-settings/assistants/{assistant}/activate', [\App\Http\Controllers\SuperAdmin\AiSettingsController::class, 'setActiveAssistant'])->name('ai-settings.assistants.activate');
 });
 
 // Include all module routes
@@ -679,6 +683,33 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/tasks/templates', [\App\Http\Controllers\TaskController::class, 'templates'])->name('tasks.templates');
         Route::post('/tasks/templates', [\App\Http\Controllers\TaskController::class, 'storeTemplate'])->name('tasks.templates.store');
         Route::delete('/tasks/{task}', [\App\Http\Controllers\TaskController::class, 'destroy'])->name('tasks.destroy');
+    });
+
+    // Documents - Accessible to all authenticated users
+    Route::middleware(['auth'])->group(function () {
+        Route::get('/documents', [\App\Http\Controllers\DocumentController::class, 'index'])->name('documents.index');
+        Route::get('/documents/create', [\App\Http\Controllers\DocumentController::class, 'create'])->name('documents.create');
+        Route::get('/documents/{document}', [\App\Http\Controllers\DocumentController::class, 'show'])->name('documents.show');
+        Route::get('/documents/{document}/preview', [\App\Http\Controllers\DocumentController::class, 'preview'])->name('documents.preview');
+        Route::get('/documents/{document}/download', [\App\Http\Controllers\DocumentController::class, 'download'])->name('documents.download');
+        
+        // Create and update restricted to authenticated users
+        Route::post('/documents', [\App\Http\Controllers\DocumentController::class, 'store'])->name('documents.store');
+        Route::get('/documents/{document}/edit', [\App\Http\Controllers\DocumentController::class, 'edit'])->name('documents.edit');
+        Route::put('/documents/{document}', [\App\Http\Controllers\DocumentController::class, 'update'])->name('documents.update');
+        Route::delete('/documents/{document}', [\App\Http\Controllers\DocumentController::class, 'destroy'])->name('documents.destroy');
+        
+        // Comments
+        Route::post('/documents/{document}/comments', [\App\Http\Controllers\DocumentController::class, 'addComment'])->name('documents.comments.add');
+        Route::delete('/documents/comments/{comment}', [\App\Http\Controllers\DocumentController::class, 'deleteComment'])->name('documents.comments.delete');
+        
+        // Sharing
+        Route::post('/documents/{document}/share', [\App\Http\Controllers\DocumentController::class, 'share'])->name('documents.share');
+        Route::delete('/documents/{document}/shares/{share}', [\App\Http\Controllers\DocumentController::class, 'revokeShare'])->name('documents.shares.revoke');
+        
+        // Versioning
+        Route::post('/documents/{document}/versions', [\App\Http\Controllers\DocumentController::class, 'createVersion'])->name('documents.versions.create');
+        Route::post('/documents/versions/{version}/restore', [\App\Http\Controllers\DocumentController::class, 'restoreVersion'])->name('documents.versions.restore');
     });
 
 });

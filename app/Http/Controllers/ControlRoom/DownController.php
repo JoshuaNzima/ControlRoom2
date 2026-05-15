@@ -109,12 +109,48 @@ class DownController extends Controller
         if ($down->status === 'resolved') {
             return back();
         }
+
         $down->update([
             'status' => 'escalated',
             'escalation_level' => $down->escalation_level + 1,
         ]);
 
-        // TODO: notifications to stakeholders
+        $zoneId = $down->clientSite?->zone_id;
+        $senderId = Auth::id();
+
+        $message = sprintf(
+            'Down #%d (%s) has been escalated to escalation level %d.',
+            $down->id,
+            (string) ($down->title ?? $down->type ?? 'Down'),
+            (int) ($down->escalation_level ?? 0)
+        );
+
+        $payload = [
+            'title' => 'Down Escalated',
+            'message' => $message,
+            'url' => route('control-room.downs.show', $down->id) ?? '',
+        ];
+
+        // 1) Notify the reporter
+        if ($down->reported_by && $down->reported_by !== $senderId) {
+            $down->reporter?->notify(new \App\Notifications\GenericDbNotification($payload));
+        }
+
+        // 2) Notify all zone commanders in the down's zone (excluding sender)
+        if ($zoneId) {
+            $zoneCommanders = \App\Models\User::query()
+                ->where('id', '!=', $senderId)
+                ->whereHas('roles', function ($q) use ($zoneId) {
+                    // Guard naming conventions vary; but policy uses hasRole('zone_commander') so roles name is reliable.
+                    $q->where('name', 'zone_commander');
+                })
+                ->where('zone_id', $zoneId)
+                ->get();
+
+            foreach ($zoneCommanders as $user) {
+                $user->notify(new \App\Notifications\GenericDbNotification($payload));
+            }
+        }
 
         return back()->withSuccess('Down escalated.');
     }
@@ -231,5 +267,3 @@ class DownController extends Controller
         return back()->withSuccess('Down marked as absconding.');
     }
 }
-
-
