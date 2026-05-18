@@ -13,6 +13,18 @@ class HelpArticlesSeeder extends Seeder
      */
     public function run(): void
     {
+        // Replace placeholder contact details inside article content.
+        $helpPhone = env('HELP_CONTACT_PHONE', '+265 999 611 711');
+        $helpEmail = env('HELP_CONTACT_EMAIL', 'info@coinsecuritymw.com');
+
+        $placeholderToReal = [
+            '+265 XXX XXX XXX' => $helpPhone,
+            'info@... ' => $helpEmail,
+            'info@...' => $helpEmail,
+            'sales@coinsecuritymw.com' => 'sales@coinsecuritymw.com',
+            'sales@...' => 'sales@coinsecuritymw.com',
+        ];
+
         $articles = [
             // ============================================
             // VISITOR/GUEST ARTICLES (target_roles = null)

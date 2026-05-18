@@ -66,8 +66,15 @@ export default function ControlRoomLayout({ title, children, user }: Props) {
   const isAdminUser = roles.includes('admin') || roles.includes('super_admin');
   const roleDisplay = roles.length > 0 ? roles[0].replace(/_/g, ' ') : 'Control Room';
 
+  const isClientUser = roles.includes('client');
+
   const controlRoomLinks: NavItem[] = [
     { name: 'Dashboard', href: route('control-room.dashboard'), icon: <IconMapper name="LayoutDashboard" size={20} /> },
+    ...(isClientUser
+      ? []
+      : ([
+          { name: 'Documents', href: route('documents.index'), icon: <IconMapper name="FileText" size={20} /> },
+        ] as NavItem[])),
     { name: 'Live Monitoring', href: route('control-room.monitoring'), icon: <IconMapper name="Activity" size={20} /> },
     { name: 'GPS Mismatch Incidents', href: route('control-room.gps-mismatch-incidents.index'), icon: <IconMapper name="MapPin" size={20} /> },
     { name: 'Incident Management', href: route('control-room.incidents.index'), icon: <IconMapper name="AlertTriangle" size={20} />, badge: counters?.control_incidents_open },
@@ -96,9 +103,11 @@ export default function ControlRoomLayout({ title, children, user }: Props) {
     { name: 'QR Codes', href: route('control-room.qr-codes.index'), icon: <IconMapper name="QrCode" size={20} /> },
     { name: 'Reports', href: route('control-room.reports'), icon: <IconMapper name="BarChart2" size={20} /> },
     { name: 'Settings', href: route('control-room.settings'), icon: <IconMapper name="Settings" size={20} /> },
-    ...(!isAdminUser ? ([
-      { name: 'My Requisitions', href: route('requisitions.index'), icon: <IconMapper name="ClipboardList" size={20} />, badge: counters?.requisitions_my_open },
-    ] as NavItem[]) : []),
+    ...(!isAdminUser
+      ? ([
+          { name: 'My Requisitions', href: route('requisitions.index'), icon: <IconMapper name="ClipboardList" size={20} />, badge: counters?.requisitions_my_open },
+        ] as NavItem[])
+      : []),
     { name: 'Budgets', href: route('budgets.index'), icon: <IconMapper name="PieChart" size={20} /> },
   ];
 
@@ -208,6 +217,7 @@ export default function ControlRoomLayout({ title, children, user }: Props) {
             </div>
           </div>
         </main>
+
         {tasksOpen && isMobile && (
           <WeeklyTasks
             tasks={weeklyTasks || []}
@@ -217,6 +227,7 @@ export default function ControlRoomLayout({ title, children, user }: Props) {
             onClose={() => setTasksOpen(false)}
           />
         )}
+
         <AIAssistant context="control-room" />
       </div>
     </div>

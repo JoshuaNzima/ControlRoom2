@@ -52,7 +52,8 @@ export default function AssetManagementLayout({ title, children, user }: Props) 
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  const rawRoles = ((user as any)?.roles ?? (page?.props as any)?.auth?.user?.roles ?? []) as (string | { id: number; name: string })[];
+  const rawRoles =
+    ((user as any)?.roles ?? (page?.props as any)?.auth?.user?.roles ?? []) as (string | { id: number; name: string })[];
   const roles = rawRoles.map((r) => (typeof r === 'string' ? r : r.name));
   const userId = (user as any)?.id ?? (page?.props as any)?.auth?.user?.id;
 
@@ -62,10 +63,16 @@ export default function AssetManagementLayout({ title, children, user }: Props) 
   const isSuperAdmin = roles.includes('super_admin');
   const isAdminUser = roles.includes('admin') || roles.includes('super_admin');
   const roleDisplay = roles.length > 0 ? roles[0].replace(/_/g, ' ') : 'Asset Manager';
+  const isClientUser = roles.includes('client');
 
   // Main Navigation
   const mainNav: NavItem[] = [
     { name: 'Overview', href: route('assets.index'), icon: <IconMapper name="LayoutDashboard" size={20} />, badge: counters?.assets_handovers_outstanding },
+    ...(!isClientUser
+      ? ([
+          { name: 'Documents', href: route('documents.index'), icon: <IconMapper name="FileText" size={20} /> },
+        ] as NavItem[])
+      : []),
   ];
 
   // Assets Navigation
@@ -83,9 +90,11 @@ export default function AssetManagementLayout({ title, children, user }: Props) 
 
   // Tools Navigation
   const toolsNav: NavItem[] = [
-    ...(!isAdminUser ? ([
-      { name: 'My Requisitions', href: route('requisitions.index'), icon: <IconMapper name="ClipboardList" size={20} />, badge: counters?.requisitions_my_open },
-    ] as NavItem[]) : []),
+    ...(!isAdminUser
+      ? ([
+          { name: 'My Requisitions', href: route('requisitions.index'), icon: <IconMapper name="ClipboardList" size={20} />, badge: counters?.requisitions_my_open },
+        ] as NavItem[])
+      : []),
     { name: 'Budgets', href: route('budgets.index'), icon: <IconMapper name="PieChart" size={20} /> },
     { name: 'Settings', href: route('assets.settings'), icon: <IconMapper name="Settings" size={20} /> },
   ];
@@ -140,6 +149,7 @@ export default function AssetManagementLayout({ title, children, user }: Props) 
                 </button>
                 <h1 className="text-lg sm:text-xl font-semibold text-red-900 dark:text-gray-100 truncate">{title}</h1>
               </div>
+
               <div className="flex items-center justify-end gap-1 sm:gap-3">
                 <QuickStats />
                 <NotificationBell />
@@ -151,10 +161,12 @@ export default function AssetManagementLayout({ title, children, user }: Props) 
                   <IconMapper name="CheckSquare" size={16} />
                   <span className="hidden sm:inline">Tasks</span>
                 </button>
+
                 <div className="hidden sm:flex items-center gap-3">
                   <QuickBudgetButton />
                   <QuickRequisitionButton />
                 </div>
+
                 {isSuperAdmin && (
                   <Link
                     href={route('superadmin.dashboard')}
@@ -165,6 +177,7 @@ export default function AssetManagementLayout({ title, children, user }: Props) 
                     <span className="sm:hidden">SA</span>
                   </Link>
                 )}
+
                 <button
                   onClick={toggle}
                   className="text-xs sm:text-sm px-2 sm:px-3 py-1.5 rounded-md bg-red-100 text-red-800 hover:bg-red-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700 transition-colors touch-target-min"
@@ -181,9 +194,7 @@ export default function AssetManagementLayout({ title, children, user }: Props) 
         <BaseShell noHeader fullScreen={false}>
           <div className="transition-all ease-out duration-500">
             <div className={`grid gap-4 ${tasksOpen ? 'grid-cols-1 xl:grid-cols-4' : 'grid-cols-1'}`}>
-              <div className={tasksOpen ? 'xl:col-span-3' : ''}>
-                {children}
-              </div>
+              <div className={tasksOpen ? 'xl:col-span-3' : ''}>{children}</div>
               <AnimatePresence>
                 {tasksOpen && (
                   <motion.div
@@ -204,6 +215,7 @@ export default function AssetManagementLayout({ title, children, user }: Props) 
             </div>
           </div>
         </BaseShell>
+
         {tasksOpen && isMobile && (
           <WeeklyTasks
             tasks={weeklyTasks || []}
@@ -213,6 +225,7 @@ export default function AssetManagementLayout({ title, children, user }: Props) 
             onClose={() => setTasksOpen(false)}
           />
         )}
+
         <AIAssistant context="assets" />
       </div>
     </div>

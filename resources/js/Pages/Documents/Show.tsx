@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
-import { Head, Link, usePage, useForm } from '@inertiajs/react';
-import { Download, Share2, MessageSquare, History, Lock, Edit, Trash2, X, Plus } from 'lucide-react';
-import Layout from '@/Layouts/AppLayout';
+import React, { useMemo, useState } from 'react';
+import { Head, Link, useForm, usePage } from '@inertiajs/react';
+import { Download, Share2, MessageSquare, History, Edit, Trash2, X, Plus } from 'lucide-react';
+import { resolveDocumentLayout } from './resolveDocumentLayout';
 
 interface DocumentData {
     id: number;
@@ -22,26 +22,70 @@ interface DocumentData {
     shares?: Array<{ id: number; user?: { name: string }; permission: string }>;
 }
 
+interface ShareableUser {
+    id: number;
+    name: string;
+    email: string;
+}
+
 interface DocumentShowProps {
     document: DocumentData;
     isOwner: boolean;
     permission: string;
+    shareableUsers: ShareableUser[];
 }
 
-export default function DocumentShow({ document, isOwner, permission }: DocumentShowProps) {
+export default function DocumentShow({
+    document,
+    isOwner,
+    permission,
+    shareableUsers,
+}: DocumentShowProps) {
+    const page = usePage<any>();
+    const roles: string[] = (page?.props?.auth?.user?.roles ?? []).map(String);
+
     const [showCommentForm, setShowCommentForm] = useState(false);
     const [showVersions, setShowVersions] = useState(false);
     const [showShareForm, setShowShareForm] = useState(false);
-    const [commentText, setCommentText] = useState('');
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-    const { post, delete: destroy } = useForm();
+    const {
+        data: commentData,
+        setData: setCommentData,
+        post: postComment,
+        processing: postingComment,
+        errors: commentErrors,
+        reset: resetComment,
+    } = useForm({ comment: '' });
+
+    const {
+        data: shareData,
+        setData: setShareData,
+        post: postShare,
+        processing: sharingDocument,
+        errors: shareErrors,
+        reset: resetShare,
+    } = useForm({ user_id: '', permission: 'view' });
+
+    const { delete: destroy } = useForm();
 
     const handleAddComment = () => {
-        post(`/documents/${document.id}/comments`, {
+        postComment(`/documents/${document.id}/comments`, {
+            preserveScroll: true,
             onSuccess: () => {
-                setCommentText('');
+                resetComment();
                 setShowCommentForm(false);
-                window.location.reload();
+            },
+        });
+    };
+
+    const handleShareDocument = (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        postShare(`/documents/${document.id}/share`, {
+            preserveScroll: true,
+            onSuccess: () => {
+                resetShare();
+                setShowShareForm(false);
             },
         });
     };
@@ -65,7 +109,7 @@ export default function DocumentShow({ document, isOwner, permission }: Document
         const k = 1024;
         const sizes = ['Bytes', 'KB', 'MB', 'GB'];
         const i = Math.floor(Math.log(bytes) / Math.log(k));
-        return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
+        return `${Math.round((bytes / Math.pow(k, i)) * 100) / 100} ${sizes[i]}`;
     };
 
     const formatDate = (dateString: string) => {
@@ -78,26 +122,64 @@ export default function DocumentShow({ document, isOwner, permission }: Document
         });
     };
 
+    const Layout = useMemo(
+        () => resolveDocumentLayout(roles, document.module),
+        [roles, document.module]
+    );
+
     return (
-        <Layout>
+        <Layout title={document.title}>
             <Head title={document.title} />
 
+            {showDeleteConfirm && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+                    <div className="w-full max-w-md rounded-lg bg-white shadow-xl dark:bg-gray-800">
+                        <div className="border-b border-gray-200 p-6 dark:border-gray-700">
+                            <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Delete document?</h2>
+                            <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
+                                This will permanently remove the document and its file.
+                            </p>
+                        </div>
+                        <div className="flex gap-3 p-6">
+                            <button
+                                type="button"
+                                onClick={() => setShowDeleteConfirm(false)}
+                                className="flex-1 rounded-lg bg-gray-300 px-4 py-2 font-semibold text-gray-900 transition hover:bg-gray-400 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    destroy(`/documents/${document.id}`, {
+                                        onSuccess: () => (window.location.href = '/documents'),
+                                    });
+                                }}
+                                className="flex-1 rounded-lg bg-red-600 px-4 py-2 font-semibold text-white transition hover:bg-red-700"
+                            >
+                                <Trash2 size={18} className="mr-2 inline-block align-[-3px]" />
+                                Delete
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <div className="px-6 py-8">
-                {/* Header */}
                 <div className="mb-8">
-                    <Link href="/documents" className="text-blue-600 hover:text-blue-700 mb-4 inline-block">
+                    <Link href="/documents" className="mb-4 inline-block text-blue-600 hover:text-blue-700">
                         ← Back to Documents
                     </Link>
-                    
-                    <div className="flex justify-between items-start">
+
+                    <div className="flex items-start justify-between gap-4">
                         <div>
-                            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+                            <h1 className="mb-2 text-3xl font-bold text-gray-900 dark:text-white">
                                 {document.title}
                             </h1>
-                            <p className="text-gray-600 dark:text-gray-400 mb-4">
+                            <p className="mb-4 text-gray-600 dark:text-gray-400">
                                 {document.description}
                             </p>
-                            <div className="flex gap-4 text-sm text-gray-600 dark:text-gray-400">
+                            <div className="flex flex-wrap gap-4 text-sm text-gray-600 dark:text-gray-400">
                                 <span>Uploaded by {document.uploader?.name}</span>
                                 <span>•</span>
                                 <span>{formatDate(document.created_at)}</span>
@@ -110,16 +192,15 @@ export default function DocumentShow({ document, isOwner, permission }: Document
                             <div className="flex gap-2">
                                 <Link
                                     href={`/documents/${document.id}/edit`}
-                                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                                    className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-white transition hover:bg-blue-700"
                                 >
                                     <Edit size={18} />
                                     Edit
                                 </Link>
                                 <button
-                                    onClick={() => destroy(`/documents/${document.id}`, {
-                                        onSuccess: () => window.location.href = '/documents',
-                                    })}
-                                    className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
+                                    type="button"
+                                    onClick={() => setShowDeleteConfirm(true)}
+                                    className="flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-white transition hover:bg-red-700"
                                 >
                                     <Trash2 size={18} />
                                     Delete
@@ -129,37 +210,36 @@ export default function DocumentShow({ document, isOwner, permission }: Document
                     </div>
                 </div>
 
-                {/* Main Content */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    {/* Preview */}
+                <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
                     <div className="lg:col-span-2">
-                        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-6">
-                            <div className="bg-gray-100 dark:bg-gray-700 rounded-lg aspect-video flex items-center justify-center overflow-hidden">
+                        <div className="mb-6 rounded-lg bg-white p-6 shadow dark:bg-gray-800">
+                            <div className="flex aspect-video items-center justify-center overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-700">
                                 {document.file_type === 'image' && (
                                     <img
                                         src={`/storage/${document.file_path}`}
                                         alt={document.title}
-                                        className="max-w-full max-h-full object-contain"
+                                        className="max-h-full max-w-full object-contain"
                                     />
                                 )}
                                 {document.file_type === 'video' && (
                                     <video
                                         src={`/storage/${document.file_path}`}
                                         controls
-                                        className="max-w-full max-h-full"
+                                        className="max-h-full max-w-full"
                                     />
                                 )}
                                 {!['image', 'video'].includes(document.file_type) && (
                                     <div className="text-center">
-                                        <div className="text-6xl mb-4">
+                                        <div className="mb-4 text-6xl">
                                             {document.file_type === 'document' ? '📄' : '📎'}
                                         </div>
-                                        <p className="text-gray-600 dark:text-gray-400 mb-4">
+                                        <p className="mb-4 text-gray-600 dark:text-gray-400">
                                             Preview not available
                                         </p>
                                         <button
+                                            type="button"
                                             onClick={handleDownload}
-                                            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition mx-auto"
+                                            className="mx-auto flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-white transition hover:bg-blue-700"
                                         >
                                             <Download size={18} />
                                             Download to View
@@ -170,8 +250,9 @@ export default function DocumentShow({ document, isOwner, permission }: Document
 
                             {(document.file_type === 'image' || document.file_type === 'video') && (
                                 <button
+                                    type="button"
                                     onClick={handleDownload}
-                                    className="w-full mt-4 flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                                    className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-white transition hover:bg-blue-700"
                                 >
                                     <Download size={18} />
                                     Download
@@ -179,17 +260,17 @@ export default function DocumentShow({ document, isOwner, permission }: Document
                             )}
                         </div>
 
-                        {/* Comments */}
-                        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-                            <div className="flex items-center justify-between mb-6">
-                                <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                        <div className="rounded-lg bg-white p-6 shadow dark:bg-gray-800">
+                            <div className="mb-6 flex items-center justify-between">
+                                <h2 className="flex items-center gap-2 text-xl font-bold text-gray-900 dark:text-white">
                                     <MessageSquare size={20} />
                                     Comments ({document.comments?.length || 0})
                                 </h2>
                                 {permission === 'view' && (
                                     <button
+                                        type="button"
                                         onClick={() => setShowCommentForm(!showCommentForm)}
-                                        className="flex items-center gap-2 px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 transition"
+                                        className="flex items-center gap-2 rounded bg-blue-600 px-3 py-1 text-sm text-white transition hover:bg-blue-700"
                                     >
                                         <Plus size={16} />
                                         Add Comment
@@ -198,24 +279,30 @@ export default function DocumentShow({ document, isOwner, permission }: Document
                             </div>
 
                             {showCommentForm && (
-                                <div className="mb-6 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                                <div className="mb-6 rounded-lg bg-gray-50 p-4 dark:bg-gray-700">
                                     <textarea
-                                        value={commentText}
-                                        onChange={(e) => setCommentText(e.target.value)}
+                                        value={commentData.comment}
+                                        onChange={(e) => setCommentData('comment', e.target.value)}
                                         placeholder="Add a comment..."
                                         rows={3}
-                                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-600 dark:text-white"
+                                        className="w-full rounded-lg border border-gray-300 px-4 py-2 dark:border-gray-600 dark:bg-gray-600 dark:text-white"
                                     />
-                                    <div className="flex gap-2 mt-2">
+                                    {commentErrors.comment && (
+                                        <p className="mt-2 text-sm text-red-600">{String(commentErrors.comment)}</p>
+                                    )}
+                                    <div className="mt-2 flex gap-2">
                                         <button
+                                            type="button"
                                             onClick={handleAddComment}
-                                            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                                            disabled={postingComment}
+                                            className="rounded-lg bg-blue-600 px-4 py-2 text-white transition hover:bg-blue-700 disabled:opacity-50"
                                         >
-                                            Post Comment
+                                            {postingComment ? 'Posting...' : 'Post Comment'}
                                         </button>
                                         <button
+                                            type="button"
                                             onClick={() => setShowCommentForm(false)}
-                                            className="px-4 py-2 bg-gray-300 dark:bg-gray-600 text-gray-900 dark:text-white rounded-lg hover:bg-gray-400 dark:hover:bg-gray-500 transition"
+                                            className="rounded-lg bg-gray-300 px-4 py-2 text-gray-900 transition hover:bg-gray-400 dark:bg-gray-600 dark:text-white dark:hover:bg-gray-500"
                                         >
                                             Cancel
                                         </button>
@@ -224,9 +311,9 @@ export default function DocumentShow({ document, isOwner, permission }: Document
                             )}
 
                             <div className="space-y-4">
-                                {document.comments?.map((comment: any) => (
-                                    <div key={comment.id} className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                                        <div className="flex justify-between items-start mb-2">
+                                {document.comments?.map((comment) => (
+                                    <div key={comment.id} className="rounded-lg bg-gray-50 p-4 dark:bg-gray-700">
+                                        <div className="mb-2 flex items-start justify-between">
                                             <div>
                                                 <p className="font-semibold text-gray-900 dark:text-white">
                                                     {comment.user?.name}
@@ -245,14 +332,12 @@ export default function DocumentShow({ document, isOwner, permission }: Document
                         </div>
                     </div>
 
-                    {/* Sidebar */}
                     <div className="space-y-6">
-                        {/* Document Info */}
-                        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-                            <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">
+                        <div className="rounded-lg bg-white p-6 shadow dark:bg-gray-800">
+                            <h3 className="mb-4 text-lg font-bold text-gray-900 dark:text-white">
                                 Information
                             </h3>
-                            
+
                             <div className="space-y-3 text-sm">
                                 <div>
                                     <p className="text-gray-600 dark:text-gray-400">Category</p>
@@ -270,7 +355,7 @@ export default function DocumentShow({ document, isOwner, permission }: Document
 
                                 <div>
                                     <p className="text-gray-600 dark:text-gray-400">Module</p>
-                                    <p className="font-semibold text-gray-900 dark:text-white capitalize">
+                                    <p className="font-semibold capitalize text-gray-900 dark:text-white">
                                         {document.module.replace(/_/g, ' ')}
                                     </p>
                                 </div>
@@ -285,11 +370,11 @@ export default function DocumentShow({ document, isOwner, permission }: Document
                                 {document.tags && (
                                     <div>
                                         <p className="text-gray-600 dark:text-gray-400">Tags</p>
-                                        <div className="flex flex-wrap gap-2 mt-1">
-                                            {document.tags.split(',').map((tag: string, idx: number) => (
+                                        <div className="mt-1 flex flex-wrap gap-2">
+                                            {document.tags.split(',').map((tag, idx) => (
                                                 <span
                                                     key={idx}
-                                                    className="text-xs bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-2 py-1 rounded"
+                                                    className="rounded bg-blue-100 px-2 py-1 text-xs text-blue-800 dark:bg-blue-900 dark:text-blue-200"
                                                 >
                                                     {tag.trim()}
                                                 </span>
@@ -300,41 +385,102 @@ export default function DocumentShow({ document, isOwner, permission }: Document
                             </div>
                         </div>
 
-                        {/* Actions */}
-                        {isOwner && (
-                            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-                                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">
+                        {permission === 'edit' && (
+                            <div className="rounded-lg bg-white p-6 shadow dark:bg-gray-800">
+                                <h3 className="mb-4 text-lg font-bold text-gray-900 dark:text-white">
                                     Actions
                                 </h3>
 
                                 <div className="space-y-2">
                                     <button
+                                        type="button"
                                         onClick={() => setShowShareForm(!showShareForm)}
-                                        className="w-full flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                                        className="flex w-full items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-white transition hover:bg-blue-700"
                                     >
                                         <Share2 size={18} />
                                         Share Document
                                     </button>
 
                                     <button
+                                        type="button"
                                         onClick={() => setShowVersions(!showVersions)}
-                                        className="w-full flex items-center gap-2 px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition"
+                                        className="flex w-full items-center gap-2 rounded-lg bg-gray-200 px-4 py-2 text-gray-900 transition hover:bg-gray-300 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600"
                                     >
                                         <History size={18} />
                                         Version History
                                     </button>
                                 </div>
 
+                                {showShareForm && (
+                                    <form onSubmit={handleShareDocument} className="mt-4 space-y-3 rounded-lg bg-gray-50 p-4 dark:bg-gray-700">
+                                        <div>
+                                            <label className="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">
+                                                Share with
+                                            </label>
+                                            <select
+                                                value={shareData.user_id}
+                                                onChange={(e) => setShareData('user_id', e.target.value)}
+                                                className="w-full rounded-lg border border-gray-300 px-4 py-2 dark:border-gray-600 dark:bg-gray-600 dark:text-white"
+                                                required
+                                            >
+                                                <option value="">Select a user</option>
+                                                {shareableUsers.map((user) => (
+                                                    <option key={user.id} value={String(user.id)}>
+                                                        {user.name} ({user.email})
+                                                    </option>
+                                                ))}
+                                            </select>
+                                            {shareErrors.user_id && (
+                                                <p className="mt-1 text-sm text-red-600">{String(shareErrors.user_id)}</p>
+                                            )}
+                                        </div>
+
+                                        <div>
+                                            <label className="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">
+                                                Permission
+                                            </label>
+                                            <select
+                                                value={shareData.permission}
+                                                onChange={(e) => setShareData('permission', e.target.value)}
+                                                className="w-full rounded-lg border border-gray-300 px-4 py-2 dark:border-gray-600 dark:bg-gray-600 dark:text-white"
+                                            >
+                                                <option value="view">View</option>
+                                                <option value="edit">Edit</option>
+                                            </select>
+                                            {shareErrors.permission && (
+                                                <p className="mt-1 text-sm text-red-600">{String(shareErrors.permission)}</p>
+                                            )}
+                                        </div>
+
+                                        <div className="flex gap-2">
+                                            <button
+                                                type="submit"
+                                                disabled={sharingDocument}
+                                                className="flex-1 rounded-lg bg-blue-600 px-4 py-2 font-semibold text-white transition hover:bg-blue-700 disabled:opacity-50"
+                                            >
+                                                {sharingDocument ? 'Sharing...' : 'Share'}
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowShareForm(false)}
+                                                className="flex-1 rounded-lg bg-gray-300 px-4 py-2 font-semibold text-gray-900 transition hover:bg-gray-400 dark:bg-gray-600 dark:text-white dark:hover:bg-gray-500"
+                                            >
+                                                Cancel
+                                            </button>
+                                        </div>
+                                    </form>
+                                )}
+
                                 {showVersions && document.versions && (
-                                    <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                                        <p className="text-sm font-semibold text-gray-900 dark:text-white mb-3">
+                                    <div className="mt-4 rounded-lg bg-gray-50 p-4 dark:bg-gray-700">
+                                        <p className="mb-3 text-sm font-semibold text-gray-900 dark:text-white">
                                             Versions
                                         </p>
                                         <div className="space-y-2">
-                                            {document.versions?.map((version: any) => (
+                                            {document.versions.map((version) => (
                                                 <div
                                                     key={version.id}
-                                                    className="text-xs p-2 bg-white dark:bg-gray-600 rounded border border-gray-200 dark:border-gray-500"
+                                                    className="rounded border border-gray-200 bg-white p-2 text-xs dark:border-gray-500 dark:bg-gray-600"
                                                 >
                                                     <div className="font-semibold text-gray-900 dark:text-white">
                                                         v{version.version_number}
@@ -343,7 +489,7 @@ export default function DocumentShow({ document, isOwner, permission }: Document
                                                         {formatDate(version.created_at)}
                                                     </div>
                                                     {version.change_log && (
-                                                        <div className="text-gray-600 dark:text-gray-400 mt-1">
+                                                        <div className="mt-1 text-gray-600 dark:text-gray-400">
                                                             {version.change_log}
                                                         </div>
                                                     )}
@@ -355,29 +501,29 @@ export default function DocumentShow({ document, isOwner, permission }: Document
                             </div>
                         )}
 
-                        {/* Shared With */}
                         {document.shares && document.shares.length > 0 && (
-                            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-                                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">
+                            <div className="rounded-lg bg-white p-6 shadow dark:bg-gray-800">
+                                <h3 className="mb-4 text-lg font-bold text-gray-900 dark:text-white">
                                     Shared With
                                 </h3>
 
                                 <div className="space-y-2">
-                                    {document.shares.map((share: any) => (
+                                    {document.shares.map((share) => (
                                         <div
                                             key={share.id}
-                                            className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-700 rounded"
+                                            className="flex items-center justify-between rounded bg-gray-50 p-2 dark:bg-gray-700"
                                         >
                                             <div>
-                                                <p className="font-semibold text-gray-900 dark:text-white text-sm">
+                                                <p className="text-sm font-semibold text-gray-900 dark:text-white">
                                                     {share.user?.name}
                                                 </p>
                                                 <p className="text-xs text-gray-600 dark:text-gray-400">
                                                     {share.permission === 'view' ? '👁️ View' : '✏️ Edit'}
                                                 </p>
                                             </div>
-                                            {isOwner && (
+                                            {permission === 'edit' && (
                                                 <button
+                                                    type="button"
                                                     onClick={() => {
                                                         destroy(`/documents/${document.id}/shares/${share.id}`, {
                                                             onSuccess: () => window.location.reload(),

@@ -38,9 +38,9 @@ return new class extends Migration
             $table->boolean('is_archived')->default(false);
             $table->timestamps();
             $table->softDeletes();
-            
+
             $table->index(['module', 'category_id', 'created_at']);
-            
+
             // Only add fulltext index for MySQL/MariaDB
             if (config('database.default') === 'mysql') {
                 $table->fullText(['title', 'description', 'tags']);
@@ -74,10 +74,13 @@ return new class extends Migration
             $table->foreignId('document_id')->constrained('documents')->onDelete('cascade');
             $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
             $table->string('permission')->default('view'); // 'view', 'edit'
-            $table->foreignId('shared_by')->constrained('users')->onDelete('set null');
+
+            // FIX: must be nullable when using on delete set null
+            $table->foreignId('shared_by')->nullable()->constrained('users')->nullOnDelete();
+
             $table->timestamp('shared_at');
             $table->timestamps();
-            
+
             $table->unique(['document_id', 'user_id']);
         });
 

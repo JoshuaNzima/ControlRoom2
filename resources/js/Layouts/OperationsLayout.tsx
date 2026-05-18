@@ -50,10 +50,16 @@ export default function OperationsLayout({ title, children, user, showQrScanner 
 
   const isSuperAdmin = roles.includes('super_admin');
   const isOperationsManager = roles.includes('operations_manager');
+  const isClientUser = roles.includes('client');
   const roleDisplay = roles.length > 0 ? roles[0].replace(/_/g, ' ') : 'Operations';
 
   const operationsLinks: NavItem[] = [
     { name: 'Dashboard', href: route('operations.dashboard'), icon: <IconMapper name="LayoutDashboard" size={20} /> },
+    ...(!isClientUser
+      ? ([
+          { name: 'Documents', href: route('documents.index'), icon: <IconMapper name="FileText" size={20} /> },
+        ] as NavItem[])
+      : []),
     { name: 'Site Coverage', href: route('operations.coverage.index'), icon: <IconMapper name="Building" size={20} /> },
     { name: 'Deployments', href: route('operations.coverage.sites'), icon: <IconMapper name="MapPin" size={20} /> },
     { name: 'Guard Roster', href: route('operations.guards.index'), icon: <IconMapper name="Shield" size={20} /> },
@@ -157,7 +163,6 @@ export default function OperationsLayout({ title, children, user, showQrScanner 
 
         {/* AI Assistant */}
         <AIAssistant context="operations" />
-
       </div>
 
       {/* QR Scanner Modal */}

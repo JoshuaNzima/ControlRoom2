@@ -20,6 +20,7 @@ export default function Authenticated({
 
     const roles = (((pageUser as any)?.roles ?? []) as any[]).map(String);
     const isAdminUser = roles.includes('admin') || roles.includes('super_admin');
+    const isClientUser = roles.includes('client');
 
     // Initialize real-time notifications for messages and QR scans
     useRealtimeNotifications({
@@ -31,9 +32,11 @@ export default function Authenticated({
         try {
             const p = window.location.pathname;
             if (p.startsWith('/superadmin')) return route('superadmin.profile');
-            if (p.startsWith('/admin/front-desk')) return route('admin.front-desk.profile');
+            if (p.startsWith('/admin/front-desk'))
+                return route('admin.front-desk.profile');
             if (p.startsWith('/admin/marketing')) return route('admin.marketing.profile');
-            if (p.startsWith('/admin/business-dev')) return route('admin.business-dev.profile');
+            if (p.startsWith('/admin/business-dev'))
+                return route('admin.business-dev.profile');
             if (p.startsWith('/admin')) return route('admin.profile');
             if (p.startsWith('/control-room')) return route('control-room.profile');
             if (p.startsWith('/operations')) return route('operations.profile');
@@ -50,8 +53,7 @@ export default function Authenticated({
         }
     })();
 
-    const [showingNavigationDropdown, setShowingNavigationDropdown] =
-        useState(false);
+    const [showingNavigationDropdown, setShowingNavigationDropdown] = useState(false);
 
     return (
         <div className="min-h-screen bg-red-50 dark:bg-gray-900">
@@ -74,16 +76,31 @@ export default function Authenticated({
                                 </NavLink>
                                 <NavLink
                                     href={route('messages.conversations.index')}
-                                    active={window.location.pathname.startsWith(route('messages.conversations.index'))}
+                                    active={window.location.pathname.startsWith(
+                                        route('messages.conversations.index')
+                                    )}
                                 >
                                     Messaging
                                 </NavLink>
                                 {!isAdminUser && (
                                     <NavLink
                                         href={route('requisitions.index')}
-                                        active={window.location.pathname.startsWith(route('requisitions.index'))}
+                                        active={window.location.pathname.startsWith(
+                                            route('requisitions.index')
+                                        )}
                                     >
                                         Requisitions
+                                    </NavLink>
+                                )}
+                                {!isClientUser && (
+                                    <NavLink
+                                        href={route('documents.index')}
+                                        active={
+                                            window.location.pathname === '/documents' ||
+                                            window.location.pathname.startsWith('/documents/')
+                                        }
+                                    >
+                                        Documents
                                     </NavLink>
                                 )}
                                 <NavLink
@@ -102,8 +119,19 @@ export default function Authenticated({
                                 className="p-2 rounded-full bg-red-600 hover:bg-red-700 text-white transition-colors shadow-lg shadow-red-900/30"
                                 title="Emergency Contacts"
                             >
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                                <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    className="h-5 w-5"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                    strokeWidth={2}
+                                >
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"
+                                    />
                                 </svg>
                             </Link>
                             <QuickBudgetButton />
@@ -135,11 +163,7 @@ export default function Authenticated({
                                     </Dropdown.Trigger>
 
                                     <Dropdown.Content>
-                                        <Dropdown.Link
-                                            href={profileHref}
-                                        >
-                                            My Profile
-                                        </Dropdown.Link>
+                                        <Dropdown.Link href={profileHref}>My Profile</Dropdown.Link>
                                         <Dropdown.Link
                                             href={route('logout')}
                                             method="post"
@@ -159,14 +183,25 @@ export default function Authenticated({
                                 className="p-2 rounded-full bg-red-600 hover:bg-red-700 text-white transition-colors"
                                 title="Emergency Contacts"
                             >
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                                <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    className="h-5 w-5"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                    strokeWidth={2}
+                                >
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"
+                                    />
                                 </svg>
                             </Link>
                             <button
                                 onClick={() =>
                                     setShowingNavigationDropdown(
-                                        (previousState) => !previousState,
+                                        (previousState) => !previousState
                                     )
                                 }
                                 className="inline-flex items-center justify-center rounded-md p-2 text-gray-400 transition duration-150 ease-in-out hover:bg-gray-100 hover:text-gray-500 focus:bg-gray-100 focus:text-gray-500 focus:outline-none dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-gray-100 dark:focus:bg-gray-700 dark:focus:text-gray-100"
@@ -179,9 +214,7 @@ export default function Authenticated({
                                 >
                                     <path
                                         className={
-                                            !showingNavigationDropdown
-                                                ? 'inline-flex'
-                                                : 'hidden'
+                                            !showingNavigationDropdown ? 'inline-flex' : 'hidden'
                                         }
                                         strokeLinecap="round"
                                         strokeLinejoin="round"
@@ -190,9 +223,7 @@ export default function Authenticated({
                                     />
                                     <path
                                         className={
-                                            showingNavigationDropdown
-                                                ? 'inline-flex'
-                                                : 'hidden'
+                                            showingNavigationDropdown ? 'inline-flex' : 'hidden'
                                         }
                                         strokeLinecap="round"
                                         strokeLinejoin="round"
@@ -207,8 +238,7 @@ export default function Authenticated({
 
                 <div
                     className={
-                        (showingNavigationDropdown ? 'block' : 'hidden') +
-                        ' sm:hidden'
+                        (showingNavigationDropdown ? 'block' : 'hidden') + ' sm:hidden'
                     }
                 >
                     <div className="space-y-1 pb-3 pt-2">
@@ -220,16 +250,31 @@ export default function Authenticated({
                         </ResponsiveNavLink>
                         <ResponsiveNavLink
                             href={route('messages.conversations.index')}
-                            active={window.location.pathname.startsWith(route('messages.conversations.index'))}
+                            active={window.location.pathname.startsWith(
+                                route('messages.conversations.index')
+                            )}
                         >
                             Messaging
                         </ResponsiveNavLink>
                         {!isAdminUser && (
                             <ResponsiveNavLink
                                 href={route('requisitions.index')}
-                                active={window.location.pathname.startsWith(route('requisitions.index'))}
+                                active={window.location.pathname.startsWith(
+                                    route('requisitions.index')
+                                )}
                             >
                                 Requisitions
+                            </ResponsiveNavLink>
+                        )}
+                        {!isClientUser && (
+                            <ResponsiveNavLink
+                                href={route('documents.index')}
+                                active={
+                                    window.location.pathname === '/documents' ||
+                                    window.location.pathname.startsWith('/documents/')
+                                }
+                            >
+                                Documents
                             </ResponsiveNavLink>
                         )}
                         <ResponsiveNavLink

@@ -126,7 +126,7 @@ export default defineConfig({
                 }
             }
         },
-        chunkSizeWarningLimit: 1200,
+        chunkSizeWarningLimit: 600,
         outDir: 'public/build',
         assetsDir: 'assets',
         sourcemap: false,

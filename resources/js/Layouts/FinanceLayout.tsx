@@ -27,7 +27,6 @@ interface NavItem {
   badge?: string | number;
 }
 
-
 export default function FinanceLayout({ title, children, user }: Props) {
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
   const [tasksOpen, setTasksOpen] = React.useState(false);
@@ -53,7 +52,8 @@ export default function FinanceLayout({ title, children, user }: Props) {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  const rawRoles = ((user as any)?.roles ?? (page?.props as any)?.auth?.user?.roles ?? []) as (string | { id: number; name: string })[];
+  const rawRoles =
+    ((user as any)?.roles ?? (page?.props as any)?.auth?.user?.roles ?? []) as (string | { id: number; name: string })[];
   const roles = rawRoles.map((r) => (typeof r === 'string' ? r : r.name));
   const userId = (user as any)?.id ?? (page?.props as any)?.auth?.user?.id;
 
@@ -63,10 +63,14 @@ export default function FinanceLayout({ title, children, user }: Props) {
   const isSuperAdmin = roles.includes('super_admin');
   const isAdminUser = roles.includes('admin') || roles.includes('super_admin');
   const roleDisplay = roles.length > 0 ? roles[0].replace(/_/g, ' ') : 'Finance';
+  const isClientUser = roles.includes('client');
 
   // Finance Navigation
   const financeLinks: NavItem[] = [
     { name: 'Dashboard', href: route('finance.dashboard'), icon: <IconMapper name="LayoutDashboard" size={20} /> },
+    ...(isClientUser
+      ? []
+      : ([{ name: 'Documents', href: route('documents.index'), icon: <IconMapper name="FileText" size={20} /> }] as NavItem[])),
     { name: 'Invoices', href: route('finance.invoices.index'), icon: <IconMapper name="FileText" size={20} /> },
     { name: 'Expenses', href: route('finance.expenses.index'), icon: <IconMapper name="CreditCard" size={20} /> },
     { name: 'Payroll', href: route('finance.payroll.index'), icon: <IconMapper name="Banknote" size={20} /> },
@@ -86,9 +90,14 @@ export default function FinanceLayout({ title, children, user }: Props) {
 
   // Tools Navigation
   const toolsLinks: NavItem[] = [
-    ...(!isAdminUser ? ([
-      { name: 'My Requisitions', href: route('requisitions.index'), icon: <IconMapper name="ClipboardList" size={20} />, badge: counters?.requisitions_my_open },
-    ] as NavItem[]) : []),
+    ...(!isAdminUser
+      ? ([{
+          name: 'My Requisitions',
+          href: route('requisitions.index'),
+          icon: <IconMapper name="ClipboardList" size={20} />,
+          badge: counters?.requisitions_my_open,
+        }] as NavItem[])
+      : []),
     // { name: 'Settings', href: route('finance.settings'), icon: <IconMapper name="Settings" size={20} /> },
   ];
 
@@ -174,9 +183,7 @@ export default function FinanceLayout({ title, children, user }: Props) {
         <BaseShell noHeader fullScreen={false}>
           <div className="transition-all ease-out duration-500">
             <div className={`grid gap-4 ${tasksOpen ? 'grid-cols-1 xl:grid-cols-4' : 'grid-cols-1'}`}>
-              <div className={tasksOpen ? 'xl:col-span-3' : ''}>
-                {children}
-              </div>
+              <div className={tasksOpen ? 'xl:col-span-3' : ''}>{children}</div>
               <AnimatePresence>
                 {tasksOpen && (
                   <motion.div
@@ -186,17 +193,14 @@ export default function FinanceLayout({ title, children, user }: Props) {
                     transition={{ duration: 0.35, ease: [0.25, 0.46, 0.45, 0.94] }}
                     className="xl:col-span-1"
                   >
-                    <WeeklyTasks
-                      tasks={weeklyTasks || []}
-                      showModule={true}
-                      isExecutiveAssistant={isExecutiveAssistant}
-                    />
+                    <WeeklyTasks tasks={weeklyTasks || []} showModule={true} isExecutiveAssistant={isExecutiveAssistant} />
                   </motion.div>
                 )}
               </AnimatePresence>
             </div>
           </div>
         </BaseShell>
+
         {tasksOpen && isMobile && (
           <WeeklyTasks
             tasks={weeklyTasks || []}
@@ -206,6 +210,7 @@ export default function FinanceLayout({ title, children, user }: Props) {
             onClose={() => setTasksOpen(false)}
           />
         )}
+
         <AIAssistant context="finance" />
       </div>
     </div>

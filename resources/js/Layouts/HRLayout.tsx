@@ -64,6 +64,8 @@ export default function HRLayout({ title, children, user }: Props) {
 
   const isAdminUser = roles.includes('admin') || roles.includes('super_admin');
   const isSuperAdmin = roles.includes('super_admin');
+  const isClientUser = roles.includes('client');
+
   const roleDisplay = (() => {
     const r: any = (user as any)?.roles;
     if (Array.isArray(r) && r.length) {
@@ -78,6 +80,11 @@ export default function HRLayout({ title, children, user }: Props) {
   // Main HR Navigation
   const hrLinks: NavItem[] = [
     { name: 'Dashboard', href: route('hr.dashboard'), icon: <IconMapper name="LayoutDashboard" size={20} /> },
+    ...(isClientUser
+      ? []
+      : ([
+          { name: 'Documents', href: route('documents.index'), icon: <IconMapper name="FileText" size={20} /> },
+        ] as NavItem[])),
     { name: 'Employees', href: route('hr.employees.index'), icon: <IconMapper name="Users" size={20} /> },
     { name: 'Downs', href: route('hr.downs.index'), icon: <IconMapper name="AlertTriangle" size={20} />, badge: counters?.control_downs_active },
     { name: 'Roster', href: route('hr.leaves'), icon: <IconMapper name="Calendar" size={20} /> },
@@ -104,9 +111,11 @@ export default function HRLayout({ title, children, user }: Props) {
 
   // Tools
   const toolsLinks: NavItem[] = [
-    ...(!isAdminUser ? ([
-      { name: 'My Requisitions', href: route('requisitions.index'), icon: <IconMapper name="ClipboardList" size={20} />, badge: counters?.requisitions_my_open },
-    ] as NavItem[]) : []),
+    ...(!isAdminUser
+      ? ([
+          { name: 'My Requisitions', href: route('requisitions.index'), icon: <IconMapper name="ClipboardList" size={20} />, badge: counters?.requisitions_my_open },
+        ] as NavItem[])
+      : []),
     { name: 'Budgets', href: route('budgets.index'), icon: <IconMapper name="PieChart" size={20} /> },
   ];
 
@@ -161,6 +170,7 @@ export default function HRLayout({ title, children, user }: Props) {
                 </button>
                 <h1 className="text-lg sm:text-xl font-semibold text-red-900 dark:text-gray-100 truncate">{title}</h1>
               </div>
+
               <div className="flex items-center justify-end gap-1 sm:gap-3">
                 <QuickStats />
                 <NotificationBell />
@@ -172,10 +182,12 @@ export default function HRLayout({ title, children, user }: Props) {
                   <IconMapper name="CheckSquare" size={16} />
                   <span className="hidden sm:inline">Tasks</span>
                 </button>
+
                 <div className="hidden sm:flex items-center gap-3">
                   <QuickBudgetButton />
                   <QuickRequisitionButton />
                 </div>
+
                 <button
                   onClick={toggle}
                   className="text-xs sm:text-sm px-2 sm:px-3 py-1.5 rounded-md bg-red-100 text-red-800 hover:bg-red-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700 transition-colors touch-target-min"
@@ -215,6 +227,7 @@ export default function HRLayout({ title, children, user }: Props) {
             </div>
           </div>
         </BaseShell>
+
         {tasksOpen && isMobile && (
           <WeeklyTasks
             tasks={weeklyTasks || []}
@@ -224,6 +237,7 @@ export default function HRLayout({ title, children, user }: Props) {
             onClose={() => setTasksOpen(false)}
           />
         )}
+
         <AIAssistant context="hr" />
       </div>
     </div>

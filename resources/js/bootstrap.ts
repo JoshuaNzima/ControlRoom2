@@ -33,10 +33,13 @@ try {
     });
 
   }
-} catch {}
+} catch (e) {
+  console.warn('Failed to initialize Echo/Pusher for real-time features', e);
+}
 
 // Provide a safe Echo stub so any consumer calling Echo.socketId() won't crash when Pusher isn't configured
 if (!window.Echo) {
+  console.warn('Echo not initialized - real-time features disabled');
   (window as any).Echo = { socketId: () => '' };
 }
 
@@ -63,6 +66,7 @@ axios.interceptors.response.use(
         const retryConfig: any = { ...config, __isRetry: true };
         return axios(retryConfig);
       } catch (e) {
+        console.warn('CSRF token refresh failed, reloading page', e);
         if (typeof window !== 'undefined') {
           window.location.reload();
         }
@@ -130,6 +134,7 @@ window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
     }
     res = await __origFetch(input as any, opts);
     if (res.status === 419) {
+      console.warn('CSRF token refresh failed, session may be expired. Reloading page.');
       if (typeof window !== 'undefined') window.location.reload();
     }
   }

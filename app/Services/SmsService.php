@@ -19,7 +19,11 @@ class SmsService
                     $this->sendViaTwilio($to, $message);
                 }
             } catch (\Throwable $e) {
-                // swallow provider errors to avoid throwing across app boundaries
+                Log::warning("SMS send failed via {$provider}", [
+                    'to' => $to,
+                    'error' => $e->getMessage(),
+                    'code' => $e->getCode(),
+                ]);
             }
         }
     }
