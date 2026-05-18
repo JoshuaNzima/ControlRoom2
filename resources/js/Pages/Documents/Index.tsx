@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Head, Link, usePage } from '@inertiajs/react';
 import { Search, Upload, Filter } from 'lucide-react';
+import DocumentUploadModal from '@/Components/DocumentUploadModal';
 import { resolveDocumentLayout } from './resolveDocumentLayout';
 
 interface DocumentCategory {
@@ -45,6 +46,8 @@ export default function DocumentsIndex({
     const [selectedFileType, setSelectedFileType] = useState('');
     const [selectedModule, setSelectedModule] = useState('');
     const [sortBy, setSortBy] = useState('newest');
+    const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+    const [selectedModuleForUpload, setSelectedModuleForUpload] = useState<string>('finance');
 
     const handleSearch = (e: React.FormEvent) => {
         e.preventDefault();
@@ -120,13 +123,13 @@ export default function DocumentsIndex({
                         </p>
                     </div>
 
-                    <Link
-                        href="/documents/create"
+                    <button
+                        onClick={() => setIsUploadModalOpen(true)}
                         className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-white transition hover:bg-blue-700"
                     >
                         <Upload size={18} />
                         Upload Document
-                    </Link>
+                    </button>
                 </div>
 
                 <div className="mb-8 rounded-lg bg-white p-6 shadow dark:bg-gray-800">
@@ -277,6 +280,20 @@ export default function DocumentsIndex({
                         ))}
                     </div>
                 )}
+
+                <DocumentUploadModal
+                    isOpen={isUploadModalOpen}
+                    onClose={() => setIsUploadModalOpen(false)}
+                    categories={categories}
+                    modules={modules}
+                    submitUrl="/documents"
+                    initialModule={selectedModuleForUpload}
+                    onModuleChange={setSelectedModuleForUpload}
+                    onUploadSuccess={() => {
+                        setIsUploadModalOpen(false);
+                        window.location.href = '/documents';
+                    }}
+                />
             </div>
         </Layout>
     );

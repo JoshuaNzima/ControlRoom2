@@ -688,14 +688,12 @@ Route::middleware(['auth'])->group(function () {
     // Documents - Accessible to all authenticated users
     Route::middleware(['auth'])->group(function () {
         Route::get('/documents', [\App\Http\Controllers\DocumentController::class, 'index'])->name('documents.index');
-        Route::get('/documents/create', [\App\Http\Controllers\DocumentController::class, 'create'])->name('documents.create');
         Route::get('/documents/{document}', [\App\Http\Controllers\DocumentController::class, 'show'])->name('documents.show');
         Route::get('/documents/{document}/preview', [\App\Http\Controllers\DocumentController::class, 'preview'])->name('documents.preview');
         Route::get('/documents/{document}/download', [\App\Http\Controllers\DocumentController::class, 'download'])->name('documents.download');
         
         // Create and update restricted to authenticated users
         Route::post('/documents', [\App\Http\Controllers\DocumentController::class, 'store'])->name('documents.store');
-        Route::get('/documents/{document}/edit', [\App\Http\Controllers\DocumentController::class, 'edit'])->name('documents.edit');
         Route::put('/documents/{document}', [\App\Http\Controllers\DocumentController::class, 'update'])->name('documents.update');
         Route::delete('/documents/{document}', [\App\Http\Controllers\DocumentController::class, 'destroy'])->name('documents.destroy');
         
