@@ -29,11 +29,13 @@ class Document extends Model
         'tags',
         'expires_at',
         'is_archived',
+        'pinned',
     ];
 
     protected $casts = [
         'expires_at' => 'datetime',
         'is_archived' => 'boolean',
+        'pinned' => 'boolean',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];

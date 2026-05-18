@@ -80,11 +80,16 @@ export default function FrontOfficeLayout({ children, title }: FrontOfficeLayout
 
     const navItems: NavItem[] = [
         { label: 'Dashboard', href: route('front-office.dashboard'), icon: LayoutDashboard },
+        ...(role === 'client' ? [] : [{ label: 'Documents', href: route('documents.index'), icon: FileText }]),
         ...(can?.manage_calendar ? [{ label: 'Calendar', href: route('front-office.calendar.index'), icon: Calendar }] : []),
         { label: 'Visitors', href: route('front-office.visitors.index'), icon: Users },
         ...(can?.manage_tasks ? [{ label: 'Tasks', href: route('tasks.dashboard'), icon: CheckSquare }] : []),
-        ...(role === 'executive_assistant' || role === 'super_admin' || role === 'admin' ? [{ label: 'Requisitions', href: route('front-office.requisitions.index'), icon: ShoppingCart }] : []),
-        ...(role === 'executive_assistant' || role === 'super_admin' ? [{ label: 'Petty Cash', href: route('executive.petty-cash.index'), icon: Wallet }] : []),
+        ...(role === 'executive_assistant' || role === 'super_admin' || role === 'admin'
+            ? [{ label: 'Requisitions', href: route('front-office.requisitions.index'), icon: ShoppingCart }]
+            : []),
+        ...(role === 'executive_assistant' || role === 'super_admin'
+            ? [{ label: 'Petty Cash', href: route('executive.petty-cash.index'), icon: Wallet }]
+            : []),
         { label: 'Messages', href: route('front-office.messages.index'), icon: MessageSquare },
         ...(can?.view_reports ? [{ label: 'Reports', href: route('front-office.reports.index'), icon: FileText }] : []),
     ];
@@ -199,10 +204,12 @@ export default function FrontOfficeLayout({ children, title }: FrontOfficeLayout
                         </Avatar>
                         <div className="flex-1 min-w-0">
                             <p className="text-sm font-semibold text-white truncate">{user?.name || 'Guest'}</p>
-                            <span className={cn(
-                                "inline-flex items-center px-2 py-0.5 rounded text-xs border font-medium",
-                                getRoleColor(role)
-                            )}>
+                            <span
+                                className={cn(
+                                    "inline-flex items-center px-2 py-0.5 rounded text-xs border font-medium",
+                                    getRoleColor(role)
+                                )}
+                            >
                                 {getRoleLabel(role)}
                             </span>
                         </div>

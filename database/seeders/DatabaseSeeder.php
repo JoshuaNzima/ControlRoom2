@@ -52,9 +52,10 @@ class DatabaseSeeder extends Seeder
             ZoneCommanderSeeder::class,
             CheckpointSeeder::class,
             ModularPermissionsSeeder::class,
-            DefaultModulesSeeder::class,            
+            DefaultModulesSeeder::class,
             ZoneCommanderDemoSeeder::class,
             MarketingAndAssetRolesSeeder::class,
+            DocumentCategorySeeder::class,
         ]);
     }
 }

@@ -301,7 +301,26 @@ export default function ScannerModal({ open, onClose, activeScan }: Props) {
       accuracy: location?.accuracy,
     }, {
       preserveState: true,
-      onSuccess: (page) => {
+        onSuccess: (page) => {
+            type FlashProps = {
+                location_verified?: boolean;
+                scan?: {
+                    checkpoint_name?: string;
+                    site_name?: string;
+                    client_name?: string;
+                };
+            };
+
+            type ScanPageProps = {
+                flash?: FlashProps;
+                scan?: FlashProps['scan'] & {
+                    checkpoint_name?: string;
+                    site_name?: string;
+                    client_name?: string;
+                };
+            };
+
+            const props = page.props as unknown as ScanPageProps;
         toast.dismiss(loadingToast);
 
         // Play success sound and haptic feedback
@@ -315,9 +334,9 @@ export default function ScannerModal({ open, onClose, activeScan }: Props) {
         });
 
         // Show success screen with scan details
-        const flash = (page.props as any).flash;
+        const flash = props.flash;
         const isLocationVerified = flash?.location_verified ?? true;
-        const scanData = (page.props as any)?.scan || flash?.scan;
+        const scanData = props.scan || flash?.scan;
 
         setScanResult({
           type: 'checkpoint',
@@ -399,6 +418,20 @@ export default function ScannerModal({ open, onClose, activeScan }: Props) {
 
     router.visit(route('scan.site', { site: siteId, latitude: location?.lat, longitude: location?.lon }), {
       onSuccess: (page) => {
+        type FlashProps = {
+          location_verified?: boolean;
+          scan_success?: string;
+        };
+
+        type SiteScanPageProps = {
+          flash?: FlashProps;
+          scan?: {
+            site_name?: string;
+            client_name?: string;
+          };
+        };
+
+        const props = page.props as unknown as SiteScanPageProps;
         toast.dismiss(loadingToast);
         playSuccessSound();
         triggerHaptic('success');
@@ -409,8 +442,8 @@ export default function ScannerModal({ open, onClose, activeScan }: Props) {
           icon: '✅',
         });
 
-        const flash = (page.props as any)?.flash;
-        const scanData = (page.props as any)?.scan;
+        const flash = props.flash;
+        const scanData = props.scan;
 
         setScanResult({
           type: 'site',

@@ -1,35 +1,42 @@
-# Coin Security ControlRoom Code Style Rules
+---
+trigger: always_on
+---
 
-## Backend (Laravel 12)
-- Always use Laravel 12 conventions and patterns
-- Follow PSR-12 coding standards
-- Use type hints and return types on all methods
-- Prefer dependency injection over facades where possible
-- Use Eloquent relationships properly with eager loading to avoid N+1 issues
+Always use laravel 12 rules for backend
+All frontend are coded in react (tsx) format
+always maintain color-theme
+Instead of create, show, edit pages, use modals for faster navigation
+take a mobile 1st approach for all pages & modals - support down to 375px screens
+keep consistency on dark mode, make sure there's no light colors in dark mode
+Delete all obsolete code and files whenever changes are made
+Avoid reverting to something that was changed unless explicitly instructed
 
-## Frontend (React + TypeScript)
-- All frontend components must use React with TypeScript (.tsx format)
-- Use functional components with hooks (no class components)
-- Use Tailwind CSS for styling with the coin theme color palette
-- Maintain dark mode consistency - never use light colors in dark mode
-- Use mobile-first responsive design approach
+**Responsive Design Standards (375px+ support):**
+Use `px-2 sm:px-4` instead of fixed `px-4` padding
+Use `py-2 sm:py-3` instead of fixed `py-3` padding
+Use `text-xs sm:text-sm` and `text-sm sm:text-base` for font scaling
+Use `gap-2 sm:gap-3` instead of fixed gaps
+Apply `touch-target-min` class to buttons smaller than 44px
+Use `min-w-0` and `truncate` on text containers to prevent overflow
+Modals should use `p-4 sm:p-6` and `rounded-t-xl sm:rounded-xl`
+Grid layouts should use `grid-cols-1 sm:grid-cols-2` breakpoints
+Action buttons should always be visible on mobile (`opacity-100 sm:opacity-0 sm:group-hover:opacity-100`)
 
-## UI/UX Guidelines
-- Use modals instead of create/show/edit pages for faster navigation
-- All pages and modals must be mobile-first designed
-- Maintain consistent dark mode theming throughout the application
-- Use the coin color theme (coin-600, coin-700, coin-800, coin-900)
-- Use shadcn/ui components where available
-
-## Code Quality
-- Delete all obsolete code and files whenever making changes
-- Avoid reverting to previously changed code unless explicitly instructed
-- Keep components small and focused (single responsibility)
-- Add proper TypeScript types for all props and state
-- Use proper error handling and loading states
-
-## Project Structure
-- Keep Laravel backend code in `app/` directory
-- Keep React components in `resources/js/` directory
-- Use Inertia.js for page routing
-- Follow existing project conventions
+**Defensive Programming - Handle Stupid User Actions:**
+Always validate and sanitize all user inputs (frontend + backend)
+Never trust client-side data; re-validate everything server-side
+Handle null/undefined gracefully with optional chaining (`?.`) and nullish coalescing (`??`)
+Add type guards for runtime type checking on external data
+Implement proper error boundaries and catch blocks with user-friendly messages
+Guard against race conditions with loading states and request deduplication
+Prevent double-submissions with button disabling during async operations
+Validate file uploads (type, size, content) before processing
+Escape/sanitize all rendered user content to prevent XSS
+Limit API rate and add pagination for large data sets
+Add confirmation dialogs for destructive actions (delete, bulk operations)
+Handle network failures gracefully with retry logic and offline state
+Validate date ranges (start <= end, not in past if restricted)
+Check permissions on every action, not just UI visibility
+Log security events (failed auth, suspicious inputs) for audit trails
+Gracefully degrade when optional features/APIs are unavailable 
+Always wire new features without using placeholders and dummies

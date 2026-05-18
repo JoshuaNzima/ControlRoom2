@@ -8,6 +8,7 @@ use App\Models\DocumentComment;
 use App\Models\DocumentVersion;
 use App\Models\DocumentShare;
 use App\Models\DocumentDownload;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
@@ -32,13 +33,14 @@ class DocumentController extends Controller
 
     public function index(Request $request)
     {
-        $query = Document::query()
-            ->where('access_level', 'public')
-            ->orWhere('uploaded_by', auth()->id())
-            ->orWhere('department', auth()->user()->department)
-            ->orWhereHas('sharedWith', function ($q) {
-                $q->where('user_id', auth()->id());
-            });
+        $query = Document::query()->where(function ($q) {
+            $q->where('access_level', 'public')
+                ->orWhere('uploaded_by', auth()->id())
+                ->orWhere('department', auth()->user()->department)
+                ->orWhereHas('sharedWith', function ($shared) {
+                    $shared->where('user_id', auth()->id());
+                });
+        });
 
         // Apply filters
         if ($request->filled('search')) {
@@ -60,6 +62,9 @@ class DocumentController extends Controller
         if ($request->filled('module')) {
             $query->where('module', $request->module);
         }
+
+        // Always float pinned documents to the top (for any role that can access them)
+        $query->orderByDesc('pinned');
 
         if ($request->filled('sort')) {
             $sort = $request->sort;
@@ -111,6 +116,7 @@ class DocumentController extends Controller
             'access_level' => 'required|in:private,department,module,public',
             'tags' => 'nullable|string',
             'expires_at' => 'nullable|date|after:today',
+            'pinned' => 'nullable|boolean',
         ]);
 
         $file = $request->file('file');
@@ -118,7 +124,7 @@ class DocumentController extends Controller
         $fileType = $this->getFileType($mimeType);
 
         $path = $file->storeAs(
-            "documents/{$validated['module']}/{now()->format('Y/m')}",
+            'documents/' . $validated['module'] . '/' . now()->format('Y/m'),
             uniqid() . '_' . $file->getClientOriginalName(),
             'public'
         );
@@ -138,6 +144,7 @@ class DocumentController extends Controller
             'access_level' => $validated['access_level'],
             'tags' => $validated['tags'] ?? null,
             'expires_at' => $validated['expires_at'] ?? null,
+            'pinned' => (bool) ($validated['pinned'] ?? false),
         ]);
 
         DocumentVersion::create([
@@ -169,6 +176,12 @@ class DocumentController extends Controller
             'document' => $document,
             'isOwner' => $document->uploaded_by === auth()->id(),
             'permission' => $document->getPermission(auth()->user()),
+            'categories' => DocumentCategory::all(),
+            'modules' => Document::getModules(),
+            'shareableUsers' => User::query()
+                ->where('id', '!=', auth()->id())
+                ->orderBy('name')
+                ->get(['id', 'name', 'email']),
         ]);
     }
 
@@ -194,9 +207,18 @@ class DocumentController extends Controller
             'access_level' => 'required|in:private,department,module,public',
             'tags' => 'nullable|string',
             'expires_at' => 'nullable|date|after:today',
+            'pinned' => 'nullable|boolean',
         ]);
 
-        $document->update($validated);
+        $document->update([
+            'title' => $validated['title'],
+            'description' => $validated['description'] ?? null,
+            'category_id' => $validated['category_id'],
+            'access_level' => $validated['access_level'],
+            'tags' => $validated['tags'] ?? null,
+            'expires_at' => $validated['expires_at'] ?? null,
+            'pinned' => (bool) ($validated['pinned'] ?? false),
+        ]);
 
         return redirect()->route('documents.show', $document)->with('success', 'Document updated successfully');
     }
@@ -248,18 +270,16 @@ class DocumentController extends Controller
             'parent_id' => 'nullable|exists:document_comments,id',
         ]);
 
-        $comment = DocumentComment::create([
+        DocumentComment::create([
             'document_id' => $document->id,
             'user_id' => auth()->id(),
             'comment' => $validated['comment'],
             'parent_id' => $validated['parent_id'] ?? null,
         ]);
 
-        $comment->load('user');
-
         $document->increment('comments_count');
 
-        return response()->json($comment);
+        return redirect()->back()->with('success', 'Comment added successfully');
     }
 
     public function deleteComment(DocumentComment $comment)
@@ -294,7 +314,7 @@ class DocumentController extends Controller
             ]
         );
 
-        return response()->json(['success' => true]);
+        return redirect()->back()->with('success', 'Document shared successfully');
     }
 
     public function revokeShare(DocumentShare $share)
@@ -304,7 +324,7 @@ class DocumentController extends Controller
 
         $share->delete();
 
-        return response()->json(['success' => true]);
+        return redirect()->back()->with('success', 'Share revoked successfully');
     }
 
     public function createVersion(Request $request, Document $document)
@@ -314,6 +334,7 @@ class DocumentController extends Controller
         $validated = $request->validate([
             'file' => 'required|file|max:512000',
             'change_log' => 'nullable|string|max:500',
+            'pinned' => 'nullable|boolean',
         ]);
 
         $file = $request->file('file');
@@ -322,7 +343,7 @@ class DocumentController extends Controller
         $versionNumber = $document->versions()->max('version_number') + 1;
 
         $path = $file->storeAs(
-            "documents/{$document->module}/{now()->format('Y/m')}",
+            'documents/' . $document->module . '/' . now()->format('Y/m'),
             uniqid() . '_' . $file->getClientOriginalName(),
             'public'
         );
@@ -341,6 +362,7 @@ class DocumentController extends Controller
             'file_path' => $path,
             'mime_type' => $mimeType,
             'file_size' => $file->getSize(),
+            'pinned' => $request->has('pinned') ? (bool) $validated['pinned'] : $document->pinned,
         ]);
 
         return response()->json(['success' => true, 'version_number' => $versionNumber]);
@@ -350,8 +372,6 @@ class DocumentController extends Controller
     {
         $document = $version->document;
         Gate::authorize('update', $document);
-
-        $oldPath = $document->file_path;
 
         $document->update([
             'file_path' => $version->file_path,

@@ -103,6 +103,11 @@ export default function AdminLayout({ title, children }: Props) {
             href: route('admin.dashboard'), 
             icon: <IconMapper name="LayoutDashboard" size={20} />,
         },
+        { 
+            name: 'Documents', 
+            href: route('documents.index'), 
+            icon: <IconMapper name="FileText" size={20} />,
+        },
     ];
 
     const operationsNav: NavItem[] = [
