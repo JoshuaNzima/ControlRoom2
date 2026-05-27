@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AiWidgetAssetController;
 use App\Http\Controllers\InstallController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\CounterController;
@@ -111,6 +112,10 @@ Route::middleware('auth')->group(function () {
         Route::post('/resolve', [\App\Http\Controllers\ChatController::class, 'resolveChat'])->name('resolve');
     });
 });
+
+Route::get('/ai-agent/widget.js', AiWidgetAssetController::class)
+    ->middleware('web')
+    ->name('ai-agent.widget.asset');
 
 // Old AI assistant endpoints (POST /ai/chat, POST /ai/transfer, GET /ai/history) removed.
 // The app now uses laravel-ai-agent widget routes under /ai-agent/*.

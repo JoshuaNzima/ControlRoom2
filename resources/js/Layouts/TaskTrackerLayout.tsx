@@ -6,6 +6,7 @@ import { User } from '@/types';
 import { useTheme } from '@/Providers/ThemeProvider';
 import useCounters from '@/Hooks/useCounters';
 import { useRealtimeNotifications } from '@/Hooks/useRealtimeNotifications';
+import AIAssistant from '@/Components/AI/AIAssistant';
 
 interface Props {
   title: string;
@@ -167,6 +168,7 @@ export default function TaskTrackerLayout({ title, children, user }: Props) {
         {/* Page content */}
         <main className="flex-1 py-6 px-4 sm:px-6 lg:px-8">{children}</main>
       </div>
+      <AIAssistant context="task-tracker" />
     </div>
   );
 }

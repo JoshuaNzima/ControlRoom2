@@ -61,15 +61,23 @@ class DocumentCategorySeeder extends Seeder
                 'description' => 'Images, videos, and multimedia files',
                 'icon' => '🎬',
             ],
+                [
+                'name' => 'Miscellaneous',
+                'description' => 'Uncategorized documents and files',
+                'icon' => '📁',
+            ],
         ];
 
         foreach ($categories as $category) {
-            DocumentCategory::create([
-                'name' => $category['name'],
-                'slug' => Str::slug($category['name']),
-                'description' => $category['description'],
-                'icon' => $category['icon'],
-            ]);
+            $slug = Str::slug($category['name']);
+            DocumentCategory::firstOrCreate(
+                ['slug' => $slug],
+                [
+                    'name' => $category['name'],
+                    'description' => $category['description'],
+                    'icon' => $category['icon'],
+                ]
+            );
         }
     }
 }

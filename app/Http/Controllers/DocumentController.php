@@ -84,6 +84,8 @@ class DocumentController extends Controller
 
         $documents = $query->paginate(20);
 
+        $modalDocument = $this->resolveModalDocument($request);
+
         return Inertia::render('Documents/Index', [
             'documents' => $documents,
             'categories' => DocumentCategory::all(),
@@ -94,15 +96,16 @@ class DocumentController extends Controller
                 'document' => 'Documents',
                 'archive' => 'Archives',
             ],
+            'modalDocument' => $modalDocument,
         ]);
     }
 
-    public function create()
+    public function create(Request $request)
     {
-        return Inertia::render('Documents/Create', [
-            'categories' => DocumentCategory::all(),
-            'modules' => Document::getModules(),
-        ]);
+        return redirect()->route('documents.index', array_filter([
+            'modal' => 'create',
+            'module' => $request->query('module'),
+        ], fn ($value) => $value !== null && $value !== ''));
     }
 
     public function store(Request $request)
@@ -189,10 +192,9 @@ class DocumentController extends Controller
     {
         Gate::authorize('update', $document);
 
-        return Inertia::render('Documents/Edit', [
-            'document' => $document,
-            'categories' => DocumentCategory::all(),
-            'modules' => Document::getModules(),
+        return redirect()->route('documents.index', [
+            'modal' => 'edit',
+            'document' => $document->id,
         ]);
     }
 
@@ -390,6 +392,50 @@ class DocumentController extends Controller
         ]);
 
         return response()->json(['success' => true, 'version_number' => $newVersion->version_number]);
+    }
+
+    private function resolveModalDocument(Request $request): ?array
+    {
+        $modal = $request->query('modal');
+        $documentId = $request->query('document');
+
+        if (!$modal || !$documentId || !in_array($modal, ['edit', 'delete'], true)) {
+            return null;
+        }
+
+        $document = Document::with(['category'])->find($documentId);
+
+        if (!$document) {
+            return null;
+        }
+
+        if ($modal === 'edit') {
+            Gate::authorize('update', $document);
+        }
+
+        if ($modal === 'delete') {
+            Gate::authorize('delete', $document);
+        }
+
+        return [
+            'id' => $document->id,
+            'title' => $document->title,
+            'description' => $document->description,
+            'file_path' => $document->file_path,
+            'file_type' => $document->file_type,
+            'category' => $document->category ? [
+                'id' => $document->category->id,
+                'name' => $document->category->name,
+            ] : null,
+            'access_level' => $document->access_level,
+            'file_size' => $document->file_size,
+            'download_count' => $document->download_count,
+            'module' => $document->module,
+            'tags' => $document->tags,
+            'expires_at' => optional($document->expires_at)?->toDateString(),
+            'pinned' => (bool) $document->pinned,
+            'original_filename' => $document->original_filename,
+        ];
     }
 
     private function getFileType(string $mimeType): string

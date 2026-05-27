@@ -47,7 +47,6 @@ export default function DocumentShow({
     const [showCommentForm, setShowCommentForm] = useState(false);
     const [showVersions, setShowVersions] = useState(false);
     const [showShareForm, setShowShareForm] = useState(false);
-    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
     const {
         data: commentData,
@@ -131,40 +130,6 @@ export default function DocumentShow({
         <Layout title={document.title}>
             <Head title={document.title} />
 
-            {showDeleteConfirm && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
-                    <div className="w-full max-w-md rounded-lg bg-white shadow-xl dark:bg-gray-800">
-                        <div className="border-b border-gray-200 p-6 dark:border-gray-700">
-                            <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Delete document?</h2>
-                            <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
-                                This will permanently remove the document and its file.
-                            </p>
-                        </div>
-                        <div className="flex gap-3 p-6">
-                            <button
-                                type="button"
-                                onClick={() => setShowDeleteConfirm(false)}
-                                className="flex-1 rounded-lg bg-gray-300 px-4 py-2 font-semibold text-gray-900 transition hover:bg-gray-400 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    destroy(`/documents/${document.id}`, {
-                                        onSuccess: () => (window.location.href = '/documents'),
-                                    });
-                                }}
-                                className="flex-1 rounded-lg bg-red-600 px-4 py-2 font-semibold text-white transition hover:bg-red-700"
-                            >
-                                <Trash2 size={18} className="mr-2 inline-block align-[-3px]" />
-                                Delete
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
             <div className="px-6 py-8">
                 <div className="mb-8">
                     <Link href="/documents" className="mb-4 inline-block text-blue-600 hover:text-blue-700">
@@ -191,20 +156,19 @@ export default function DocumentShow({
                         {isOwner && (
                             <div className="flex gap-2">
                                 <Link
-                                    href={`/documents/${document.id}/edit`}
+                                    href={route('documents.index', { modal: 'edit', document: document.id })}
                                     className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-white transition hover:bg-blue-700"
                                 >
                                     <Edit size={18} />
                                     Edit
                                 </Link>
-                                <button
-                                    type="button"
-                                    onClick={() => setShowDeleteConfirm(true)}
+                                <Link
+                                    href={route('documents.index', { modal: 'delete', document: document.id })}
                                     className="flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-white transition hover:bg-red-700"
                                 >
                                     <Trash2 size={18} />
                                     Delete
-                                </button>
+                                </Link>
                             </div>
                         )}
                     </div>

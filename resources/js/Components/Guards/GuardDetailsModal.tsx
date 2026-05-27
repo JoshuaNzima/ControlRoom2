@@ -787,7 +787,7 @@ export default function GuardDetailsModal({
                   <div className="py-2">
                     <span className="text-xs text-gray-500 dark:text-gray-400 block">Languages</span>
                     <div className="flex flex-wrap gap-1 mt-1">
-                      {guard.languages && guard.languages.length > 0 ? (
+                      {Array.isArray(guard.languages) && guard.languages.length > 0 ? (
                         guard.languages.map((lang, i) => (
                           <Badge key={i} variant="outline" className="text-xs">{lang}</Badge>
                         ))
@@ -799,7 +799,7 @@ export default function GuardDetailsModal({
                   <div className="py-2">
                     <span className="text-xs text-gray-500 dark:text-gray-400 block">Qualifications</span>
                     <div className="flex flex-wrap gap-1 mt-1">
-                      {guard.qualifications && guard.qualifications.length > 0 ? (
+                      {Array.isArray(guard.qualifications) && guard.qualifications.length > 0 ? (
                         guard.qualifications.map((q, i) => (
                           <Badge key={i} variant="outline" className="text-xs">{q}</Badge>
                         ))
@@ -816,7 +816,7 @@ export default function GuardDetailsModal({
                     <IconMapper name="FileText" size={16} />
                     Documents
                   </h3>
-                  {guard.documents && guard.documents.length > 0 ? (
+                  {Array.isArray(guard.documents) && guard.documents.length > 0 ? (
                     <div className="space-y-2">
                       {guard.documents.map((doc) => (
                         <div key={doc.id} className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-800 rounded">
@@ -883,7 +883,7 @@ export default function GuardDetailsModal({
                   <IconMapper name="CalendarDays" size={16} />
                   Recent Attendance (Last 7 Days)
                 </h3>
-                {guard.recent_attendance && guard.recent_attendance.length > 0 ? (
+                {Array.isArray(guard.recent_attendance) && guard.recent_attendance.length > 0 ? (
                   <div className="space-y-2">
                     {guard.recent_attendance.map((record, i) => (
                       <div key={i} className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-800 rounded">
@@ -915,7 +915,7 @@ export default function GuardDetailsModal({
                   <IconMapper name="ShieldAlert" size={16} />
                   Recent Infractions (Last 3 Months)
                 </h3>
-                {guard.recent_infractions && guard.recent_infractions.length > 0 ? (
+                {Array.isArray(guard.recent_infractions) && guard.recent_infractions.length > 0 ? (
                   <div className="space-y-2">
                     {guard.recent_infractions.map((infraction) => (
                       <div key={infraction.id} className="p-3 bg-red-50 dark:bg-red-950/20 border border-red-100 dark:border-red-800 rounded">

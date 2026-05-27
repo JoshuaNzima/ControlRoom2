@@ -175,9 +175,7 @@ class ExpenseController extends Controller
             'approval_stage' => 'admin_pending', // first stage: admin approval
         ]);
 
-        $routeName = request()->route() ? request()->route()->getName() : '';
-        $isAdminAlias = is_string($routeName) && str_starts_with($routeName, 'admin.requisitions');
-        return redirect()->route($isAdminAlias ? 'admin.requisitions.index' : 'finance.expenses.index')
+        return redirect()->route('requisitions.index')
             ->withSuccess('Expense created successfully. Awaiting approval.');
     }
 
@@ -261,9 +259,7 @@ class ExpenseController extends Controller
 
         $expense->update($validated);
 
-        $routeName = request()->route() ? request()->route()->getName() : '';
-        $isAdminAlias = is_string($routeName) && str_starts_with($routeName, 'admin.requisitions');
-        return redirect()->route($isAdminAlias ? 'admin.requisitions.index' : 'finance.expenses.index')
+        return redirect()->route('requisitions.index')
             ->withSuccess('Expense updated successfully.');
     }
 
@@ -276,9 +272,7 @@ class ExpenseController extends Controller
 
         $expense->delete();
 
-        $routeName = request()->route() ? request()->route()->getName() : '';
-        $isAdminAlias = is_string($routeName) && str_starts_with($routeName, 'admin.requisitions');
-        return redirect()->route($isAdminAlias ? 'admin.requisitions.index' : 'finance.expenses.index')
+        return redirect()->route('requisitions.index')
             ->withSuccess('Expense deleted successfully.');
     }
 

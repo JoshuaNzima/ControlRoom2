@@ -5,6 +5,7 @@ import IconMapper from '@/Components/IconMapper';
 import QuickRequisitionButton from '@/Components/Requisitions/QuickRequisitionButton';
 import QuickBudgetButton from '@/Components/Budgets/QuickBudgetButton';
 import WeeklyTasks from '@/Components/WeeklyTasks';
+import AIAssistant from '@/Components/AI/AIAssistant';
 
 type Props = {
   children: React.ReactNode;
@@ -106,6 +107,7 @@ export default function AppLayout({ children, title, weeklyTasks }: Props) {
           onClose={() => setTasksOpen(false)}
         />
       )}
+      <AIAssistant context="default" />
     </div>
   );
 }

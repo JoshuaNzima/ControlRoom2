@@ -4,7 +4,7 @@ namespace App\Models\Guards;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Database\Eloquent\Relations\{HasMany, BelongsTo, HasManyThrough};
+use Illuminate\Database\Eloquent\Relations\{HasMany, BelongsTo, BelongsToMany, HasOne};
 use App\Models\User;
 use App\Models\ClientSite;
 use App\Models\Guards\{Attendance, Shift};
@@ -241,16 +241,17 @@ class Guard extends Model
         return $this->hasMany(GuardAssignment::class)->where('is_active', true);
     }
 
-    public function sites(): HasManyThrough
+    public function sites(): BelongsToMany
     {
-        return $this->hasManyThrough(
+        return $this->belongsToMany(
             ClientSite::class,
-            GuardAssignment::class,
+            'guard_assignments',
             'guard_id',
-            'id',
-            'id',
             'client_site_id'
-        )->where('guard_assignments.is_active', true);
+        )
+            ->withPivot(['assigned_by', 'start_date', 'end_date', 'assignment_type', 'notes', 'is_active', 'active'])
+            ->withTimestamps()
+            ->wherePivot('is_active', true);
     }
 
     public function currentAssignmentRelation(): HasOne

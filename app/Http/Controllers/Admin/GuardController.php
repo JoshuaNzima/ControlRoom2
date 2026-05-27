@@ -490,7 +490,7 @@ class GuardController extends Controller
             ->whereDate('date', '>=', now()->subDays(7))
             ->orderBy('date', 'desc')
             ->limit(7)
-            ->get(['date', 'status', 'check_in_time', 'check_out_time', 'hours_worked', 'site_id'])
+            ->get(['date', 'status', 'check_in_time', 'check_out_time', 'hours_worked', 'client_site_id'])
             ->map(fn ($a) => [
                 'date' => $a->date?->format('Y-m-d'),
                 'status' => $a->status,

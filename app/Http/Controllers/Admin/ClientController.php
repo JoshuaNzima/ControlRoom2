@@ -218,7 +218,17 @@ class ClientController extends Controller
             ->limit(5)
             ->get(['id', 'name', 'phone', 'email', 'status', 'deleted_at']);
 
-        $client = Client::create(collect($validated)->except(['site', 'services'])->toArray());
+        $clientData = collect($validated)->except([
+            'site',
+            'services',
+            'create_user',
+            'user_name',
+            'user_email',
+            'user_phone',
+            'user_role',
+        ])->toArray();
+
+        $client = Client::create($clientData);
 
         // Attach services if provided (array of {id, custom_price})
         if (!empty($validated['services'])) {

@@ -236,7 +236,9 @@ class RequisitionItemController extends Controller
 
     protected function updateParentStatus(Requisition $requisition): void
     {
-        $items = $requisition->items;
+        // Refresh the requisition to ensure we have the latest items
+        $requisition->refresh();
+        $items = $requisition->items()->get();
 
         $allApproved = $items->every(fn($i) => in_array($i->status, ['approved', 'funded', 'disbursed']));
         $anyApproved = $items->contains(fn($i) => in_array($i->status, ['approved', 'funded', 'disbursed']));

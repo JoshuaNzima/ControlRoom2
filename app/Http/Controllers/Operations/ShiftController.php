@@ -15,7 +15,7 @@ class ShiftController extends Controller
 {
     public function index(Request $request)
     {
-        $shifts = Shift::with(['site', 'guard', 'zone'])
+        $shifts = Shift::with(['clientSite', 'guardRelation', 'attendance'])
             ->when($request->date, fn($q, $date) => $q->whereDate('date', $date))
             ->when($request->site_id, fn($q, $siteId) => $q->where('client_site_id', $siteId))
             ->orderBy('date', 'desc')
@@ -29,7 +29,7 @@ class ShiftController extends Controller
 
     public function show(Shift $shift)
     {
-        $shift->load(['site', 'guard', 'zone', 'attendance']);
+        $shift->load(['clientSite', 'guardRelation', 'attendance']);
 
         return Inertia::render('Operations/Shifts/Show', [
             'shift' => $shift,

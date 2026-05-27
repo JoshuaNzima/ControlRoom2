@@ -29,23 +29,39 @@ class AiSettingsController extends Controller
      */
     public function update(Request $request, string $provider)
     {
-        $validated = $request->validate([
-            'enabled' => 'boolean',
-            'api_key' => 'nullable|string|max:255',
-            'model' => 'nullable|string|max:100',
-            'base_url' => 'nullable|string|max:255',
-            'max_tokens' => 'integer|min:100|max:4000',
-            'temperature' => 'numeric|min:0|max:2',
-        ]);
-
         $setting = AiSetting::where('provider', $provider)->firstOrFail();
 
-        // If enabling this provider, disable others
-        if (!empty($validated['enabled']) && !$setting->enabled) {
-            AiSetting::where('enabled', true)->update(['enabled' => false]);
+        $validated = $request->validate([
+            'enabled' => 'sometimes|boolean',
+            'api_key' => 'sometimes|nullable|string|max:255',
+            'model' => 'sometimes|nullable|string|max:100',
+            'base_url' => 'sometimes|nullable|string|max:255',
+            'max_tokens' => 'sometimes|nullable|integer|min:100|max:4000',
+            'temperature' => 'sometimes|nullable|numeric|min:0|max:2',
+        ]);
+
+        $payload = array_merge([
+            'enabled' => $setting->enabled,
+            'api_key' => $setting->api_key,
+            'model' => $setting->model,
+            'base_url' => $setting->base_url,
+            'max_tokens' => $setting->max_tokens,
+            'temperature' => $setting->temperature,
+        ], $validated);
+
+        // Normalize blank strings coming from form inputs.
+        foreach (['api_key', 'model', 'base_url'] as $field) {
+            if (array_key_exists($field, $payload) && $payload[$field] === '') {
+                $payload[$field] = null;
+            }
         }
 
-        $setting->update($validated);
+        // If enabling this provider, disable others first.
+        if (!empty($payload['enabled']) && !$setting->enabled) {
+            AiSetting::where('enabled', true)->where('provider', '!=', $provider)->update(['enabled' => false]);
+        }
+
+        $setting->update($payload);
 
         // Clear cached settings
         Cache::forget('ai_active_provider');

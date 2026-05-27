@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Guards\Guard;
 use App\Models\Training\Refresher;
 use App\Models\Training\RefresherTrainingRecord;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -227,6 +228,37 @@ class TrainerGuardsController extends Controller
         return Inertia::render('Training/TrainerGuards/Show', [
             'guard' => $guard,
             'refresherHistory' => $refresherHistory,
+        ]);
+    }
+
+    public function getGuardRefresherHistory(Request $request, Guard $guard): JsonResponse
+    {
+        $history = RefresherTrainingRecord::with(['refresher', 'trainer', 'evaluator'])
+            ->where('guard_id', $guard->id)
+            ->orderByDesc('created_at')
+            ->get()
+            ->map(fn (RefresherTrainingRecord $record) => [
+                'id' => $record->id,
+                'refresher_id' => $record->refresher_id,
+                'status' => $record->status,
+                'training_date' => $record->training_date,
+                'completed_date' => $record->completed_date,
+                'evaluated_at' => $record->evaluated_at,
+                'trainer_notes' => $record->trainer_notes,
+                'dismissal_reason' => $record->dismissal_reason,
+                'refresher' => [
+                    'id' => $record->refresher->id,
+                    'title' => $record->refresher->title,
+                    'duration_hours' => $record->refresher->duration_hours,
+                    'validity_months' => $record->refresher->validity_months,
+                ],
+                'trainer' => $record->trainer?->only(['id', 'name']),
+                'evaluator' => $record->evaluator?->only(['id', 'name']),
+            ]);
+
+        return response()->json([
+            'success' => true,
+            'history' => $history,
         ]);
     }
 }

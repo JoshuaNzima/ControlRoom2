@@ -187,6 +187,26 @@ class User extends Authenticatable
     }
 
     /**
+     * Get the primary client linked to this user.
+     */
+    public function getClientAttribute(): ?\App\Models\Guards\Client
+    {
+        if ($this->relationLoaded('clients')) {
+            return $this->clients->first();
+        }
+
+        return $this->clients()->first();
+    }
+
+    /**
+     * Get the primary client ID linked to this user.
+     */
+    public function getClientIdAttribute(): ?int
+    {
+        return $this->client?->id;
+    }
+
+    /**
      * Check if user is a client.
      */
     public function isClient(): bool

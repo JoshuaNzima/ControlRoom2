@@ -26,60 +26,91 @@ class RequisitionBatchController extends Controller
         $user = $request->user();
         abort_unless($user->hasAnyRole(['asset_manager', 'assets_manager', 'super_admin']), 403);
 
-        $today = Carbon::today();
+        try {
+            $today = Carbon::today();
 
-        $batch = RequisitionBatch::firstOrCreate(
-            ['batch_date' => $today],
-            ['compiled_by' => $user->id, 'status' => 'pending_ack']
-        );
+            $batch = RequisitionBatch::firstOrCreate(
+                ['batch_date' => $today],
+                ['compiled_by' => $user->id, 'status' => 'pending_ack']
+            );
 
-        $now = now();
+            $now = now();
 
-        Requisition::where('status', 'pending_disbursement')
-            ->whereNull('batch_id')
-            ->whereDate('updated_at', $today)
-            ->update([
+            // Count requisitions BEFORE update for logging
+            $beforeCount = Requisition::where('status', 'pending_disbursement')
+                ->whereNull('batch_id')
+                ->count();
+
+            // Include all pending_disbursement requisitions not yet batched
+            // Remove the restrictive updated_at filter to allow previous requisitions to be compiled
+            $updateResult = Requisition::where('status', 'pending_disbursement')
+                ->whereNull('batch_id')
+                ->update([
+                    'batch_id' => $batch->id,
+                    'batched_at' => $now,
+                ]);
+
+            // Get the new total including any previously batched requisitions
+            $total = Requisition::where('batch_id', $batch->id)->sum('amount');
+            $batch->total_amount = $total ?? 0;
+            $batch->save();
+
+            Log::info('Batch compiled successfully', [
                 'batch_id' => $batch->id,
-                'batched_at' => $now,
+                'user_id' => $user->id,
+                'requisitions_added' => $updateResult,
+                'total_before_count' => $beforeCount,
+                'total_amount' => $batch->total_amount,
+                'batch_date' => $batch->batch_date,
             ]);
 
-        $total = Requisition::where('batch_id', $batch->id)->sum('amount');
-        $batch->total_amount = $total ?? 0;
-        $batch->save();
+            // Notify admins that a batch is ready for acknowledgement
+            $admins = User::role(['admin', 'super_admin'])->get();
+            $mailFailures = [];
+            foreach ($admins as $admin) {
+                $admin->notify(new RequisitionBatchCompiled($batch, ['database']));
 
-        // Notify admins that a batch is ready for acknowledgement
-        $admins = User::role(['admin', 'super_admin'])->get();
-        $mailFailures = [];
-        foreach ($admins as $admin) {
-            $admin->notify(new RequisitionBatchCompiled($batch, ['database']));
+                try {
+                    $admin->notify(new RequisitionBatchCompiled($batch, ['mail']));
+                } catch (TransportExceptionInterface $e) {
+                    $mailFailures[] = [
+                        'user_id' => $admin->id,
+                        'email' => $admin->email,
+                        'message' => $e->getMessage(),
+                    ];
 
-            try {
-                $admin->notify(new RequisitionBatchCompiled($batch, ['mail']));
-            } catch (TransportExceptionInterface $e) {
-                $mailFailures[] = [
-                    'user_id' => $admin->id,
-                    'email' => $admin->email,
-                    'message' => $e->getMessage(),
-                ];
-
-                Log::warning('Requisition batch mail notification failed', [
-                    'batch_id' => $batch->id,
-                    'admin_user_id' => $admin->id,
-                    'admin_email' => $admin->email,
-                    'exception_class' => $e::class,
-                    'exception_message' => $e->getMessage(),
-                ]);
+                    Log::warning('Requisition batch mail notification failed', [
+                        'batch_id' => $batch->id,
+                        'admin_user_id' => $admin->id,
+                        'admin_email' => $admin->email,
+                        'exception_class' => $e::class,
+                        'exception_message' => $e->getMessage(),
+                    ]);
+                }
             }
-        }
 
-        if ($request->wantsJson()) {
-            return $this->successResponse([
-                'batch_id' => $batch->id,
-                'mail_failures' => $mailFailures,
-            ], 'Batch compiled successfully.');
-        }
+            if ($request->wantsJson()) {
+                return $this->successResponse([
+                    'batch_id' => $batch->id,
+                    'requisitions_compiled' => $updateResult,
+                    'mail_failures' => $mailFailures,
+                ], 'Batch compiled successfully.');
+            }
 
-        return back();
+            return back();
+        } catch (\Throwable $e) {
+            Log::error('Batch compilation failed', [
+                'user_id' => $user->id,
+                'exception' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            if ($request->wantsJson()) {
+                return $this->errorResponse('Failed to compile batch: ' . $e->getMessage(), 500);
+            }
+
+            return back()->withErrors(['batch' => 'Failed to compile batch: ' . $e->getMessage()]);
+        }
     }
 
     public function fund(Request $request, RequisitionBatch $batch): RedirectResponse|JsonResponse
@@ -128,29 +159,47 @@ class RequisitionBatchController extends Controller
         $user = $request->user();
         abort_unless($user->hasAnyRole(['admin', 'super_admin', 'asset_manager', 'assets_manager']), 403);
 
-        $today = Carbon::today();
+        try {
+            $today = Carbon::today();
 
-        $batch = RequisitionBatch::with(['compiledBy:id,name', 'acknowledgedBy:id,name'])
-            ->whereDate('batch_date', $today)
-            ->latest('id')
-            ->first();
+            $batch = RequisitionBatch::with(['compiledBy:id,name', 'acknowledgedBy:id,name'])
+                ->whereDate('batch_date', $today)
+                ->latest('id')
+                ->first();
 
-        if (!$batch) {
-            return $this->successResponse([
-                'batch' => null,
-                'requisitions' => [],
+            if (!$batch) {
+                Log::info('No batch found for today', ['date' => $today]);
+                return $this->successResponse([
+                    'batch' => null,
+                    'requisitions' => [],
+                ]);
+            }
+
+            $requisitions = Requisition::with(['requestedBy:id,name', 'approvedBy:id,name'])
+                ->where('batch_id', $batch->id)
+                ->orderBy('created_at')
+                ->get();
+
+            Log::info('Today batch retrieved', [
+                'batch_id' => $batch->id,
+                'requisitions_count' => $requisitions->count(),
+                'batch_total' => $batch->total_amount,
+                'batch_status' => $batch->status,
             ]);
+
+            return $this->successResponse([
+                'batch' => $batch,
+                'requisitions' => $requisitions,
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('Error fetching today batch', [
+                'user_id' => $user->id,
+                'exception' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return $this->errorResponse('Failed to fetch batch: ' . $e->getMessage(), 500);
         }
-
-        $requisitions = Requisition::with(['requestedBy:id,name', 'approvedBy:id,name'])
-            ->where('batch_id', $batch->id)
-            ->orderBy('created_at')
-            ->get();
-
-        return $this->successResponse([
-            'batch' => $batch,
-            'requisitions' => $requisitions,
-        ]);
     }
 
     public function acknowledgeToday(Request $request): RedirectResponse|JsonResponse

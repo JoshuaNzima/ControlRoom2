@@ -1,6 +1,8 @@
 import React, { useMemo, useState } from 'react';
-import { Head, Link, usePage } from '@inertiajs/react';
-import { Search, Upload, Filter } from 'lucide-react';
+import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
+import { Edit, Filter, Plus, Search, Trash2, Upload } from 'lucide-react';
+import DocumentUploadModal from '@/Components/DocumentUploadModal';
+import Modal from '@/Components/Modal';
 import { resolveDocumentLayout } from './resolveDocumentLayout';
 
 interface DocumentCategory {
@@ -18,6 +20,11 @@ interface Document {
     access_level: string;
     file_size: number;
     download_count: number;
+    module: string;
+    tags: string | null;
+    expires_at: string | null;
+    pinned: boolean;
+    original_filename: string;
 }
 
 interface DocumentsIndexProps {
@@ -30,6 +37,30 @@ interface DocumentsIndexProps {
     categories: DocumentCategory[];
     modules: Record<string, string>;
     fileTypes: Record<string, string>;
+    modalDocument?: Document | null;
+}
+
+function getCurrentSearchParams() {
+    if (typeof window === 'undefined') return new URLSearchParams();
+    return new URLSearchParams(window.location.search);
+}
+
+function buildIndexUrl(nextParams: Record<string, string | number | undefined | null> = {}) {
+    if (typeof window === 'undefined') return route('documents.index');
+
+    const params = getCurrentSearchParams();
+
+    Object.entries(nextParams).forEach(([key, value]) => {
+        if (value === undefined || value === null || value === '') {
+            params.delete(key);
+            return;
+        }
+
+        params.set(key, String(value));
+    });
+
+    const query = params.toString();
+    return query ? `${window.location.pathname}?${query}` : window.location.pathname;
 }
 
 export default function DocumentsIndex({
@@ -37,14 +68,43 @@ export default function DocumentsIndex({
     categories,
     modules,
     fileTypes,
+    modalDocument,
 }: DocumentsIndexProps) {
     const page = usePage<any>();
     const roles: string[] = (page?.props?.auth?.user?.roles ?? []).map(String);
+    const searchParams = getCurrentSearchParams();
+
     const [search, setSearch] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('');
     const [selectedFileType, setSelectedFileType] = useState('');
     const [selectedModule, setSelectedModule] = useState('');
     const [sortBy, setSortBy] = useState('newest');
+
+    const selectedDocumentId = searchParams.get('document');
+    const modalMode = searchParams.get('modal');
+    const initialCreateModule = searchParams.get('module') || 'finance';
+
+    const activeDocument =
+        modalDocument ??
+        documents.data.find((doc) => String(doc.id) === selectedDocumentId) ??
+        null;
+
+    const editDefaults = activeDocument
+        ? {
+              title: activeDocument.title,
+              description: activeDocument.description ?? '',
+              category_id: activeDocument.category ? String(activeDocument.category.id) : '',
+              module: activeDocument.module,
+              access_level: activeDocument.access_level,
+              tags: activeDocument.tags ?? '',
+              expires_at: activeDocument.expires_at ?? '',
+              pinned: activeDocument.pinned ?? false,
+          }
+        : undefined;
+
+    const showCreateModal = modalMode === 'create';
+    const showEditModal = modalMode === 'edit' && Boolean(activeDocument);
+    const showDeleteModal = modalMode === 'delete' && Boolean(activeDocument);
 
     const handleSearch = (e: React.FormEvent) => {
         e.preventDefault();
@@ -58,6 +118,43 @@ export default function DocumentsIndex({
 
         window.location.href = `/documents?${params.toString()}`;
     };
+
+    const openCreateModal = () => {
+        router.visit(buildIndexUrl({ modal: 'create', document: null, module: initialCreateModule }), {
+            preserveScroll: true,
+            preserveState: true,
+            replace: true,
+        });
+    };
+
+    const openEditModal = (document: Document) => {
+        router.visit(buildIndexUrl({ modal: 'edit', document: document.id }), {
+            preserveScroll: true,
+            preserveState: true,
+            replace: true,
+        });
+    };
+
+    const openDeleteModal = (document: Document) => {
+        router.visit(buildIndexUrl({ modal: 'delete', document: document.id }), {
+            preserveScroll: true,
+            preserveState: true,
+            replace: true,
+        });
+    };
+
+    const closeModal = () => {
+        router.visit(buildIndexUrl({ modal: null, document: null }), {
+            preserveScroll: true,
+            preserveState: true,
+            replace: true,
+        });
+    };
+
+    const {
+        delete: destroyDocument,
+        processing: deletingDocument,
+    } = useForm();
 
     const getFileIcon = (fileType: string) => {
         const icons: Record<string, string> = {
@@ -100,17 +197,26 @@ export default function DocumentsIndex({
         );
     };
 
-    const Layout = useMemo(
-        () => resolveDocumentLayout(roles, selectedModule || undefined),
-        [roles, selectedModule]
-    );
+    const Layout = useMemo(() => {
+        const moduleKey = selectedModule || activeDocument?.module || (showCreateModal ? initialCreateModule : undefined);
+        return resolveDocumentLayout(roles, moduleKey);
+    }, [roles, selectedModule, activeDocument?.module, showCreateModal, initialCreateModule]);
+
+    const handleDeleteDocument = () => {
+        if (!activeDocument) return;
+
+        destroyDocument(route('documents.destroy', activeDocument.id), {
+            onSuccess: () => closeModal(),
+            preserveScroll: true,
+        });
+    };
 
     return (
         <Layout title="Documents">
             <Head title="Documents" />
 
             <div className="px-6 py-8">
-                <div className="mb-8 flex items-center justify-between">
+                <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                     <div>
                         <h1 className="mb-2 text-3xl font-bold text-gray-900 dark:text-white">
                             Documents
@@ -120,13 +226,14 @@ export default function DocumentsIndex({
                         </p>
                     </div>
 
-                    <Link
-                        href="/documents/create"
-                        className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-white transition hover:bg-blue-700"
+                    <button
+                        type="button"
+                        onClick={openCreateModal}
+                        className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 font-semibold text-white transition hover:bg-blue-700"
                     >
                         <Upload size={18} />
                         Upload Document
-                    </Link>
+                    </button>
                 </div>
 
                 <div className="mb-8 rounded-lg bg-white p-6 shadow dark:bg-gray-800">
@@ -207,50 +314,83 @@ export default function DocumentsIndex({
                 {documents.data.length > 0 ? (
                     <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
                         {documents.data.map((doc) => (
-                            <Link
+                            <div
                                 key={doc.id}
-                                href={`/documents/${doc.id}`}
-                                className="group overflow-hidden rounded-lg bg-white shadow transition hover:shadow-lg dark:bg-gray-800"
+                                className="overflow-hidden rounded-lg bg-white shadow transition hover:shadow-lg dark:bg-gray-800"
                             >
-                                <div className="relative flex aspect-video items-center justify-center bg-gray-100 transition group-hover:bg-gray-200 dark:bg-gray-700 dark:group-hover:bg-gray-600">
-                                    {doc.file_type === 'image' ? (
-                                        <img
-                                            src={`/storage/${doc.file_path}`}
-                                            alt={doc.title}
-                                            className="h-full w-full object-cover"
-                                        />
-                                    ) : doc.file_type === 'video' ? (
-                                        <video
-                                            src={`/storage/${doc.file_path}`}
-                                            className="h-full w-full object-cover"
-                                        />
-                                    ) : (
-                                        <div className="text-4xl">{getFileIcon(doc.file_type)}</div>
-                                    )}
-                                </div>
-
-                                <div className="p-4">
-                                    <h3 className="mb-2 line-clamp-2 font-semibold text-gray-900 dark:text-white">
-                                        {doc.title}
-                                    </h3>
-
-                                    <div className="mb-3 flex flex-wrap gap-2">
-                                        {getAccessBadge(doc.access_level)}
-                                        <span className="rounded bg-gray-100 px-2 py-1 text-xs text-gray-700 dark:bg-gray-700 dark:text-gray-300">
-                                            {doc.category?.name}
-                                        </span>
+                                <Link href={`/documents/${doc.id}`} className="block">
+                                    <div className="relative flex aspect-video items-center justify-center bg-gray-100 transition hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600">
+                                        {doc.file_type === 'image' ? (
+                                            <img
+                                                src={`/storage/${doc.file_path}`}
+                                                alt={doc.title}
+                                                className="h-full w-full object-cover"
+                                            />
+                                        ) : doc.file_type === 'video' ? (
+                                            <video
+                                                src={`/storage/${doc.file_path}`}
+                                                className="h-full w-full object-cover"
+                                            />
+                                        ) : (
+                                            <div className="text-4xl">{getFileIcon(doc.file_type)}</div>
+                                        )}
                                     </div>
 
-                                    <p className="mb-3 line-clamp-2 text-sm text-gray-600 dark:text-gray-400">
-                                        {doc.description}
-                                    </p>
+                                    <div className="p-4">
+                                        <div className="mb-2 flex items-start justify-between gap-3">
+                                            <h3 className="line-clamp-2 font-semibold text-gray-900 dark:text-white">
+                                                {doc.title}
+                                            </h3>
+                                            {doc.pinned && (
+                                                <span className="rounded-full bg-yellow-100 px-2 py-1 text-[11px] font-semibold text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
+                                                    Pinned
+                                                </span>
+                                            )}
+                                        </div>
 
-                                    <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400">
-                                        <span>{formatFileSize(doc.file_size)}</span>
-                                        <span>{doc.download_count || 0} downloads</span>
+                                        <div className="mb-3 flex flex-wrap gap-2">
+                                            {getAccessBadge(doc.access_level)}
+                                            <span className="rounded bg-gray-100 px-2 py-1 text-xs text-gray-700 dark:bg-gray-700 dark:text-gray-300">
+                                                {doc.category?.name}
+                                            </span>
+                                        </div>
+
+                                        <p className="mb-3 line-clamp-2 text-sm text-gray-600 dark:text-gray-400">
+                                            {doc.description}
+                                        </p>
+
+                                        <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400">
+                                            <span>{formatFileSize(doc.file_size)}</span>
+                                            <span>{doc.download_count || 0} downloads</span>
+                                        </div>
                                     </div>
+                                </Link>
+
+                                <div className="flex flex-wrap gap-2 border-t border-gray-200 px-4 py-3 dark:border-gray-700">
+                                    <Link
+                                        href={`/documents/${doc.id}`}
+                                        className="rounded-lg bg-gray-100 px-3 py-2 text-sm font-semibold text-gray-900 transition hover:bg-gray-200 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600"
+                                    >
+                                        View
+                                    </Link>
+                                    <button
+                                        type="button"
+                                        onClick={() => openEditModal(doc)}
+                                        className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-blue-700"
+                                    >
+                                        <Edit size={16} />
+                                        Edit
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => openDeleteModal(doc)}
+                                        className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-red-700"
+                                    >
+                                        <Trash2 size={16} />
+                                        Delete
+                                    </button>
                                 </div>
-                            </Link>
+                            </div>
                         ))}
                     </div>
                 ) : (
@@ -278,6 +418,77 @@ export default function DocumentsIndex({
                     </div>
                 )}
             </div>
+
+            <DocumentUploadModal
+                open={showCreateModal || showEditModal}
+                mode={showEditModal ? 'edit' : 'create'}
+                onClose={closeModal}
+                categories={categories}
+                modules={modules}
+                submitUrl={
+                    showEditModal && activeDocument
+                        ? route('documents.update', activeDocument.id)
+                        : route('documents.store')
+                }
+                initialModule={showEditModal && activeDocument ? activeDocument.module : initialCreateModule}
+                initialAccessLevel={showEditModal && activeDocument ? activeDocument.access_level : 'department'}
+                initialCategoryId={
+                    showEditModal && activeDocument?.category ? String(activeDocument.category.id) : ''
+                }
+                initialValues={editDefaults}
+                onSuccess={() => {
+                    if (showEditModal) {
+                        router.visit(buildIndexUrl({ modal: null, document: null }), {
+                            preserveScroll: true,
+                            preserveState: true,
+                            replace: true,
+                        });
+                    }
+                }}
+                onModuleChange={(moduleKey) => {
+                    setSelectedModule(moduleKey);
+                }}
+            />
+
+            {showDeleteModal && activeDocument && (
+                <Modal show={true} onClose={closeModal} maxWidth="md">
+                    <div className="bg-white p-6 dark:bg-gray-800">
+                        <div className="flex items-start gap-3">
+                            <div className="rounded-full bg-red-100 p-3 text-red-600 dark:bg-red-900/30 dark:text-red-300">
+                                <Trash2 size={22} />
+                            </div>
+                            <div className="flex-1">
+                                <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                                    Delete document?
+                                </h2>
+                                <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                                    This will permanently remove <span className="font-semibold">{activeDocument.title}</span>{' '}
+                                    and its file. This cannot be undone.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="mt-6 flex flex-col gap-3 border-t border-gray-200 pt-6 sm:flex-row dark:border-gray-700">
+                            <button
+                                type="button"
+                                onClick={closeModal}
+                                className="flex-1 rounded-lg bg-gray-300 px-4 py-2 font-semibold text-gray-900 transition hover:bg-gray-400 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleDeleteDocument}
+                                disabled={deletingDocument}
+                                className="flex-1 inline-flex items-center justify-center gap-2 rounded-lg bg-red-600 px-4 py-2 font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                                <Trash2 size={18} />
+                                {deletingDocument ? 'Deleting...' : 'Delete'}
+                            </button>
+                        </div>
+                    </div>
+                </Modal>
+            )}
         </Layout>
     );
 }

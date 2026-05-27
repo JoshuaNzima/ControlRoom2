@@ -7,6 +7,7 @@ import { useTheme } from '@/Providers/ThemeProvider';
 import BaseShell from './BaseShell';
 import { NavSection, SidebarHeader, UserSection, QuickStats } from '@/Components/Layout';
 import { useRealtimeNotifications } from '@/Hooks/useRealtimeNotifications';
+import AIAssistant from '@/Components/AI/AIAssistant';
 
 interface Props {
   title: string;
@@ -59,6 +60,7 @@ export default function ClientLayout({ title, children, user }: Props) {
     { name: 'My Sites', href: route('client.sites'), icon: <IconMapper name="Building" size={20} /> },
     { name: 'Reports', href: route('client.reports'), icon: <IconMapper name="FileText" size={20} /> },
     { name: 'Schedules', href: route('client.schedules'), icon: <IconMapper name="Calendar" size={20} /> },
+    { name: 'Loyalty', href: route('client.loyalty.dashboard'), icon: <IconMapper name="Gift" size={20} /> },
   ];
 
   // Financial Navigation
@@ -148,6 +150,7 @@ export default function ClientLayout({ title, children, user }: Props) {
           </div>
         </BaseShell>
       </div>
+      <AIAssistant context="client" />
     </div>
   );
 }
