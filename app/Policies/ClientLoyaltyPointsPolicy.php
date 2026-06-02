@@ -13,13 +13,13 @@ class ClientLoyaltyPointsPolicy
      */
     public function view(User $user, ClientLoyaltyPoints $loyaltyPoints): bool
     {
-        // Admin and superadmin always have access
-        if ($user->hasAnyRole(['admin', 'superadmin'])) {
+        // Admin and super admin always have access
+        if ($user->hasAnyRole(['admin', 'super_admin', 'superadmin'])) {
             return true;
         }
 
-        // Finance officers can view any client's loyalty
-        if ($user->hasRole('finance')) {
+        // Finance roles can view any client's loyalty
+        if ($user->hasAnyRole(['finance', 'finance_officer', 'finance_manager', 'accountant'])) {
             return true;
         }
 
@@ -37,13 +37,13 @@ class ClientLoyaltyPointsPolicy
      */
     public function viewSummary(User $user, Client $client): bool
     {
-        // Admin and superadmin
-        if ($user->hasAnyRole(['admin', 'superadmin'])) {
+        // Admin and super admin
+        if ($user->hasAnyRole(['admin', 'super_admin', 'superadmin'])) {
             return true;
         }
 
-        // Finance officers can view any client
-        if ($user->hasRole('finance')) {
+        // Finance roles can view any client
+        if ($user->hasAnyRole(['finance', 'finance_officer', 'finance_manager', 'accountant'])) {
             return true;
         }
 
@@ -73,7 +73,7 @@ class ClientLoyaltyPointsPolicy
      */
     public function manage(User $user): bool
     {
-        return $user->hasAnyRole(['admin', 'superadmin']);
+        return $user->hasAnyRole(['admin', 'super_admin', 'superadmin']);
     }
 
     /**
@@ -81,7 +81,7 @@ class ClientLoyaltyPointsPolicy
      */
     public function approveRedemptions(User $user): bool
     {
-        return $user->hasAnyRole(['admin', 'superadmin', 'finance']);
+        return $user->hasAnyRole(['admin', 'super_admin', 'superadmin', 'finance', 'finance_officer', 'finance_manager', 'accountant']);
     }
 
     /**
@@ -89,6 +89,6 @@ class ClientLoyaltyPointsPolicy
      */
     public function viewReports(User $user): bool
     {
-        return $user->hasAnyRole(['admin', 'superadmin', 'finance']);
+        return $user->hasAnyRole(['admin', 'super_admin', 'superadmin', 'finance', 'finance_officer', 'finance_manager', 'accountant']);
     }
 }

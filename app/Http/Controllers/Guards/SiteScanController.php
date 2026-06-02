@@ -182,20 +182,30 @@ class SiteScanController extends Controller
         TagScanJob::dispatchSync($scan->id);
 
         // Dispatch event for real-time notifications (control-room + supervisor private channel)
-        event(new QRScanned(
-            $user->id,
-            'Site scanned successfully',
-            [
-                'id' => $scan->id,
-                'supervisor_name' => $user->name,
-                'site_name' => $site->name,
-                'client_name' => (string) ($site->client?->name ?? ''),
-                'scanned_at' => $scan->scanned_at ? $scan->scanned_at->toIso8601String() : now()->toIso8601String(),
-                'location_verified' => (bool) $locationVerified,
-                'latitude' => $latitude !== null ? (float) $latitude : null,
-                'longitude' => $longitude !== null ? (float) $longitude : null,
-            ]
-        ));
+        // Broadcasting failures (e.g. Pusher SSL) must not break scan HTTP flows.
+        try {
+            event(new QRScanned(
+                $user->id,
+                'Site scanned successfully',
+                [
+                    'id' => $scan->id,
+                    'supervisor_name' => $user->name,
+                    'site_name' => $site->name,
+                    'client_name' => (string) ($site->client?->name ?? ''),
+                    'scanned_at' => $scan->scanned_at ? $scan->scanned_at->toIso8601String() : now()->toIso8601String(),
+                    'location_verified' => (bool) $locationVerified,
+                    'latitude' => $latitude !== null ? (float) $latitude : null,
+                    'longitude' => $longitude !== null ? (float) $longitude : null,
+                ]
+            ));
+        } catch (\Throwable $broadcastError) {
+            \Log::warning('SiteScanController: QRScanned broadcast failed (non-fatal)', [
+                'scan_id' => $scan->id ?? null,
+                'user_id' => $user->id ?? null,
+                'site_id' => $site->id ?? null,
+                'error' => $broadcastError->getMessage(),
+            ]);
+        }
 
         // Send push notification to control room operators
         try {

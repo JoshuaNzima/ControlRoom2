@@ -38,6 +38,7 @@ interface PaginationLink {
 
 interface Props {
   client: Client;
+  loyaltyEnabled?: boolean;
   redemptions: {
     data: Redemption[];
     links?: PaginationLink[];
@@ -62,16 +63,24 @@ function statusTone(status: string): string {
   }
 }
 
-export default function Redemptions({ client, redemptions }: Props) {
+export default function Redemptions({
+  client,
+  loyaltyEnabled = true,
+  redemptions,
+}: Props) {
   const [cancelling, setCancelling] = useState<number | null>(null);
 
   const handleCancel = async (redemptionId: number) => {
     setCancelling(redemptionId);
     try {
-      router.post(route('client.loyalty.cancel', redemptionId), {}, {
-        preserveScroll: true,
-        onSuccess: () => window.location.reload(),
-      });
+      router.post(
+        route('client.loyalty.cancel', redemptionId),
+        {},
+        {
+          preserveScroll: true,
+          onSuccess: () => window.location.reload(),
+        },
+      );
     } finally {
       setCancelling(null);
     }
@@ -82,126 +91,168 @@ export default function Redemptions({ client, redemptions }: Props) {
       <Head title="Loyalty Redemptions" />
 
       <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-        <div className="mb-6 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <h1 className="flex items-center gap-2 text-3xl font-bold text-gray-900 dark:text-gray-100">
-              <IconMapper name="Gift" size={32} className="text-amber-500" />
-              Redemption History
-            </h1>
-            <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-              Track reward requests and cancel any pending redemption.
-            </p>
-          </div>
-
-          <div className="flex flex-wrap gap-2">
-            <Button asChild variant="outline">
-              <Link href={route('client.loyalty.dashboard')}>
-                <IconMapper name="ArrowLeft" size={16} className="mr-2" />
-                Back to Dashboard
-              </Link>
-            </Button>
-          </div>
-        </div>
-
-        <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-3">
-          <Card>
-            <CardContent className="pt-6">
-              <p className="text-sm text-gray-600 dark:text-gray-400">Client</p>
-              <p className="mt-2 text-3xl font-bold text-gray-900 dark:text-gray-100">{client.name}</p>
-            </CardContent>
+        {!loyaltyEnabled ? (
+          <Card className="p-8 text-center">
+            <div className="flex flex-col items-center gap-4">
+              <div className="p-4 bg-amber-100 dark:bg-amber-900/20 rounded-full">
+                <IconMapper
+                  name="Gift"
+                  size={32}
+                  className="text-amber-600 dark:text-amber-400"
+                />
+              </div>
+              <div>
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
+                  Loyalty is currently disabled
+                </h2>
+                <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                  Redemption actions have been turned off by the admin.
+                </p>
+              </div>
+            </div>
           </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <p className="text-sm text-gray-600 dark:text-gray-400">Redemptions</p>
-              <p className="mt-2 text-3xl font-bold text-amber-600 dark:text-amber-400">{redemptions.data.length}</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <p className="text-sm text-gray-600 dark:text-gray-400">Action</p>
-              <p className="mt-2 text-sm font-semibold text-gray-900 dark:text-gray-100">
-                Pending requests can be cancelled
-              </p>
-            </CardContent>
-          </Card>
-        </div>
+        ) : (
+          <>
+            <div className="mb-6 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+              <div>
+                <h1 className="flex items-center gap-2 text-3xl font-bold text-gray-900 dark:text-gray-100">
+                  <IconMapper name="Gift" size={32} className="text-amber-500" />
+                  Redemption History
+                </h1>
+                <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+                  Track reward requests and cancel any pending redemption.
+                </p>
+              </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>My Redemption Requests</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {redemptions.data.length ? (
-              <div className="space-y-4">
-                {redemptions.data.map((redemption) => {
-                  const canCancel = redemption.status === 'pending';
+              <div className="flex flex-wrap gap-2">
+                <Button asChild variant="outline">
+                  <Link href={route('client.loyalty.dashboard')}>
+                    <IconMapper name="ArrowLeft" size={16} className="mr-2" />
+                    Back to Dashboard
+                  </Link>
+                </Button>
+              </div>
+            </div>
 
-                  return (
-                    <div
-                      key={redemption.id}
-                      className="rounded-lg border border-gray-200 p-4 dark:border-gray-800"
-                    >
-                      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                        <div className="min-w-0">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <p className="font-semibold text-gray-900 dark:text-gray-100">
-                              {redemption.reward?.name || 'Unknown reward'}
-                            </p>
-                            <Badge className={statusTone(redemption.status)}>{redemption.status}</Badge>
+            <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-3">
+              <Card>
+                <CardContent className="pt-6">
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Client</p>
+                  <p className="mt-2 text-3xl font-bold text-gray-900 dark:text-gray-100">
+                    {client.name}
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="pt-6">
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Redemptions</p>
+                  <p className="mt-2 text-3xl font-bold text-amber-600 dark:text-amber-400">
+                    {redemptions.data.length}
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="pt-6">
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Action</p>
+                  <p className="mt-2 text-sm font-semibold text-gray-900 dark:text-gray-100">
+                    Pending requests can be cancelled
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>My Redemption Requests</CardTitle>
+              </CardHeader>
+
+              <CardContent>
+                {redemptions.data.length ? (
+                  <div className="space-y-4">
+                    {redemptions.data.map((redemption) => {
+                      const canCancel = redemption.status === 'pending';
+
+                      return (
+                        <div
+                          key={redemption.id}
+                          className="rounded-lg border border-gray-200 p-4 dark:border-gray-800"
+                        >
+                          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                            <div className="min-w-0">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <p className="font-semibold text-gray-900 dark:text-gray-100">
+                                  {redemption.reward?.name || 'Unknown reward'}
+                                </p>
+                                <Badge className={statusTone(redemption.status)}>
+                                  {redemption.status}
+                                </Badge>
+                              </div>
+
+                              <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+                                {redemption.points_used} points{' '}
+                                {redemption.value_received !== null
+                                  ? `• ${Number(redemption.value_received).toLocaleString()}`
+                                  : ''}
+                              </p>
+
+                              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                Requested on {new Date(redemption.created_at).toLocaleString()}
+                              </p>
+                            </div>
+
+                            <div className="flex flex-wrap gap-2">
+                              {canCancel && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleCancel(redemption.id)}
+                                  disabled={cancelling === redemption.id}
+                                >
+                                  {cancelling === redemption.id ? 'Cancelling...' : 'Cancel'}
+                                </Button>
+                              )}
+
+                              {redemption.approvedBy && (
+                                <span className="text-xs text-gray-500 dark:text-gray-400 self-center">
+                                  Reviewed by {redemption.approvedBy.name}
+                                </span>
+                              )}
+                            </div>
                           </div>
-                          <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-                            {redemption.points_used} points {redemption.value_received !== null ? `• ${Number(redemption.value_received).toLocaleString()}` : ''}
-                          </p>
-                          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                            Requested on {new Date(redemption.created_at).toLocaleString()}
-                          </p>
                         </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="rounded-lg border border-dashed border-gray-300 p-10 text-center text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400">
+                    You have no redemption requests yet.
+                  </div>
+                )}
 
-                        <div className="flex flex-wrap gap-2">
-                          {canCancel && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleCancel(redemption.id)}
-                              disabled={cancelling === redemption.id}
-                            >
-                              {cancelling === redemption.id ? 'Cancelling...' : 'Cancel'}
-                            </Button>
-                          )}
-                          {redemption.approvedBy && (
-                            <span className="text-xs text-gray-500 dark:text-gray-400 self-center">
-                              Reviewed by {redemption.approvedBy.name}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="rounded-lg border border-dashed border-gray-300 p-10 text-center text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400">
-                You have no redemption requests yet.
-              </div>
-            )}
-
-            {redemptions.links && redemptions.links.length > 1 && (
-              <div className="mt-6 flex flex-wrap justify-center gap-2">
-                {redemptions.links.map((link, index) => (
-                  <Button
-                    key={index}
-                    asChild
-                    size="sm"
-                    variant={link.active ? 'default' : 'outline'}
-                    disabled={!link.url}
-                  >
-                    <Link href={link.url || '#'} dangerouslySetInnerHTML={{ __html: link.label }} />
-                  </Button>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                {redemptions.links && redemptions.links.length > 1 && (
+                  <div className="mt-6 flex flex-wrap justify-center gap-2">
+                    {redemptions.links.map((link, index) => (
+                      <Button
+                        key={index}
+                        asChild
+                        size="sm"
+                        variant={link.active ? 'default' : 'outline'}
+                        disabled={!link.url}
+                      >
+                        <Link
+                          href={link.url || '#'}
+                          dangerouslySetInnerHTML={{ __html: link.label }}
+                        />
+                      </Button>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </>
+        )}
       </div>
     </ClientLayout>
   );

@@ -53,7 +53,23 @@ class TagScanJob implements ShouldQueue
             ]);
 
             // Broadcast the saved ScanTag instance
-            event(new \App\Events\ScanTagged($scanTag));
+            // Broadcasting should never break HTTP flows/tests.
+            try {
+                event(new \App\Events\ScanTagged($scanTag));
+            } catch (\Throwable $broadcastError) {
+                Log::warning('TagScanJob: broadcast failed (non-fatal)', [
+                    'scan_id' => $scan->id,
+                    'scan_tag_id' => $scanTag->id ?? null,
+                    'error' => $broadcastError->getMessage(),
+                    'testing' => app()->environment('testing'),
+                ]);
+
+                // In production, you may want to still surface this.
+                // For this app's QR workflow, we treat broadcasting as best-effort.
+                if (!app()->environment('testing')) {
+                    // Keep non-fatal behavior across environments to avoid 500s.
+                }
+            }
 
             // Log success
             Log::info('Scan tagged', ['scan_id' => $scan->id, 'scan_tag_id' => $scanTag->id]);

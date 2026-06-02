@@ -1,9 +1,9 @@
-import React from 'react';
-import { Head, Link } from '@inertiajs/react';
+import React, { useState } from 'react';
+import { Head, Link, router } from '@inertiajs/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card';
 import { Badge } from '@/Components/ui/badge';
 import { Button } from '@/Components/ui/button';
-import AdminLayout from '@/Layouts/AdminLayout';
+import FinanceLayout from '@/Layouts/FinanceLayout';
 import IconMapper from '@/Components/IconMapper';
 
 interface Client {
@@ -67,8 +67,59 @@ interface Props {
 }
 
 export default function ClientDetails({ client, summary, transactions, redemptions }: Props) {
+  const [busyId, setBusyId] = useState<number | null>(null);
+  const [rejectingId, setRejectingId] = useState<number | null>(null);
+  const [rejectReason, setRejectReason] = useState<string>('');
+
+  const handleApprove = (redemptionId: number) => {
+    if (busyId !== null) return;
+
+    setBusyId(redemptionId);
+
+    router.post(
+      route('finance.loyalty.approve', redemptionId),
+      {},
+      {
+        preserveScroll: true,
+        onSuccess: () => {
+          setBusyId(null);
+          setRejectingId(null);
+          setRejectReason('');
+          router.reload();
+        },
+        onError: () => {
+          setBusyId(null);
+        },
+      },
+    );
+  };
+
+  const handleRejectSubmit = (redemptionId: number) => {
+    if (busyId !== null) return;
+    if (!rejectReason.trim()) return;
+
+    setBusyId(redemptionId);
+
+    router.post(
+      route('finance.loyalty.reject', redemptionId),
+      { reason: rejectReason },
+      {
+        preserveScroll: true,
+        onSuccess: () => {
+          setBusyId(null);
+          setRejectingId(null);
+          setRejectReason('');
+          router.reload();
+        },
+        onError: () => {
+          setBusyId(null);
+        },
+      },
+    );
+  };
+
   return (
-    <AdminLayout title="Client Loyalty Details">
+    <FinanceLayout title="Client Loyalty Details">
       <Head title={`${client.name} Loyalty`} />
 
       <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
@@ -202,7 +253,64 @@ export default function ClientDetails({ client, summary, transactions, redemptio
                           {redemption.points_used} points • {redemption.status}
                         </p>
                       </div>
-                      <Badge variant="outline">{redemption.status}</Badge>
+                      <div className="flex flex-col items-end gap-2">
+                        <Badge variant="outline">{redemption.status}</Badge>
+
+                        {redemption.status === 'pending' && (
+                          <div className="flex flex-wrap justify-end gap-2">
+                            <Button
+                              size="sm"
+                              disabled={busyId !== null}
+                              onClick={() => handleApprove(redemption.id)}
+                            >
+                              Approve
+                            </Button>
+
+                            {rejectingId === redemption.id ? (
+                              <>
+                                <input
+                                  className="w-full sm:w-72 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100"
+                                  value={rejectReason}
+                                  onChange={(e) => setRejectReason(e.target.value)}
+                                  placeholder="Reason for rejection (required)"
+                                  maxLength={500}
+                                />
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  disabled={busyId !== redemption.id || !rejectReason.trim()}
+                                  onClick={() => handleRejectSubmit(redemption.id)}
+                                >
+                                  Submit Reject
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  disabled={busyId !== null}
+                                  onClick={() => {
+                                    setRejectingId(null);
+                                    setRejectReason('');
+                                  }}
+                                >
+                                  Cancel
+                                </Button>
+                              </>
+                            ) : (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                disabled={busyId !== null}
+                                onClick={() => {
+                                  setRejectingId(redemption.id);
+                                  setRejectReason('');
+                                }}
+                              >
+                                Reject
+                              </Button>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 ))
@@ -213,6 +321,6 @@ export default function ClientDetails({ client, summary, transactions, redemptio
           </Card>
         </div>
       </div>
-    </AdminLayout>
+    </FinanceLayout>
   );
 }

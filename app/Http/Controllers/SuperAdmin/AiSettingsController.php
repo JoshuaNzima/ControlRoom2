@@ -131,6 +131,8 @@ class AiSettingsController extends Controller
 
         AiAssistantSetting::query()->where('assistant', $assistant)->update(['enabled' => true]);
 
+        Cache::forget('ai_active_assistant');
+
         return back()->with('success', "Assistant '{$assistant}' enabled.");
     }
 
@@ -140,6 +142,8 @@ class AiSettingsController extends Controller
     public function disableAssistant(string $assistant)
     {
         AiAssistantSetting::query()->where('assistant', $assistant)->update(['enabled' => false]);
+
+        Cache::forget('ai_active_assistant');
 
         $active = AiAssistantSetting::getActiveAssistant();
         if ($active && $active->assistant === $assistant) {
@@ -165,6 +169,8 @@ class AiSettingsController extends Controller
 
         // Ensure it exists and is enabled.
         AiAssistantSetting::setActiveAssistant($assistant);
+
+        Cache::forget('ai_active_assistant');
 
         return back()->with('success', "Active assistant set to '{$assistant}'.");
     }

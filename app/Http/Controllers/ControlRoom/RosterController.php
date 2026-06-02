@@ -7,7 +7,7 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use App\Models\Guards\Guard;
 use App\Models\Guards\GuardAssignment;
-use App\Models\Guards\GuardOffDay;
+use App\Models\GuardRotaException;
 use App\Models\RelieverRotation;
 use App\Models\Guards\ClientSite;
 use App\Models\Zone;
@@ -236,6 +236,48 @@ class RosterController extends Controller
         return back()->with('success', "Draft saved ({$saved} entries, {$deleted} removed). ");
     }
 
+    private function getExceptionTypeForOverride(?WeeklyRosterPlanEntry $entry): ?string
+    {
+        // Only treat these draft states as explicit override intentions.
+        // IMPORTANT: when the draft cell is cleared, we delete ONLY this exception type (best-effort),
+        // based on what the draft previously intended.
+        if (!$entry) {
+            return null;
+        }
+
+        if ($entry->entry_type === 'off') {
+            return 'ad_hoc_off';
+        }
+
+        // entry_type === 'site' => a WORK override intention (if template-derived says OFF)
+        return 'work_override';
+    }
+
+    private function upsertRotaExceptionForDay(int $guardId, string $date, string $exceptionType, ?string $notes): void
+    {
+        GuardRotaException::updateOrCreate(
+            [
+                'guard_id' => $guardId,
+                'start_date' => $date,
+                'end_date' => $date,
+                'exception_type' => $exceptionType,
+            ],
+            [
+                'notes' => $notes,
+            ]
+        );
+    }
+
+    private function deleteRotaExceptionForDay(int $guardId, string $date, string $exceptionType): int
+    {
+        return (int) GuardRotaException::where([
+            'guard_id' => $guardId,
+            'start_date' => $date,
+            'end_date' => $date,
+            'exception_type' => $exceptionType,
+        ])->delete();
+    }
+
     public function publishWeeklyPlan(Request $request)
     {
         $data = $request->validate([
@@ -293,10 +335,10 @@ class RosterController extends Controller
         $endTime = $data['end_time'];
 
         $created = 0;
-        $updated = 0;
         $deleted = 0;
         $skippedLocked = 0;
-        $skippedOffday = 0;
+
+        $resolver = app(\App\Services\RotaResolver::class);
 
         DB::transaction(function () use (
             $plan,
@@ -307,11 +349,10 @@ class RosterController extends Controller
             $endTime,
             $request,
             $entriesByGuardDay,
+            $resolver,
             &$created,
-            &$updated,
             &$deleted,
-            &$skippedLocked,
-            &$skippedOffday
+            &$skippedLocked
         ) {
             // Delete existing scheduled shifts for this supervisor-week-scope (plan wins)
             // but do NOT delete shifts that are already in progress / completed.
@@ -326,12 +367,10 @@ class RosterController extends Controller
                 $deleted = GuardShift::whereIn('id', $existing->pluck('id'))->delete();
             }
 
-            // Re-create based on plan entries (site entries only)
             foreach ($guardIds as $gid) {
                 foreach ($days as $d) {
                     $entry = $entriesByGuardDay[$gid][$d] ?? null;
 
-                    // If there is a locked shift (in_progress/completed), don't override.
                     $locked = GuardShift::query()
                         ->where('guard_id', $gid)
                         ->whereDate('date', $d)
@@ -344,31 +383,57 @@ class RosterController extends Controller
                         continue;
                     }
 
+                    // Reconcile exceptions deterministically based on template/legacy baseline
+                    // (ignoring existing GuardRotaException rows).
+                    $templateDayStatus = $resolver->getTemplateDayStatus((int) $gid, $d);
+                    $templateIsOff = !empty($templateDayStatus['is_off']);
+
+                    // We only manage the two v1 exception types used by the planner:
+                    // - ad_hoc_off      => OFF intent
+                    // - work_override  => WORK intent
+                    //
+                    // Draft semantics:
+                    // - entry_type === 'off'  => OFF intent
+                    // - entry_type === 'site' => WORK intent
+                    // - cleared cell (no entry) => remove the exception type that would contradict template intent,
+                    //   i.e. delete ONLY the opposite/intended exception type (per requirement).
                     if ($entry && $entry->entry_type === 'off') {
-                        // Create an off-day record (if none exists covering this date)
-                        $offExists = GuardOffDay::query()
-                            ->where('guard_id', $gid)
-                            ->whereDate('start_date', '<=', $d)
-                            ->where(function ($q) use ($d) {
-                                $q->whereNull('end_date')->orWhereDate('end_date', '>=', $d);
-                            })
-                            ->exists();
-
-                        if (!$offExists) {
-                            GuardOffDay::create([
-                                'guard_id' => $gid,
-                                'start_date' => $d,
-                                'end_date' => $d,
-                                'reason' => $entry?->notes ?: 'Weekly plan off-day',
-                            ]);
+                        // OFF intent => ensure ad_hoc_off exists iff template says WORK.
+                        if (!$templateIsOff) {
+                            $this->upsertRotaExceptionForDay((int) $gid, $d, 'ad_hoc_off', $entry?->notes ?: 'Weekly plan off-day');
                         }
-
-                        $skippedOffday++;
-                        continue;
+                        // WORK intent exception must not coexist.
+                        $this->deleteRotaExceptionForDay((int) $gid, $d, 'work_override');
+                    } elseif ($entry && $entry->entry_type === 'site') {
+                        // WORK intent => ensure work_override exists iff template says OFF.
+                        if ($templateIsOff) {
+                            $this->upsertRotaExceptionForDay((int) $gid, $d, 'work_override', $entry?->notes ?: 'Weekly plan work override');
+                        }
+                        // OFF intent exception must not coexist.
+                        $this->deleteRotaExceptionForDay((int) $gid, $d, 'ad_hoc_off');
+                    } else {
+                        // Cleared cell => revert to template intent by removing the opposite exception type.
+                        // If template says OFF, remove ad_hoc_off (OFF-intent opposite to template's implicit WORK intent is work_override),
+                        // but requirement is: delete only the opposite/intended exception type relative to template intent.
+                        //
+                        // Template OFF => keep/remove:
+                        // - correct exception for template OFF is NONE (no off exception necessary)
+                        // - if a WORK override exists, delete it (work_override is the opposite)
+                        if ($templateIsOff) {
+                            $this->deleteRotaExceptionForDay((int) $gid, $d, 'work_override');
+                        } else {
+                            $this->deleteRotaExceptionForDay((int) $gid, $d, 'ad_hoc_off');
+                        }
                     }
 
-                    $siteId = $entry?->client_site_id;
-                    if (!$siteId) {
+                    // Now compute final status AFTER reconciliation for shift creation.
+                    $finalStatus = $resolver->getDayStatus((int) $gid, $d);
+                    if (!empty($finalStatus['is_off'])) {
+                        continue; // no shift on off-day
+                    }
+
+                    // Work day => create shift only if draft specified a site.
+                    if (empty($entry) || empty($entry->client_site_id)) {
                         continue;
                     }
 
@@ -380,7 +445,7 @@ class RosterController extends Controller
 
                     $shift = GuardShift::create([
                         'guard_id' => $gid,
-                        'client_site_id' => (int) $siteId,
+                        'client_site_id' => (int) $entry->client_site_id,
                         'assigned_by' => $request->user()?->id,
                         'date' => $d,
                         'start_time' => $startDt,
@@ -390,6 +455,7 @@ class RosterController extends Controller
                         'status' => 'scheduled',
                         'notes' => $entry?->notes,
                     ]);
+
                     if ($shift) {
                         $created++;
                     }
@@ -516,21 +582,14 @@ class RosterController extends Controller
             ->get()
             ->groupBy('guard_id');
 
-        // Off-days overlapping the week
-        $offDays = GuardOffDay::whereIn('guard_id', $guardIds)
-            ->whereDate('start_date', '<=', $weekEnd->toDateString())
-            ->where(function($q) use ($weekStart) {
-                $q->whereNull('end_date')->orWhereDate('end_date', '>=', $weekStart->toDateString());
-            })
-            ->get();
-
+        // Off status derived from rota template + exceptions (v1 via RotaResolver)
         $offMap = [];
-        foreach ($offDays as $off) {
-            $start = Carbon::parse($off->start_date)->toDateString();
-            $end = $off->end_date ? Carbon::parse($off->end_date)->toDateString() : $start;
+        $resolver = app(\App\Services\RotaResolver::class);
+        foreach ($guardIds as $gid) {
             foreach ($days as $d) {
-                if ($d >= $start && $d <= $end) {
-                    $offMap[$off->guard_id][$d] = true;
+                $status = $resolver->getDayStatus((int)$gid, $d);
+                if (!empty($status['is_off'])) {
+                    $offMap[$gid][$d] = true;
                 }
             }
         }
@@ -691,14 +750,11 @@ class RosterController extends Controller
         }
 
         $errors = [];
-        $offDay = GuardOffDay::where('guard_id', (int) $data['guard_id'])
-            ->whereDate('start_date', '<=', $date)
-            ->where(function($q) use ($date) {
-                $q->whereNull('end_date')->orWhereDate('end_date', '>=', $date);
-            })
-            ->exists();
-        if ($offDay) {
-            $errors['date'] = 'Guard has an off-day on the selected date.';
+        $resolver = app(\App\Services\RotaResolver::class);
+        $dayStatus = $resolver->getDayStatus((int) $data['guard_id'], $date);
+        if (!empty($dayStatus['is_off']) && empty($data['shift_id'])) {
+            // When adding a roster shift we still allow explicit work_override via exception,
+            // so we don't hard-block here; we rely on exception persistence below.
         }
 
         $overlap = GuardShift::where('guard_id', (int) $data['guard_id'])
@@ -734,6 +790,25 @@ class RosterController extends Controller
             $shift->update($payload);
         } else {
             $shift = GuardShift::create($payload);
+        }
+
+        // Ensure we persist a work override exception when template-derived status is off.
+        if (!empty($dayStatus['is_off'])) {
+            GuardRotaException::updateOrCreate(
+                [
+                    'guard_id' => (int) $data['guard_id'],
+                    'start_date' => $date,
+                    'end_date' => $date,
+                    'exception_type' => 'work_override',
+                ],
+                [
+                    'notes' => $data['notes'] ?? null,
+                ]
+            );
+            $this->deleteRotaExceptionForDay((int) $data['guard_id'], $date, 'ad_hoc_off');
+        } else {
+            $this->deleteRotaExceptionForDay((int) $data['guard_id'], $date, 'ad_hoc_off');
+            $this->deleteRotaExceptionForDay((int) $data['guard_id'], $date, 'work_override');
         }
 
         if ($request->wantsJson() && !$request->header('X-Inertia')) {
@@ -838,24 +913,221 @@ class RosterController extends Controller
         ]);
 
         $date = Carbon::parse($data['date'])->toDateString();
+        $resolver = app(\App\Services\RotaResolver::class);
 
         foreach ($data['guard_ids'] as $gid) {
-            // Skip if an off-day already covers this date
-            $exists = GuardOffDay::where('guard_id', $gid)
-                ->whereDate('start_date', '<=', $date)
-                ->where(function($q) use ($date) {
-                    $q->whereNull('end_date')->orWhereDate('end_date', '>=', $date);
-                })->exists();
-            if ($exists) { continue; }
-            GuardOffDay::create([
-                'guard_id' => $gid,
-                'start_date' => $date,
-                'end_date' => null,
-                'reason' => $data['reason'] ?? null,
-            ]);
+            $dayStatus = $resolver->getDayStatus((int)$gid, $date);
+
+            // Create an off exception only when template-derived is work.
+            if (!empty($dayStatus['is_off'])) {
+                continue;
+            }
+
+            GuardRotaException::updateOrCreate(
+                [
+                    'guard_id' => (int)$gid,
+                    'start_date' => $date,
+                    'end_date' => $date,
+                    'exception_type' => 'ad_hoc_off',
+                ],
+                [
+                    'notes' => $data['reason'] ?? null,
+                ]
+            );
         }
 
         return back()->with('success', 'Off days saved.');
+    }
+
+    /**
+     * Bulk apply rota template baseline (does not delete/modify exceptions).
+     */
+    public function bulkApplyRotaTemplate(Request $request)
+    {
+        $data = $request->validate([
+            'guard_ids' => ['required', 'array', 'min:1'],
+            'guard_ids.*' => ['integer', 'exists:guards,id'],
+            'rota_template_id' => ['required', 'integer', 'exists:rota_templates,id'],
+        ]);
+
+        $updated = Guard::query()
+            ->whereIn('id', $data['guard_ids'])
+            ->update(['rota_template_id' => (int) $data['rota_template_id']]);
+
+        return response()->json(['success' => true, 'updated' => $updated]);
+    }
+
+    /**
+     * Bulk preview computed off/work for a range (uses resolver, including existing exceptions).
+     */
+    public function bulkPreviewRotaTemplate(Request $request)
+    {
+        $data = $request->validate([
+            'guard_ids' => ['required', 'array', 'min:1'],
+            'guard_ids.*' => ['integer', 'exists:guards,id'],
+            'start' => ['required', 'date'],
+            'end' => ['required', 'date'],
+        ]);
+
+        $start = Carbon::parse($data['start'])->toDateString();
+        $end = Carbon::parse($data['end'])->toDateString();
+
+        if ($end < $start) {
+            return response()->json(['success' => false, 'message' => 'End date must be >= start date.'], 422);
+        }
+
+        $weekStart = Carbon::parse($start)->startOfDay();
+        $weekEnd = Carbon::parse($end)->startOfDay();
+        $days = collect(range(0, $weekStart->diffInDays($weekEnd)))
+            ->map(fn (int $i) => $weekStart->copy()->addDays($i)->toDateString())
+            ->values();
+
+        $resolver = app(\App\Services\RotaResolver::class);
+
+        $statuses = [];
+        foreach ($data['guard_ids'] as $gid) {
+            $statuses[(int) $gid] = [];
+            foreach ($days as $d) {
+                $status = $resolver->getDayStatus((int) $gid, $d);
+                $statuses[(int) $gid][$d] = [
+                    'is_off' => (bool) ($status['is_off'] ?? false),
+                    'reason' => $status['reason'] ?? null,
+                ];
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'start' => $start,
+            'end' => $end,
+            'days' => $days,
+            'statuses' => $statuses,
+        ]);
+    }
+
+    /**
+     * Bulk upsert exceptions to override OFF/WORK intent for a range.
+     */
+    public function bulkUpsertRotaExceptions(Request $request)
+    {
+        $data = $request->validate([
+            'guard_ids' => ['required', 'array', 'min:1'],
+            'guard_ids.*' => ['integer', 'exists:guards,id'],
+            'start' => ['required', 'date'],
+            'end' => ['required', 'date'],
+            'exception_intent' => ['required', 'in:OFF,WORK'],
+            'notes' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        $start = Carbon::parse($data['start'])->toDateString();
+        $end = Carbon::parse($data['end'])->toDateString();
+
+        if ($end < $start) {
+            return response()->json(['success' => false, 'message' => 'End date must be >= start date.'], 422);
+        }
+
+        $intent = $data['exception_intent'];
+        $exceptionType = $intent === 'OFF' ? 'ad_hoc_off' : 'work_override';
+
+        $resolver = app(\App\Services\RotaResolver::class);
+
+        $weekStart = Carbon::parse($start)->startOfDay();
+        $weekEnd = Carbon::parse($end)->startOfDay();
+        $days = collect(range(0, $weekStart->diffInDays($weekEnd)))
+            ->map(fn (int $i) => $weekStart->copy()->addDays($i)->toDateString())
+            ->values();
+
+        $upserted = 0;
+
+        DB::transaction(function () use ($data, $days, $resolver, $exceptionType, $intent, &$upserted) {
+            foreach ($data['guard_ids'] as $gid) {
+                foreach ($days as $d) {
+                    $dayStatus = $resolver->getDayStatus((int) $gid, $d);
+
+                    // Reduce exception spam: only persist when it would change resolved state.
+                    if ($intent === 'OFF') {
+                        // Create ad_hoc_off only when current resolved is WORK.
+                        if (!empty($dayStatus['is_off'])) {
+                            continue;
+                        }
+                    } else {
+                        // Create work_override only when current resolved is OFF.
+                        if (empty($dayStatus['is_off'])) {
+                            continue;
+                        }
+                    }
+
+                    GuardRotaException::updateOrCreate(
+                        [
+                            'guard_id' => (int) $gid,
+                            'start_date' => $d,
+                            'end_date' => $d,
+                            'exception_type' => $exceptionType,
+                        ],
+                        [
+                            'notes' => $data['notes'] ?? null,
+                        ]
+                    );
+                    $upserted++;
+                }
+            }
+        });
+
+        return response()->json(['success' => true, 'upserted' => $upserted]);
+    }
+
+    /**
+     * Bulk clear exceptions for a range, deleting ONLY the exception types requested.
+     */
+    public function bulkClearRotaExceptions(Request $request)
+    {
+        $data = $request->validate([
+            'guard_ids' => ['required', 'array', 'min:1'],
+            'guard_ids.*' => ['integer', 'exists:guards,id'],
+            'start' => ['required', 'date'],
+            'end' => ['required', 'date'],
+            'clear_intent' => ['required', 'in:OFF,WORK,BOTH'],
+        ]);
+
+        $start = Carbon::parse($data['start'])->toDateString();
+        $end = Carbon::parse($data['end'])->toDateString();
+
+        if ($end < $start) {
+            return response()->json(['success' => false, 'message' => 'End date must be >= start date.'], 422);
+        }
+
+        $types = [];
+        if (in_array($data['clear_intent'], ['OFF', 'BOTH'], true)) {
+            $types[] = 'ad_hoc_off';
+        }
+        if (in_array($data['clear_intent'], ['WORK', 'BOTH'], true)) {
+            $types[] = 'work_override';
+        }
+
+        $weekStart = Carbon::parse($start)->startOfDay();
+        $weekEnd = Carbon::parse($end)->startOfDay();
+        $days = collect(range(0, $weekStart->diffInDays($weekEnd)))
+            ->map(fn (int $i) => $weekStart->copy()->addDays($i)->toDateString())
+            ->values();
+
+        $deleted = 0;
+
+        DB::transaction(function () use ($data, $days, $types, &$deleted) {
+            foreach ($days as $d) {
+                $q = GuardRotaException::query()
+                    ->whereIn('guard_id', $data['guard_ids'])
+                    ->where('start_date', $d)
+                    ->whereIn('exception_type', $types)
+                    ->where(function ($qq) use ($d) {
+                        // start_date=date and (end_date IS NULL OR end_date=date)
+                        $qq->whereNull('end_date')->orWhereDate('end_date', $d);
+                    });
+
+                $deleted += $q->delete();
+            }
+        });
+
+        return response()->json(['success' => true, 'deleted' => $deleted]);
     }
 
     public function reuseWeeklyRelief(Request $request)
@@ -1026,20 +1298,14 @@ class RosterController extends Controller
             ->get()
             ->groupBy('guard_id');
 
-        $offDays = GuardOffDay::whereIn('guard_id', $guardIds)
-            ->whereDate('start_date', '<=', $weekEnd->toDateString())
-            ->where(function($q) use ($weekStart) {
-                $q->whereNull('end_date')->orWhereDate('end_date', '>=', $weekStart->toDateString());
-            })
-            ->get();
-
+        // Off status derived from rota template + exceptions (v1 via RotaResolver)
+        $resolver = app(\App\Services\RotaResolver::class);
         $offMap = [];
-        foreach ($offDays as $off) {
-            $start = Carbon::parse($off->start_date)->toDateString();
-            $end = $off->end_date ? Carbon::parse($off->end_date)->toDateString() : $start;
+        foreach ($guardIds as $gid) {
             foreach ($days as $d) {
-                if ($d >= $start && $d <= $end) {
-                    $offMap[$off->guard_id][$d] = true;
+                $status = $resolver->getDayStatus((int)$gid, $d);
+                if (!empty($status['is_off'])) {
+                    $offMap[(int)$gid][$d] = true;
                 }
             }
         }
@@ -1056,6 +1322,7 @@ class RosterController extends Controller
             $gAssigns = $assignments->get($g->id) ?? collect();
             foreach ($days as $d) {
                 if (!empty($offMap[$g->id][$d])) { $skipped++; $offdaySkips++; continue; }
+
                 // Find site covering day
                 $siteId = null;
                 foreach ($gAssigns as $a) {
@@ -1265,25 +1532,28 @@ class RosterController extends Controller
             return back()->withErrors(['guard_id' => 'Cannot set roster for dismissed or absconded guards.']);
         }
 
+        $resolver = app(\App\Services\RotaResolver::class);
+
         if ($data['entry_type'] === 'off') {
-            // Create off-day
-            $exists = GuardOffDay::where('guard_id', $guard->id)
-                ->whereDate('start_date', '<=', $date)
-                ->where(function($q) use ($date) {
-                    $q->whereNull('end_date')->orWhereDate('end_date', '>=', $date);
-                })
-                ->exists();
-
-            if ($exists) {
-                return back()->withErrors(['date' => 'Guard already has an off-day on this date.']);
+            // Persist exception only when template-derived is work.
+            $dayStatus = $resolver->getDayStatus((int)$guard->id, $date);
+            if (empty($dayStatus['is_off'])) {
+                GuardRotaException::updateOrCreate(
+                    [
+                        'guard_id' => (int)$guard->id,
+                        'start_date' => $date,
+                        'end_date' => $date,
+                        'exception_type' => 'ad_hoc_off',
+                    ],
+                    [
+                        'notes' => $data['notes'] ?? 'Manual roster entry',
+                    ]
+                );
+                $this->deleteRotaExceptionForDay((int) $guard->id, $date, 'work_override');
+            } else {
+                $this->deleteRotaExceptionForDay((int) $guard->id, $date, 'ad_hoc_off');
+                $this->deleteRotaExceptionForDay((int) $guard->id, $date, 'work_override');
             }
-
-            GuardOffDay::create([
-                'guard_id' => $guard->id,
-                'start_date' => $date,
-                'end_date' => $date,
-                'reason' => $data['notes'] ?? 'Manual roster entry',
-            ]);
 
             // Cancel any existing shifts for this date
             GuardShift::where('guard_id', $guard->id)
@@ -1302,16 +1572,24 @@ class RosterController extends Controller
             return back()->withErrors(['start_time' => 'Start and end times are required for work entry.']);
         }
 
-        // Check for off-day conflict
-        $offDay = GuardOffDay::where('guard_id', $guard->id)
-            ->whereDate('start_date', '<=', $date)
-            ->where(function($q) use ($date) {
-                $q->whereNull('end_date')->orWhereDate('end_date', '>=', $date);
-            })
-            ->exists();
-
-        if ($offDay) {
-            return back()->withErrors(['date' => 'Guard has an off-day on the selected date. Remove it first.']);
+        // If template-derived is off, persist work override exception (so controller behavior matches resolver)
+        $dayStatus = $resolver->getDayStatus((int)$guard->id, $date);
+        if (!empty($dayStatus['is_off'])) {
+            GuardRotaException::updateOrCreate(
+                [
+                    'guard_id' => (int) $guard->id,
+                    'start_date' => $date,
+                    'end_date' => $date,
+                    'exception_type' => 'work_override',
+                ],
+                [
+                    'notes' => $data['notes'] ?? null,
+                ]
+            );
+            $this->deleteRotaExceptionForDay((int) $guard->id, $date, 'ad_hoc_off');
+        } else {
+            $this->deleteRotaExceptionForDay((int) $guard->id, $date, 'ad_hoc_off');
+            $this->deleteRotaExceptionForDay((int) $guard->id, $date, 'work_override');
         }
 
         $startDt = Carbon::parse($date . ' ' . $data['start_time'] . ':00');
@@ -1392,90 +1670,94 @@ class RosterController extends Controller
         $skipped = 0;
         $created = 0;
 
+        $resolver = app(\App\Services\RotaResolver::class);
+
         foreach ($validGuards as $guard) {
             foreach ($dates as $date) {
                 if ($entryType === 'off') {
-                    // Check existing off-day
-                    $exists = GuardOffDay::where('guard_id', $guard->id)
-                        ->whereDate('start_date', '<=', $date)
-                        ->where(function($q) use ($date) {
-                            $q->whereNull('end_date')->orWhereDate('end_date', '>=', $date);
-                        })
-                        ->exists();
+                    // Persist exception only if template-derived says work.
+                    $dayStatus = $resolver->getDayStatus((int)$guard->id, $date);
+                    if (empty($dayStatus['is_off'])) {
+            GuardRotaException::updateOrCreate(
+                [
+                    'guard_id' => (int)$gid,
+                    'start_date' => $date,
+                    'end_date' => $date,
+                    'exception_type' => 'ad_hoc_off',
+                ],
+                [
+                    'notes' => $data['reason'] ?? null,
+                ]
+            );
+            $this->deleteRotaExceptionForDay((int) $gid, $date, 'work_override');
+        }
 
-                    if (!$exists) {
-                        GuardOffDay::create([
-                            'guard_id' => $guard->id,
-                            'start_date' => $date,
-                            'end_date' => $date,
-                            'reason' => $data['notes'] ?? 'Bulk roster entry',
-                        ]);
-
-                        // Cancel shifts
-                        GuardShift::where('guard_id', $guard->id)
-                            ->whereDate('date', $date)
-                            ->whereNotIn('status', ['cancelled', 'missed'])
-                            ->update(['status' => 'cancelled']);
-
-                        $created++;
-                    } else {
-                        $skipped++;
-                    }
-                } else {
-                    // Work entry - requires site and times
-                    if (empty($data['client_site_id']) || empty($data['start_time']) || empty($data['end_time'])) {
-                        $skipped++;
-                        continue;
-                    }
-
-                    $startDt = Carbon::parse($date . ' ' . $data['start_time'] . ':00');
-                    $endDt = Carbon::parse($date . ' ' . $data['end_time'] . ':00');
-                    if ($endDt->lessThanOrEqualTo($startDt)) {
-                        $endDt->addDay();
-                    }
-
-                    // Check off-day
-                    $offDay = GuardOffDay::where('guard_id', $guard->id)
-                        ->whereDate('start_date', '<=', $date)
-                        ->where(function($q) use ($date) {
-                            $q->whereNull('end_date')->orWhereDate('end_date', '>=', $date);
-                        })
-                        ->exists();
-
-                    if ($offDay) {
-                        $skipped++;
-                        continue;
-                    }
-
-                    // Check overlap
-                    $overlap = GuardShift::where('guard_id', $guard->id)
-                        ->where('status', '!=', 'cancelled')
-                        ->where(function($q) use ($startDt, $endDt) {
-                            $q->where('start_time', '<', $endDt)
-                                ->where('end_time', '>', $startDt);
-                        })
-                        ->exists();
-
-                    if ($overlap) {
-                        $skipped++;
-                        continue;
-                    }
-
-                    GuardShift::create([
-                        'guard_id' => $guard->id,
-                        'client_site_id' => (int) $data['client_site_id'],
-                        'assigned_by' => $request->user()?->id,
-                        'date' => $date,
-                        'start_time' => $startDt,
-                        'end_time' => $endDt,
-                        'shift_type' => $data['shift_type'] ?? 'custom',
-                        'instructions' => null,
-                        'status' => 'scheduled',
-                        'notes' => $data['notes'] ?? null,
-                    ]);
+                    // Cancel shifts
+                    GuardShift::where('guard_id', $guard->id)
+                        ->whereDate('date', $date)
+                        ->whereNotIn('status', ['cancelled', 'missed'])
+                        ->update(['status' => 'cancelled']);
 
                     $created++;
+                    continue;
                 }
+
+                // Work entry - requires site and times
+                if (empty($data['client_site_id']) || empty($data['start_time']) || empty($data['end_time'])) {
+                    $skipped++;
+                    continue;
+                }
+
+                $startDt = Carbon::parse($date . ' ' . $data['start_time'] . ':00');
+                $endDt = Carbon::parse($date . ' ' . $data['end_time'] . ':00');
+                if ($endDt->lessThanOrEqualTo($startDt)) {
+                    $endDt->addDay();
+                }
+
+                // If template-derived is off, persist work override exception.
+                $dayStatus = $resolver->getDayStatus((int)$guard->id, $date);
+                if (!empty($dayStatus['is_off'])) {
+                    GuardRotaException::updateOrCreate(
+                        [
+                            'guard_id' => (int)$guard->id,
+                            'start_date' => $date,
+                            'end_date' => $date,
+                            'exception_type' => 'work_override',
+                        ],
+                        [
+                            'notes' => $data['notes'] ?? null,
+                        ]
+                    );
+                }
+
+                // Check overlap
+                $overlap = GuardShift::where('guard_id', $guard->id)
+                    ->where('status', '!=', 'cancelled')
+                    ->where(function($q) use ($startDt, $endDt) {
+                        $q->where('start_time', '<', $endDt)
+                            ->where('end_time', '>', $startDt);
+                    })
+                    ->exists();
+
+                if ($overlap) {
+                    $skipped++;
+                    continue;
+                }
+
+                GuardShift::create([
+                    'guard_id' => $guard->id,
+                    'client_site_id' => (int) $data['client_site_id'],
+                    'assigned_by' => $request->user()?->id,
+                    'date' => $date,
+                    'start_time' => $startDt,
+                    'end_time' => $endDt,
+                    'shift_type' => $data['shift_type'] ?? 'custom',
+                    'instructions' => null,
+                    'status' => 'scheduled',
+                    'notes' => $data['notes'] ?? null,
+                ]);
+
+                $created++;
             }
         }
 

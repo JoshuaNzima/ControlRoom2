@@ -12,11 +12,20 @@ use Inertia\Inertia;
 
 class LoyaltyPointsController extends Controller
 {
+    private function loyaltyEnabledOrAbort(): void
+    {
+        if (!LoyaltyPointsService::isLoyaltyEnabled()) {
+            abort(403, 'Loyalty program is currently disabled');
+        }
+    }
+
     /**
      * Dashboard - View own loyalty points
      */
     public function dashboard()
     {
+        $this->loyaltyEnabledOrAbort();
+
         $client = auth()->user()->client;
 
         if (!$client) {
@@ -38,6 +47,7 @@ class LoyaltyPointsController extends Controller
                 'id' => $client->id,
                 'name' => $client->name,
             ],
+            'loyaltyEnabled' => LoyaltyPointsService::isLoyaltyEnabled(),
             'summary' => $summary,
             'transactions' => $transactions,
             'availableRewards' => $availableRewards,
@@ -50,6 +60,8 @@ class LoyaltyPointsController extends Controller
      */
     public function getSummary()
     {
+        $this->loyaltyEnabledOrAbort();
+
         $client = auth()->user()->client;
 
         if (!$client) {
@@ -72,6 +84,8 @@ class LoyaltyPointsController extends Controller
      */
     public function getRewards()
     {
+        $this->loyaltyEnabledOrAbort();
+
         $client = auth()->user()->client;
 
         if (!$client) {
@@ -103,6 +117,8 @@ class LoyaltyPointsController extends Controller
      */
     public function requestRedemption(Request $request)
     {
+        $this->loyaltyEnabledOrAbort();
+
         $client = auth()->user()->client;
 
         if (!$client) {
@@ -154,6 +170,8 @@ class LoyaltyPointsController extends Controller
      */
     public function redemptions()
     {
+        $this->loyaltyEnabledOrAbort();
+
         $client = auth()->user()->client;
 
         if (!$client) {
@@ -172,6 +190,7 @@ class LoyaltyPointsController extends Controller
                 'id' => $client->id,
                 'name' => $client->name,
             ],
+            'loyaltyEnabled' => LoyaltyPointsService::isLoyaltyEnabled(),
             'redemptions' => $redemptions,
         ]);
     }
@@ -181,6 +200,8 @@ class LoyaltyPointsController extends Controller
      */
     public function cancelRedemption(ClientLoyaltyRedemption $redemption)
     {
+        $this->loyaltyEnabledOrAbort();
+
         $client = auth()->user()->client;
 
         if (!$client || $redemption->client_id !== $client->id) {
@@ -195,32 +216,13 @@ class LoyaltyPointsController extends Controller
         }
 
         try {
-            // Refund points
-            $loyaltyPoints = LoyaltyPointsService::initializeClient($client);
-            $balanceBefore = $loyaltyPoints->available_points;
-            $newBalance = $balanceBefore + $redemption->points_used;
+            $cancelled = LoyaltyPointsService::cancelRedemption($redemption, auth()->id());
 
-            \App\Models\ClientLoyaltyTransaction::create([
-                'client_loyalty_points_id' => $loyaltyPoints->id,
-                'client_id' => $client->id,
-                'type' => 'adjusted',
-                'points' => $redemption->points_used,
-                'balance_before' => $balanceBefore,
-                'balance_after' => $newBalance,
-                'reason' => "Redemption cancelled by client: {$redemption->reward->name}",
-                'status' => 'completed',
-            ]);
-
-            $loyaltyPoints->update([
-                'available_points' => $newBalance,
-            ]);
-
-            // Update redemption status
-            $redemption->update(['status' => 'cancelled']);
-
-            // Refund reward quantity if limited
-            if ($redemption->reward && $redemption->reward->is_limited) {
-                $redemption->reward->decrement('quantity_redeemed');
+            if (!$cancelled) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unable to cancel redemption (already processed or invalid state).',
+                ], 422);
             }
 
             return response()->json([

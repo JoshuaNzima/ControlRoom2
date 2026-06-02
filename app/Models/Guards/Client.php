@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Client extends Model
 {
@@ -60,6 +61,11 @@ class Client extends Model
     public function payments(): HasMany
     {
         return $this->hasMany(\App\Models\ClientPayment::class);
+    }
+
+    public function loyaltyPoints(): HasOne
+    {
+        return $this->hasOne(\App\Models\ClientLoyaltyPoints::class, 'client_id');
     }
 
     public function users(): BelongsToMany
@@ -119,6 +125,7 @@ class Client extends Model
     {
         $currentYear = now()->year;
         $currentMonth = now()->month;
+
         $limitMonth = $year < $currentYear ? 12 : ($year > $currentYear ? 0 : $currentMonth);
 
         $paymentsForYear = $this->relationLoaded('payments')
@@ -132,11 +139,23 @@ class Client extends Model
         $totalPaid = 0;
         $totalCovered = 0;
 
+        // Ensure effective billing start is safely usable as a Carbon instance
+        $effectiveStart = $this->effective_billing_start;
+        if ($effectiveStart && !($effectiveStart instanceof \Illuminate\Support\Carbon)) {
+            try {
+                $effectiveStart = \Illuminate\Support\Carbon::parse($effectiveStart);
+            } catch (\Throwable $e) {
+                $effectiveStart = null;
+            }
+        }
+
         $startMonth = 1;
-        if ($this->effective_billing_start?->year === $year) {
-            $startMonth = $this->effective_billing_start->month;
-        } elseif ($this->effective_billing_start?->year > $year) {
-            $startMonth = 13; // No months to bill this year
+        if ($effectiveStart) {
+            if ($effectiveStart->year === $year) {
+                $startMonth = (int) $effectiveStart->month;
+            } elseif ($effectiveStart->year > $year) {
+                $startMonth = 13; // No months to bill this year
+            }
         }
 
         $monthlyRate = $this->getMonthlyDueAmount();
@@ -145,8 +164,9 @@ class Client extends Model
         for ($month = $startMonth; $month <= $limitMonth; $month++) {
             $payment = $yearPayments->get($month);
             $isInBillingWindow = $this->isInBillingWindow($year, $month);
-            
+
             $computedDue = $isInBillingWindow ? (float) $monthlyRate : 0.0;
+
             $monthDue = $isInBillingWindow
                 ? (float) (($payment && (float) $payment->amount_due > 0) ? $payment->amount_due : $computedDue)
                 : 0.0;
@@ -170,7 +190,7 @@ class Client extends Model
             'total_paid' => round($totalPaid, 2),
             'outstanding_amount' => round($totalDue - $totalCovered, 2),
             'outstanding_months' => $unpaidCount,
-            'billing_start' => $this->effective_billing_start?->toDateString(),
+            'billing_start' => $effectiveStart?->toDateString(),
             'is_overdue' => $unpaidCount >= 3
         ];
     }
@@ -181,8 +201,17 @@ class Client extends Model
     protected function isInBillingWindow(int $year, int $month): bool
     {
         $date = now()->setYear($year)->setMonth($month)->startOfMonth();
-        
-        if ($this->effective_billing_start && $date->lt($this->effective_billing_start->startOfMonth())) {
+
+        $effectiveStart = $this->effective_billing_start;
+        if ($effectiveStart && !($effectiveStart instanceof \Illuminate\Support\Carbon)) {
+            try {
+                $effectiveStart = \Illuminate\Support\Carbon::parse($effectiveStart);
+            } catch (\Throwable $e) {
+                $effectiveStart = null;
+            }
+        }
+
+        if ($effectiveStart && $date->lt($effectiveStart->startOfMonth())) {
             return false;
         }
 

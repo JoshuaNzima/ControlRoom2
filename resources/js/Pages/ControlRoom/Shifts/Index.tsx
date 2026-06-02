@@ -34,7 +34,11 @@ export default function ShiftsIndex() {
   const [loadingId, setLoadingId] = useState<number | null>(null);
 
   const [selectedGuardShiftIds, setSelectedGuardShiftIds] = useState<Record<number, boolean>>({});
-  const selectedGuardShiftIdList = Object.entries(selectedGuardShiftIds).filter(([, v]) => !!v).map(([k]) => Number(k));
+  const selectedGuardShiftIdList = React.useMemo(
+    () => Object.entries(selectedGuardShiftIds).filter(([, v]) => !!v).map(([k]) => Number(k)),
+    [selectedGuardShiftIds]
+  );
+
   const [guardShiftViewOpen, setGuardShiftViewOpen] = useState(false);
   const [guardShiftEditOpen, setGuardShiftEditOpen] = useState(false);
   const [guardShiftCancelOpen, setGuardShiftCancelOpen] = useState(false);
@@ -60,10 +64,12 @@ export default function ShiftsIndex() {
     const edit = qp.get('edit_shift');
     const view = qp.get('view_shift');
 
+    // Open requested modal(s) from query params.
+    // Then clean up the query params WITHOUT triggering another full Inertia navigation.
+    const shouldCleanParams = Boolean(create || edit || view);
+
     if (create) {
       setCreateOpen(true);
-      router.get(route('control-room.shifts.index'), {}, { preserveScroll: true, preserveState: true, replace: true });
-      return;
     }
 
     if (edit) {
@@ -73,8 +79,6 @@ export default function ShiftsIndex() {
         setEditingShift(shift);
         setEditOpen(true);
       }
-      router.get(route('control-room.shifts.index'), {}, { preserveScroll: true, preserveState: true, replace: true });
-      return;
     }
 
     if (view) {
@@ -82,10 +86,22 @@ export default function ShiftsIndex() {
       if (id) {
         openViewModal(id);
       }
-      router.get(route('control-room.shifts.index'), {}, { preserveScroll: true, preserveState: true, replace: true });
     }
+
+    if (shouldCleanParams) {
+      // Replace URL only; keep current page state.
+      try {
+        const url = new URL(window.location.href);
+        url.searchParams.delete('create_shift');
+        url.searchParams.delete('edit_shift');
+        url.searchParams.delete('view_shift');
+        window.history.replaceState({}, '', url.toString());
+      } catch {}
+    }
+
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
 
   useEffect(() => {
     if (didInitFromStorageRef.current) return;
@@ -588,21 +604,23 @@ export default function ShiftsIndex() {
                         <div className="flex-1 min-w-0">
                           <div className="flex flex-wrap items-center gap-2 mb-1">
                             <span className="font-semibold text-gray-900 dark:text-gray-100 truncate">
-                              {s.guard_relation?.name || 'Unassigned'}
+                              {s.guardRelation?.name || s.guard_relation?.name || 'Unassigned'}
                             </span>
                             <span className="text-gray-400">•</span>
                             <span className="text-gray-600 dark:text-gray-400 truncate">
-                              {s.client_site?.name || 'No Site'}
+                              {s.clientSite?.name || s.client_site?.name || 'No Site'}
                             </span>
-                            {s.guard_relation?.guard_type && (
+                            {(s.guardRelation?.guard_type || s.guard_relation?.guard_type) && (
                               <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
-                                s.guard_relation.guard_type === 'reliever' 
-                                  ? 'bg-coin-100 text-coin-700 dark:bg-coin-900/30 dark:text-coin-300' 
-                                  : s.guard_relation.guard_type === 'standby' 
-                                    ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300' 
+                                (s.guardRelation?.guard_type || s.guard_relation?.guard_type) === 'reliever'
+                                  ? 'bg-coin-100 text-coin-700 dark:bg-coin-900/30 dark:text-coin-300'
+                                  : (s.guardRelation?.guard_type || s.guard_relation?.guard_type) === 'standby'
+                                    ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300'
                                     : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
                               }`}>
-                                {s.guard_relation.guard_type === 'permanent' ? 'Standard' : s.guard_relation.guard_type.charAt(0).toUpperCase() + s.guard_relation.guard_type.slice(1)}
+                                {(s.guardRelation?.guard_type || s.guard_relation?.guard_type) === 'permanent'
+                                  ? 'Standard'
+                                  : String(s.guardRelation?.guard_type || s.guard_relation?.guard_type).charAt(0).toUpperCase() + String(s.guardRelation?.guard_type || s.guard_relation?.guard_type).slice(1)}
                               </span>
                             )}
                           </div>

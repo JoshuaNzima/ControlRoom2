@@ -11,6 +11,10 @@ class ClientLoyaltyExpiration extends Model
         'client_id',
         'points',
         'expires_at',
+        'claimed',
+        'claimed_at',
+        'processing',
+        'processing_at',
         'processed',
         'processed_at',
     ];
@@ -18,7 +22,11 @@ class ClientLoyaltyExpiration extends Model
     protected $casts = [
         'points' => 'decimal:2',
         'expires_at' => 'datetime',
+        'claimed_at' => 'datetime',
+        'processing_at' => 'datetime',
         'processed_at' => 'datetime',
+        'claimed' => 'boolean',
+        'processing' => 'boolean',
         'processed' => 'boolean',
     ];
 
@@ -29,7 +37,11 @@ class ClientLoyaltyExpiration extends Model
 
     public function scopePending($query)
     {
-        return $query->where('processed', false)->where('expires_at', '<=', now());
+        return $query
+            ->where('processed', false)
+            ->where('claimed', false)
+            ->where('processing', false)
+            ->where('expires_at', '<=', now());
     }
 
     public function scopeProcessed($query)

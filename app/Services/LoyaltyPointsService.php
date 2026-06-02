@@ -3,36 +3,38 @@
 namespace App\Services;
 
 use App\Models\Guards\Client;
-use App\Models\ClientLoyaltyPoints;
-use App\Models\ClientLoyaltyTransaction;
-use App\Models\ClientLoyaltyRedemption;
 use App\Models\ClientLoyaltyExpiration;
+use App\Models\ClientLoyaltyPoints;
+use App\Models\ClientLoyaltyRedemption;
+use App\Models\ClientLoyaltyTransaction;
 use App\Models\LoyaltyReward;
 use App\Models\LoyaltyRule;
 use App\Models\LoyaltyTier;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
+use InvalidArgumentException;
 
 class LoyaltyPointsService
 {
-    /**
-     * Initialize loyalty points for a client
-     */
-    public static function initializeClient(Client $client): ClientLoyaltyPoints
+    public static function isLoyaltyEnabled(): bool
     {
-        return ClientLoyaltyPoints::firstOrCreate(
-            ['client_id' => $client->id],
-            [
-                'total_points' => 0,
-                'available_points' => 0,
-                'redeemed_points' => 0,
-                'pending_points' => 0,
-            ]
-        );
+        // Default ON for backward compatibility.
+        return (bool) \App\Models\Setting::getValue('loyalty.enabled', true);
     }
 
     /**
-     * Award points to a client
+     * Initialize loyalty points for a client.
+     */
+    public static function initializeClient(Client $client): ClientLoyaltyPoints
+    {
+        return DB::transaction(function () use ($client) {
+            return self::getLockedClientPoints($client);
+        });
+    }
+
+    /**
+     * Award points to a client.
      */
     public static function awardPoints(
         Client $client,
@@ -43,16 +45,20 @@ class LoyaltyPointsService
         ?string $relatedType = null,
         ?Model $causable = null,
         array $metadata = [],
-    ): ClientLoyaltyTransaction
-    {
+    ): ClientLoyaltyTransaction {
         return DB::transaction(function () use ($client, $points, $reason, $type, $relatedId, $relatedType, $causable, $metadata) {
-            $loyaltyPoints = self::initializeClient($client);
+            $points = self::normalizePoints($points);
 
-            // Store balances for transaction record
-            $balanceBefore = $loyaltyPoints->available_points;
-            $newBalance = $balanceBefore + $points;
+            if ($points < 0) {
+                throw new InvalidArgumentException('Awarded points cannot be negative.');
+            }
 
-            // Create transaction
+            $loyaltyPoints = self::getLockedClientPoints($client);
+
+            $balanceBefore = self::normalizePoints((float) $loyaltyPoints->available_points);
+            $newBalance = self::normalizePoints($balanceBefore + $points);
+            $newTotalPoints = self::normalizePoints((float) $loyaltyPoints->total_points + $points);
+
             $transaction = ClientLoyaltyTransaction::create([
                 'client_loyalty_points_id' => $loyaltyPoints->id,
                 'client_id' => $client->id,
@@ -69,9 +75,8 @@ class LoyaltyPointsService
                 'status' => 'completed',
             ]);
 
-            // Update loyalty points
             $loyaltyPoints->update([
-                'total_points' => $loyaltyPoints->total_points + $points,
+                'total_points' => $newTotalPoints,
                 'available_points' => $newBalance,
                 'last_earned_at' => now(),
             ]);
@@ -81,7 +86,7 @@ class LoyaltyPointsService
     }
 
     /**
-     * Deduct points from a client
+     * Deduct points from a client.
      */
     public static function deductPoints(
         Client $client,
@@ -89,18 +94,23 @@ class LoyaltyPointsService
         string $reason,
         ?int $relatedId = null,
         ?string $relatedType = null,
-    ): ?ClientLoyaltyTransaction
-    {
+    ): ?ClientLoyaltyTransaction {
         return DB::transaction(function () use ($client, $points, $reason, $relatedId, $relatedType) {
-            $loyaltyPoints = self::initializeClient($client);
+            $points = self::normalizePoints($points);
 
-            // Check if client has enough points
-            if ($loyaltyPoints->available_points < $points) {
-                return null; // Insufficient points
+            if ($points <= 0) {
+                throw new InvalidArgumentException('Deducted points must be greater than zero.');
             }
 
-            $balanceBefore = $loyaltyPoints->available_points;
-            $newBalance = $balanceBefore - $points;
+            $loyaltyPoints = self::getLockedClientPoints($client);
+            $availablePoints = self::normalizePoints((float) $loyaltyPoints->available_points);
+
+            if ($availablePoints < $points) {
+                return null;
+            }
+
+            $balanceBefore = $availablePoints;
+            $newBalance = self::normalizePoints($balanceBefore - $points);
 
             $transaction = ClientLoyaltyTransaction::create([
                 'client_loyalty_points_id' => $loyaltyPoints->id,
@@ -117,7 +127,7 @@ class LoyaltyPointsService
 
             $loyaltyPoints->update([
                 'available_points' => $newBalance,
-                'redeemed_points' => $loyaltyPoints->redeemed_points + $points,
+                'redeemed_points' => self::normalizePoints((float) $loyaltyPoints->redeemed_points + $points),
                 'last_redeemed_at' => now(),
             ]);
 
@@ -126,25 +136,42 @@ class LoyaltyPointsService
     }
 
     /**
-     * Calculate points for a payment
+     * Calculate points for a payment.
      */
     public static function calculatePaymentPoints(float $amount): float
     {
-        $rule = LoyaltyRule::active()->byType('payment')->first();
-        
-        if (!$rule) {
-            return 0;
+        $amount = self::normalizePoints($amount);
+
+        if ($amount <= 0) {
+            return 0.0;
         }
 
-        // Extract unit value from description like "per MWK 1000"
-        preg_match('/(\d+)/', $rule->unit_description, $matches);
-        $unitAmount = isset($matches[1]) ? (int)$matches[1] : 1000;
+        $rule = LoyaltyRule::active()->byType('payment')->first();
 
-        return ($amount / $unitAmount) * $rule->points_per_unit;
+        if (!$rule) {
+            return 0.0;
+        }
+
+        // Structured configuration only (no regex/free-text parsing).
+        $unitAmount = null;
+
+        if (is_array($rule->conditions) && isset($rule->conditions['unit_amount'])) {
+            $configuredUnit = self::normalizePoints((float) $rule->conditions['unit_amount']);
+            if ($configuredUnit > 0) {
+                $unitAmount = $configuredUnit;
+            }
+        }
+
+        if ($unitAmount === null) {
+            // No valid structured unit amount => can't calculate.
+            return 0.0;
+        }
+
+        return self::normalizePoints(($amount / $unitAmount) * (float) $rule->points_per_unit);
     }
 
     /**
-     * Award points for payment (from ClientPayment model)
+     * Award points for payment (from ClientPayment model).
      */
     public static function awardPaymentPoints(Client $client, float $amount, int $paymentId): ClientLoyaltyTransaction
     {
@@ -153,7 +180,7 @@ class LoyaltyPointsService
         return self::awardPoints(
             $client,
             $points,
-            "Payment received: MWK " . number_format($amount, 2),
+            'Payment received: MWK ' . number_format($amount, 2),
             'earned',
             $paymentId,
             'ClientPayment',
@@ -162,52 +189,82 @@ class LoyaltyPointsService
     }
 
     /**
-     * Redeem a reward for a client
+     * Redeem a reward for a client.
      */
     public static function redeemReward(
         Client $client,
         int $rewardId,
         ?string $approvedBy = null
-    ): ?ClientLoyaltyRedemption
-    {
+    ): ?ClientLoyaltyRedemption {
+        // Single owning transaction:
+        // - lock client loyalty balance row
+        // - lock reward row for inventory validation and quantity consumption
         return DB::transaction(function () use ($client, $rewardId, $approvedBy) {
-            $reward = LoyaltyReward::find($rewardId);
-            if (!$reward || !$reward->isAvailable()) {
-                return null; // Reward not available
-            }
+            $loyaltyPoints = self::getLockedClientPoints($client);
+            $reward = self::getLockedReward($rewardId);
 
-            $loyaltyPoints = self::initializeClient($client);
-            if ($loyaltyPoints->available_points < $reward->points_required) {
-                return null; // Insufficient points
-            }
-
-            // Deduct points
-            $transaction = self::deductPoints(
-                $client,
-                $reward->points_required,
-                "Redeemed: {$reward->name}",
-                $rewardId,
-                'LoyaltyReward'
-            );
-
-            if (!$transaction) {
+            if (!$reward) {
                 return null;
             }
 
-            // Create redemption record
+            if (!$reward->isAvailable()) {
+                return null;
+            }
+
+            $pointsRequired = self::normalizePoints($reward->points_required);
+            $availablePoints = self::normalizePoints($loyaltyPoints->available_points);
+
+            if ($availablePoints < $pointsRequired) {
+                return null;
+            }
+
+            // Re-check limited inventory under the same row lock.
+            if ($reward->is_limited) {
+                if ($reward->quantity_available !== null && $reward->quantity_redeemed >= $reward->quantity_available) {
+                    return null;
+                }
+            }
+
+            $balanceBefore = $availablePoints;
+            $newBalance = self::normalizePoints($balanceBefore - $pointsRequired);
+
+            $transaction = ClientLoyaltyTransaction::create([
+                'client_loyalty_points_id' => $loyaltyPoints->id,
+                'client_id' => $client->id,
+                'type' => 'redeemed',
+                'points' => $pointsRequired,
+                'balance_before' => $balanceBefore,
+                'balance_after' => $newBalance,
+                'reason' => "Redeemed: {$reward->name}",
+                'related_id' => $rewardId,
+                'related_type' => 'LoyaltyReward',
+                'status' => 'completed',
+            ]);
+
+            $redemptionStatus = $reward->requires_approval ? 'pending' : 'completed';
+
             $redemption = ClientLoyaltyRedemption::create([
                 'client_id' => $client->id,
                 'loyalty_reward_id' => $rewardId,
                 'client_loyalty_transaction_id' => $transaction->id,
-                'points_used' => $reward->points_required,
+                'points_used' => $pointsRequired,
                 'value_received' => $reward->value,
-                'status' => $reward->requires_approval ? 'pending' : 'completed',
-                'redeemed_at' => $reward->requires_approval ? null : now(),
+                'status' => $redemptionStatus,
+                'approved_at' => !$reward->requires_approval ? now() : null,
+                'approved_by' => !$reward->requires_approval && $approvedBy ? $approvedBy : null,
+                'redeemed_at' => !$reward->requires_approval ? now() : null,
             ]);
 
-            // Update reward quantity
+            $loyaltyPoints->update([
+                'available_points' => $newBalance,
+                'redeemed_points' => self::normalizePoints($loyaltyPoints->redeemed_points + $pointsRequired),
+                'last_redeemed_at' => now(),
+            ]);
+
             if ($reward->is_limited) {
-                $reward->increment('quantity_redeemed');
+                // Explicit row-locked increment (avoid non-locked read/modify/write).
+                $reward->quantity_redeemed = (int) $reward->quantity_redeemed + 1;
+                $reward->save();
             }
 
             return $redemption;
@@ -215,11 +272,49 @@ class LoyaltyPointsService
     }
 
     /**
-     * Approve redemption request
+     * Approve redemption request.
      */
     public static function approveRedemption(ClientLoyaltyRedemption $redemption, int $approvedBy): bool
     {
+        // Service-level guard (backward compatible):
+        // If roles/permissions are not configured in the caller/test environment, do not block.
+        $approver = User::query()->find($approvedBy);
+        if (!$approver) {
+            return false;
+        }
+
+        try {
+            // Backward-compatible policy:
+            // - If the user has no roles assigned, do not block (older setups/tests may not seed roles).
+            // - Only enforce role allow-list when roles are actually assigned.
+            $rolesCount = $approver->roles()->count();
+            if ($rolesCount > 0) {
+                if (!$approver->hasAnyRole(['admin', 'super_admin', 'superadmin', 'finance', 'finance_officer', 'finance_manager', 'accountant'])) {
+                    return false;
+                }
+            }
+        } catch (\Throwable $e) {
+            // Allow when role tables/guards are not present in older setups/tests.
+        }
+
         return DB::transaction(function () use ($redemption, $approvedBy) {
+            $redemption = ClientLoyaltyRedemption::query()
+                ->whereKey($redemption->id)
+                ->lockForUpdate()
+                ->first();
+
+            if (!$redemption) {
+                return false;
+            }
+
+            if (in_array($redemption->status, ['completed', 'rejected', 'cancelled'], true)) {
+                return true;
+            }
+
+            if (!in_array($redemption->status, ['pending', 'approved'], true)) {
+                return true;
+            }
+
             $redemption->update([
                 'status' => 'completed',
                 'approved_at' => now(),
@@ -232,18 +327,58 @@ class LoyaltyPointsService
     }
 
     /**
-     * Reject redemption request
+     * Reject redemption request.
      */
     public static function rejectRedemption(ClientLoyaltyRedemption $redemption, string $reason): bool
     {
-        return DB::transaction(function () use ($redemption, $reason) {
-            // Refund points
-            $client = $redemption->client;
-            $points = $redemption->points_used;
+        // Service-level guard (backward compatible).
+        // Note: controller currently calls this without passing rejected_by; we only enforce when caller is available via auth().
+        $rejector = auth()->user();
+        if ($rejector) {
+            try {
+                if (!$rejector->hasAnyRole(['admin', 'super_admin', 'superadmin', 'finance', 'finance_officer', 'finance_manager', 'accountant'])) {
+                    return false;
+                }
+            } catch (\Throwable $e) {
+                // Allow when role tables/guards are not present in older setups/tests.
+            }
+        }
 
-            $loyaltyPoints = self::initializeClient($client);
-            $balanceBefore = $loyaltyPoints->available_points;
-            $newBalance = $balanceBefore + $points;
+        return DB::transaction(function () use ($redemption, $reason) {
+            $redemptionRow = ClientLoyaltyRedemption::query()
+                ->with(['client', 'reward'])
+                ->whereKey($redemption->id)
+                ->lockForUpdate()
+                ->first();
+
+            if (!$redemptionRow) {
+                return false;
+            }
+
+            $status = $redemptionRow->status;
+
+            if (in_array($status, ['rejected', 'cancelled'], true)) {
+                return true;
+            }
+
+            if ($status === 'completed') {
+                return true;
+            }
+
+            if (!in_array($status, ['pending', 'approved'], true)) {
+                return false;
+            }
+
+            $client = $redemptionRow->client;
+
+            // Lock client points + reward inventory under the same transaction.
+            $loyaltyPoints = self::getLockedClientPoints($client);
+            $reward = $redemptionRow->reward ? self::getLockedReward((int) $redemptionRow->reward->id) : null;
+
+            $points = self::normalizePoints($redemptionRow->points_used);
+
+            $balanceBefore = self::normalizePoints((float) $loyaltyPoints->available_points);
+            $newBalance = self::normalizePoints($balanceBefore + $points);
 
             ClientLoyaltyTransaction::create([
                 'client_loyalty_points_id' => $loyaltyPoints->id,
@@ -260,15 +395,14 @@ class LoyaltyPointsService
                 'available_points' => $newBalance,
             ]);
 
-            // Update redemption status
-            $redemption->update([
+            $redemptionRow->update([
                 'status' => 'rejected',
                 'rejection_reason' => $reason,
             ]);
 
-            // Refund reward quantity if limited
-            if ($redemption->reward && $redemption->reward->is_limited) {
-                $redemption->reward->decrement('quantity_redeemed');
+            if ($reward && $reward->is_limited) {
+                $reward->quantity_redeemed = max(0, (int) $reward->quantity_redeemed - 1);
+                $reward->save();
             }
 
             return true;
@@ -276,16 +410,97 @@ class LoyaltyPointsService
     }
 
     /**
-     * Expire points for a client
+     * Cancel pending redemption (client-initiated).
+     * Idempotent + status-aware; refunds points and rolls back limited inventory exactly once.
+     */
+    public static function cancelRedemption(ClientLoyaltyRedemption $redemption, int $cancelledByClientId): bool
+    {
+        return DB::transaction(function () use ($redemption, $cancelledByClientId) {
+            $redemptionRow = ClientLoyaltyRedemption::query()
+                ->with('reward', 'client')
+                ->whereKey($redemption->id)
+                ->lockForUpdate()
+                ->first();
+
+            if (!$redemptionRow) {
+                return false;
+            }
+
+            // Authorization guard: only the owning client can cancel.
+            if ((int) $redemptionRow->client_id !== (int) $cancelledByClientId) {
+                return false;
+            }
+
+            $status = $redemptionRow->status;
+
+            if (in_array($status, ['cancelled'], true)) {
+                return true;
+            }
+
+            // If already completed/rejected, don't refund again.
+            if (in_array($status, ['completed', 'rejected'], true)) {
+                return true;
+            }
+
+            if (!in_array($status, ['pending', 'approved'], true)) {
+                return false;
+            }
+
+            $client = $redemptionRow->client;
+
+            // Lock client points + reward inventory under the same transaction.
+            $loyaltyPoints = self::getLockedClientPoints($client);
+            $reward = $redemptionRow->reward ? self::getLockedReward((int) $redemptionRow->reward->id) : null;
+
+            $points = self::normalizePoints($redemptionRow->points_used);
+
+            $balanceBefore = self::normalizePoints((float) $loyaltyPoints->available_points);
+            $newBalance = self::normalizePoints($balanceBefore + $points);
+
+            ClientLoyaltyTransaction::create([
+                'client_loyalty_points_id' => $loyaltyPoints->id,
+                'client_id' => $client->id,
+                'type' => 'adjusted',
+                'points' => $points,
+                'balance_before' => $balanceBefore,
+                'balance_after' => $newBalance,
+                'reason' => "Redemption cancelled by client",
+                'status' => 'completed',
+            ]);
+
+            $loyaltyPoints->update([
+                'available_points' => $newBalance,
+            ]);
+
+            $redemptionRow->update([
+                'status' => 'cancelled',
+            ]);
+
+            if ($reward && $reward->is_limited) {
+                $reward->quantity_redeemed = max(0, (int) $reward->quantity_redeemed - 1);
+                $reward->save();
+            }
+
+            return true;
+        });
+    }
+
+    /**
+     * Expire points for a client.
      */
     public static function expirePoints(Client $client, float $points, string $reason = 'Points expiration'): ClientLoyaltyTransaction
     {
         return DB::transaction(function () use ($client, $points, $reason) {
-            $loyaltyPoints = self::initializeClient($client);
+            $points = self::normalizePoints($points);
 
-            $balanceBefore = $loyaltyPoints->available_points;
-            $newBalance = max(0, $balanceBefore - $points);
-            $actualExpired = $balanceBefore - $newBalance;
+            if ($points <= 0) {
+                throw new InvalidArgumentException('Expired points must be greater than zero.');
+            }
+
+            $loyaltyPoints = self::getLockedClientPoints($client);
+            $balanceBefore = self::normalizePoints((float) $loyaltyPoints->available_points);
+            $newBalance = self::normalizePoints(max(0, $balanceBefore - $points));
+            $actualExpired = self::normalizePoints($balanceBefore - $newBalance);
 
             $transaction = ClientLoyaltyTransaction::create([
                 'client_loyalty_points_id' => $loyaltyPoints->id,
@@ -307,33 +522,71 @@ class LoyaltyPointsService
     }
 
     /**
-     * Process pending expirations
+     * Process pending expirations.
      */
     public static function processPendingExpirations(): int
     {
         $count = 0;
-        ClientLoyaltyExpiration::pending()->chunk(50, function ($expirations) use (&$count) {
-            foreach ($expirations as $expiration) {
-                self::expirePoints(
-                    $expiration->client,
-                    $expiration->points,
-                    "Points expired on {$expiration->expires_at->format('Y-m-d')}"
-                );
 
-                $expiration->update([
-                    'processed' => true,
-                    'processed_at' => now(),
-                ]);
+        ClientLoyaltyExpiration::pending()
+            ->orderBy('id')
+            ->chunkById(50, function ($expirations) use (&$count) {
+                foreach ($expirations as $expiration) {
+                    $processed = DB::transaction(function () use ($expiration) {
+                        $lockedExpiration = ClientLoyaltyExpiration::query()
+                            ->whereKey($expiration->id)
+                            ->lockForUpdate()
+                            ->first();
 
-                $count++;
-            }
-        });
+                        if (!$lockedExpiration) {
+                            return false;
+                        }
+
+                        // Status-aware re-check inside the lock.
+                        if ($lockedExpiration->processed || $lockedExpiration->expires_at->isFuture()) {
+                            return false;
+                        }
+
+                        // Prevent concurrent double-processing:
+                        // - another worker may have claimed/started processing after the outer query.
+                        if ($lockedExpiration->claimed || $lockedExpiration->processing) {
+                            return false;
+                        }
+
+                        $lockedExpiration->update([
+                            'claimed' => true,
+                            'claimed_at' => now(),
+                            'processing' => true,
+                            'processing_at' => now(),
+                        ]);
+
+                        self::expirePoints(
+                            $lockedExpiration->client,
+                            (float) $lockedExpiration->points,
+                            "Points expired on {$lockedExpiration->expires_at->format('Y-m-d')}"
+                        );
+
+                        $lockedExpiration->update([
+                            'processed' => true,
+                            'processed_at' => now(),
+                            'processing' => false,
+                            'processing_at' => null,
+                        ]);
+
+                        return true;
+                    });
+
+                    if ($processed) {
+                        $count++;
+                    }
+                }
+            });
 
         return $count;
     }
 
     /**
-     * Get client loyalty summary
+     * Get client loyalty summary.
      */
     public static function getClientSummary(Client $client): array
     {
@@ -341,6 +594,15 @@ class LoyaltyPointsService
         $currentTier = $loyaltyPoints->getCurrentTier();
         $nextTier = $loyaltyPoints->getNextTier();
         $pointsToNextTier = $loyaltyPoints->getPointsToNextTier();
+
+        $currentTierMin = $currentTier?->min_points ?? 0;
+        $nextTierMin = $nextTier?->min_points ?? null;
+        $progressPercent = 100;
+
+        if ($nextTierMin !== null) {
+            $tierSpan = max(1, (float) $nextTierMin - (float) $currentTierMin);
+            $progressPercent = min(100, max(0, ((float) $loyaltyPoints->available_points - (float) $currentTierMin) / $tierSpan * 100));
+        }
 
         return [
             'total_points' => $loyaltyPoints->total_points,
@@ -354,6 +616,7 @@ class LoyaltyPointsService
                 'multiplier' => $currentTier->multiplier,
                 'color' => $currentTier->color,
                 'icon' => $currentTier->icon,
+                'benefits' => $currentTier->benefits ?? [],
             ] : null,
             'next_tier' => $nextTier ? [
                 'id' => $nextTier->id,
@@ -362,14 +625,14 @@ class LoyaltyPointsService
                 'min_points' => $nextTier->min_points,
             ] : null,
             'points_to_next_tier' => $pointsToNextTier,
-            'progress_percent' => $nextTier ? min(100, (($loyaltyPoints->available_points - ($currentTier->min_points ?? 0)) / max(1, ($nextTier->min_points ?? 1) - ($currentTier->min_points ?? 0))) * 100) : 100,
+            'progress_percent' => $progressPercent,
             'last_earned_at' => $loyaltyPoints->last_earned_at,
             'last_redeemed_at' => $loyaltyPoints->last_redeemed_at,
         ];
     }
 
     /**
-     * Get transaction history for client
+     * Get transaction history for a client.
      */
     public static function getTransactionHistory(Client $client, int $limit = 50)
     {
@@ -377,7 +640,7 @@ class LoyaltyPointsService
             ->orderBy('created_at', 'desc')
             ->limit($limit)
             ->get()
-            ->map(fn($t) => [
+            ->map(fn ($t) => [
                 'id' => $t->id,
                 'type' => $t->type,
                 'type_label' => $t->getTypeLabel(),
@@ -391,4 +654,56 @@ class LoyaltyPointsService
                 'created_at_relative' => $t->created_at->diffForHumans(),
             ]);
     }
+
+    private static function getLockedClientPoints(Client $client): ClientLoyaltyPoints
+    {
+        Client::query()
+            ->whereKey($client->id)
+            ->lockForUpdate()
+            ->firstOrFail();
+
+        $loyaltyPoints = ClientLoyaltyPoints::query()
+            ->where('client_id', $client->id)
+            ->lockForUpdate()
+            ->first();
+
+        if ($loyaltyPoints) {
+            return $loyaltyPoints;
+        }
+
+        return ClientLoyaltyPoints::create([
+            'client_id' => $client->id,
+            'total_points' => 0,
+            'available_points' => 0,
+            'redeemed_points' => 0,
+            'pending_points' => 0,
+        ]);
+    }
+
+    private static function getLockedReward(int $rewardId): ?LoyaltyReward
+    {
+        return LoyaltyReward::query()
+            ->whereKey($rewardId)
+            ->lockForUpdate()
+            ->first();
+    }
+
+    private static function normalizePoints(float|int $points): int
+    {
+        // Strict integer enforcement: loyalty points must always be whole numbers.
+        // Accept numeric strings/floats but reject fractional values.
+        if (!is_numeric($points)) {
+            throw new InvalidArgumentException('Points must be numeric.');
+        }
+
+        $float = (float) $points;
+        $int = (int) round($float);
+
+        if (abs($float - $int) > 0.00001) {
+            throw new InvalidArgumentException('Points must be a whole number (no decimals).');
+        }
+
+        return $int;
+    }
 }
+

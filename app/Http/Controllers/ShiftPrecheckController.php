@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Guards\Shift;
 use App\Models\Guards\GuardAssignment;
-use App\Models\Guards\GuardOffDay;
+use App\Services\RotaResolver;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 
@@ -25,10 +25,10 @@ class ShiftPrecheckController extends Controller
         $end = Carbon::parse($data['date'].' '.$data['end_time'].':00');
         if ($end->lessThanOrEqualTo($start)) { $end->addDay(); }
 
-        $offDay = GuardOffDay::where('guard_id', $data['guard_id'])
-            ->whereDate('start_date', '<=', $data['date'])
-            ->where(function($q) use ($data) { $q->whereNull('end_date')->orWhereDate('end_date', '>=', $data['date']); })
-            ->exists();
+        $rota = app(RotaResolver::class);
+        $dayStatus = $rota->getDayStatus((int) $data['guard_id'], $data['date']);
+        $offDay = !empty($dayStatus['is_off']);
+
 
         $overlapQuery = Shift::where('guard_id', $data['guard_id'])
             ->where('status', '!=', 'cancelled')
@@ -49,6 +49,7 @@ class ShiftPrecheckController extends Controller
         return response()->json([
             'success' => true,
             'ok' => !$offDay && !$overlap && $assigned,
+            'rota_off_reason' => $offDay ? ($dayStatus['reason'] ?? null) : null,
             'conflicts' => [
                 'off_day' => (bool) $offDay,
                 'overlap' => (bool) $overlap,

@@ -1,5 +1,5 @@
-import React from 'react';
-import { Head, Link } from '@inertiajs/react';
+import React, { useMemo, useState } from 'react';
+import { Head, Link, router } from '@inertiajs/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card';
 import { Badge } from '@/Components/ui/badge';
 import { Button } from '@/Components/ui/button';
@@ -64,12 +64,83 @@ function statusTone(status: string): string {
 
 export default function PendingRedemptions({ redemptions }: Props) {
   const total = redemptions.data.length;
+  const [busyId, setBusyId] = useState<number | null>(null);
+  const [rejectingId, setRejectingId] = useState<number | null>(null);
+  const [rejectReason, setRejectReason] = useState<string>('');
+  const [notice, setNotice] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
+  const pendingRedemptionIds = useMemo(() => new Set(redemptions.data.map((r) => r.id)), [redemptions.data]);
+
+  const handleApprove = (redemption: Redemption) => {
+    if (!pendingRedemptionIds.has(redemption.id)) return;
+
+    setNotice(null);
+    setBusyId(redemption.id);
+
+    router.post(
+      route('finance.loyalty.approve', redemption.id),
+      {},
+      {
+        preserveScroll: true,
+        onSuccess: () => {
+          setBusyId(null);
+          setRejectingId(null);
+          setRejectReason('');
+          setNotice({ type: 'success', message: 'Redemption approved' });
+          router.reload({ only: ['redemptions'] });
+        },
+        onError: (errors: any) => {
+          setBusyId(null);
+          setNotice({ type: 'error', message: errors?.message || 'Unable to approve redemption' });
+        },
+      },
+    );
+  };
+
+  const handleRejectSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!rejectingId) return;
+    if (!rejectReason.trim()) return;
+
+    setNotice(null);
+    setBusyId(rejectingId);
+
+    router.post(
+      route('finance.loyalty.reject', rejectingId),
+      { reason: rejectReason },
+      {
+        preserveScroll: true,
+        onSuccess: () => {
+          setBusyId(null);
+          setRejectingId(null);
+          setRejectReason('');
+          setNotice({ type: 'success', message: 'Redemption rejected' });
+          router.reload({ only: ['redemptions'] });
+        },
+        onError: (errors: any) => {
+          setBusyId(null);
+          setNotice({ type: 'error', message: errors?.message || 'Unable to reject redemption' });
+        },
+      },
+    );
+  };
 
   return (
     <FinanceLayout title="Pending Redemptions">
       <Head title="Pending Redemptions" />
 
       <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+        {notice && (
+          <div
+            className={`mb-4 rounded-lg border px-4 py-3 text-sm ${
+              notice.type === 'success'
+                ? 'border-green-200 bg-green-50 text-green-800'
+                : 'border-red-200 bg-red-50 text-red-800'
+            }`}
+          >
+            {notice.message}
+          </div>
+        )}
         <div className="mb-6 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <h1 className="flex items-center gap-2 text-3xl font-bold text-gray-900 dark:text-gray-100">
@@ -170,6 +241,59 @@ export default function PendingRedemptions({ redemptions }: Props) {
                       <Button size="sm" asChild variant="outline">
                         <Link href={route('finance.loyalty.client', redemption.client.id)}>View Client</Link>
                       </Button>
+
+                      {redemption.status === 'pending' && (
+                        <>
+                          <Button
+                            size="sm"
+                            variant="default"
+                            disabled={busyId !== null || rejectingId !== null}
+                            onClick={() => handleApprove(redemption)}
+                          >
+                            Approve
+                          </Button>
+
+                          {rejectingId === redemption.id ? (
+                            <form onSubmit={handleRejectSubmit} className="flex w-full flex-wrap gap-2">
+                              <input
+                                className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100"
+                                value={rejectReason}
+                                onChange={(e) => setRejectReason(e.target.value)}
+                                placeholder="Reason for rejection (required)"
+                                maxLength={500}
+                              />
+                              <Button size="sm" type="submit" disabled={busyId !== redemption.id || !rejectReason.trim()}>
+                                Reject
+                              </Button>
+                              <Button
+                                size="sm"
+                                type="button"
+                                variant="outline"
+                                disabled={busyId !== null}
+                                onClick={() => {
+                                  setRejectingId(null);
+                                  setRejectReason('');
+                                }}
+                              >
+                                Cancel
+                              </Button>
+                            </form>
+                          ) : (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              disabled={busyId !== null || rejectingId !== null}
+                              onClick={() => {
+                                setRejectingId(redemption.id);
+                                setRejectReason('');
+                              }}
+                            >
+                              Reject
+                            </Button>
+                          )}
+                        </>
+                      )}
+
                       {redemption.approvedBy && (
                         <span className="text-xs text-gray-500 dark:text-gray-400">
                           Reviewed by {redemption.approvedBy.name}

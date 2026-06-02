@@ -97,6 +97,21 @@ Route::middleware(['auth'])->group(function () {
 			Route::get('/weekly', [\App\Http\Controllers\ControlRoom\RosterController::class, 'weekly'])->name('weekly');
 			Route::get('/weekly/data', [\App\Http\Controllers\ControlRoom\RosterController::class, 'weeklyData'])->name('weekly.data');
 			Route::get('/weekly/plan', [\App\Http\Controllers\ControlRoom\RosterController::class, 'weeklyPlan'])->name('weekly.plan');
+
+			// Bulk rota-template + exception controls (for weekly planner UI)
+			Route::post('/bulk-apply-template', [\App\Http\Controllers\ControlRoom\RosterController::class, 'bulkApplyRotaTemplate'])
+				->middleware(['role_or_permission:control_room_operator|operations_officer|super_admin'])
+				->name('bulk.apply-template');
+			Route::post('/bulk-preview-template', [\App\Http\Controllers\ControlRoom\RosterController::class, 'bulkPreviewRotaTemplate'])
+				->middleware(['role_or_permission:control_room_operator|operations_officer|super_admin'])
+				->name('bulk.preview-template');
+			Route::post('/bulk-upsert-exceptions', [\App\Http\Controllers\ControlRoom\RosterController::class, 'bulkUpsertRotaExceptions'])
+				->middleware(['role_or_permission:control_room_operator|operations_officer|super_admin'])
+				->name('bulk.upsert-exceptions');
+			Route::post('/bulk-clear-exceptions', [\App\Http\Controllers\ControlRoom\RosterController::class, 'bulkClearRotaExceptions'])
+				->middleware(['role_or_permission:control_room_operator|operations_officer|super_admin'])
+				->name('bulk.clear-exceptions');
+
 			Route::post('/weekly/plan/entry', [\App\Http\Controllers\ControlRoom\RosterController::class, 'upsertWeeklyPlanEntry'])
 				->middleware(['role_or_permission:control_room_operator|operations_officer|super_admin'])
 				->name('weekly.plan.entry');

@@ -6,7 +6,7 @@ use App\Models\Guards\Guard;
 use App\Models\Guards\Shift;
 use App\Models\Guards\ClientSite;
 use App\Models\Guards\GuardAssignment;
-use App\Models\Guards\GuardOffDay;
+use App\Services\RotaResolver;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
@@ -86,12 +86,13 @@ class ShiftController extends Controller
             $end->addDay();
         }
 
+        $rota = app(RotaResolver::class);
+        $dayStatus = $rota->getDayStatus((int) $validated['guard_id'], $validated['date']);
+
         $errors = [];
-        $offDay = GuardOffDay::where('guard_id', $validated['guard_id'])
-            ->whereDate('start_date', '<=', $validated['date'])
-            ->where(function($q) use ($validated) { $q->whereNull('end_date')->orWhereDate('end_date', '>=', $validated['date']); })
-            ->exists();
-        if ($offDay) { $errors['date'] = 'Guard has an off-day on the selected date.'; }
+        if (!empty($dayStatus['is_off'])) {
+            $errors['date'] = 'Guard has an off-day on the selected date.';
+        }
 
         $overlap = Shift::where('guard_id', $validated['guard_id'])
             ->where('status', '!=', 'cancelled')
@@ -100,22 +101,28 @@ class ShiftController extends Controller
                   ->where('end_time', '>', $start);
             })
             ->exists();
-        if ($overlap) { $errors['start_time'] = 'Overlapping shift exists for this guard at the selected time.'; }
+        if ($overlap) {
+            $errors['start_time'] = 'Overlapping shift exists for this guard at the selected time.';
+        }
 
         $assigned = GuardAssignment::active()->current()
             ->where('guard_id', $validated['guard_id'])
             ->where('client_site_id', $validated['client_site_id'])
             ->whereDate('start_date', '<=', $validated['date'])
-            ->where(function($q) use ($validated) { $q->whereNull('end_date')->orWhereDate('end_date', '>=', $validated['date']); })
+            ->where(function($q) use ($validated) {
+                $q->whereNull('end_date')->orWhereDate('end_date', '>=', $validated['date']);
+            })
             ->exists();
-        if (!$assigned) { $errors['client_site_id'] = 'Guard is not assigned to the selected site on this date.'; }
+        if (!$assigned) {
+            $errors['client_site_id'] = 'Guard is not assigned to the selected site on this date.';
+        }
 
         if (!empty($errors)) {
             return back()->withErrors($errors)->withInput();
         }
 
         $validated['assigned_by'] = Auth::id();
-        
+
         // Combine date and time
         $validated['start_time'] = $start;
         $validated['end_time'] = $end;
@@ -159,12 +166,13 @@ class ShiftController extends Controller
             $end->addDay();
         }
 
+        $rota = app(RotaResolver::class);
+        $dayStatus = $rota->getDayStatus((int) $validated['guard_id'], $validated['date']);
+
         $errors = [];
-        $offDay = GuardOffDay::where('guard_id', $validated['guard_id'])
-            ->whereDate('start_date', '<=', $validated['date'])
-            ->where(function($q) use ($validated) { $q->whereNull('end_date')->orWhereDate('end_date', '>=', $validated['date']); })
-            ->exists();
-        if ($offDay) { $errors['date'] = 'Guard has an off-day on the selected date.'; }
+        if (!empty($dayStatus['is_off'])) {
+            $errors['date'] = 'Guard has an off-day on the selected date.';
+        }
 
         $overlap = Shift::where('guard_id', $validated['guard_id'])
             ->where('status', '!=', 'cancelled')
@@ -174,15 +182,21 @@ class ShiftController extends Controller
                   ->where('end_time', '>', $start);
             })
             ->exists();
-        if ($overlap) { $errors['start_time'] = 'Overlapping shift exists for this guard at the selected time.'; }
+        if ($overlap) {
+            $errors['start_time'] = 'Overlapping shift exists for this guard at the selected time.';
+        }
 
         $assigned = GuardAssignment::active()->current()
             ->where('guard_id', $validated['guard_id'])
             ->where('client_site_id', $validated['client_site_id'])
             ->whereDate('start_date', '<=', $validated['date'])
-            ->where(function($q) use ($validated) { $q->whereNull('end_date')->orWhereDate('end_date', '>=', $validated['date']); })
+            ->where(function($q) use ($validated) {
+                $q->whereNull('end_date')->orWhereDate('end_date', '>=', $validated['date']);
+            })
             ->exists();
-        if (!$assigned) { $errors['client_site_id'] = 'Guard is not assigned to the selected site on this date.'; }
+        if (!$assigned) {
+            $errors['client_site_id'] = 'Guard is not assigned to the selected site on this date.';
+        }
 
         if (!empty($errors)) {
             return back()->withErrors($errors)->withInput();
@@ -206,3 +220,4 @@ class ShiftController extends Controller
             ->with('success', 'Shift deleted successfully.');
     }
 }
+

@@ -172,6 +172,29 @@ export default function AdminLayout({ title, children }: Props) {
         },
     ];
 
+    const loyaltyNav: NavItem[] = [
+        {
+            name: 'Dashboard',
+            href: route('admin.loyalty.dashboard'),
+            icon: <IconMapper name="Gift" size={20} />,
+        },
+        {
+            name: 'Rules',
+            href: route('admin.loyalty.rules'),
+            icon: <IconMapper name="Settings2" size={20} />,
+        },
+        {
+            name: 'Tiers',
+            href: route('admin.loyalty.tiers'),
+            icon: <IconMapper name="Award" size={20} />,
+        },
+        {
+            name: 'Rewards',
+            href: route('admin.loyalty.rewards'),
+            icon: <IconMapper name="Ticket" size={20} />,
+        },
+    ];
+
     const managementNav: NavItem[] = [
         { 
             name: 'Users', 
@@ -231,6 +254,7 @@ export default function AdminLayout({ title, children }: Props) {
                             <NavSection title="Main" items={mainNav} isCurrent={isCurrent} />
                             <NavSection title="Operations" items={operationsNav} isCurrent={isCurrent} />
                             <NavSection title="Finance" items={financeNav} isCurrent={isCurrent} />
+                            <NavSection title="Loyalty" items={loyaltyNav} isCurrent={isCurrent} />
                             <NavSection title="Management" items={managementNav} isCurrent={isCurrent} />
                             <NavSection title="Tools" items={toolsNav} isCurrent={isCurrent} />
                         </>

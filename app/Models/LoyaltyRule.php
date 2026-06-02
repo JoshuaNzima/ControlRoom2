@@ -39,10 +39,23 @@ class LoyaltyRule extends Model
     }
 
     /**
-     * Calculate points based on amount
+     * Calculate points based on amount using structured `conditions`.
+     *
+     * Expected `conditions['unit_amount']` to be a positive number.
+     * Returns 0 when unit_amount is missing/invalid.
      */
     public function calculatePoints($amount): float
     {
-        return ($amount / intval(explode(' ', $this->unit_description)[2] ?? 1)) * $this->points_per_unit;
+        $unitAmount = null;
+
+        if (is_array($this->conditions) && isset($this->conditions['unit_amount'])) {
+            $unitAmount = (float) $this->conditions['unit_amount'];
+        }
+
+        if (!is_numeric($unitAmount) || $unitAmount <= 0) {
+            return 0.0;
+        }
+
+        return ((float) $amount / $unitAmount) * (float) $this->points_per_unit;
     }
 }

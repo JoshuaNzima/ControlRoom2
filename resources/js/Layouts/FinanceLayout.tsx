@@ -82,6 +82,7 @@ export default function FinanceLayout({ title, children, user }: Props) {
   const managementLinks: NavItem[] = [
     { name: 'Approvals', href: route('finance.approvals.index'), icon: <IconMapper name="CheckCircle" size={20} />, badge: counters?.finance_approvals_pending },
     { name: 'Budgets', href: route('finance.budgets.index'), icon: <IconMapper name="PieChart" size={20} /> },
+    { name: 'Loyalty', href: route('finance.loyalty.dashboard'), icon: <IconMapper name="Gift" size={20} /> },
     // { name: 'Reports', href: route('finance.reports.index'), icon: <IconMapper name="BarChart3" size={20} /> },
   ];
 

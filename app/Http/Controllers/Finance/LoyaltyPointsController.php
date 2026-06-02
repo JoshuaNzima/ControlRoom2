@@ -69,15 +69,10 @@ class LoyaltyPointsController extends Controller
     {
         $this->authorize('approveRedemptions', new \App\Models\ClientLoyaltyPoints());
 
-        $query = ClientLoyaltyRedemption::where('status', 'pending')
+        $redemptions = ClientLoyaltyRedemption::where('status', 'pending')
             ->with('client', 'reward', 'approvedBy')
-            ->orderBy('created_at', 'desc');
-
-        if ($request->filled('sort')) {
-            $query = $query->orderBy($request->sort['field'], $request->sort['direction']);
-        }
-
-        $redemptions = $query->paginate(20);
+            ->orderBy('created_at', 'desc')
+            ->paginate(20);
 
         return Inertia::render('Finance/Loyalty/PendingRedemptions', [
             'redemptions' => $redemptions,

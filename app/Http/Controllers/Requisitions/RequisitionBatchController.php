@@ -65,7 +65,11 @@ class RequisitionBatchController extends Controller
             ]);
 
             // Notify admins that a batch is ready for acknowledgement
-            $admins = User::role(['admin', 'super_admin'])->get();
+            $admins = User::query()
+                ->whereHas('roles', function ($query) {
+                    $query->whereIn('name', ['admin', 'super_admin']);
+                })
+                ->get();
             $mailFailures = [];
             foreach ($admins as $admin) {
                 $admin->notify(new RequisitionBatchCompiled($batch, ['database']));

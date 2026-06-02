@@ -6,7 +6,7 @@ use App\Http\Controllers\Finance\LoyaltyPointsController as FinanceLoyaltyPoints
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth'])->group(function () {
-    Route::middleware(['role:client'])->prefix('client/loyalty')->name('client.loyalty.')->group(function () {
+    Route::middleware(['role:client'])->prefix('loyalty')->name('client.loyalty.')->group(function () {
         Route::get('/', [ClientLoyaltyPointsController::class, 'dashboard'])->name('dashboard');
         Route::get('/summary', [ClientLoyaltyPointsController::class, 'getSummary'])->name('api.summary');
         Route::get('/rewards', [ClientLoyaltyPointsController::class, 'getRewards'])->name('api.rewards');
@@ -29,6 +29,11 @@ Route::middleware(['auth'])->group(function () {
 
     Route::middleware(['role:admin|super_admin'])->prefix('admin/loyalty')->name('admin.loyalty.')->group(function () {
         Route::get('/', [AdminLoyaltyPointsController::class, 'dashboard'])->name('dashboard');
+
+        // Loyalty program settings (on/off)
+        Route::get('/settings', [AdminLoyaltyPointsController::class, 'settings'])->name('settings');
+        Route::post('/settings/toggle', [AdminLoyaltyPointsController::class, 'updateSettings'])->name('settings.update');
+
         Route::get('/rules', [AdminLoyaltyPointsController::class, 'rules'])->name('rules');
         Route::post('/rules', [AdminLoyaltyPointsController::class, 'storeRule'])->name('rules.store');
         Route::get('/tiers', [AdminLoyaltyPointsController::class, 'tiers'])->name('tiers');

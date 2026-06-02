@@ -9,12 +9,39 @@ use App\Models\ClientLoyaltyRedemption;
 use App\Models\LoyaltyRule;
 use App\Models\LoyaltyTier;
 use App\Models\LoyaltyReward;
+use App\Models\Setting;
 use App\Services\LoyaltyPointsService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
 class LoyaltyPointsController extends Controller
 {
+    /**
+     * Loyalty program settings (on/off)
+     */
+    public function settings()
+    {
+        $enabled = (bool) LoyaltyPointsService::isLoyaltyEnabled();
+
+        return Inertia::render('Admin/LoyaltyPoints/Settings', [
+            'loyaltyEnabled' => $enabled,
+        ]);
+    }
+
+    /**
+     * Update loyalty program settings.
+     */
+    public function updateSettings(Request $request)
+    {
+        $validated = $request->validate([
+            'loyalty_enabled' => 'required|boolean',
+        ]);
+
+        Setting::setValue('loyalty.enabled', $validated['loyalty_enabled']);
+
+        return back()->with('success', 'Loyalty settings updated successfully');
+    }
+
     /**
      * Dashboard / Overview page
      */
