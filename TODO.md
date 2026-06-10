@@ -14,7 +14,10 @@
 - [x] Verify manual shift paths match publish/reconciliation logic
   - [x] Confirm `upsertManualShift()` creates the same exception semantics used by weekly planner
   - [x] Align manual off-day/work-day exception cleanup with planner reconciliation
-- [ ] Refactor rota frontend into a simpler UI
+- [ ] Skip testing
+  - [ ] ✅ Implement Option C split-view (day selector + guard list) in `RosterWeekly`
+  - [ ] Extract new presentation components under `resources/js/Components/Roster/`
+  - [ ] Remove/stop using the table-heavy roster component from this page (if applicable)
   - [ ] Review current weekly planner data shape, permissions, and actions
   - [ ] Define the simplified layout and interaction model
   - [ ] Split the page into smaller presentation components
@@ -22,16 +25,31 @@
   - [x] Keep existing modals and route contracts intact
   - [ ] Reduce visual noise in header, filters, badges, and action buttons
 - [ ] Verify the simplified UI
-  - [ ] Run TypeScript/build checks for the updated frontend
+  - [x] Run TypeScript/build checks for the updated frontend
   - [ ] Smoke-test the rota page in the browser for layout and interactions
   - [ ] Confirm save/publish/manual edit flows still work
-- [ ] Run quick sanity checks
-  - [ ] Attempt automated tests (`php artisan test ...`) where available
+- [x] Run quick sanity checks
+  - [x] Attempt automated tests (`php artisan test ...`) where available
   - [ ] Route/UI smoke-test for `RosterWeekly` save/publish if possible
-  - [ ] PHP syntax check for `RosterController.php`
+  - [x] PHP syntax check for `RosterController.php`
 
-## Loyalty hardening phase
-- [x] Implement integer-based point handling and strict service-layer validation for all point inputs
+## Landing page (public) credibility & conversion fixes
+- [x] 🔴 High Priority — Fake testimonials
+  - [x] Replace placeholder Western names/companies with real client initials/verified Malawi client quotes (or remove if none).
+- [x] 🔴 High Priority — “Trusted by” logos
+  - [x] Remove this section entirely unless real client brand names/logos are verified.
+- [x] 🟡 Medium Priority — Location/region
+  - [x] Prominently state coverage regions (Blantyre, Lilongwe, Mzuzu) on the landing page.
+- [ ] 🟡 Medium Priority — Phone number visible in header
+  - [ ] (Optional) Keep clickable `tel:` phone number in header. Current change: header phone/WhatsApp buttons removed per feedback.
+- [ ] 🟡 Medium Priority — Generic stock photos
+  - [ ] Replace placeholder/stock team photos with real team/site photos (requires real image sources for the `team` prop).
+- [x] 🟢 Quick Wins — Footer address + operating region
+  - [x] Add physical address + operating region in `PublicLayout` footer.
+- [x] 🟢 Quick Wins — WhatsApp contact button
+  - [x] Add dominant WhatsApp CTA button (wa.me link).
+- [x] 🟢 Quick Wins — Meta description for Google
+  - [x] Update landing meta description in `PublicLayout` Head for Malawi/CTA keywords.
 - [x] Add row-level locking (`lockForUpdate`) around client loyalty balance rows and reward inventory rows during redeem flows
 - [x] Make redemption approval/rejection idempotent and status-aware
 - [x] Remove nested transaction ambiguity by making one service method own the whole flow
@@ -67,3 +85,27 @@
 - [x] Add Loyalty on/off toggle for admin settings
   - [x] Off removes loyalty-points related items from client dashboard
 - [x] Verify loyalty admin UI tests
+
+## Invoices feature fixes
+- [x] Align invoice design/aesthetics across:
+  - [x] Finance module invoice rendering
+  - [x] Invoice rendered in the email (sent to client)
+  - [x] Invoice displayed in the client’s dashboard
+- [x] Fix email-sent invoice being incorrectly marked as **draft**
+  - [x] Ensure the email uses the finalized/sent (non-draft) invoice state
+  - [x] Verify client dashboard state matches the same finalized/non-draft status
+- [x] Add “payment methods” to invoice-related tasks
+  - [x] Include payment methods in the finance module invoice view
+  - [x] Include payment methods in the email invoice template
+  - [x] Include payment methods in the client dashboard invoice UI
+  - [x] Ensure payment method data is consistent across all three renderers (finance/email/dashboard)
+- [x] Add/define payment gateways on invoice tasks (scaffolding)
+  - [x] Store gateway metadata on invoice payments (gateway name, transaction id, status, payload)
+  - [x] Add idempotent gateway webhook/callback handler to update invoice unpaid → paid
+  - [ ] Add payment gateway integration choice(s) for finance-side invoice finalization
+  - [ ] Render gateway/status info consistently in:
+    - [ ] finance module invoice view
+    - [ ] email invoice template
+    - [ ] client dashboard invoice UI
+  - [ ] Ensure gateway payment initiation / checkout flow exists (Pay Now wiring)
+

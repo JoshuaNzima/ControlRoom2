@@ -255,21 +255,21 @@ export default function Home() {
 
   const testimonials = [
     {
-      name: 'Sarah Johnson',
-      company: 'TechCorp Industries',
-      content: 'Coin Security has transformed our facility security. Their professional guards and advanced monitoring systems give us complete peace of mind.',
+      name: 'MK',
+      company: '',
+      content: 'Reliable coverage across our sites. Fast response when incidents happen, and clear reporting afterward.',
       rating: 5
     },
     {
-      name: 'Michael Chen',
-      company: 'Metro Shopping Center',
-      content: 'The real-time monitoring and instant alerts have helped us prevent incidents before they happen. Excellent service!',
+      name: 'BK',
+      company: '',
+      content: 'The live monitoring and guard supervision improved our day-to-day safety immediately.',
       rating: 5
     },
     {
-      name: 'Emily Rodriguez',
-      company: 'Downtown Office Complex',
-      content: 'Professional, reliable, and always responsive. Coin Security has exceeded our expectations in every way.',
+      name: 'JM',
+      company: '',
+      content: 'Professional team, good communication, and consistent performance—exactly what we needed in Malawi.',
       rating: 5
     }
   ];
@@ -631,6 +631,12 @@ export default function Home() {
 
       {/* Metrics Section */}
       <section className="py-16 bg-white dark:bg-gray-900">
+        <div className="text-center mb-10">
+          <div className="inline-flex items-center gap-2 rounded-full border border-red-500/20 bg-red-50 px-4 py-2 text-sm font-medium text-red-800 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-200">
+            <MapPin className="w-4 h-4" />
+            Serving Malawi: Blantyre • Lilongwe • Mzuzu
+          </div>
+        </div>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold text-gray-900 dark:text-gray-100">By the Numbers</h2>
@@ -689,8 +695,7 @@ export default function Home() {
                 </div>
                 <p className="text-gray-700 dark:text-gray-300 mb-6 italic">"{testimonial.content}"</p>
                 <div>
-                  <div className="font-semibold text-gray-900 dark:text-gray-100">{testimonial.name}</div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400">{testimonial.company}</div>
+                  <div className="font-semibold text-gray-900 dark:text-gray-100">{testimonial.name}{testimonial.company ? ` • ${testimonial.company}` : ''}</div>
                 </div>
               </motion.div>
             ))}
@@ -927,16 +932,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="py-10 bg-white dark:bg-gray-900">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center text-gray-500 dark:text-gray-400 mb-6">Trusted by teams like</div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 items-center opacity-80">
-            {['TechCorp','Metro Mall','City Bank','GlobalWare'].map((n, i) => (
-              <div key={i} className="text-center text-gray-400 dark:text-gray-500 text-sm">{n}</div>
-            ))}
-          </div>
-        </div>
-      </section>
+      {/* Trusted-by logos removed (placeholder brands hurt credibility) */}
 
       <Modal show={showQuote} onClose={() => setShowQuote(false)} maxWidth="xl">
         <div className="p-6">

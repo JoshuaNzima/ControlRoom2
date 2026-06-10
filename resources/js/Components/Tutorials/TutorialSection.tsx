@@ -25,9 +25,23 @@ type Tutorial = {
 type Props = {
   dashboard: 'admin' | 'superadmin' | 'control-room' | 'assets' | 'client' | 'hr' | 'finance' | 'operations' | 'marketing' | 'training' | 'front-office' | 'business-dev' | 'supervisor' | 'zone-commander';
   canManage?: boolean;
+  /**
+   * If true, auto-open the first tutorial (lowest `order`) once.
+   * This is intended for first-time onboarding flows (e.g., first-time clients).
+   */
+  autoOpenFirst?: boolean;
+  /**
+   * localStorage key to ensure the auto-open happens once per user/client.
+   */
+  autoOpenOnceStorageKey?: string;
 };
 
-export default function TutorialSection({ dashboard, canManage = false }: Props) {
+export default function TutorialSection({
+  dashboard,
+  canManage = false,
+  autoOpenFirst = false,
+  autoOpenOnceStorageKey,
+}: Props) {
   const { push } = useNotification();
   const [tutorials, setTutorials] = useState<Tutorial[]>([]);
   const [loading, setLoading] = useState(true);
@@ -49,6 +63,7 @@ export default function TutorialSection({ dashboard, canManage = false }: Props)
 
   useEffect(() => {
     fetchTutorials();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dashboard]);
 
   const fetchTutorials = async () => {
@@ -57,7 +72,26 @@ export default function TutorialSection({ dashboard, canManage = false }: Props)
       const res = await fetch(route('tutorials.index', { dashboard }));
       const data = await res.json();
       if (data.success) {
-        setTutorials(data.tutorials);
+        const fetchedTutorials: Tutorial[] = data.tutorials || [];
+        setTutorials(fetchedTutorials);
+
+        // Auto-open the first tutorial once (for first-time onboarding).
+        if (autoOpenFirst && autoOpenOnceStorageKey && typeof window !== 'undefined') {
+          try {
+            const alreadySeen = window.localStorage.getItem(autoOpenOnceStorageKey);
+            if (!alreadySeen && fetchedTutorials.length > 0) {
+              const sorted = [...fetchedTutorials].sort((a, b) => a.order - b.order);
+              setActiveTutorial(sorted[0]);
+
+              // Mark as seen immediately to avoid repeated openings on re-render.
+              window.localStorage.setItem(autoOpenOnceStorageKey, '1');
+              setExpanded(false);
+            }
+          } catch (e) {
+            // If localStorage is blocked, just skip auto-open.
+            console.warn('Unable to access localStorage for tutorial onboarding:', e);
+          }
+        }
       }
     } catch (error) {
       console.error('Failed to fetch tutorials:', error);

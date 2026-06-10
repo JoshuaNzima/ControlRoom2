@@ -5,6 +5,7 @@ import { Card } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import IconMapper from '@/Components/IconMapper';
 import { Badge } from '@/Components/ui/badge';
+import TutorialSection from '@/Components/Tutorials/TutorialSection';
 
 interface ClientDashboardProps {
   auth: {
@@ -349,6 +350,15 @@ export default function ClientDashboard({
       <Head title="Client Dashboard" />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+        {/* Client onboarding tutorials (auto-opens once per client/browser) */}
+        {client && (
+          <TutorialSection
+            dashboard="client"
+            autoOpenFirst
+            autoOpenOnceStorageKey={`client_onboarding_tutorial_seen_${client.id}`}
+          />
+        )}
 
         {/* Hero Header */}
         <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-red-700 via-red-600 to-rose-600 text-white shadow-2xl">

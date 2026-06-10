@@ -1,9 +1,18 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, Suspense } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/Components/ui/dialog';
 import { Button } from '@/Components/ui/button';
 import { useForm, router } from '@inertiajs/react';
 import IconMapper from '@/Components/IconMapper';
-import LocationPicker from '@/Components/Map/LocationPicker';
+
+// Lazy load LocationPicker to reduce main bundle size
+const LocationPicker = React.lazy(() => import('@/Components/Map/LocationPicker'));
+
+// Loading fallback for map component
+const MapLoadingFallback = () => (
+  <div className="w-full h-64 bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center">
+    <span className="text-gray-500">Loading map...</span>
+  </div>
+);
 
 interface Service {
   id: number;
@@ -340,11 +349,13 @@ export default function AddClientModal({ open, onClose, services = [], zones = [
                     </button>
                   </div>
                   {showSiteMap && (
-                    <LocationPicker
-                      value={data.site.latitude && data.site.longitude ? { lat: Number(data.site.latitude), lng: Number(data.site.longitude) } : null}
-                      onChange={(coords) => setData('site', { ...data.site, latitude: coords.lat.toFixed(6), longitude: coords.lng.toFixed(6) })}
-                      heightClassName="h-64"
-                    />
+                    <Suspense fallback={<MapLoadingFallback />}>
+                      <LocationPicker
+                        value={data.site.latitude && data.site.longitude ? { lat: Number(data.site.latitude), lng: Number(data.site.longitude) } : null}
+                        onChange={(coords) => setData('site', { ...data.site, latitude: coords.lat.toFixed(6), longitude: coords.lng.toFixed(6) })}
+                        heightClassName="h-64"
+                      />
+                    </Suspense>
                   )}
                 </div>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Tap the map to set exact coordinates or enter them manually below.</p>

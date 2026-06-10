@@ -67,7 +67,7 @@ return [
 
         'openrouter' => [
             'api_key' => env('OPENROUTER_API_KEY',env('AI_AGENT_API_KEY')),
-            'model' => env('OPENROUTER_MODEL', env('AI_AGENT_MODEL','openai/gpt-4o-mini')),
+            'model' => env('OPENROUTER_MODEL', env('AI_AGENT_MODEL','mistralai/mistral-7b-instruct:free')),
             'base_url' => env('OPENROUTER_BASE_URL', 'https://openrouter.ai/api/v1'),
             'site_url' => env('APP_URL'), // For OpenRouter attribution
             'site_name' => env('APP_NAME', 'Laravel AI Agent'),
@@ -84,18 +84,15 @@ return [
     | AI Agents
     |--------------------------------------------------------------------------
     |
-    | Define multiple AI agents, each with its own endpoint, system prompt,
-    | and middleware. Tools are scoped per-method using the `agents` parameter
-    | in #[AsAITool]. Leave empty to use the default single-agent behavior.
+    | Define AI agents with their own endpoint, system prompt, and middleware.
+    | Tools are scoped per-method using the `agents` parameter in #[AsAITool].
     |
     | Each agent automatically gets: POST /{prefix}/{agent}/chat
     |
     */
     'agents' => [
-        // Register class-based agents here. Each agent gets its own routes automatically.
-        // All configuration (instructions, tools, middleware, widget) lives in the class itself.
-        \App\AI\Agents\ControlRoomAgent::class,
-        \App\AI\Agents\HelpCenterAgent::class,
+        // Single consolidated agent for all user interactions
+        \App\AI\Agents\AppAssistant::class,
     ],
 
     /*

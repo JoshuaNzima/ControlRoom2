@@ -15,6 +15,14 @@ class InvoicePayment extends Model
         'reference',
         'notes',
         'recorded_by',
+
+        // Payment gateway metadata (populated from gateway initiation + webhook callbacks)
+        'gateway_name',
+        'gateway_transaction_id',
+        'gateway_status',
+        'gateway_reference',
+        'gateway_payload',
+        'gateway_paid_at',
     ];
 
     protected $casts = [

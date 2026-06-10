@@ -7,17 +7,28 @@ import { Badge } from '@/Components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/Components/ui/dialog';
 import IconMapper from '@/Components/IconMapper';
 
+interface InvoicePayment {
+  id: number;
+  amount: number;
+  payment_date: string;
+  payment_method: string | null;
+  reference: string | null;
+  notes: string | null;
+  recorded_by: { id: number; name: string } | null;
+}
+
 interface Invoice {
   id: number;
   invoice_number: string;
   total_amount: number;
-  status: 'draft' | 'sent' | 'paid' | 'overdue';
+  status: 'draft' | 'sent' | 'paid' | 'overdue' | 'cancelled';
   due_date: string | null;
   billing_month: number | null;
   billing_year: number | null;
   billing_period: string | null;
-  paid_date: string | null;
+  paid_date?: string | null;
   created_at: string;
+  payments?: InvoicePayment[];
 }
 
 interface ClientInvoicesProps {
@@ -273,7 +284,7 @@ export default function ClientInvoices({ auth, client, invoices, paymentSummary 
                           <StatusBadge status={invoice.status} />
                         </td>
                         <td className="py-3 px-4 text-sm text-gray-500 dark:text-gray-400">
-                          {formatDate(invoice.paid_date)}
+                          {invoice.paid_date ? formatDate(invoice.paid_date) : 'N/A'}
                         </td>
                       </tr>
                     ))}
@@ -372,8 +383,61 @@ export default function ClientInvoices({ auth, client, invoices, paymentSummary 
                   )}
                 </div>
 
+                {/* Payments (display only) */}
+                <div className="pt-2">
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">Payments</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      {(selectedInvoice.payments?.length ?? 0) > 0
+                        ? `${selectedInvoice.payments?.length} record${(selectedInvoice.payments?.length ?? 0) === 1 ? '' : 's'}`
+                        : 'No payments recorded'}
+                    </p>
+                  </div>
+
+                  {(selectedInvoice.payments?.length ?? 0) > 0 ? (
+                    <div className="max-h-44 overflow-y-auto pr-1">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="text-left">
+                            <th className="py-2 pr-2 text-xs font-medium text-gray-500 dark:text-gray-400">Date</th>
+                            <th className="py-2 pr-2 text-xs font-medium text-gray-500 dark:text-gray-400">Method</th>
+                            <th className="py-2 pr-2 text-xs font-medium text-gray-500 dark:text-gray-400">Reference</th>
+                            <th className="py-2 pr-2 text-xs font-medium text-gray-500 dark:text-gray-400">Recorded By</th>
+                            <th className="py-2 text-right pr-0 text-xs font-medium text-gray-500 dark:text-gray-400">Amount</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                          {selectedInvoice.payments!.map((p) => (
+                            <tr key={p.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                              <td className="py-2 pr-2 text-gray-700 dark:text-gray-300">
+                                {formatDate(p.payment_date)}
+                              </td>
+                              <td className="py-2 pr-2 text-gray-700 dark:text-gray-300">
+                                {p.payment_method ? p.payment_method.replace('_', ' ') : 'Other'}
+                              </td>
+                              <td className="py-2 pr-2 text-gray-700 dark:text-gray-300">
+                                {p.reference || '-'}
+                              </td>
+                              <td className="py-2 pr-2 text-gray-700 dark:text-gray-300">
+                                {p.recorded_by?.name || '-'}
+                              </td>
+                              <td className="py-2 text-right text-gray-900 dark:text-gray-100 font-semibold">
+                                {formatCurrency(p.amount)}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <div className="p-4 bg-gray-50 dark:bg-gray-900/50 rounded-lg text-sm text-gray-600 dark:text-gray-300">
+                      No payment details available for this invoice.
+                    </div>
+                  )}
+                </div>
+
                 {/* Actions */}
-                <div className="flex gap-3">
+                <div className="flex gap-3 mt-2">
                   <Button
                     variant="outline"
                     onClick={() => setIsDetailModalOpen(false)}
@@ -381,13 +445,11 @@ export default function ClientInvoices({ auth, client, invoices, paymentSummary 
                   >
                     Close
                   </Button>
-                  {selectedInvoice.status !== 'paid' && (
+
+                  {selectedInvoice.status !== 'paid' && selectedInvoice.status !== 'cancelled' && (
                     <Button
                       className="flex-1 bg-red-600 hover:bg-red-700 text-white"
-                      onClick={() => {
-                        // TODO: Add payment link or contact support
-                        setIsDetailModalOpen(false);
-                      }}
+                      onClick={() => setIsDetailModalOpen(false)}
                     >
                       <IconMapper name="CreditCard" size={16} className="mr-2" />
                       Pay Now

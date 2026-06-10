@@ -1,6 +1,5 @@
 import React from 'react';
 import { Head, Link } from '@inertiajs/react';
-import IconMapper from '@/Components/IconMapper';
 import AIAssistant from '@/Components/AI/AIAssistant';
 
 interface Props {
@@ -16,9 +15,21 @@ export default function PublicLayout({ title = 'Coin Security', children }: Prop
       return fallback;
     }
   };
+
+  const phoneNumber = '0999611711';
+  const phoneHref = `tel:+265${phoneNumber}`;
+  const whatsappHref = `https://wa.me/265${phoneNumber}?text=Hi%20Coin%20Security%2C%20I%27d%20like%20a%20quote.`;
+  const addressLine = 'Area 47/4, Viphya street, Lilongwe, Malawi';
+  const operatingRegion = 'Blantyre • Lilongwe • Mzuzu';
+
   return (
     <div className="min-h-screen overflow-x-hidden bg-red-50 text-gray-900 dark:bg-gray-950 dark:text-gray-100">
-      <Head title={title} />
+      <Head title={title}>
+        <meta
+          name="description"
+          content="Coin Security provides professional security guards, 24/7 live monitoring, and rapid response across Malawi (Blantyre, Lilongwe, Mzuzu). Call or WhatsApp us for a quote."
+        />
+      </Head>
 
       <header className="sticky top-0 z-50 border-b border-red-100 bg-white/95 backdrop-blur-sm shadow-lg dark:border-gray-800 dark:bg-gray-950/80 dark:shadow-black/30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -29,30 +40,40 @@ export default function PublicLayout({ title = 'Coin Security', children }: Prop
                 Coin Security
               </span>
             </div>
+
             <nav className="flex w-full flex-wrap items-center justify-start gap-3 sm:w-auto sm:justify-end">
-              <Link 
-                href={safeRoute('public.home', undefined, '/')} 
+              <Link
+                href={safeRoute('public.home', undefined, '/')}
                 className="text-sm font-medium text-gray-700 hover:text-coin-700 transition-colors duration-200 dark:text-gray-200 dark:hover:text-coin-300"
               >
                 Home
               </Link>
-              <Link 
-                href={safeRoute('public.services', undefined, '/services')} 
+
+              <Link
+                href={safeRoute('public.services', undefined, '/services')}
                 className="text-sm font-medium text-gray-700 hover:text-coin-700 transition-colors duration-200 dark:text-gray-200 dark:hover:text-coin-300"
               >
                 Services
               </Link>
-              <Link 
-                href={safeRoute('login', undefined, '/login')} 
+
+              <Link
+                href={safeRoute('login', undefined, '/login')}
                 className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-coin-700 to-coin-600 text-white text-sm font-medium rounded-lg shadow-sm shadow-black/10 hover:shadow-lg transform hover:scale-[1.02] transition-all duration-200 dark:shadow-black/40"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"
+                  />
                 </svg>
                 Client Login
               </Link>
-              <Link 
-                href={safeRoute('public.contact', undefined, '/contact')} 
+
+
+              <Link
+                href={safeRoute('public.contact', undefined, '/contact')}
                 className="text-sm font-medium text-gray-700 hover:text-coin-700 transition-colors duration-200 dark:text-gray-200 dark:hover:text-coin-300"
               >
                 Contact
@@ -63,9 +84,7 @@ export default function PublicLayout({ title = 'Coin Security', children }: Prop
       </header>
 
       <main>
-        <div className="animate-slideUp transition-all-smooth">
-          {children}
-        </div>
+        <div className="animate-slideUp transition-all-smooth">{children}</div>
       </main>
 
       <footer className="bg-gradient-to-r from-slate-900 to-gray-900 text-white">
@@ -76,55 +95,149 @@ export default function PublicLayout({ title = 'Coin Security', children }: Prop
                 <img src="/images/Coin-logo.png" alt="Coin Security" className="h-8 w-auto" />
                 <span className="text-xl font-bold">Coin Security</span>
               </div>
+
               <p className="text-gray-300 mb-4 max-w-md">
-                Professional security services with cutting-edge technology. 
-                Protecting businesses with trained guards, live monitoring, and intelligent analytics.
+                Professional security services with cutting-edge technology. Protecting businesses with trained guards,
+                live monitoring, and intelligent analytics.
               </p>
-              <div className="flex gap-4">
-                <a href="#" className="text-gray-400 hover:text-white transition-colors">
-                  <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M24 4.557c-.883.392-1.832.656-2.828.775 1.017-.609 1.798-1.574 2.165-2.724-.951.564-2.005.974-3.127 1.195-.897-.957-2.178-1.555-3.594-1.555-3.179 0-5.515 2.966-4.797 6.045-4.091-.205-7.719-2.165-10.148-5.144-1.29 2.213-.669 5.108 1.523 6.574-.806-.026-1.566-.247-2.229-.616-.054 2.281 1.581 4.415 3.949 4.89-.693.188-1.452.232-2.224.084.626 1.956 2.444 3.379 4.6 3.419-2.07 1.623-4.678 2.348-7.29 2.04 2.179 1.397 4.768 2.212 7.548 2.212 9.142 0 14.307-7.721 13.995-14.646.962-.695 1.797-1.562 2.457-2.549z"/>
+
+              <div className="mt-4 space-y-3 text-sm text-gray-300">
+                <div className="flex items-start gap-2">
+                  <svg
+                    className="w-4 h-4 mt-0.5 text-gray-400"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M21 10c0 6-9 13-9 13S3 16 3 10a9 9 0 1 1 18 0z" />
+                    <circle cx="12" cy="10" r="3" />
                   </svg>
-                </a>
-                <a href="#" className="text-gray-400 hover:text-white transition-colors">
-                  <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M22.46 6c-.77.35-1.6.58-2.46.69.88-.53 1.56-1.37 1.88-2.38-.83.5-1.75.85-2.72 1.05C18.37 4.5 17.26 4 16 4c-2.35 0-4.27 1.92-4.27 4.29 0 .34.04.67.11.98C8.28 9.09 5.11 7.38 3 4.79c-.37.63-.58 1.37-.58 2.15 0 1.49.75 2.81 1.91 3.56-.71 0-1.37-.2-1.95-.5v.03c0 2.08 1.48 3.82 3.44 4.21a4.22 4.22 0 0 1-1.93.07 4.28 4.28 0 0 0 4 2.98 8.521 8.521 0 0 1-5.33 1.84c-.34 0-.68-.02-1.02-.06C3.44 20.29 5.7 21 8.12 21 16 21 20.33 14.46 20.33 8.79c0-.19 0-.37-.01-.56.84-.6 1.56-1.36 2.14-2.23z"/>
+
+                  <span>
+                    Physical Address: {addressLine}
+                    <br />
+                    Operating Region: {operatingRegion}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <svg
+                    className="w-4 h-4 text-gray-400"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.08 4.18 2 2 0 0 1 4.06 2h3a2 2 0 0 1 2 1.72c.12.86.3 1.7.57 2.5a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.58-1.09a2 2 0 0 1 2.11-.45c.8.27 1.64.45 2.5.57A2 2 0 0 1 22 16.92z" />
                   </svg>
-                </a>
-                <a href="#" className="text-gray-400 hover:text-white transition-colors">
-                  <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
-                  </svg>
-                </a>
+
+                  <a className="text-white hover:underline" href={phoneHref}>
+                    {phoneNumber}
+                  </a>
+                </div>
+
+                <div>
+                  <a
+                    href={whatsappHref}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition-all"
+                  >
+                    WhatsApp
+                  </a>
+                </div>
               </div>
             </div>
-            
+
             <div>
               <h3 className="text-lg font-semibold mb-4">Services</h3>
               <ul className="space-y-2 text-gray-300">
-                <li><Link href={safeRoute('public.services.show', 'security-guards', '/services/security-guards')} className="hover:text-white transition-colors">Security Guards</Link></li>
-                <li><Link href={safeRoute('public.services.show', 'cctv-surveillance', '/services/cctv-surveillance')} className="hover:text-white transition-colors">Live Monitoring</Link></li>
-                <li><Link href={safeRoute('public.services.show', 'mobile-patrol', '/services/mobile-patrol')} className="hover:text-white transition-colors">Patrol Services</Link></li>
-                <li><Link href={safeRoute('public.services', undefined, '/services')} className="hover:text-white transition-colors">Emergency Response</Link></li>
+                <li>
+                  <Link
+                    href={safeRoute('public.services.show', 'security-guards', '/services/security-guards')}
+                    className="hover:text-white transition-colors"
+                  >
+                    Security Guards
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href={safeRoute('public.services.show', 'cctv-surveillance', '/services/cctv-surveillance')}
+                    className="hover:text-white transition-colors"
+                  >
+                    Live Monitoring
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href={safeRoute('public.services.show', 'mobile-patrol', '/services/mobile-patrol')}
+                    className="hover:text-white transition-colors"
+                  >
+                    Patrol Services
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href={safeRoute('public.services', undefined, '/services')}
+                    className="hover:text-white transition-colors"
+                  >
+                    Emergency Response
+                  </Link>
+                </li>
               </ul>
             </div>
-            
+
             <div>
               <h3 className="text-lg font-semibold mb-4">Company</h3>
               <ul className="space-y-2 text-gray-300">
-                <li><Link href={safeRoute('public.about', undefined, '/about')} className="hover:text-white transition-colors">About Us</Link></li>
-                <li><Link href={safeRoute('public.careers', undefined, '/careers')} className="hover:text-white transition-colors">Careers</Link></li>
-                <li><Link href={safeRoute('public.contact', undefined, '/contact')} className="hover:text-white transition-colors">Contact</Link></li>
-                <li><Link href={safeRoute('public.privacy', undefined, '/privacy')} className="hover:text-white transition-colors">Privacy Policy</Link></li>
+                <li>
+                  <Link href={safeRoute('public.about', undefined, '/about')} className="hover:text-white transition-colors">
+                    About Us
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href={safeRoute('public.careers', undefined, '/careers')}
+                    className="hover:text-white transition-colors"
+                  >
+                    Careers
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href={safeRoute('public.contact', undefined, '/contact')}
+                    className="hover:text-white transition-colors"
+                  >
+                    Contact
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href={safeRoute('public.privacy', undefined, '/privacy')}
+                    className="hover:text-white transition-colors"
+                  >
+                    Privacy Policy
+                  </Link>
+                </li>
               </ul>
             </div>
           </div>
-          
+
           <div className="border-t border-gray-700 mt-8 pt-8 text-center text-gray-400">
-            <p>© {new Date().getFullYear()} Coin Security — All rights reserved. Professional security services you can trust.</p>
+            <p>
+              © {new Date().getFullYear()} Coin Security — All rights reserved. Professional security services you can trust.
+            </p>
           </div>
         </div>
       </footer>
+
       <AIAssistant context="landing" />
     </div>
   );

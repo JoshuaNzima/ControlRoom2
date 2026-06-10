@@ -7,11 +7,15 @@ import EmptyState from '@/Components/ui/empty-state';
 import ManualRosterEntryModal from '@/Components/Roster/ManualRosterEntryModal';
 import WeeklyPlannerHeader from '@/Components/Roster/WeeklyPlannerHeader';
 import WeeklyPlannerFilters from '@/Components/Roster/WeeklyPlannerFilters';
-import WeeklyRosterSection, {
+import SimplifiedWeeklyRosterSection, {
   WeeklyRosterSectionAction,
   WeeklyRosterSectionCell,
   WeeklyRosterSectionRow,
-} from '@/Components/Roster/WeeklyRosterSection';
+} from '@/Components/Roster/SimplifiedWeeklyRosterSection';
+
+
+
+
 import QuickAttendanceConfirmModal from '@/Components/Roster/RosterWeekly/QuickAttendanceConfirmModal';
 
 type DayKey = string;
@@ -44,6 +48,7 @@ type GuardWeekly = {
   off: Record<DayKey, boolean>;
   meta?: Record<DayKey, DayMeta>;
   attendance_today?: AttendanceToday | null;
+};
 
 type RelieverWeekly = {
   id: number;
@@ -156,6 +161,7 @@ function getCellTone(
 function getCellValue(scope: Scope, off: boolean, site?: Site | null): string {
   if (off) return 'OFF';
   if (site?.name) return site.name;
+  if (scope !== 'reliever') return '-';
   return scope === 'reliever' ? 'Assign' : '—';
 }
 
@@ -581,52 +587,54 @@ export default function RosterWeekly() {
   const standbyRows = useMemo(() => buildGuardRows('standby', safeGuards), [buildGuardRows, safeGuards]);
 
   const relieverRows = useMemo(() => {
-    return safeRelievers.map<WeeklyRosterSectionRow>((reliever) => ({
-      id: reliever.id,
-      name: reliever.name,
-      employeeId: reliever.employee_id,
-      typeLabel: 'Reliever',
-      actions: [
-        {
-          label: 'Bulk week',
-          onClick: () => setBulkReliefGuardId(reliever.id),
-        },
-      ],
-      cells: safeDays.map<WeeklyRosterSectionCell>((day) => {
-        const meta = reliever.meta?.[day];
-        const isShift = meta?.source === 'shift';
-        const site = isShift ? (reliever.sites?.[day] ?? null) : (planned.sites?.[reliever.id]?.[day] ?? null);
-        const badges = [
-          ...(meta?.source === 'rotation' ? ['Rotation'] : []),
-          ...(meta?.source === 'shift' ? ['Manual'] : []),
-          ...(data?.today && day === data.today ? getAttendanceBadges(reliever.attendance_today) : []),
-        ];
-
-        return {
-          label: shortDayLabel(day),
-          value: getCellValue('reliever', false, site),
-          tone: getCellTone('reliever', false, !!site, meta?.source),
-          badges,
-          onClick: () => {
-            if (meta?.source === 'shift') {
-              setManualModal({
-                open: true,
-                guardId: reliever.id,
-                date: day,
-                siteId: site?.id,
-                shiftId: meta?.shift_id,
-              });
-              return;
-            }
-            if (planLocked) {
-              lockToast();
-              return;
-            }
-            setReliefModal({ open: true, guardId: reliever.id, date: day, siteId: site?.id });
+    return safeRelievers.map((reliever) => {
+      return {
+        id: reliever.id,
+        name: reliever.name,
+        employeeId: reliever.employee_id,
+        typeLabel: 'Reliever',
+        actions: [
+          {
+            label: 'Bulk week',
+            onClick: () => setBulkReliefGuardId(reliever.id),
           },
-        };
-      }),
-    }));
+        ],
+        cells: safeDays.map((day) => {
+          const meta = reliever.meta?.[day];
+          const isShift = meta?.source === 'shift';
+          const site = isShift ? (reliever.sites?.[day] ?? null) : (planned.sites?.[reliever.id]?.[day] ?? null);
+          const badges = [
+            ...(meta?.source === 'rotation' ? ['Rotation'] : []),
+            ...(meta?.source === 'shift' ? ['Manual'] : []),
+            ...(data?.today && day === data.today ? getAttendanceBadges(reliever.attendance_today) : []),
+          ];
+
+          return {
+            label: shortDayLabel(day),
+            value: getCellValue('reliever', false, site),
+            tone: getCellTone('reliever', false, !!site, meta?.source),
+            badges,
+            onClick: () => {
+              if (meta?.source === 'shift') {
+                setManualModal({
+                  open: true,
+                  guardId: reliever.id,
+                  date: day,
+                  siteId: site?.id,
+                  shiftId: meta?.shift_id,
+                });
+                return;
+              }
+              if (planLocked) {
+                lockToast();
+                return;
+              }
+              setReliefModal({ open: true, guardId: reliever.id, date: day, siteId: site?.id });
+            },
+          };
+        }),
+      };
+    });
   }, [data?.today, lockToast, planned.sites, planLocked, safeDays, safeRelievers]);
 
   const permanentSelectedIds = useMemo(
@@ -638,6 +646,12 @@ export default function RosterWeekly() {
     [selectedStandby],
   );
   const bulkOffSelectedIds = bulkOffScope === 'standby' ? standbySelectedIds : permanentSelectedIds;
+
+  const selectedDay = useMemo<DayKey | null>(() => {
+    if (!data?.days?.length) return null;
+    if (data.today && data.days.includes(data.today)) return data.today;
+    return data.days[0] ?? null;
+  }, [data?.days, data?.today]);
 
   const sectionBulkAction = (scope: Scope): WeeklyRosterSectionAction | undefined => {
     const count = scope === 'standby' ? standbySelectedIds.length : permanentSelectedIds.length;
@@ -704,25 +718,29 @@ export default function RosterWeekly() {
           <button
             type="button"
             onClick={() => setManualEntryOpen(true)}
-            className="rounded-md bg-coin-700 px-3 py-2 text-sm font-medium text-white hover:bg-coin-600"
+            className="inline-flex items-center rounded-md bg-coin-700 px-3 py-2 text-sm font-medium text-white hover:bg-coin-600"
           >
             Manual entry
           </button>
           {selectedSupervisorLabel ? (
-            <span className={`rounded-full px-3 py-2 text-xs font-semibold ${planLocked ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300' : 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300'}`}>
-              {planLocked ? 'Published & locked' : 'Draft mode'}
+            <span className={`rounded-md px-2.5 py-1 text-xs font-medium ${planLocked ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300' : 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300'}`}>
+              {planLocked ? 'Published' : 'Draft mode'}
             </span>
           ) : null}
         </div>
 
-        {loading && (
+        {loading ? (
+          <EmptyState title="Loading roster" description="Fetching weekly roster data..." size="sm" contentClassName="py-2" />
+        ) : null}
+
+        {false && loading && (
           <EmptyState title="Loading roster" description="Fetching weekly roster data…" size="sm" contentClassName="py-2" />
         )}
 
         {data && hasRows && (
           <div className="space-y-5">
             {permanentRows.length ? (
-              <WeeklyRosterSection
+              <SimplifiedWeeklyRosterSection
                 title={getSectionTitle('permanent').title}
                 description={getSectionTitle('permanent').description}
                 icon={getSectionTitle('permanent').icon}
@@ -732,7 +750,7 @@ export default function RosterWeekly() {
             ) : null}
 
             {standbyRows.length ? (
-              <WeeklyRosterSection
+              <SimplifiedWeeklyRosterSection
                 title={getSectionTitle('standby').title}
                 description={getSectionTitle('standby').description}
                 icon={getSectionTitle('standby').icon}
@@ -742,7 +760,7 @@ export default function RosterWeekly() {
             ) : null}
 
             {relieverRows.length ? (
-              <WeeklyRosterSection
+              <SimplifiedWeeklyRosterSection
                 title={getSectionTitle('reliever').title}
                 description={getSectionTitle('reliever').description}
                 icon={getSectionTitle('reliever').icon}
@@ -1625,3 +1643,28 @@ function ManualRosterShiftModal({
                 onClick={doDelete}
                 className="rounded-md bg-red-700 px-4 py-2 text-sm text-white hover:bg-red-600"
                 disabled={processing}
+              >
+                Delete
+              </button>
+            ) : null}
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-md border border-gray-200 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800"
+              disabled={processing}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="rounded-md bg-coin-700 px-4 py-2 text-sm text-white hover:bg-coin-600 disabled:opacity-50"
+              disabled={processing}
+            >
+              Save shift
+            </button>
+          </div>
+        </form>
+      </div>
+    </Modal>
+  );
+}

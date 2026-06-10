@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Cache;
 
 class AiSetting extends Model
 {
@@ -26,6 +27,22 @@ class AiSetting extends Model
         'max_tokens' => 'integer',
         'temperature' => 'decimal:2',
     ];
+
+    /**
+     * Boot the model - clear cache when settings change.
+     */
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::saved(function ($model) {
+            Cache::forget('ai_active_provider');
+        });
+
+        static::deleted(function ($model) {
+            Cache::forget('ai_active_provider');
+        });
+    }
 
     /**
      * Get settings for a specific provider.

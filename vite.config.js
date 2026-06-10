@@ -106,36 +106,43 @@ export default defineConfig({
                 'node:http', 'node:https', 'node:zlib', 'node:stream', 'node:crypto', 'node:fs', 'node:path', 'node:tty', 'node:os'
             ],
             output: {
-                manualChunks: {
-                    'vendor-react': ['react', 'react-dom', 'react-dom/client', 'react/jsx-runtime'],
-                    'vendor-inertia': ['@inertiajs/react'],
-                    'vendor-ui': [
-                        'lucide-react', 
-                        '@headlessui/react',
-                        'framer-motion'
-                    ],
-                    'vendor-charts': [
-                        'chart.js',
-                        'react-chartjs-2',
-                        'recharts'
-                    ],
-                    'vendor-leaflet': [
-                        'leaflet',
-                        'react-leaflet'
-                    ]
-                }
+                // NOTE: manualChunks disabled.
+                // The previous manual chunking caused runtime crashes (e.g. leaflet/React interop)
+                // by forcing unsafe chunk boundaries.
             }
         },
-        chunkSizeWarningLimit: 600,
+        chunkSizeWarningLimit: 250,
         outDir: 'public/build',
         assetsDir: 'assets',
         sourcemap: false,
         minify: 'terser',
+        terserOptions: {
+            compress: {
+                drop_console: true,
+                drop_debugger: true,
+                passes: 3,
+                pure_funcs: ['console.log', 'console.info', 'console.debug'],
+                unused: true,
+                dead_code: true,
+            },
+            mangle: true,
+            format: {
+                comments: false,
+            }
+        },
         commonjsOptions: {
             include: [/node_modules/],
             transformMixedEsModules: true,
             defaultIsModuleExports: 'auto',
             requireReturnsDefault: 'auto'
+        },
+        cssMinify: true,
+        maxInitialChunkSize: 250,
+        maxAssetSize: 250,
+        treeshake: {
+            moduleSideEffects: false,
+            propertyReadSideEffects: false,
+            tryCatchDeoptimization: false
         }
     },
 });

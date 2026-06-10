@@ -164,9 +164,10 @@ class PortalController extends Controller
 
         $invoices = Invoice::where('client_id', $client->id)
             ->orderBy('created_at', 'desc')
+            ->with(['payments.recordedBy:id,name'])
             ->get([
                 'id', 'invoice_number', 'total_amount', 'status',
-                'due_date', 'billing_month', 'billing_year', 'paid_date', 'created_at'
+                'due_date', 'billing_month', 'billing_year', 'created_at'
             ]);
 
         $paymentSummary = $client->getPaymentSummary(now()->year);
@@ -189,9 +190,21 @@ class PortalController extends Controller
                 'billing_period' => $invoice->billing_month && $invoice->billing_year
                     ? "{$invoice->billing_month}/{$invoice->billing_year}"
                     : null,
-                'paid_date' => $invoice->paid_date,
                 'created_at' => $invoice->created_at,
-            ]),
+                'paid_date' => $invoice->paid_date,
+                'payments' => $invoice->payments->map(fn($p) => [
+                    'id' => $p->id,
+                    'amount' => $p->amount,
+                    'payment_date' => $p->payment_date,
+                    'payment_method' => $p->payment_method,
+                    'reference' => $p->reference,
+                    'notes' => $p->notes,
+                    'recorded_by' => $p->recordedBy ? [
+                        'id' => $p->recordedBy->id,
+                        'name' => $p->recordedBy->name,
+                    ] : null,
+                ])->values(),
+              ]),
             'paymentSummary' => $paymentSummary ? [
                 'expected_amount' => $paymentSummary['expected_amount'] ?? 0,
                 'total_due' => $paymentSummary['total_due'] ?? 0,

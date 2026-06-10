@@ -22,7 +22,7 @@ class AiConfigSyncService
             return AiSetting::where('enabled', true)->first();
         });
 
-        if ($provider) {
+        if ($provider && $provider->hasApiKey()) {
             config([
                 'ai-agent.default' => $provider->provider,
                 "ai-agent.drivers.{$provider->provider}" => $this->buildDriverConfig($provider),
@@ -43,7 +43,7 @@ class AiConfigSyncService
      */
     protected function buildDriverConfig(AiSetting $provider): array
     {
-        return [
+        $config = [
             'api_key' => $provider->api_key,
             'model' => $provider->model,
             'base_url' => $provider->base_url,
@@ -53,6 +53,14 @@ class AiConfigSyncService
                 'sleep' => 1000,
             ],
         ];
+
+        // Add provider-specific settings
+        if ($provider->provider === 'openrouter') {
+            $config['site_url'] = config('app.url');
+            $config['site_name'] = config('app.name', 'Laravel AI Agent');
+        }
+
+        return $config;
     }
 
     /**

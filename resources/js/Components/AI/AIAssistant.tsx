@@ -18,10 +18,9 @@ type AiAssistant = {
 
 const assistantMeta: Record<
   string,
-  { title: string; endpointSlug: 'control-room' | 'help-center' }
+  { title: string; endpointSlug: 'app-assistant' }
 > = {
-  'control-room': { title: 'Control Room Assistant', endpointSlug: 'control-room' },
-  'help-center': { title: 'Help Center Assistant', endpointSlug: 'help-center' },
+  'app-assistant': { title: 'AI Assistant', endpointSlug: 'app-assistant' },
 };
 
 const WIDGET_SCRIPT_SRC = '/ai-agent/widget.js';
@@ -91,7 +90,7 @@ export default function AIAssistant({ className = '' }: Props) {
   const enabledAssistants = assistants.filter((a) => a?.enabled && a?.assistant);
 
   const [selectedAssistant, setSelectedAssistant] = React.useState<string>(
-    activeAssistant?.assistant ?? enabledAssistants[0]?.assistant ?? 'control-room'
+    activeAssistant?.assistant ?? enabledAssistants[0]?.assistant ?? 'app-assistant'
   );
   const [widgetReady, setWidgetReady] = React.useState(false);
   const [widgetError, setWidgetError] = React.useState<string | null>(null);
@@ -122,7 +121,7 @@ export default function AIAssistant({ className = '' }: Props) {
 
   const endpointSlug =
     assistantMeta[selectedAssistant as keyof typeof assistantMeta]?.endpointSlug ??
-    'control-room';
+    'app-assistant';
 
   const title =
     assistantMeta[selectedAssistant as keyof typeof assistantMeta]?.title ?? 'AI Assistant';

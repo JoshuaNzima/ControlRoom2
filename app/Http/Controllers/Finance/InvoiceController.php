@@ -43,6 +43,7 @@ class InvoiceController extends Controller
             $notes
         );
     }
+
     /**
      * Display a listing of invoices
      */
@@ -244,6 +245,7 @@ class InvoiceController extends Controller
             'invoice' => $invoice,
             'appName' => config('app.name'),
         ])->setPaper('a4', 'portrait');
+
         return $pdf->download($file);
     }
 
@@ -355,13 +357,31 @@ class InvoiceController extends Controller
         }
 
         $sentAny = false;
+
+        // If we're sending via email, ensure status is NOT draft at template render time.
+        $oldStatusBeforeEmail = null;
+        $shouldRevertAfterEmailFailure = false;
+
         try {
             if (in_array('email', $channels)) {
+                if ($invoice->status === 'draft') {
+                    $oldStatusBeforeEmail = $invoice->status;
+                    $invoice->markAsSent(); // status needs to be non-draft for the email template
+                    $shouldRevertAfterEmailFailure = true;
+                }
+
                 $this->sendInvoiceEmail($invoice);
                 $sentAny = true;
+
+                $shouldRevertAfterEmailFailure = false;
             }
         } catch (\Throwable $e) {
             Log::warning('Invoice email send failed', ['invoice_id' => $invoice->id, 'error' => $e->getMessage()]);
+
+            if ($shouldRevertAfterEmailFailure && $oldStatusBeforeEmail) {
+                // Revert to avoid incorrectly marking sent when email actually failed
+                $invoice->update(['status' => $oldStatusBeforeEmail]);
+            }
         }
 
         try {
@@ -374,9 +394,13 @@ class InvoiceController extends Controller
         }
 
         if ($sentAny) {
-            $oldStatus = $invoice->status;
-            $invoice->markAsSent();
-            $this->logInvoiceAction($invoice, 'status_changed', 'status', $oldStatus, 'sent', 'Invoice sent via: ' . implode(', ', $channels));
+            // Mark sent if we didn't already mark it before email.
+            if (!in_array($invoice->status, ['sent', 'paid'])) {
+                $oldStatus = $invoice->status;
+                $invoice->markAsSent();
+                $this->logInvoiceAction($invoice, 'status_changed', 'status', $oldStatus, 'sent', 'Invoice sent via: ' . implode(', ', $channels));
+            }
+
             return back()->withSuccess('Invoice sent.');
         }
 
@@ -442,6 +466,7 @@ class InvoiceController extends Controller
             $seq = (int) $m[1];
         }
         $seq++;
+
         return sprintf('INV-%s-%04d', $prefix, $seq);
     }
 
@@ -452,15 +477,18 @@ class InvoiceController extends Controller
         if (! $to) {
             return;
         }
+
         Mail::to($to)->send(new InvoiceMailable($invoice));
     }
 
     private function sendInvoiceWhatsApp(Invoice $invoice): void
     {
         $invoice->loadMissing('client');
+
         $toPhone = optional($invoice->client)->phone;
         $token = env('WHATSAPP_TOKEN');
         $phoneId = env('WHATSAPP_PHONE_ID');
+
         if (! $toPhone || ! $token || ! $phoneId) {
             return;
         }
@@ -550,7 +578,7 @@ class InvoiceController extends Controller
         $newTotal = $existingPayments + (float) $validated['amount'];
 
         // Create payment record
-        $payment = $invoice->payments()->create([
+        $invoice->payments()->create([
             'amount' => $validated['amount'],
             'payment_date' => $validated['payment_date'],
             'payment_method' => $validated['payment_method'] ?? 'other',
@@ -595,6 +623,7 @@ class InvoiceController extends Controller
      * When an invoice is marked as paid, update or create a ClientPayment row
      * for the inferred client/year/month. When cancelled, remove the payment amount.
      */
+    // Kept private for existing internal usage.
     private function syncClientPaymentForInvoice(Invoice $invoice, string $operation = 'add'): void
     {
         try {
@@ -605,6 +634,7 @@ class InvoiceController extends Controller
                 $client = GuardClient::where('name', $invoice->client_name)->first();
                 if ($client) {
                     $clientId = $client->id;
+
                     // Persist back-link for future syncs
                     if (! $invoice->client_id) {
                         $invoice->client_id = $clientId;
@@ -672,5 +702,14 @@ class InvoiceController extends Controller
                 'message' => $e->getMessage(),
             ]);
         }
+    }
+
+    /**
+     * Public wrapper for payment gateway + webhook integrations.
+     * Exposes a stable method name while keeping sync logic encapsulated.
+     */
+    public function syncClientPaymentForInvoicePublic(Invoice $invoice, string $operation = 'add'): void
+    {
+        $this->syncClientPaymentForInvoice($invoice, $operation);
     }
 }

@@ -100,6 +100,11 @@ Route::middleware('auth')->group(function () {
     Route::post('/tutorials/{tutorial}', [\App\Http\Controllers\DashboardTutorialController::class, 'update'])->name('tutorials.update.post');
     Route::delete('/tutorials/{tutorial}', [\App\Http\Controllers\DashboardTutorialController::class, 'destroy'])->name('tutorials.destroy');
 
+    // AI Agent Chat Widget Endpoint
+    // Fixes: "Error: The route ai-agent/app-assistant/chat could not be found."
+    Route::post('/ai-agent/app-assistant/chat', [\App\Http\Controllers\ChatController::class, 'chat'])
+        ->name('ai-agent.app-assistant.chat');
+
     // Agent Chat Management (super_admin, control_room_operator, admin)
     // NOTE: The AI chatbot UI now uses laravel-ai-agent widget endpoints (/ai-agent/*).
     // We keep agent chat transfer/resolve routes for human handoff.

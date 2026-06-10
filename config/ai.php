@@ -63,14 +63,14 @@ return [
         'openrouter' => [
             'enabled' => (bool) env('OPENROUTER_ENABLED', false),
             'api_key' => env('OPENROUTER_API_KEY'),
-            'model' => env('OPENROUTER_MODEL', 'meta-llama/llama-3-8b-instruct:free'),
+            'model' => env('OPENROUTER_MODEL', 'mistralai/mistral-7b-instruct:free'),
             'base_url' => env('OPENROUTER_BASE_URL', 'https://openrouter.ai/api/v1'),
             'max_tokens' => (int) env('OPENROUTER_MAX_TOKENS', 1000),
             'temperature' => (float) env('OPENROUTER_TEMPERATURE', 0.7),
             'free_tier' => true,
             'free_models' => [
-                'meta-llama/llama-3-8b-instruct:free',
                 'mistralai/mistral-7b-instruct:free',
+                'meta-llama/llama-2-7b-chat:free',
                 'google/gemma-7b-it:free',
             ],
             'description' => 'OpenRouter provides access to multiple AI providers. Several free models available.',

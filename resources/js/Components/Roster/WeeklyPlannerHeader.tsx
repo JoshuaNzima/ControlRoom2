@@ -32,58 +32,48 @@ export default function WeeklyPlannerHeader({
   const statusLabel = planStatus === 'published' ? 'Published' : 'Draft';
   const statusTone =
     planStatus === 'published'
-      ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300'
-      : 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300';
+      ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-300'
+      : 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-300';
 
   return (
-    <section className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900">
-      <div className="bg-gradient-to-r from-coin-700 via-coin-600 to-coin-500 px-5 py-6 text-white sm:px-6">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div className="min-w-0">
-            <div className="flex items-center gap-3">
-              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white/15 text-white">
-                <IconMapper name="CalendarDays" size={28} />
-              </span>
-              <div className="min-w-0">
-                <h1 className="truncate text-2xl font-bold sm:text-3xl">Weekly Planner</h1>
-                <p className="mt-1 max-w-2xl text-sm text-coin-100">
-                  Schedule and manage guard assignments for the week.
-                </p>
-              </div>
-            </div>
-
-            <div className="mt-4 flex flex-wrap items-center gap-2">
-              <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${statusTone}`}>
-                <IconMapper name={planStatus === 'published' ? 'Lock' : 'Edit3'} size={12} />
-                {statusLabel}
-              </span>
-              {planLocked ? (
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-xs font-semibold text-white">
-                  Locked after publish
-                </span>
-              ) : null}
-              {draftCount > 0 ? (
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-xs font-semibold text-white">
-                  {draftCount} unsaved change{draftCount === 1 ? '' : 's'}
-                </span>
-              ) : null}
+    <section className="rounded-lg border border-gray-200 bg-white px-4 py-4 shadow-sm dark:border-gray-800 dark:bg-gray-900 sm:px-5">
+      <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-gray-200 bg-gray-50 text-coin-700 dark:border-gray-800 dark:bg-gray-950 dark:text-coin-300">
+              <IconMapper name="CalendarDays" size={20} />
+            </span>
+            <div className="min-w-0">
+              <h1 className="text-xl font-semibold text-gray-950 dark:text-gray-100 sm:text-2xl">Weekly roster</h1>
+              <p className="mt-0.5 text-sm text-gray-500 dark:text-gray-400">
+                Plan assignments, off days, relievers, and manual shifts.
+              </p>
             </div>
           </div>
+        </div>
 
-          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:justify-end">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <StatTile label="Week" value={weekStart} />
+            <StatTile label="Guards" value={assignedGuards.toString()} />
+            <StatTile label="Relievers" value={relievers.toString()} />
+            <StatTile label="Status" value={statusLabel} />
+          </div>
+
+          <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
             <Button
               type="button"
               variant="secondary"
-              className="border-0 bg-white/20 text-white hover:bg-white/30"
+              className="border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900"
               onClick={onSaveDraft}
               disabled={savingDraft || planLocked || draftCount === 0}
             >
               <IconMapper name="Save" size={16} className="mr-2" />
-              Save Draft
+              Save draft
             </Button>
             <Button
               type="button"
-              className="bg-white text-coin-700 hover:bg-coin-50"
+              className="bg-coin-700 text-white hover:bg-coin-600"
               onClick={onPublish}
               disabled={publishing || planLocked || draftCount > 0}
             >
@@ -92,13 +82,23 @@ export default function WeeklyPlannerHeader({
             </Button>
           </div>
         </div>
+      </div>
 
-        <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <StatTile label="Week Starting" value={weekStart} />
-          <StatTile label="Assigned Guards" value={assignedGuards.toString()} />
-          <StatTile label="Relievers" value={relievers.toString()} />
-          <StatTile label="Plan Status" value={statusLabel} />
-        </div>
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <span className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium ${statusTone}`}>
+          <IconMapper name={planStatus === 'published' ? 'Lock' : 'Edit3'} size={12} />
+          {statusLabel}
+        </span>
+        {planLocked ? (
+          <span className="inline-flex items-center rounded-md border border-gray-200 px-2.5 py-1 text-xs text-gray-600 dark:border-gray-800 dark:text-gray-300">
+            Locked after publish
+          </span>
+        ) : null}
+        {draftCount > 0 ? (
+          <span className="inline-flex items-center rounded-md border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-300">
+            {draftCount} unsaved change{draftCount === 1 ? '' : 's'}
+          </span>
+        ) : null}
       </div>
     </section>
   );
@@ -106,9 +106,9 @@ export default function WeeklyPlannerHeader({
 
 function StatTile({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-xl bg-white/10 px-3 py-3 backdrop-blur-sm">
-      <div className="text-xs text-coin-100">{label}</div>
-      <div className="mt-1 break-words text-sm font-bold sm:text-base">{value}</div>
+    <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 dark:border-gray-800 dark:bg-gray-950">
+      <div className="text-[11px] font-medium uppercase text-gray-500 dark:text-gray-400">{label}</div>
+      <div className="mt-0.5 break-words text-sm font-semibold text-gray-950 dark:text-gray-100">{value}</div>
     </div>
   );
 }

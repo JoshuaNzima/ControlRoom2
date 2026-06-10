@@ -17,7 +17,7 @@ use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Inertia\Response;
 use Illuminate\Validation\ValidationException;
-use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
+use Throwable;
 
 class RequisitionBatchController extends Controller
 {
@@ -76,7 +76,7 @@ class RequisitionBatchController extends Controller
 
                 try {
                     $admin->notify(new RequisitionBatchCompiled($batch, ['mail']));
-                } catch (TransportExceptionInterface $e) {
+                } catch (Throwable $e) {
                     $mailFailures[] = [
                         'user_id' => $admin->id,
                         'email' => $admin->email,
