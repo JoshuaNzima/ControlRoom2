@@ -44,10 +44,9 @@ export default function ClientDetailsModal({
 
   if (!open || !client) return null;
 
-  const paymentSummary = client.payment_summary || {};
-  const isOverdue = paymentSummary.is_overdue || false;
-  const outstandingMonths = paymentSummary?.outstanding_months ?? 0;
-
+  const paymentSummary = client.payment_summary ?? {};
+  const isOverdue = paymentSummary.is_overdue ?? false;
+  const outstandingMonths = (paymentSummary as any)?.outstanding_months ?? 0;
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-2xl bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 p-6">

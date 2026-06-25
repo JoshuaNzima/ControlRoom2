@@ -70,21 +70,49 @@ class ClientsController extends Controller
 	{
 		$data = $request->validate([
 			'guard_id' => ['required','exists:guards,id'],
+			'client_site_id' => ['required','exists:client_sites,id'],
 		]);
 
-		// business rule: assign a guard to all client sites as active assignment (simplified)
-		foreach ($client->sites as $site) {
-			\App\Models\Guards\GuardAssignment::firstOrCreate([
-				'guard_id' => $data['guard_id'],
-				'client_site_id' => $site->id,
-			], [
-				'assigned_by' => $request->user()?->id,
-				'start_date' => now()->startOfDay(),
-				'is_active' => true,
-			]);
+		// Verify the site belongs to this client
+		$site = ClientSite::where('id', $data['client_site_id'])
+			->where('client_id', $client->id)
+			->first();
+
+		if (!$site) {
+			return back()->withErrors(['client_site_id' => 'The selected site does not belong to this client.']);
 		}
 
-		return back()->with('success', 'Guard assigned to client');
+		// Check for existing active assignment at this site
+		$existing = \App\Models\Guards\GuardAssignment::where('guard_id', $data['guard_id'])
+			->where('client_site_id', $site->id)
+			->where('is_active', true)
+			->whereNull('end_date')
+			->exists();
+
+		if ($existing) {
+			return back()->with('success', 'Guard already assigned to this site.');
+		}
+
+		// Zone consistency check — warn if guard is assigned to sites in different zones
+		$zoneCheck = \App\Models\Guards\GuardAssignment::checkZoneConsistency(
+			$data['guard_id'],
+			$site->id,
+			now()->startOfDay()->toDateString()
+		);
+
+		\App\Models\Guards\GuardAssignment::create([
+			'guard_id' => $data['guard_id'],
+			'client_site_id' => $site->id,
+			'assigned_by' => $request->user()?->id,
+			'start_date' => now()->startOfDay(),
+			'is_active' => true,
+		]);
+
+		if (!empty($zoneCheck['conflicting'])) {
+			return back()->with('warning', $zoneCheck['message']);
+		}
+
+		return back()->with('success', 'Guard assigned to site.');
 	}
 
 	public function assignSupervisor(Request $request, Client $client)

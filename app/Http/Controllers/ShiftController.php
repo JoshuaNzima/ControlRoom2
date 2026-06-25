@@ -6,6 +6,7 @@ use App\Models\Guards\Guard;
 use App\Models\Guards\Shift;
 use App\Models\Guards\ClientSite;
 use App\Models\Guards\GuardAssignment;
+use App\Services\GuardScopingService;
 use App\Services\RotaResolver;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -14,6 +15,19 @@ use Carbon\Carbon;
 
 class ShiftController extends Controller
 {
+    /**
+     * Get the guards managed by the current user (supervisor/sergeant) via GuardScopingService.
+     * Returns a query builder scoped to managed guards, or all guards for other roles.
+     */
+    private function getManagedGuardsQuery(): \Illuminate\Database\Eloquent\Builder
+    {
+        $user = Auth::user();
+        if ($user && ($user->hasRole('supervisor') || $user->hasRole('sergeant'))) {
+            return app(GuardScopingService::class)->getManagedGuardQuery($user);
+        }
+        return Guard::query();
+    }
+
     public function index()
     {
         $query = Shift::query()
@@ -30,18 +44,18 @@ class ShiftController extends Controller
                 $query->where('status', $status);
             });
 
-        // If user is supervisor, only show their guards' shifts
-        if (Auth::user()->hasRole('supervisor')) {
-            $query->whereHas('guardRelation', function($q) {
-                $q->forSupervisor(Auth::id());
+        // Scope to managed guards via GuardScopingService (handles both supervisor and sergeant)
+        $user = Auth::user();
+        if ($user && ($user->hasRole('supervisor') || $user->hasRole('sergeant'))) {
+            $guardIds = app(GuardScopingService::class)->getManagedGuardIds($user);
+            $query->whereHas('guardRelation', function($q) use ($guardIds) {
+                $q->whereIn('id', $guardIds);
             });
         }
 
         $shifts = $query->latest('date')->paginate(20);
 
-        $guards = Guard::when(Auth::user()->hasRole('supervisor'), function($query) {
-            $query->forSupervisor(Auth::id());
-        })->active()->select(['id','name','guard_type'])->get();
+        $guards = $this->getManagedGuardsQuery()->active()->select(['id','name','guard_type'])->get();
 
         $sites = ClientSite::active()->select(['id','name'])->get();
 
@@ -55,9 +69,7 @@ class ShiftController extends Controller
 
     public function create()
     {
-        $guards = Guard::when(Auth::user()->hasRole('supervisor'), function($query) {
-            $query->forSupervisor(Auth::id());
-        })->active()->get();
+        $guards = $this->getManagedGuardsQuery()->active()->get();
 
         $sites = ClientSite::active()->get();
 
@@ -122,6 +134,7 @@ class ShiftController extends Controller
         }
 
         $validated['assigned_by'] = Auth::id();
+        $validated['source'] = 'manual_roster_entry';
 
         // Combine date and time
         $validated['start_time'] = $start;
@@ -135,9 +148,7 @@ class ShiftController extends Controller
 
     public function edit(Shift $shift)
     {
-        $guards = Guard::when(Auth::user()->hasRole('supervisor'), function($query) {
-            $query->forSupervisor(Auth::id());
-        })->active()->get();
+        $guards = $this->getManagedGuardsQuery()->active()->get();
 
         $sites = ClientSite::active()->get();
 
@@ -220,4 +231,3 @@ class ShiftController extends Controller
             ->with('success', 'Shift deleted successfully.');
     }
 }
-

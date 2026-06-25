@@ -1,7 +1,27 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Head, Link } from '@inertiajs/react';
 import DashboardLayout from '@/Layouts/SupervisorLayout';
 import IconMapper from '@/Components/IconMapper';
+import SiteCoverageMap from '@/Components/ControlRoom/SiteCoverageMap';
+
+interface GuardOnSite {
+  id: number;
+  name: string;
+  check_in_time: string;
+}
+
+interface SiteCoverage {
+  site_id: number;
+  site_name: string;
+  client_name: string;
+  required_guards: number;
+  checked_in_guards: number;
+  coverage_percentage: number;
+  status: 'covered' | 'partial' | 'uncovered';
+  latitude: number | null;
+  longitude: number | null;
+  guards_on_site: GuardOnSite[];
+}
 
 interface Props {
   guardPerformanceMetrics: Array<{
@@ -31,20 +51,7 @@ interface Props {
     date: string;
     available: number;
   }>;
-  siteCoverageStatus: Array<{
-    site_id: number;
-    site_name: string;
-    client_name: string;
-    required_guards: number;
-    checked_in_guards: number;
-    coverage_percentage: number;
-    status: 'covered' | 'partial' | 'uncovered';
-    guards_on_site: Array<{
-      id: number;
-      name: string;
-      check_in_time: string;
-    }>;
-  }>;
+  siteCoverageStatus: SiteCoverage[];
   stats: Record<string, {
     label: string;
     count: number;
@@ -63,6 +70,10 @@ export default function Analytics({
   siteCoverageStatus = [],
   stats = {},
 }: Props) {
+  const [showMap, setShowMap] = useState(false);
+  const sitesWithCoords = siteCoverageStatus.filter(
+    (s) => s.latitude != null && s.longitude != null
+  );
   const getIcon = (iconName: string) => {
     const iconMap: Record<string, string> = {
       '🛡️': 'Shield',
@@ -268,61 +279,77 @@ export default function Analytics({
 
           {/* Site Coverage Section */}
           <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm p-4 sm:p-6">
-            <h3 className="text-base sm:text-lg font-bold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
-              <IconMapper name="MapPin" size={20} className="text-coin-500" />
-              Site Coverage Status
-              <span className="ml-2 text-sm font-normal text-gray-500 dark:text-gray-400">
-                ({siteCoverageStatus.filter(s => s.status === 'covered').length}/{siteCoverageStatus.length} covered)
-              </span>
-            </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {siteCoverageStatus.length === 0 ? (
-                <p className="text-gray-500 dark:text-gray-400 col-span-full text-center py-8">No site coverage data available</p>
-              ) : (
-                siteCoverageStatus.map((site) => (
-                  <div key={site.site_id} className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-                    <div className="flex items-center justify-between mb-3">
-                      <div>
-                        <p className="font-medium text-gray-900 dark:text-gray-100">{site.site_name}</p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">{site.client_name}</p>
-                      </div>
-                      <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                        site.status === 'covered' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200' :
-                        site.status === 'partial' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200' :
-                        'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200'
-                      }`}>
-                        {site.status === 'covered' ? 'Covered' : site.status === 'partial' ? 'Partial' : 'Uncovered'}
-                      </span>
-                    </div>
-                    <div className="mb-3">
-                      <div className="flex justify-between text-xs text-gray-600 dark:text-gray-400 mb-1">
-                        <span>{site.checked_in_guards} / {site.required_guards} guards</span>
-                        <span>{site.coverage_percentage}%</span>
-                      </div>
-                      <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                        <div 
-                          className={`h-full transition-all ${
-                            site.coverage_percentage >= 100 ? 'bg-green-500' :
-                            site.coverage_percentage >= 50 ? 'bg-yellow-500' : 'bg-red-500'
-                          }`}
-                          style={{ width: `${Math.min(site.coverage_percentage, 100)}%` }}
-                        />
-                      </div>
-                    </div>
-                    {site.guards_on_site.length > 0 && (
-                      <div className="flex flex-wrap gap-1">
-                        {site.guards_on_site.map((guard) => (
-                          <span key={guard.id} className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200 text-xs rounded">
-                            <span className="w-1.5 h-1.5 bg-green-500 rounded-full" />
-                            {guard.name}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                ))
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-base sm:text-lg font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                <IconMapper name="MapPin" size={20} className="text-coin-500" />
+                Site Coverage Status
+                <span className="ml-2 text-sm font-normal text-gray-500 dark:text-gray-400">
+                  ({siteCoverageStatus.filter(s => s.status === 'covered').length}/{siteCoverageStatus.length} covered)
+                </span>
+              </h3>
+              {sitesWithCoords.length > 0 && (
+                <button
+                  onClick={() => setShowMap(!showMap)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                >
+                  <IconMapper name={showMap ? 'List' : 'Map'} size={16} />
+                  {showMap ? 'List View' : 'Map View'}
+                </button>
               )}
             </div>
+
+            {showMap && sitesWithCoords.length > 0 ? (
+              <SiteCoverageMap sites={siteCoverageStatus} />
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {siteCoverageStatus.length === 0 ? (
+                  <p className="text-gray-500 dark:text-gray-400 col-span-full text-center py-8">No site coverage data available</p>
+                ) : (
+                  siteCoverageStatus.map((site) => (
+                    <div key={site.site_id} className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                      <div className="flex items-center justify-between mb-3">
+                        <div>
+                          <p className="font-medium text-gray-900 dark:text-gray-100">{site.site_name}</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">{site.client_name}</p>
+                        </div>
+                        <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                          site.status === 'covered' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200' :
+                          site.status === 'partial' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200' :
+                          'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200'
+                        }`}>
+                          {site.status === 'covered' ? 'Covered' : site.status === 'partial' ? 'Partial' : 'Uncovered'}
+                        </span>
+                      </div>
+                      <div className="mb-3">
+                        <div className="flex justify-between text-xs text-gray-600 dark:text-gray-400 mb-1">
+                          <span>{site.checked_in_guards} / {site.required_guards} guards</span>
+                          <span>{site.coverage_percentage}%</span>
+                        </div>
+                        <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                          <div 
+                            className={`h-full transition-all ${
+                              site.coverage_percentage >= 100 ? 'bg-green-500' :
+                              site.coverage_percentage >= 50 ? 'bg-yellow-500' : 'bg-red-500'
+                            }`}
+                            style={{ width: `${Math.min(site.coverage_percentage, 100)}%` }}
+                          />
+                        </div>
+                      </div>
+                      {site.guards_on_site.length > 0 && (
+                        <div className="flex flex-wrap gap-1">
+                          {site.guards_on_site.map((guard) => (
+                            <span key={guard.id} className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200 text-xs rounded">
+                              <span className="w-1.5 h-1.5 bg-green-500 rounded-full" />
+                              {guard.name}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>

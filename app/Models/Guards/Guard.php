@@ -66,6 +66,7 @@ class Guard extends Model
         'position',
         'is_leader',
         'default_off_day',
+        'rota_template_id',
     ];
 
     protected $casts = [
@@ -249,7 +250,7 @@ class Guard extends Model
             'guard_id',
             'client_site_id'
         )
-            ->withPivot(['assigned_by', 'start_date', 'end_date', 'assignment_type', 'notes', 'is_active', 'active'])
+            ->withPivot(['assigned_by', 'start_date', 'end_date', 'assignment_type', 'notes', 'is_active'])
             ->withTimestamps()
             ->wherePivot('is_active', true);
     }

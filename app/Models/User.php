@@ -91,16 +91,11 @@ class User extends Authenticatable
 
     /**
      * Get guards managed by this user.
+     * Delegates to GuardScopingService for unified role-based logic.
      */
     public function managedGuards()
     {
-        if ($this->hasRole('zone_commander')) {
-            return Guard::whereHas('site.zone', function($query) {
-                $query->where('id', $this->zone_id);
-            });
-        }
-        
-        return Guard::where('supervisor_id', $this->id);
+        return app(\App\Services\GuardScopingService::class)->getManagedGuardQuery($this);
     }
 
     // AgentStatus / presence functionality temporarily disabled

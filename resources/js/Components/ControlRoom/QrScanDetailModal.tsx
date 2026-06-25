@@ -5,6 +5,7 @@ interface QrScanDetailModalProps {
   isOpen: boolean;
   scanId: number | null;
   onClose: () => void;
+  initialData?: ScanDetail | null;
 }
 
 interface ScanDetail {
@@ -44,20 +45,30 @@ interface ScanDetail {
   tags: Record<string, unknown>;
 }
 
-export default function QrScanDetailModal({ isOpen, scanId, onClose }: QrScanDetailModalProps) {
+export default function QrScanDetailModal({ isOpen, scanId, onClose, initialData }: QrScanDetailModalProps) {
   const [scanDetail, setScanDetail] = useState<ScanDetail | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Use preloaded data if available, otherwise fetch
   useEffect(() => {
-    if (isOpen && scanId) {
-      fetchScanDetail();
-    }
-    return () => {
+    if (!isOpen) {
       setScanDetail(null);
       setError(null);
-    };
-  }, [isOpen, scanId]);
+      return;
+    }
+
+    if (initialData && initialData.id === scanId) {
+      setScanDetail(initialData);
+      setLoading(false);
+      setError(null);
+      return;
+    }
+
+    if (scanId) {
+      fetchScanDetail();
+    }
+  }, [isOpen, scanId, initialData]);
 
   const fetchScanDetail = async () => {
     if (!scanId) return;

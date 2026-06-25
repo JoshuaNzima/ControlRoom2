@@ -93,6 +93,7 @@ export default function SuperAdminSettings() {
 	const [attendanceMethods, setAttendanceMethods] = React.useState(() => ({
 		auto_absent: Boolean(attendance?.methods?.auto_absent ?? true),
 		auto_present: Boolean(attendance?.methods?.auto_present ?? false),
+		require_site_scan: Boolean(attendance?.methods?.require_site_scan ?? false),
 	}));
 
 	const submitAttendanceMethods = (e: React.FormEvent) => {
@@ -102,6 +103,7 @@ export default function SuperAdminSettings() {
 		router.post(route('superadmin.attendance.methods.update'), {
 			auto_absent: attendanceMethods.auto_absent ? 1 : 0,
 			auto_present: attendanceMethods.auto_present ? 1 : 0,
+			require_site_scan: attendanceMethods.require_site_scan ? 1 : 0,
 		}, {
 			preserveScroll: true,
 			onFinish: () => setLoadingState('attendanceMethods', false),
@@ -318,6 +320,18 @@ export default function SuperAdminSettings() {
                       type="checkbox"
                       checked={attendanceMethods.auto_present}
                       onChange={(e) => setAttendanceMethods(m => ({ ...m, auto_present: e.target.checked }))}
+                      className="rounded border-gray-300 dark:border-gray-700"
+                    />
+                  </label>
+                  <label className="flex items-center justify-between gap-3 p-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
+                    <div>
+                      <div className="text-sm font-medium text-gray-900 dark:text-gray-100">Require Site Scan</div>
+                      <div className="text-xs text-gray-600 dark:text-gray-400">Supervisors must scan a site QR code before taking attendance. The site dropdown in check-in modal will be locked until scanned.</div>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={attendanceMethods.require_site_scan}
+                      onChange={(e) => setAttendanceMethods(m => ({ ...m, require_site_scan: e.target.checked }))}
                       className="rounded border-gray-300 dark:border-gray-700"
                     />
                   </label>

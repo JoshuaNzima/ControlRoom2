@@ -87,7 +87,7 @@ class GuardAssignmentController extends Controller
 
         \App\Models\Guards\GuardAssignment::where('guard_id', $validated['guard_id'])
             ->whereNull('end_date')
-            ->update(['end_date' => now()->toDateString(), 'is_active' => false, 'active' => false]);
+            ->update(['end_date' => now()->toDateString(), 'is_active' => false]);
 
         \App\Models\Guards\GuardAssignment::create([
             'guard_id' => $validated['guard_id'],
@@ -98,7 +98,6 @@ class GuardAssignmentController extends Controller
             'assignment_type' => $validated['assignment_type'] ?? 'permanent',
             'notes' => $validated['notes'] ?? null,
             'is_active' => true,
-            'active' => true,
         ]);
 
         return back()->with('success', 'Guard assigned to site.');
@@ -112,7 +111,7 @@ class GuardAssignmentController extends Controller
 
         \App\Models\Guards\GuardAssignment::where('guard_id', $validated['guard_id'])
             ->whereNull('end_date')
-            ->update(['end_date' => now()->toDateString(), 'is_active' => false, 'active' => false]);
+            ->update(['end_date' => now()->toDateString(), 'is_active' => false]);
 
         return back()->with('success', 'Guard unassigned from site.');
     }

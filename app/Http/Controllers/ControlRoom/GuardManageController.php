@@ -237,7 +237,7 @@ class GuardManageController extends Controller
         GuardAssignment::where('guard_id', $validated['guard_id'])
             ->where('is_active', true)
             ->whereNull('end_date')
-            ->update(['end_date' => $startDate, 'is_active' => false, 'active' => false]);
+            ->update(['end_date' => $startDate, 'is_active' => false]);
 
         GuardAssignment::create([
             'guard_id' => $validated['guard_id'],
@@ -248,7 +248,6 @@ class GuardManageController extends Controller
             'assignment_type' => $validated['assignment_type'] ?? 'permanent',
             'notes' => $validated['notes'] ?? null,
             'is_active' => true,
-            'active' => true,
         ]);
 
         return back()->with('success', 'Guard assigned to site.');

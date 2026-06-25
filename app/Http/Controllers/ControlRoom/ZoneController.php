@@ -253,7 +253,7 @@ class ZoneController extends Controller
         \App\Models\Guards\GuardAssignment::where('guard_id', $data['guard_id'])
             ->where('is_active', true)
             ->whereNull('end_date')
-            ->update(['end_date' => $startDate, 'is_active' => false, 'active' => false]);
+            ->update(['end_date' => $startDate, 'is_active' => false]);
 
         \App\Models\Guards\GuardAssignment::create([
             'guard_id' => $data['guard_id'],
@@ -262,7 +262,6 @@ class ZoneController extends Controller
             'start_date' => $startDate,
             'end_date' => null,
             'is_active' => true,
-            'active' => true,
         ]);
 
         return back()->withSuccess('Guard assigned to site.');
@@ -278,10 +277,26 @@ class ZoneController extends Controller
         $assignment->update([
             'is_active' => false,
             'end_date' => now()->startOfDay(),
-            'active' => false,
         ]);
 
         return back()->withSuccess('Guard unassigned from site.');
+    }
+
+    public function recalculate(Zone $zone)
+    {
+        app(\App\Services\ZoneCoverageService::class)->recalculateZone($zone->id);
+        $zone->refresh();
+
+        return redirect()->back()->withSuccess(
+            "Zone \"{$zone->name}\" required_guard_count recalculated to {$zone->required_guard_count}"
+        );
+    }
+
+    public function recalculateAll()
+    {
+        app(\App\Services\ZoneCoverageService::class)->recalculateAll();
+
+        return redirect()->back()->withSuccess('All zones recalculated successfully.');
     }
 
     public function endAssignment(Request $request, Zone $zone, \App\Models\Guards\GuardAssignment $assignment)
@@ -303,11 +318,8 @@ class ZoneController extends Controller
         $assignment->update([
             'end_date' => $data['end_date'],
             'is_active' => false,
-            'active' => false,
         ]);
 
         return back()->withSuccess('Assignment ended successfully.');
     }
 }
-
-

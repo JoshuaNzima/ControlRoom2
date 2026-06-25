@@ -6,7 +6,6 @@ use App\Http\Controllers\Guards\CalendarController;
 use App\Http\Controllers\Guards\GuardController;
 use App\Http\Controllers\Guards\IncidentController;
 use App\Http\Controllers\Guards\OperationsController;
-use App\Http\Controllers\Guards\SergeantController;
 use App\Http\Controllers\Guards\SupervisorController;
 use App\Http\Controllers\Guards\SupervisorAssignmentController;
 use App\Http\Controllers\Guards\DownReportController;
@@ -21,7 +20,8 @@ Route::middleware(['auth'])->group(function () {
 
     // Supervisor routes (also accessible by sergeants with roaming permissions)
     Route::middleware(['role:supervisor|sergeant'])->prefix('supervisor')->name('supervisor.')->group(function () {
-        Route::get('/dashboard', [SupervisorController::class, 'dashboard'])->name('dashboard');
+        // Dashboard now points directly to Overview (avoids redirect flash)
+        Route::get('/dashboard', [SupervisorController::class, 'overview'])->name('dashboard');
         Route::get('/me', [\App\Http\Controllers\Supervisor\ProfileController::class, 'index'])->name('profile');
         Route::get('/overview', [SupervisorController::class, 'overview'])->name('overview');
         Route::get('/analytics', [SupervisorController::class, 'analytics'])->name('analytics');
@@ -29,6 +29,9 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/guards', [SupervisorController::class, 'guards'])->name('guards');
         Route::get('/shifts', [SupervisorController::class, 'shifts'])->name('shifts');
         Route::get('/reports', [SupervisorController::class, 'reports'])->name('reports');
+        Route::get('/reports/pdf', [SupervisorController::class, 'reportsPdf'])->name('reports.pdf');
+        Route::get('/reports/csv', [SupervisorController::class, 'reportsCsv'])->name('reports.csv');
+        Route::post('/reports/email', [SupervisorController::class, 'reportsEmail'])->name('reports.email');
 
         Route::get('guards/{guard}', [SupervisorController::class, 'showGuard'])->name('guards.show');
 
@@ -73,7 +76,6 @@ Route::middleware(['permission:guards.view'])->prefix('guards')->name('guards.')
     Route::get('/incidents', [IncidentController::class, 'index'])->name('incidents');
     Route::get('/calendar', [CalendarController::class, 'index'])->name('calendar');
     Route::get('/operations', [OperationsController::class, 'index'])->name('operations');
-    Route::get('/sergeants', [SergeantController::class, 'index'])->name('sergeants');
 });
 
 // Client Routes

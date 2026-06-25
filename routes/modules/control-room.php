@@ -21,8 +21,10 @@ Route::middleware(['auth'])->group(function () {
         Route::post('zones/{zone}/assignments', [\App\Http\Controllers\ControlRoom\ZoneController::class, 'storeAssignment'])->name('zones.assignments.store');
         Route::post('zones/{zone}/assignments/{assignment}/end', [\App\Http\Controllers\ControlRoom\ZoneController::class, 'endAssignment'])->name('zones.assignments.end');
         Route::delete('zones/{zone}/assignments/{assignment}', [\App\Http\Controllers\ControlRoom\ZoneController::class, 'unassign'])->name('zones.assignments.destroy');
-        Route::get('zones/{zone}/reports', [\App\Http\Controllers\ControlRoom\ZoneController::class, 'reports'])->name('zones.reports');
+		Route::get('zones/{zone}/reports', [\App\Http\Controllers\ControlRoom\ZoneController::class, 'reports'])->name('zones.reports');
         Route::get('zones/{zone}/map', [\App\Http\Controllers\ControlRoom\ZoneController::class, 'map'])->name('zones.map');
+        Route::post('zones/recalculate-all', [\App\Http\Controllers\ControlRoom\ZoneController::class, 'recalculateAll'])->name('zones.recalculate-all');
+        Route::post('zones/{zone}/recalculate', [\App\Http\Controllers\ControlRoom\ZoneController::class, 'recalculate'])->name('zones.recalculate');
 		Route::get('/settings', [\App\Http\Controllers\ControlRoom\SettingsController::class, 'index'])->name('settings');
 		Route::post('/settings', [\App\Http\Controllers\ControlRoom\SettingsController::class, 'update'])->name('settings.update');
 		

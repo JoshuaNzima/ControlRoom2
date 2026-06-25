@@ -9,10 +9,40 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\ValidationException;
 
 class Shift extends Model
 {
     use SoftDeletes;
+
+    /**
+     * Boot events — centralized shift overlap validation.
+     */
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::saving(function (self $shift) {
+            if (!$shift->start_time || !$shift->end_time) {
+                return;
+            }
+
+            $overlap = static::where('guard_id', $shift->guard_id)
+                ->where('status', '!=', 'cancelled')
+                ->where('id', '!=', $shift->id ?? 0)
+                ->where(function ($q) use ($shift) {
+                    $q->where('start_time', '<', $shift->end_time)
+                      ->where('end_time', '>', $shift->start_time);
+                })
+                ->exists();
+
+            if ($overlap) {
+                throw ValidationException::withMessages([
+                    'start_time' => 'Overlapping shift exists for this guard at the selected time.',
+                ]);
+            }
+        });
+    }
 
     protected $fillable = [
         'guard_id',
@@ -22,6 +52,7 @@ class Shift extends Model
         'start_time',
         'end_time',
         'shift_type',
+        'source',
         'instructions',
         'status',
         'notes',
@@ -225,6 +256,45 @@ class Shift extends Model
 
         $guardSupervisorId = $this->guardRelation?->supervisor_id;
         return $guardSupervisorId !== null && (int) $guardSupervisorId === (int) Auth::id();
+    }
+
+    /**
+     * Scope to find overlapping shifts for a guard within a time range.
+     */
+    public function scopeOverlapping($query, int $guardId, $startTime, $endTime, ?int $excludeId = null)
+    {
+        $query->where('guard_id', $guardId)
+            ->where('status', '!=', 'cancelled')
+            ->where(function ($q) use ($startTime, $endTime) {
+                $q->where('start_time', '<', $endTime)
+                  ->where('end_time', '>', $startTime);
+            });
+
+        if ($excludeId) {
+            $query->where('id', '!=', $excludeId);
+        }
+
+        return $query;
+    }
+
+    /**
+     * Check if a shift overlaps with existing shifts for the same guard.
+     */
+    public static function hasOverlap(int $guardId, $startTime, $endTime, ?int $excludeId = null): bool
+    {
+        return static::overlapping($guardId, $startTime, $endTime, $excludeId)->exists();
+    }
+
+    /**
+     * Validate that a shift does not overlap with existing shifts.
+     * Returns the error message string if overlap exists, null otherwise.
+     */
+    public static function validateNoOverlap(int $guardId, $startTime, $endTime, ?int $excludeId = null): ?string
+    {
+        if (static::hasOverlap($guardId, $startTime, $endTime, $excludeId)) {
+            return 'Overlapping shift exists for this guard at the selected time.';
+        }
+        return null;
     }
 
     // Methods

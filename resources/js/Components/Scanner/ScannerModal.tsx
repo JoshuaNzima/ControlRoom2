@@ -1,42 +1,11 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { router } from '@inertiajs/react';
 import { Html5QrcodeScanner, Html5QrcodeScanType } from 'html5-qrcode';
 import CameraCapture from '@/Components/CameraCapture';
-import toast, { Toaster } from 'react-hot-toast';
+import { Toaster } from 'react-hot-toast';
 import IconMapper from '@/Components/IconMapper';
-
-interface ScanResponse {
-  success: boolean;
-  message: string;
-  redirect: string;
-  scan: {
-    scan_id: number;
-    checkpoint_id?: number;
-    checkpoint_name?: string;
-    checkpoint_code?: string;
-    site_id: number;
-    site_name: string;
-    client_name: string;
-    scanned_at: string;
-    expires_at: string;
-  };
-  checkpoint?: {
-    id: number;
-    name: string;
-  };
-  location_verified?: boolean;
-  distance_meters?: number;
-}
-
-interface ScanResult {
-  type: 'site' | 'checkpoint';
-  name: string;
-  checkpointName?: string;
-  siteName?: string;
-  clientName?: string;
-  locationVerified: boolean;
-  timestamp: string;
-}
+import useScanner from '@/Hooks/useScanner';
+import toast from 'react-hot-toast';
 
 interface Props {
   open: boolean;
@@ -57,192 +26,56 @@ interface Props {
 export default function ScannerModal({ open, onClose, activeScan }: Props) {
   const [scanning, setScanning] = useState(false);
   const [manualCode, setManualCode] = useState('');
-  const [location, setLocation] = useState<{lat: number; lon: number; accuracy: number | null} | null>(null);
   const [cameraError, setCameraError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [gpsStatus, setGpsStatus] = useState<'acquiring' | 'ready' | 'retrying' | 'error'>('acquiring');
-  const [gpsRetryCount, setGpsRetryCount] = useState(0);
   const [downOpen, setDownOpen] = useState(false);
   const [downReason, setDownReason] = useState('');
   const [downPhoto, setDownPhoto] = useState<File | null>(null);
-  const [scanResult, setScanResult] = useState<ScanResult | null>(null);
-  const [scanError, setScanError] = useState<string | null>(null);
-  const [showSuccess, setShowSuccess] = useState(false);
-  const audioContextRef = useRef<AudioContext | null>(null);
-  const gpsWatchIdRef = useRef<number | null>(null);
+  const [manualNotFound, setManualNotFound] = useState('');
 
-  // Initialize audio context for feedback sounds
-  useEffect(() => {
-    if (typeof window !== 'undefined' && 'AudioContext' in window) {
-      audioContextRef.current = new AudioContext();
-    }
-  }, []);
-
-  const playSuccessSound = useCallback(() => {
-    if (!audioContextRef.current) return;
-    
-    const ctx = audioContextRef.current;
-    const oscillator = ctx.createOscillator();
-    const gainNode = ctx.createGain();
-    
-    oscillator.connect(gainNode);
-    gainNode.connect(ctx.destination);
-    
-    oscillator.frequency.setValueAtTime(880, ctx.currentTime); // A5
-    oscillator.frequency.setValueAtTime(1100, ctx.currentTime + 0.1); // C#6
-    
-    gainNode.gain.setValueAtTime(0.3, ctx.currentTime);
-    gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
-    
-    oscillator.start(ctx.currentTime);
-    oscillator.stop(ctx.currentTime + 0.3);
-  }, []);
-
-  const playErrorSound = useCallback(() => {
-    if (!audioContextRef.current) return;
-    
-    const ctx = audioContextRef.current;
-    const oscillator = ctx.createOscillator();
-    const gainNode = ctx.createGain();
-    
-    oscillator.connect(gainNode);
-    gainNode.connect(ctx.destination);
-    
-    oscillator.frequency.setValueAtTime(200, ctx.currentTime);
-    oscillator.frequency.linearRampToValueAtTime(150, ctx.currentTime + 0.3);
-    
-    gainNode.gain.setValueAtTime(0.3, ctx.currentTime);
-    gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
-    
-    oscillator.start(ctx.currentTime);
-    oscillator.stop(ctx.currentTime + 0.3);
-  }, []);
-
-  const triggerHaptic = useCallback((type: 'success' | 'error' | 'light') => {
-    if ('vibrate' in navigator) {
-      switch (type) {
-        case 'success':
-          navigator.vibrate([50, 100, 50]);
-          break;
-        case 'error':
-          navigator.vibrate([200, 100, 200]);
-          break;
-        case 'light':
-          navigator.vibrate(50);
-          break;
-      }
-    }
-  }, []);
-
-  // GPS acquisition with retry logic using watchPosition for better accuracy
-  const acquireGps = useCallback(() => {
-    if (!navigator.geolocation) {
-      setGpsStatus('error');
-      return;
-    }
-
-    const maxRetries = 3;
-    const maxAccuracy = 100; // meters - reject if accuracy worse than this
-    let attempts = 0;
-    let bestPosition: {lat: number; lon: number; accuracy: number} | null = null;
-
-    setGpsStatus('acquiring');
-
-    // Use watchPosition for continuous updates until we get good accuracy
-    const watchId = navigator.geolocation.watchPosition(
-      (position) => {
-        const accuracy = position.coords.accuracy || 999;
-        attempts++;
-        setGpsRetryCount(attempts);
-
-        // Track best position seen
-        if (!bestPosition || accuracy < bestPosition.accuracy) {
-          bestPosition = {
-            lat: position.coords.latitude,
-            lon: position.coords.longitude,
-            accuracy: accuracy,
-          };
-        }
-
-        // Accept if accuracy is good enough or we've tried enough times
-        if (accuracy <= maxAccuracy || attempts >= maxRetries) {
-          if (gpsWatchIdRef.current !== null) {
-            navigator.geolocation.clearWatch(gpsWatchIdRef.current);
-            gpsWatchIdRef.current = null;
-          }
-
-          setLocation(bestPosition);
-          setGpsStatus(accuracy <= maxAccuracy ? 'ready' : 'retrying');
-        }
-      },
-      (error) => {
-        console.warn('GPS error:', error.message);
-        setGpsStatus('error');
-        if (gpsWatchIdRef.current !== null) {
-          navigator.geolocation.clearWatch(gpsWatchIdRef.current);
-          gpsWatchIdRef.current = null;
-        }
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 15000,
-        maximumAge: 0,
-      }
-    );
-
-    gpsWatchIdRef.current = watchId;
-
-    // Fallback: stop watching after 15 seconds and use best position
-    setTimeout(() => {
-      if (gpsWatchIdRef.current === watchId) {
-        navigator.geolocation.clearWatch(watchId);
-        gpsWatchIdRef.current = null;
-        if (bestPosition) {
-          setLocation(bestPosition);
-          setGpsStatus(bestPosition.accuracy <= maxAccuracy ? 'ready' : 'retrying');
-        } else {
-          setGpsStatus('error');
-        }
-      }
-    }, 15000);
-  }, []);
-
-  useEffect(() => {
-    if (open) {
-      acquireGps();
-    }
-    return () => {
-      if (gpsWatchIdRef.current !== null) {
-        navigator.geolocation.clearWatch(gpsWatchIdRef.current);
-        gpsWatchIdRef.current = null;
-      }
-    };
-  }, [open, acquireGps]);
+  const {
+    location,
+    gpsStatus,
+    gpsRetryCount,
+    isLoading,
+    scanResult,
+    scanError,
+    showSuccess,
+    acquireGps,
+    handleScan,
+    normalizeCode,
+    reportNotFound,
+    clearScan: clearSiteLock,
+    resetScanState,
+  } = useScanner({
+    onScanSuccess: () => {
+      setTimeout(() => onClose(), 2000);
+    },
+  });
 
   // Auto-start scanner once modal opens and we have a location fix
   useEffect(() => {
     if (open && location && !scanning) {
       setScanning(true);
     }
-  }, [open, location]);
+  }, [open, location, scanning]);
 
   useEffect(() => {
     if (scanning && open) {
       try {
         const scanner = new Html5QrcodeScanner(
           'qr-reader',
-          { 
+          {
             fps: 10,
             qrbox: { width: 250, height: 250 },
             experimentalFeatures: {
-              useBarCodeDetectorIfSupported: true
+              useBarCodeDetectorIfSupported: true,
             },
             rememberLastUsedCamera: true,
             aspectRatio: 1.0,
             supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA],
             showTorchButtonIfSupported: true,
           },
-          false
+          false,
         );
 
         scanner.render(
@@ -261,7 +94,7 @@ export default function ScannerModal({ open, onClose, activeScan }: Props) {
               setScanning(false);
               scanner.clear();
             }
-          }
+          },
         );
 
         return () => {
@@ -273,272 +106,7 @@ export default function ScannerModal({ open, onClose, activeScan }: Props) {
         setScanning(false);
       }
     }
-  }, [scanning, open]);
-
-  const handleScan = async (code: string) => {
-    setIsLoading(true);
-    setScanError(null);
-    const normalized = normalizeCode(code);
-    
-    try {
-      const handled = await submitIfSiteScan(code);
-      if (!handled) {
-        await submitScan(normalized);
-      }
-    } catch (error) {
-      console.error('Scan submission error:', error);
-      setIsLoading(false);
-    }
-  };
-
-  const submitScan = async (code: string) => {
-    const loadingToast = toast.loading('Processing scan...');
-
-    router.post(route('scan.checkpoint'), {
-      code: code,
-      latitude: location?.lat,
-      longitude: location?.lon,
-      accuracy: location?.accuracy,
-    }, {
-      preserveState: true,
-        onSuccess: (page) => {
-            type FlashProps = {
-                location_verified?: boolean;
-                scan?: {
-                    checkpoint_name?: string;
-                    site_name?: string;
-                    client_name?: string;
-                };
-            };
-
-            type ScanPageProps = {
-                flash?: FlashProps;
-                scan?: FlashProps['scan'] & {
-                    checkpoint_name?: string;
-                    site_name?: string;
-                    client_name?: string;
-                };
-            };
-
-            const props = page.props as unknown as ScanPageProps;
-        toast.dismiss(loadingToast);
-
-        // Play success sound and haptic feedback
-        playSuccessSound();
-        triggerHaptic('success');
-
-        // Show success toast notification
-        toast.success('Checkpoint scanned successfully!', {
-          duration: 3000,
-          icon: '✅',
-        });
-
-        // Show success screen with scan details
-        const flash = props.flash;
-        const isLocationVerified = flash?.location_verified ?? true;
-        const scanData = props.scan || flash?.scan;
-
-        setScanResult({
-          type: 'checkpoint',
-          name: scanData?.checkpoint_name || scanData?.site_name || code.substring(0, 20),
-          checkpointName: scanData?.checkpoint_name,
-          siteName: scanData?.site_name,
-          clientName: scanData?.client_name,
-          locationVerified: isLocationVerified,
-          timestamp: new Date().toISOString(),
-        });
-        setShowSuccess(true);
-
-        // Auto-close after showing success for 2 seconds
-        setTimeout(() => {
-          onClose();
-          router.visit(route('scan.scanner'));
-        }, 2000);
-      },
-      onError: (errors) => {
-        toast.dismiss(loadingToast);
-
-        // Play error sound and haptic feedback
-        playErrorSound();
-        triggerHaptic('error');
-
-        const message = Object.values(errors)[0] as string;
-        const errorMsg = message || 'Failed to process scan. Please try again.';
-
-        setScanError(errorMsg);
-        toast.error(errorMsg, {
-          duration: 6000,
-          icon: '❌',
-        });
-      }
-    });
-  };
-
-  // Try to interpret the raw code as a site scan and visit the site scan endpoint (GET)
-  const submitIfSiteScan = async (raw: string): Promise<boolean> => {
-    let siteId: string | number | null = null;
-    let siteName: string | null = null;
-
-    try {
-      // JSON payload (our QR generation may embed type/site_id)
-      if (raw.trim().startsWith('{')) {
-        const obj = JSON.parse(raw);
-        siteId = obj.site_id ?? obj.site ?? obj.id;
-        siteName = obj.site_name ?? obj.name ?? null;
-        if (!((obj.type === 'site' || obj.t === 'site') && siteId)) {
-          siteId = null;
-        }
-      }
-    } catch {}
-
-    // URL payload containing /site/scan/{id}
-    if (!siteId) {
-      try {
-        if (raw.startsWith('http')) {
-          const url = new URL(raw);
-          const parts = url.pathname.split('/').filter(Boolean);
-          const siteIdx = parts.findIndex(p => p.toLowerCase() === 'site' && parts[parts.indexOf(p)+1]?.toLowerCase() === 'scan');
-          if (siteIdx !== -1) {
-            const idPart = parts[siteIdx + 2];
-            if (idPart) siteId = idPart;
-          }
-          // query param ?site=<id>
-          if (!siteId) {
-            const siteParam = url.searchParams.get('site');
-            if (siteParam) siteId = siteParam;
-          }
-        }
-      } catch {}
-    }
-
-    if (!siteId) return false;
-
-    // Submit site scan with proper success/error handling
-    const loadingToast = toast.loading('Processing site scan...');
-
-    router.visit(route('scan.site', { site: siteId, latitude: location?.lat, longitude: location?.lon }), {
-      onSuccess: (page) => {
-        type FlashProps = {
-          location_verified?: boolean;
-          scan_success?: string;
-        };
-
-        type SiteScanPageProps = {
-          flash?: FlashProps;
-          scan?: {
-            site_name?: string;
-            client_name?: string;
-          };
-        };
-
-        const props = page.props as unknown as SiteScanPageProps;
-        toast.dismiss(loadingToast);
-        playSuccessSound();
-        triggerHaptic('success');
-
-        // Show success toast notification
-        toast.success('Site scanned successfully!', {
-          duration: 3000,
-          icon: '✅',
-        });
-
-        const flash = props.flash;
-        const scanData = props.scan;
-
-        setScanResult({
-          type: 'site',
-          name: siteName || scanData?.site_name || flash?.scan_success || `Site #${siteId}`,
-          siteName: siteName || scanData?.site_name,
-          clientName: scanData?.client_name,
-          locationVerified: flash?.location_verified ?? true,
-          timestamp: new Date().toISOString(),
-        });
-        setShowSuccess(true);
-        setIsLoading(false);
-
-        // Auto-close after showing success for 2 seconds
-        setTimeout(() => {
-          onClose();
-        }, 2000);
-      },
-      onError: (errors) => {
-        toast.dismiss(loadingToast);
-        playErrorSound();
-        triggerHaptic('error');
-
-        const message = Object.values(errors)[0] as string;
-        const errorMsg = message || 'Failed to process site scan. Please try again.';
-
-        setScanError(errorMsg);
-        toast.error(errorMsg, {
-          duration: 6000,
-          icon: '❌',
-        });
-        setIsLoading(false);
-      },
-      onFinish: () => {
-        // isLoading is handled in onSuccess/onError
-      },
-    });
-
-    return true;
-  };
-
-  const clearScan = () => {
-    const loadingToast = toast.loading('Clearing site lock...');
-    
-    router.post(route('scan.clear'), {}, {
-      preserveState: true,
-      onSuccess: () => {
-        toast.dismiss(loadingToast);
-        toast.success('Site lock cleared');
-        onClose();
-      },
-      onError: () => {
-        toast.dismiss(loadingToast);
-        toast.error('Failed to clear site lock');
-      }
-    });
-  };
-
-  const normalizeCode = (raw: string): string => {
-    try {
-      // First, try to parse as JSON (our checkpoint QR codes embed JSON)
-      if (raw.trim().startsWith('{')) {
-        const obj = JSON.parse(raw);
-        // Checkpoint QR has type='checkpoint' and a code field
-        if ((obj.type === 'checkpoint' || obj.t === 'checkpoint') && obj.code) {
-          return obj.code;
-        }
-      }
-
-      if (raw.startsWith('http')) {
-        const url = new URL(raw);
-        const checkpoint = url.searchParams.get('checkpoint');
-        if (checkpoint) return checkpoint;
-        
-        const code = url.searchParams.get('code');
-        if (code) return code;
-
-        const parts = url.pathname.split('/').filter(Boolean);
-        const checkpointIndex = parts.findIndex(p => 
-          p.toLowerCase() === 'checkpoint' || 
-          p.toLowerCase() === 'checkpoints'
-        );
-        if (checkpointIndex !== -1 && parts[checkpointIndex + 1]) {
-          return parts[checkpointIndex + 1];
-        }
-      }
-      
-      if (raw.match(/^CHK-[A-Z0-9]+$/i)) {
-        return raw.toUpperCase();
-      }
-
-      return raw;
-    } catch {
-      return raw;
-    }
-  };
+  }, [scanning, open, handleScan]);
 
   const handleManualSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -546,12 +114,13 @@ export default function ScannerModal({ open, onClose, activeScan }: Props) {
       toast.error('Location is required to submit manual scan. Please enable GPS and try again.');
       if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
-          (position) => setLocation({ lat: position.coords.latitude, lon: position.coords.longitude, accuracy: position.coords.accuracy || null }),
-          (err) => {
-            console.warn('Location access error:', err.message);
+          (position) => {
+            acquireGps();
+          },
+          () => {
             toast.error('Unable to acquire location.');
           },
-          { enableHighAccuracy: true, timeout: 10000 }
+          { enableHighAccuracy: true, timeout: 10000 },
         );
       }
       return;
@@ -561,6 +130,17 @@ export default function ScannerModal({ open, onClose, activeScan }: Props) {
       handleScan(manualCode.trim());
       setManualCode('');
     }
+  };
+
+  const handleNotFoundSubmit = () => {
+    const name = manualNotFound.trim();
+    if (!name) return;
+    reportNotFound(name);
+    setManualNotFound('');
+  };
+
+  const handleClearScan = () => {
+    clearSiteLock(() => onClose());
   };
 
   const timeRemaining = activeScan
@@ -588,21 +168,18 @@ export default function ScannerModal({ open, onClose, activeScan }: Props) {
               {scanResult.type === 'site' ? 'Site' : 'Checkpoint'} verified and locked
             </p>
             <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 mb-6 text-left">
-              {/* Client Name */}
               {scanResult.clientName && (
                 <div className="flex items-center gap-2 mb-2">
                   <IconMapper name="Building2" size={16} className="text-red-600 dark:text-red-400" />
                   <span className="font-medium text-gray-900 dark:text-gray-100">{scanResult.clientName}</span>
                 </div>
               )}
-              {/* Site Name */}
               {scanResult.siteName && (
                 <div className="flex items-center gap-2 mb-2">
                   <IconMapper name="MapPin" size={16} className="text-red-600 dark:text-red-400" />
                   <span className="font-medium text-gray-900 dark:text-gray-100">{scanResult.siteName}</span>
                 </div>
               )}
-              {/* Checkpoint name */}
               {scanResult.type === 'checkpoint' && scanResult.checkpointName && (
                 <div className="flex items-center gap-2 mb-2 text-sm">
                   <IconMapper name="ScanLine" size={14} className="text-coin-600 dark:text-coin-400" />
@@ -648,7 +225,7 @@ export default function ScannerModal({ open, onClose, activeScan }: Props) {
             <div className="space-y-3">
               <button
                 onClick={() => {
-                  setScanError(null);
+                  resetScanState();
                   setScanning(true);
                 }}
                 className="w-full py-3 bg-coin-600 hover:bg-coin-700 text-white rounded-lg font-medium transition"
@@ -657,7 +234,7 @@ export default function ScannerModal({ open, onClose, activeScan }: Props) {
               </button>
               <button
                 onClick={() => {
-                  setScanError(null);
+                  resetScanState();
                   setScanning(false);
                 }}
                 className="w-full py-3 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg font-medium transition"
@@ -679,167 +256,101 @@ export default function ScannerModal({ open, onClose, activeScan }: Props) {
 
   return (
     <>
-    <Toaster position="top-right" />
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white dark:bg-gray-900 dark:text-gray-100 rounded-xl w-11/12 max-w-2xl p-6 max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-bold text-gray-900">Scan Checkpoint</h2>
-          <button
-            onClick={onClose}
-            className="text-gray-500 hover:text-gray-700"
-          >
-            ✕
-          </button>
-        </div>
-
-        {/* Active Scan Display */}
-        {activeScan && (
-          <div className="bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl shadow-lg p-6 text-white relative overflow-hidden mb-6">
-            <div className="absolute inset-0">
-              <div className="absolute inset-0 bg-white opacity-10 animate-pulse"></div>
-            </div>
-            
-            <div className="relative flex items-start justify-between">
-              <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="text-2xl">+</span>
-                  <h3 className="text-xl font-bold">Checkpoint Locked</h3>
-                </div>
-                <p className="text-green-100 text-sm mb-1">Client: {activeScan.client_name}</p>
-                <p className="text-lg font-semibold">{activeScan.site_name}</p>
-                {activeScan.checkpoint_name && (
-                  <p className="text-green-100 text-sm mt-1">
-                    Checkpoint: {activeScan.checkpoint_name}
-                  </p>
-                )}
-                <p className="text-green-100 text-sm mt-2">
-                  Scanned: {new Date(activeScan.scanned_at).toLocaleTimeString()}
-                </p>
-                <p className="text-green-100 text-sm">
-                  <span className={timeRemaining < 15 ? 'text-yellow-300 font-semibold' : ''}>
-                    Expires in: {timeRemaining} minutes
-                  </span>
-                </p>
-              </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setDownOpen(true)}
-                  className="bg-white text-red-600 hover:bg-gray-100 px-4 py-2 rounded-lg font-bold transition disabled:opacity-50"
-                  disabled={isLoading}
-                >
-                  Report Down
-                </button>
-                <button
-                  onClick={clearScan}
-                  className="bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg font-medium transition disabled:opacity-50"
-                  disabled={isLoading}
-                >
-                  Clear
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Scanner Card */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">Scan Checkpoint</h2>
-          
-          {cameraError && (
-            <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-              <div className="flex items-center gap-2 text-yellow-800">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
-                <span className="font-medium">{cameraError}</span>
-              </div>
-              <button
-                onClick={() => setCameraError(null)}
-                className="mt-2 text-sm text-yellow-600 hover:text-yellow-800"
-              >
-                Dismiss
-              </button>
-            </div>
-          )}
-
-          <p className="text-gray-600 mb-6">
-            Scan the QR code at the client site to verify your location and lock the site for attendance.
-          </p>
-
-          {/* QR Scanner */}
-          {!scanning ? (
-            <button
-              onClick={() => {
-                setCameraError(null);
-                // Require GPS before starting scanner
-                if (!location) {
-                  toast.error('Location is required to scan. Please enable GPS and try again.');
-                  if (navigator.geolocation) {
-                    navigator.geolocation.getCurrentPosition(
-                      (position) => {
-                        setLocation({ lat: position.coords.latitude, lon: position.coords.longitude, accuracy: position.coords.accuracy || null });
-                        toast.success('Location acquired. You can now scan.');
-                      },
-                      (err) => {
-                        console.warn('Location access error:', err.message);
-                        toast.error('Unable to acquire location. Please enable location services.');
-                      },
-                      { enableHighAccuracy: true, timeout: 10000 }
-                    );
-                  }
-                  return;
-                }
-                setScanning(true);
-              }}
-              disabled={isLoading}
-              className="w-full py-4 bg-red-600 hover:bg-red-700 disabled:bg-gray-400 text-white rounded-lg font-bold text-lg shadow-md transition-all transform hover:scale-105 flex items-center justify-center gap-2"
-            >
-              {isLoading ? (
-                <>
-                  <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                  </svg>
-                  Processing...
-                </>
-              ) : (
-                <>
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
-                  Start QR Scanner
-                </>
-              )}
+      <Toaster position="top-right" />
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white dark:bg-gray-900 dark:text-gray-100 rounded-xl w-11/12 max-w-2xl p-6 max-h-[90vh] overflow-y-auto">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold text-gray-900">Scan Checkpoint</h2>
+            <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
+              ✕
             </button>
-          ) : (
-            <div className="space-y-4">
-              <div id="qr-reader" className="rounded-lg overflow-hidden shadow-inner"></div>
-              <button
-                onClick={() => setScanning(false)}
-                className="w-full py-3 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-medium transition"
-              >
-                Cancel Scanning
-              </button>
+          </div>
+
+          {/* Active Scan Display */}
+          {activeScan && (
+            <div className="bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl shadow-lg p-6 text-white relative overflow-hidden mb-6">
+              <div className="absolute inset-0">
+                <div className="absolute inset-0 bg-white opacity-10 animate-pulse"></div>
+              </div>
+
+              <div className="relative flex items-start justify-between">
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-2xl">+</span>
+                    <h3 className="text-xl font-bold">Checkpoint Locked</h3>
+                  </div>
+                  <p className="text-green-100 text-sm mb-1">Client: {activeScan.client_name}</p>
+                  <p className="text-lg font-semibold">{activeScan.site_name}</p>
+                  {activeScan.checkpoint_name && (
+                    <p className="text-green-100 text-sm mt-1">
+                      Checkpoint: {activeScan.checkpoint_name}
+                    </p>
+                  )}
+                  <p className="text-green-100 text-sm mt-2">
+                    Scanned: {new Date(activeScan.scanned_at).toLocaleTimeString()}
+                  </p>
+                  <p className="text-green-100 text-sm">
+                    <span className={timeRemaining < 15 ? 'text-yellow-300 font-semibold' : ''}>
+                      Expires in: {timeRemaining} minutes
+                    </span>
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setDownOpen(true)}
+                    className="bg-white text-red-600 hover:bg-gray-100 px-4 py-2 rounded-lg font-bold transition disabled:opacity-50"
+                    disabled={isLoading}
+                  >
+                    Report Down
+                  </button>
+                  <button
+                    onClick={handleClearScan}
+                    className="bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg font-medium transition disabled:opacity-50"
+                    disabled={isLoading}
+                  >
+                    Clear
+                  </button>
+                </div>
+              </div>
             </div>
           )}
 
-          {/* Manual Entry */}
-          <div className="mt-6 pt-6 border-t">
-            <h3 className="font-semibold text-gray-900 mb-3">Manual Entry</h3>
-            <form onSubmit={handleManualSubmit} className="space-y-3">
-              <input
-                type="text"
-                value={manualCode}
-                onChange={(e) => setManualCode(e.target.value)}
-                placeholder="Enter checkpoint code (e.g., CHK-XXXXXXXXXXXX)"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
-                disabled={isLoading}
-              />
+          {/* Scanner Card */}
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">Scan Checkpoint</h2>
+
+            {cameraError && (
+              <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <div className="flex items-center gap-2 text-yellow-800">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                  <span className="font-medium">{cameraError}</span>
+                </div>
+                <button onClick={() => setCameraError(null)} className="mt-2 text-sm text-yellow-600 hover:text-yellow-800">
+                  Dismiss
+                </button>
+              </div>
+            )}
+
+            <p className="text-gray-600 mb-6">
+              Scan the QR code at the client site to verify your location and lock the site for attendance.
+            </p>
+
+            {/* QR Scanner */}
+            {!scanning ? (
               <button
-                type="submit"
-                disabled={!manualCode.trim() || isLoading}
-                className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-300 text-white rounded-lg font-medium transition flex items-center justify-center gap-2"
+                onClick={() => {
+                  setCameraError(null);
+                  if (!location) {
+                    toast.error('Location is required to scan. Please enable GPS and try again.');
+                    acquireGps();
+                    return;
+                  }
+                  setScanning(true);
+                }}
+                disabled={isLoading}
+                className="w-full py-4 bg-red-600 hover:bg-red-700 disabled:bg-gray-400 text-white rounded-lg font-bold text-lg shadow-md transition-all transform hover:scale-105 flex items-center justify-center gap-2"
               >
                 {isLoading ? (
                   <>
@@ -850,173 +361,229 @@ export default function ScannerModal({ open, onClose, activeScan }: Props) {
                     Processing...
                   </>
                 ) : (
-                  'Submit Code'
+                  <>
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    Start QR Scanner
+                  </>
                 )}
               </button>
-            </form>
-          </div>
-
-          {/* Location Status */}
-          <div className="mt-6 pt-6 border-t">
-            <div className="flex items-center justify-between text-sm">
-              <div className="flex items-center gap-2">
-                {gpsStatus === 'acquiring' && (
-                  <>
-                    <span className="animate-pulse text-yellow-600">●</span>
-                    <span className="text-gray-600 dark:text-gray-400">Acquiring GPS...</span>
-                    {gpsRetryCount > 0 && (
-                      <span className="text-xs text-gray-500">(attempt {gpsRetryCount})</span>
-                    )}
-                  </>
-                )}
-                {gpsStatus === 'ready' && location && (
-                  <>
-                    <span className="text-green-600 dark:text-green-400">●</span>
-                    <span className="text-gray-600 dark:text-gray-400">GPS Ready</span>
-                    {location.accuracy && (
-                      <span className="text-xs text-gray-500 dark:text-gray-500">
-                        (±{Math.round(location.accuracy)}m)
-                      </span>
-                    )}
-                  </>
-                )}
-                {gpsStatus === 'retrying' && location && (
-                  <>
-                    <span className="text-yellow-600 dark:text-yellow-400">●</span>
-                    <span className="text-gray-600 dark:text-gray-400">GPS Low Accuracy</span>
-                    {location.accuracy && (
-                      <span className="text-xs text-yellow-600 dark:text-yellow-400">
-                        (±{Math.round(location.accuracy)}m - may cause issues)
-                      </span>
-                    )}
-                  </>
-                )}
-                {gpsStatus === 'error' && (
-                  <>
-                    <span className="text-red-600 dark:text-red-400">●</span>
-                    <span className="text-gray-600 dark:text-gray-400">GPS Unavailable</span>
-                  </>
-                )}
-              </div>
-              <button
-                onClick={() => acquireGps()}
-                disabled={gpsStatus === 'acquiring'}
-                className="text-coin-600 hover:text-coin-700 dark:text-coin-400 dark:hover:text-coin-300 text-xs font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
-              >
-                <IconMapper name="RefreshCw" size={12} className={gpsStatus === 'acquiring' ? 'animate-spin' : ''} />
-                Refresh GPS
-              </button>
-            </div>
-            {location && location.accuracy && location.accuracy > 50 && (
-              <div className="mt-2 p-2 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded text-xs text-yellow-700 dark:text-yellow-300">
-                ⚠ GPS accuracy is low. For best results, move outdoors and wait 10-30 seconds before scanning.
+            ) : (
+              <div className="space-y-4">
+                <div id="qr-reader" className="rounded-lg overflow-hidden shadow-inner"></div>
+                <button
+                  onClick={() => setScanning(false)}
+                  className="w-full py-3 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-medium transition"
+                >
+                  Cancel Scanning
+                </button>
               </div>
             )}
-          </div>
 
-          {/* Instructions */}
-          <div className="mt-6 pt-6 border-t bg-blue-50 border border-blue-200 dark:bg-gray-800 dark:border-gray-700 rounded-xl p-6">
-            <h3 className="font-bold text-blue-900 mb-3">How It Works</h3>
-            <ol className="space-y-2 text-sm text-blue-800">
-              <li>1. Arrive at the client site</li>
-              <li>2. Ensure location access is enabled for accurate tracking</li>
-              <li>3. Scan the site's QR code or use manual entry</li>
-              <li>4. Site will be locked for attendance tracking</li>
-              <li>5. Take attendance for guards at this site</li>
-            </ol>
-          </div>
-        </div>
-
-        {/* Report Down Modal */}
-        {downOpen && activeScan && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white dark:bg-gray-900 dark:text-gray-100 rounded-xl w-11/12 md:w-1/2 p-6">
-              <h3 className="text-lg font-bold mb-4">Report Down</h3>
-              <form onSubmit={(e) => {
-                e.preventDefault();
-                const formData = new FormData();
-                if (activeScan) {
-                  formData.append('site_id', String(activeScan.site_id));
-                }
-                if (downReason) formData.append('reason', downReason);
-                if (downPhoto) formData.append('photo', downPhoto);
-                setIsLoading(true);
-                router.post(route('supervisor.downs.store'), formData, {
-                  preserveState: true,
-                  onSuccess: () => {
-                    setDownOpen(false);
-                    setDownReason('');
-                    setDownPhoto(null);
-                    setIsLoading(false);
-                  },
-                  onError: () => {
-                    setIsLoading(false);
-                  },
-                });
-              }} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Site</label>
-                  <input
-                    value={`${activeScan.client_name} - ${activeScan.site_name}`}
-                    readOnly
-                    className="w-full px-3 py-2 border rounded-lg bg-gray-100"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Reason (optional)</label>
-                  <textarea
-                    value={downReason}
-                    onChange={(e) => setDownReason(e.target.value)}
-                    rows={3}
-                    className="w-full px-3 py-2 border rounded-lg"
-                    placeholder="e.g., no guard present on site"
-                    disabled={isLoading}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Photo (optional)</label>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    capture="environment"
-                    onChange={(e) => setDownPhoto(e.target.files?.[0] || null)}
-                    disabled={isLoading}
-                    className="w-full"
-                  />
-                </div>
-                <div className="flex justify-end gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setDownOpen(false)}
-                    className="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg disabled:opacity-50"
-                    disabled={isLoading}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg disabled:opacity-50 flex items-center gap-2"
-                    disabled={isLoading}
-                  >
-                    {isLoading ? (
-                      <>
-                        <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                        </svg>
-                        Submitting...
-                      </>
-                    ) : (
-                      'Submit'
-                    )}
-                  </button>
-                </div>
+            {/* Manual Entry */}
+            <div className="mt-6 pt-6 border-t">
+              <h3 className="font-semibold text-gray-900 mb-3">Manual Entry</h3>
+              <form onSubmit={handleManualSubmit} className="space-y-3">
+                <input
+                  type="text"
+                  value={manualCode}
+                  onChange={(e) => setManualCode(e.target.value)}
+                  placeholder="Enter checkpoint code (e.g., CHK-XXXXXXXXXXXX)"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                  disabled={isLoading}
+                />
+                <button
+                  type="submit"
+                  disabled={!manualCode.trim() || isLoading}
+                  className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-300 text-white rounded-lg font-medium transition flex items-center justify-center gap-2"
+                >
+                  {isLoading ? (
+                    <>
+                      <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                      Processing...
+                    </>
+                  ) : (
+                    'Submit Code'
+                  )}
+                </button>
               </form>
             </div>
+
+            {/* Location Status */}
+            <div className="mt-6 pt-6 border-t">
+              <div className="flex items-center justify-between text-sm">
+                <div className="flex items-center gap-2">
+                  {gpsStatus === 'acquiring' && (
+                    <>
+                      <span className="animate-pulse text-yellow-600">●</span>
+                      <span className="text-gray-600 dark:text-gray-400">Acquiring GPS...</span>
+                      {gpsRetryCount > 0 && (
+                        <span className="text-xs text-gray-500">(attempt {gpsRetryCount})</span>
+                      )}
+                    </>
+                  )}
+                  {gpsStatus === 'ready' && location && (
+                    <>
+                      <span className="text-green-600 dark:text-green-400">●</span>
+                      <span className="text-gray-600 dark:text-gray-400">GPS Ready</span>
+                      {location.accuracy && (
+                        <span className="text-xs text-gray-500 dark:text-gray-500">
+                          (±{Math.round(location.accuracy)}m)
+                        </span>
+                      )}
+                    </>
+                  )}
+                  {gpsStatus === 'retrying' && location && (
+                    <>
+                      <span className="text-yellow-600 dark:text-yellow-400">●</span>
+                      <span className="text-gray-600 dark:text-gray-400">GPS Low Accuracy</span>
+                      {location.accuracy && (
+                        <span className="text-xs text-yellow-600 dark:text-yellow-400">
+                          (±{Math.round(location.accuracy)}m - may cause issues)
+                        </span>
+                      )}
+                    </>
+                  )}
+                  {gpsStatus === 'error' && (
+                    <>
+                      <span className="text-red-600 dark:text-red-400">●</span>
+                      <span className="text-gray-600 dark:text-gray-400">GPS Unavailable</span>
+                    </>
+                  )}
+                </div>
+                <button
+                  onClick={() => acquireGps()}
+                  disabled={gpsStatus === 'acquiring'}
+                  className="text-coin-600 hover:text-coin-700 dark:text-coin-400 dark:hover:text-coin-300 text-xs font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+                >
+                  <IconMapper name="RefreshCw" size={12} className={gpsStatus === 'acquiring' ? 'animate-spin' : ''} />
+                  Refresh GPS
+                </button>
+              </div>
+              {location && location.accuracy && location.accuracy > 50 && (
+                <div className="mt-2 p-2 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded text-xs text-yellow-700 dark:text-yellow-300">
+                  ⚠ GPS accuracy is low. For best results, move outdoors and wait 10-30 seconds before scanning.
+                </div>
+              )}
+            </div>
+
+            {/* Site Not Found Fallback */}
+            <div className="mt-6 pt-6 border-t">
+              <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2">
+                <IconMapper name="MapPin" size={18} className="text-yellow-600" />
+                Site Not Found?
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                If the QR code is damaged or missing, you can type the site name directly to request manual mapping.
+              </p>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={manualNotFound}
+                  onChange={(e) => setManualNotFound(e.target.value)}
+                  placeholder="Type the site name..."
+                  className="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-coin-500"
+                  disabled={isLoading}
+                />
+                <button
+                  onClick={handleNotFoundSubmit}
+                  disabled={!manualNotFound.trim() || isLoading}
+                  className="px-5 py-3 bg-yellow-600 hover:bg-yellow-700 disabled:bg-gray-300 text-white rounded-lg font-medium transition"
+                >
+                  Submit
+                </button>
+              </div>
+            </div>
+
+            {/* Instructions */}
+            <div className="mt-6 pt-6 border-t bg-blue-50 border border-blue-200 dark:bg-gray-800 dark:border-gray-700 rounded-xl p-6">
+              <h3 className="font-bold text-blue-900 mb-3">How It Works</h3>
+              <ol className="space-y-2 text-sm text-blue-800">
+                <li>1. Arrive at the client site</li>
+                <li>2. Ensure location access is enabled for accurate tracking</li>
+                <li>3. Scan the site's QR code or use manual entry</li>
+                <li>4. Site will be locked for attendance tracking</li>
+                <li>5. Take attendance for guards at this site</li>
+              </ol>
+            </div>
           </div>
-        )}
+
+          {/* Report Down Modal */}
+          {downOpen && activeScan && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+              <div className="bg-white dark:bg-gray-900 dark:text-gray-100 rounded-xl w-11/12 md:w-1/2 p-6">
+                <h3 className="text-lg font-bold mb-4">Report Down</h3>
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    const formData = new FormData();
+                    if (activeScan) {
+                      formData.append('site_id', String(activeScan.site_id));
+                    }
+                    if (downReason) formData.append('reason', downReason);
+                    if (downPhoto) formData.append('photo', downPhoto);
+                    router.post(route('supervisor.downs.store'), formData, {
+                      preserveState: true,
+                      onSuccess: () => {
+                        setDownOpen(false);
+                        setDownReason('');
+                        setDownPhoto(null);
+                      },
+                    });
+                  }}
+                  className="space-y-4"
+                >
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Site</label>
+                    <input
+                      value={`${activeScan.client_name} - ${activeScan.site_name}`}
+                      readOnly
+                      className="w-full px-3 py-2 border rounded-lg bg-gray-100"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Reason (optional)</label>
+                    <textarea
+                      value={downReason}
+                      onChange={(e) => setDownReason(e.target.value)}
+                      rows={3}
+                      className="w-full px-3 py-2 border rounded-lg"
+                      placeholder="e.g., no guard present on site"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Photo (optional)</label>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      onChange={(e) => setDownPhoto(e.target.files?.[0] || null)}
+                      className="w-full"
+                    />
+                  </div>
+                  <div className="flex justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setDownOpen(false)}
+                      className="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg"
+                    >
+                      Cancel
+                    </button>
+                    <button type="submit" className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg flex items-center gap-2">
+                      Submit
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
-    </div>
     </>
   );
 }

@@ -2,15 +2,14 @@ import { useState, useEffect, useRef } from "react";
 import IconMapper from '@/Components/IconMapper';
 import BaseShell from './BaseShell';
 import { Link, usePage, router } from "@inertiajs/react";
-import { PageProps } from '@/types';
 import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from '@/Providers/ThemeProvider';
 import { useRealtimeNotifications } from '@/Hooks/useRealtimeNotifications';
 import NotificationBell from '@/Components/Common/NotificationBell';
-import QuickBudgetButton from '@/Components/Budgets/QuickBudgetButton';
 import WeeklyTasks from '@/Components/WeeklyTasks';
 import AIAssistant from '@/Components/AI/AIAssistant';
-import { NavSection, SidebarHeader, UserSection, QuickStats } from '@/Components/Layout';
+import useCounters from '@/Hooks/useCounters';
+import { NavSection, SidebarHeader, UserSection, QuickStats, AnimatedCounter } from '@/Components/Layout';
 
 interface NavItem {
   name: string;
@@ -33,7 +32,7 @@ interface Notification {
 }
 
 export default function SupervisorLayout({ children, title }: SupervisorLayoutProps) {
-  const pageProps = usePage<PageProps<{ auth: { user: any }, roleType?: string, isSergeant?: boolean, notifications?: Notification[], appName?: string, weeklyTasks?: any[], isExecutiveAssistant?: boolean }>>().props;
+  const pageProps = usePage<any>().props;
   const { auth, roleType, isSergeant: pageIsSergeant, notifications: serverNotifications, weeklyTasks, isExecutiveAssistant } = pageProps;
   const appName = pageProps.appName ?? 'CoinSec';
   const { url } = usePage();
@@ -51,10 +50,11 @@ export default function SupervisorLayout({ children, title }: SupervisorLayoutPr
 
   const isSuperAdmin = roles.includes('super_admin');
 
-  // Detect if user is a sergeant (from page props or user roles)
+  // Sergeant and supervisor are now consolidated into one unified role
   const isSergeant = pageIsSergeant || roles.includes('sergeant') || roleType === 'sergeant';
-  const roleLabel = isSergeant ? 'Sergeant' : 'Supervisor';
+  const roleLabel = 'Supervisor';
   const displayTitle = title ? `${roleLabel} - ${title}` : `${roleLabel} Dashboard`;
+
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [tasksOpen, setTasksOpen] = useState(false);
@@ -82,7 +82,7 @@ export default function SupervisorLayout({ children, title }: SupervisorLayoutPr
     { name: "Guards", href: route('supervisor.guards'), icon: <IconMapper name="Users" size={20} /> },
     { name: "Analytics", href: route('supervisor.analytics'), icon: <IconMapper name="BarChart3" size={20} /> },
     { name: "Attendance", href: route('supervisor.attendance'), icon: <IconMapper name="ClipboardList" size={20} /> },
-    { name: "Requisitions", href: route('requisitions.index'), icon: <IconMapper name="FileText" size={20} /> },
+    { name: "Reports", href: route('supervisor.reports'), icon: <IconMapper name="FileText" size={20} /> },
   ];
 
   // Touch gestures for mobile sidebar
@@ -117,6 +117,14 @@ export default function SupervisorLayout({ children, title }: SupervisorLayoutPr
       default: return <IconMapper name="Bell" size={20} className="text-blue-500" />;
     }
   };
+
+  // Attendance summary from global counters
+  const { counters } = useCounters();
+  const attendanceSummaryItems = [
+    { label: 'Checked In', value: counters?.attendance_checked_in_today ?? 0, icon: 'LogIn', color: 'text-emerald-400' },
+    { label: 'Absent', value: counters?.attendance_absent_today ?? 0, icon: 'XCircle', color: 'text-red-400' },
+    { label: 'Covered', value: counters?.attendance_covered_today ?? 0, icon: 'UserCheck', color: 'text-blue-400' },
+  ];
 
   return (
     <div
@@ -158,8 +166,31 @@ export default function SupervisorLayout({ children, title }: SupervisorLayoutPr
       >
         <SidebarHeader title="Supervisor" appName={appName} iconName="UserCheck" />
 
-        <nav className="flex-1 px-3 py-2 space-y-6 overflow-y-auto">
+        <nav className="flex-1 px-3 py-2 space-y-4 overflow-y-auto">
           <NavSection title="Navigation" items={navLinks} isCurrent={isCurrent} />
+
+          {/* Attendance Summary Badges */}
+          <div className="border-t border-red-700/40 dark:border-gray-700/40 pt-3">
+            <p className="px-2 text-[10px] uppercase tracking-wider text-red-300 dark:text-gray-500 font-semibold mb-2">
+              Today's Attendance
+            </p>
+            <div className="grid grid-cols-3 gap-1.5 px-1">
+              {attendanceSummaryItems.map((item) => (
+                <div
+                  key={item.label}
+                  className="flex flex-col items-center justify-center bg-red-800/40 dark:bg-gray-800/60 rounded-lg py-2 px-1"
+                >
+                  <IconMapper name={item.icon} size={16} className={item.color} />
+                  <span className="text-white font-bold text-sm mt-0.5">
+                    <AnimatedCounter value={item.value} duration={600} />
+                  </span>
+                  <span className="text-[10px] text-red-300/80 dark:text-gray-400 truncate max-w-full text-center leading-tight">
+                    {item.label}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
         </nav>
 
         <UserSection
@@ -180,7 +211,6 @@ export default function SupervisorLayout({ children, title }: SupervisorLayoutPr
           </div>
           <div className="flex items-center gap-3">
             <QuickStats />
-            <QuickBudgetButton />
             <NotificationBell />
             <button
               onClick={() => setTasksOpen(!tasksOpen)}

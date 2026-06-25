@@ -39,6 +39,16 @@ class Attendance extends Model
         'backdated' => 'boolean',
     ];
 
+    /**
+     * Boot the model and register a saving event to auto-calculate hours.
+     */
+    protected static function booted(): void
+    {
+        static::saving(function (self $attendance) {
+            $attendance->calculateHours();
+        });
+    }
+
     public function guardRelation(): BelongsTo
     {
         return $this->belongsTo(Guard::class, 'guard_id');
@@ -163,7 +173,6 @@ class Attendance extends Model
             $this->overtime_hours = 0;
         }
 
-        $this->save();
     }
 
     public function scopeToday($query)

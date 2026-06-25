@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Head, Link, router } from '@inertiajs/react';
 import SupervisorLayout from '@/Layouts/SupervisorLayout';
 import DatePicker from '@/Components/DatePicker';
 import ScannerModal from '@/Components/Scanner/ScannerModal';
+import { toast } from 'react-hot-toast';
 
 interface AttendanceRecord {
   id: number;
@@ -62,6 +63,33 @@ export default function Attendance({ attendance, filters, stats, activeScan }: P
   const [status, setStatus] = useState(filters.status || '');
   const [search, setSearch] = useState(filters.search || '');
   const [isScannerOpen, setIsScannerOpen] = useState(false);
+
+  // Echo real-time listener for attendance updates
+  useEffect(() => {
+    const echo = (window as any).Echo;
+    if (!echo || typeof echo.private !== 'function') return;
+
+    let channel: any;
+    try {
+      channel = echo.private('supervisor-attendance');
+      channel.listen('AttendanceUpdated', (e: any) => {
+        const data = e?.data ?? e?.attendance ?? {};
+        const guardName = data.guard_name ?? data.guard ?? 'A guard';
+        const action = data.action ?? (data.check_out_time ? 'checked out' : 'checked in');
+
+        toast.success(`${guardName} just ${action}`, { duration: 4000, icon: data.check_out_time ? '🚪' : '✅' });
+
+        // Refresh attendance data in-place
+        router.reload({ only: ['attendance', 'stats'] });
+      });
+    } catch (err) {
+      console.warn('Attendance Echo listener: failed to subscribe', err);
+    }
+
+    return () => {
+      try { channel?.stopListening('.AttendanceUpdated'); } catch {}
+    };
+  }, []);
 
   const handleFilter = () => {
     router.get(route('supervisor.attendance'), {

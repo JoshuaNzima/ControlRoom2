@@ -35,4 +35,8 @@ Route::middleware(['auth'])->prefix('scan')->name('scan.')->group(function () {
     // Site scan clear (dedicated route for site scan clearing)
     Route::post('/site/clear', [SiteScanController::class, 'clearScan'])
         ->name('site.clear');
+
+    // Report a site not found via QR — allows supervisor to type site name when QR is missing/damaged
+    Route::post('/report-not-found', [SiteScanController::class, 'reportNotFound'])
+        ->name('report-not-found');
 });

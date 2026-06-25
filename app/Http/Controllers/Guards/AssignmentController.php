@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Guards;
 
 use App\Http\Controllers\Controller;
+use App\Services\GuardScopingService;
 use Illuminate\Http\Request;
 use App\Models\Guards\ClientSite;
 use App\Models\Guards\Guard;
@@ -15,8 +16,9 @@ class AssignmentController extends Controller
     public function index()
     {
         $supervisor = Auth::user();
-        $guards = Guard::with('currentAssignmentRelation.site.client')
-            ->where('supervisor_id', $supervisor->id)
+        $guards = app(GuardScopingService::class)
+            ->getManagedGuardQuery($supervisor)
+            ->with('currentAssignmentRelation.site.client')
             ->get()
             ->map(function ($guard) {
                 $assignment = $guard->currentAssignmentRelation;
@@ -65,7 +67,6 @@ class AssignmentController extends Controller
             ->update([
                 'end_date' => $validated['start_date'],
                 'is_active' => false,
-                'active' => false,
             ]);
 
         GuardAssignment::create([
@@ -76,7 +77,6 @@ class AssignmentController extends Controller
             'end_date' => $validated['end_date'] ?? null,
             'assignment_type' => $validated['assignment_type'],
             'is_active' => true,
-            'active' => true,
         ]);
 
         return redirect()->back()->with('success', 'Guard assigned successfully.');
@@ -87,7 +87,6 @@ class AssignmentController extends Controller
         $assignment->update([
             'end_date' => now()->toDateString(),
             'is_active' => false,
-            'active' => false,
         ]);
 
         return redirect()->back()->with('success', 'Guard unassigned successfully.');

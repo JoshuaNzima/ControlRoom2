@@ -7,21 +7,23 @@ use App\Models\Guards\Guard;
 use App\Models\GuardRotaException;
 use App\Models\RotaTemplateDay;
 use Carbon\Carbon;
-use Illuminate\Support\Arr;
 
 class RotaResolver
 {
     /**
      * Returns whether a guard is off on a given date based on:
-     *  1) guard_rota_exceptions
+     *  1) guard_rota_exceptions (via the simplified `intent` column)
      *  2) guard's rota_template_id + rota_template_days
      *  3) legacy guard_off_days (fallback)
+     *
+     * Valid intents: off, work, swap. "swap" is treated as off until duty-trade is fully implemented.
      */
     public function getDayStatus(int $guardId, string $date): array
     {
         $date = Carbon::parse($date)->toDateString();
 
-        // 1) Exceptions override template.
+        // 1) Exceptions override template. Uses the simplified `intent` column.
+        //    The latest exception wins (by id).
         $exc = GuardRotaException::query()
             ->where('guard_id', $guardId)
             ->whereDate('start_date', '<=', $date)
@@ -33,15 +35,12 @@ class RotaResolver
             ->first();
 
         if ($exc) {
-            $exceptionType = $exc->exception_type;
-
-            // v1: leave/training/ad_hoc_off => off. swap => treated as off until swap-duty logic lands.
-            $isOff = in_array($exceptionType, ['leave', 'training', 'ad_hoc_off', 'swap'], true);
-
+            $intent = $exc->intent ?? 'off'; // fallback for rows migrated from pre-intent data
+            $isOff = in_array($intent, ['off', 'swap'], true);
             return [
                 'is_off' => (bool) $isOff,
-                'reason' => $exceptionType,
-                'exception_type' => $exceptionType,
+                'reason' => "intent:{$intent}",
+                'intent' => $intent,
             ];
         }
 
@@ -89,4 +88,3 @@ class RotaResolver
         ];
     }
 }
-

@@ -1,5 +1,0 @@
-﻿
-> build
-> tsc && vite build
-
-resources/js/Components/Clients/ClientDetailsModal.tsx(1066,77): error TS18048: 'client.payment_summary.outstanding_months' is possibly 'undefined'.

@@ -18,8 +18,10 @@ interface ZonesProps { auth?: { user?: { name?: string } }; zones?: ZoneItem[]; 
 
 const Zones = ({ auth, zones: zonesProp = [], commanders = [], sites = [], guards = [] }: ZonesProps) => {
   const { props } = usePage();
-  const zones = zonesProp.length ? zonesProp : ((props as any).zones ?? []);
+    const zones = zonesProp.length ? zonesProp : ((props as any).zones ?? []);
   const [open, setOpen] = React.useState<boolean>(false);
+  const [recalculating, setRecalculating] = React.useState<number | null>(null);
+  const [recalculatingAll, setRecalculatingAll] = React.useState(false);
   const [editing, setEditing] = React.useState<ZoneItem | null>(null);
   const [quickAssignFor, setQuickAssignFor] = React.useState<ZoneItem | null>(null);
   const [search, setSearch] = React.useState<string>('');
@@ -95,6 +97,24 @@ const Zones = ({ auth, zones: zonesProp = [], commanders = [], sites = [], guard
   const handleDelete = (z: ZoneItem) => {
     if (!confirm(`Delete zone "${z.name}"?`)) return;
     destroy(route('control-room.zones.destroy', z.id));
+  };
+
+  const handleRecalculate = (zoneId: number) => {
+    setRecalculating(zoneId);
+    router.post(route('control-room.zones.recalculate', zoneId), {}, {
+      preserveScroll: true,
+      preserveState: true,
+      onFinish: () => setRecalculating(null),
+    });
+  };
+
+  const handleRecalculateAll = () => {
+    setRecalculatingAll(true);
+    router.post(route('control-room.zones.recalculate-all'), {}, {
+      preserveScroll: true,
+      preserveState: true,
+      onFinish: () => setRecalculatingAll(false),
+    });
   };
 
   const handleQuickAssignSubmit = (e: React.FormEvent) => {
@@ -328,6 +348,16 @@ const Zones = ({ auth, zones: zonesProp = [], commanders = [], sites = [], guard
         <Card className="dark:bg-gray-800 dark:border-gray-700">
           <CardHeader className="flex flex-row items-center justify-between">
             <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Zone Overview</h3>
+            <Button
+              size="sm"
+              variant="outline"
+              className="dark:border-gray-600 dark:text-gray-300"
+              onClick={handleRecalculateAll}
+              disabled={recalculatingAll}
+            >
+              <IconMapper name="RefreshCw" size={14} className={`mr-1 ${recalculatingAll ? 'animate-spin' : ''}`} />
+              {recalculatingAll ? 'Recalculating...' : 'Recalculate All'}
+            </Button>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
@@ -371,7 +401,7 @@ const Zones = ({ auth, zones: zonesProp = [], commanders = [], sites = [], guard
                     ></div>
                   </div>
 
-                  {/* Action Buttons */}
+                          {/* Action Buttons */}
                   <div className="flex flex-wrap gap-2">
                     <Button size="sm" variant="outline" className="dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-600" asChild>
                       <a href={route('control-room.zones.reports', zone.id)}>Zone Reports</a>
@@ -384,6 +414,16 @@ const Zones = ({ auth, zones: zonesProp = [], commanders = [], sites = [], guard
                     <Button size="sm" variant="secondary" onClick={() => startQuickAssign(zone)}>Quick Assign</Button>
                     <Button size="sm" variant="secondary" asChild>
                       <a href={route('control-room.zones.map', zone.id)}>Zone Map</a>
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-600"
+                      onClick={() => handleRecalculate(zone.id)}
+                      disabled={recalculating === zone.id}
+                    >
+                      <IconMapper name="RefreshCw" size={14} className={`mr-1 ${recalculating === zone.id ? 'animate-spin' : ''}`} />
+                      {recalculating === zone.id ? 'Recalculating...' : 'Recalculate'}
                     </Button>
                   </div>
                 </div>

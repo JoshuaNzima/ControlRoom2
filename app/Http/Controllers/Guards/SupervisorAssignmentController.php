@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Guards;
 
 use App\Http\Controllers\Controller;
 use App\Models\Guards\{Guard, GuardAssignment, ClientSite};
+use App\Services\GuardScopingService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -12,10 +13,11 @@ class SupervisorAssignmentController extends Controller
 {
     public function index()
     {
-        $supervisorId = Auth::id();
+        $user = Auth::user();
         
-        // Get guards assigned to this supervisor
-        $guards = Guard::forSupervisor($supervisorId)
+        // Get guards managed by this user (via GuardScopingService)
+        $guards = app(GuardScopingService::class)
+            ->getManagedGuardQuery($user)
             ->with(['activeAssignments.clientSite.client'])
             ->orderBy('name')
             ->get()
@@ -73,7 +75,7 @@ class SupervisorAssignmentController extends Controller
         // Deactivate previous assignments
         GuardAssignment::where('guard_id', $validated['guard_id'])
             ->where('is_active', true)
-            ->update(['is_active' => false, 'active' => false, 'end_date' => today()]);
+            ->update(['is_active' => false, 'end_date' => today()]);
 
         // Create new assignment
         GuardAssignment::create([
@@ -85,7 +87,6 @@ class SupervisorAssignmentController extends Controller
             'assignment_type' => $validated['assignment_type'],
             'notes' => $validated['notes'] ?? null,
             'is_active' => true,
-            'active' => true,
         ]);
 
         return back()->with('success', "{$guard->name} assigned successfully.");
@@ -102,7 +103,6 @@ class SupervisorAssignmentController extends Controller
 
         $assignment->update([
             'is_active' => false,
-            'active' => false,
             'end_date' => today(),
         ]);
 

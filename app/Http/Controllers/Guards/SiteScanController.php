@@ -9,6 +9,7 @@ use App\Models\Guards\Checkpoint;
 use App\Models\Guards\Attendance;
 use App\Models\AuditLog;
 use App\Models\GPSMismatchIncident;
+use App\Services\SiteScanLockService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
@@ -249,20 +250,14 @@ class SiteScanController extends Controller
             }
         }
 
-        // For non-management roles OR if attendance already taken
-        // Store scan info in session for display
-        Session::put('active_checkpoint_scan', [
-            'scan_id' => $scan->id,
-            'site_id' => $site->id,
-            'site_name' => $site->name,
-            'client_name' => (string) ($site->client?->name ?? ''),
-            'checkpoint_id' => $checkpoint->id,
-            'scanned_at' => now()->toIso8601String(),
-            'expires_at' => now()->addMinutes(config('scanner.lock_minutes', 120))->toIso8601String(),
-            'latitude' => $latitude,
-            'longitude' => $longitude,
-            'location_verified' => $locationVerified,
-        ]);
+        // Store scan lock in database (survives across devices, configurable TTL)
+        app(SiteScanLockService::class)->setLock(
+            userId: $user->id,
+            clientSiteId: $site->id,
+            checkpointId: $checkpoint->id,
+            scanId: $scan->id,
+            ttlMinutes: (int) config('scanner.lock_minutes', 120)
+        );
 
         // Flash success message
         Session::flash('scan_success', 'Scan recorded successfully. Site: ' . $site->name);
@@ -346,7 +341,7 @@ class SiteScanController extends Controller
      */
     public function showScanner()
     {
-        $activeScan = session('active_checkpoint_scan');
+        $activeScan = app(SiteScanLockService::class)->getActiveLock(auth()->id());
 
         return Inertia::render('Supervisor/SiteScanner', [
             'activeScan' => $activeScan,
@@ -358,7 +353,7 @@ class SiteScanController extends Controller
      */
     public function clearScan()
     {
-        session()->forget('active_checkpoint_scan');
+        app(SiteScanLockService::class)->clearLock(auth()->id());
         return back()->with('info', 'Site lock cleared.');
     }
 
@@ -380,6 +375,45 @@ class SiteScanController extends Controller
     /**
      * Log a failed scan attempt to audit log
      */
+    /**
+     * Report a site that was not found via QR scan (manual fallback).
+     * Creates an audit log entry + notification so the control room can map it.
+     */
+    public function reportNotFound(Request $request)
+    {
+        $validated = $request->validate([
+            'site_name' => 'required|string|max:255',
+            'latitude' => 'nullable|numeric',
+            'longitude' => 'nullable|numeric',
+            'accuracy' => 'nullable|numeric',
+        ]);
+
+        $user = Auth::user();
+
+        // Log to audit so control room operators can see it
+        AuditLog::create([
+            'user_id' => $user?->id,
+            'action' => 'site_not_found_reported',
+            'entity_type' => \App\Models\Guards\ClientSite::class,
+            'entity_id' => null,
+            'description' => "User '{$user?->name}' reported site '{$validated['site_name']}' not found. GPS: {$validated['latitude']}, {$validated['longitude']}",
+            'old_values' => [],
+            'new_values' => [
+                'site_name' => $validated['site_name'],
+                'latitude' => $validated['latitude'],
+                'longitude' => $validated['longitude'],
+                'accuracy' => $validated['accuracy'],
+            ],
+            'ip_address' => $request->ip(),
+            'user_agent' => $request->userAgent(),
+        ]);
+
+        return back()->with(
+            'success',
+            "Site '{$validated['site_name']}' reported. Control room will map it."
+        );
+    }
+
     private function logFailedScan($user, $site, string $reason, ?float $userLat, ?float $userLng, ?float $distance = null): void
     {
         try {

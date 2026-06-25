@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Guards;
 use App\Http\Controllers\Controller;
 use App\Models\Guards\{Checkpoint, CheckpointScan};
 use App\Models\GPSMismatchIncident;
+use App\Services\SiteScanLockService;
 use App\Events\QRScanned;
 use App\Jobs\TagScanJob;
 use App\Notifications\GenericDbNotification;
@@ -130,20 +131,16 @@ class CheckpointScanController extends Controller
             'location_verified' => $locationVerified,
         ]);
 
-        // Store scan in session to lock site for attendance
-        $scanData = [
-            'scan_id' => $scan->id,
-            'checkpoint_id' => $checkpoint->id,
-            'checkpoint_name' => $checkpoint->name,
-            'checkpoint_code' => $checkpoint->code,
-            'site_id' => $checkpoint->client_site_id,
-            'site_name' => $checkpoint->clientSite->name,
-            'client_name' => $checkpoint->clientSite->client->name,
-            'scanned_at' => now()->toIso8601String(),
-            'expires_at' => now()->addMinutes(config('scanner.lock_minutes', 120))->toIso8601String(),
-        ];
+        // Store scan lock in database (survives across devices, configurable TTL)
+        app(SiteScanLockService::class)->setLock(
+            userId: (int) auth()->id(),
+            clientSiteId: (int) $checkpoint->client_site_id,
+            checkpointId: (int) $checkpoint->id,
+            scanId: (int) $scan->id,
+            ttlMinutes: (int) config('scanner.lock_minutes', 120)
+        );
 
-        session(['active_checkpoint_scan' => $scanData]);
+        $scanData = app(SiteScanLockService::class)->getActiveLock((int) auth()->id());
 
         // Tag the scan immediately (synchronous) to ensure it appears in control-room dashboard
         // This avoids requiring a queue worker on the live server
@@ -204,7 +201,7 @@ class CheckpointScanController extends Controller
 
     public function showScanner()
     {
-        $activeScan = session('active_checkpoint_scan');
+        $activeScan = app(SiteScanLockService::class)->getActiveLock((int) auth()->id());
         
         return Inertia::render('Supervisor/Scanner', [
             'activeScan' => $activeScan,
@@ -213,7 +210,7 @@ class CheckpointScanController extends Controller
 
     public function clearScan()
     {
-        session()->forget('active_checkpoint_scan');
+        app(SiteScanLockService::class)->clearLock((int) auth()->id());
         
         return back()->with('info', 'Site lock cleared.');
     }
