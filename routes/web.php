@@ -18,8 +18,10 @@ Route::middleware('web')->group(function () {
 // Public landing page for guests (redirects authenticated users to dashboard)
 Route::get('/', [\App\Http\Controllers\Public\LandingController::class, 'index'])->name('public.home');
 
-// Public pages
-Route::get('/contact', [\App\Http\Controllers\Public\ContactController::class, 'index'])->name('public.contact');
+// Public pages - contact form is now consolidated on the home page
+Route::get('/contact', function () {
+    return redirect()->route('public.home', ['#intake']);
+})->name('public.contact');
 Route::post('/contact', [\App\Http\Controllers\Public\ContactController::class, 'store'])->name('public.contact.store');
 Route::get('/services', [\App\Http\Controllers\Public\PageController::class, 'services'])->name('public.services');
 Route::get('/services/{slug}', [\App\Http\Controllers\Public\PageController::class, 'service'])->name('public.services.show');

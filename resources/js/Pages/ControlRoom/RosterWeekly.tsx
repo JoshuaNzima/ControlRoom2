@@ -7,11 +7,11 @@ import EmptyState from '@/Components/ui/empty-state';
 import ManualRosterEntryModal from '@/Components/Roster/ManualRosterEntryModal';
 import WeeklyPlannerHeader from '@/Components/Roster/WeeklyPlannerHeader';
 import WeeklyPlannerFilters from '@/Components/Roster/WeeklyPlannerFilters';
-import SimplifiedWeeklyRosterSection, {
+import WeeklyRosterSection, {
   WeeklyRosterSectionAction,
   WeeklyRosterSectionCell,
   WeeklyRosterSectionRow,
-} from '@/Components/Roster/SimplifiedWeeklyRosterSection';
+} from '@/Components/Roster/WeeklyRosterSection';
 import AssignGuardSiteModal from '@/Components/Roster/RosterWeekly/AssignGuardSiteModal';
 import BulkOffModal from '@/Components/Roster/RosterWeekly/BulkOffModal';
 import AddOffDayModal from '@/Components/Roster/RosterWeekly/AddOffDayModal';
@@ -698,7 +698,7 @@ export default function RosterWeekly() {
         {data && hasRows && (
           <div className="space-y-5">
             {permanentRows.length ? (
-              <SimplifiedWeeklyRosterSection
+              <WeeklyRosterSection
                 title={getSectionTitle('permanent').title}
                 description={getSectionTitle('permanent').description}
                 icon={getSectionTitle('permanent').icon}
@@ -708,7 +708,7 @@ export default function RosterWeekly() {
             ) : null}
 
             {standbyRows.length ? (
-              <SimplifiedWeeklyRosterSection
+              <WeeklyRosterSection
                 title={getSectionTitle('standby').title}
                 description={getSectionTitle('standby').description}
                 icon={getSectionTitle('standby').icon}
@@ -718,7 +718,7 @@ export default function RosterWeekly() {
             ) : null}
 
             {relieverRows.length ? (
-              <SimplifiedWeeklyRosterSection
+              <WeeklyRosterSection
                 title={getSectionTitle('reliever').title}
                 description={getSectionTitle('reliever').description}
                 icon={getSectionTitle('reliever').icon}

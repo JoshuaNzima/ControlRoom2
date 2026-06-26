@@ -101,77 +101,82 @@ export default function WeeklyRosterSection({
 
         {rows.map((row) => (
           <article key={row.id} className="px-4 py-4 sm:px-5">
-            <div className="grid gap-3 xl:grid-cols-[minmax(220px,280px)_1fr] xl:items-start">
-              <div className="flex min-w-0 items-start justify-between gap-3 xl:block">
-                <label className="flex items-start gap-3">
-                  {row.onSelectToggle ? (
-                    <input
-                      type="checkbox"
-                      checked={!!row.selected}
-                      onChange={row.onSelectToggle}
-                      className="mt-1 h-4 w-4 rounded border-gray-300 text-coin-700 focus:ring-coin-700 dark:border-gray-600"
-                    />
-                  ) : null}
-                  <span className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h4 className="text-base font-semibold text-gray-900 dark:text-gray-100">{row.name}</h4>
-                      <span className="inline-flex items-center rounded-md bg-gray-100 px-2 py-0.5 text-[11px] font-medium text-gray-600 dark:bg-gray-800 dark:text-gray-300">
-                        {row.typeLabel}
-                      </span>
-                    </div>
-                    {row.employeeId ? <p className="mt-0.5 text-sm text-gray-500 dark:text-gray-400">Employee ID {row.employeeId}</p> : null}
-                  </span>
-                </label>
-
-                {row.actions?.length ? (
-                  <div className="flex shrink-0 flex-wrap gap-2">
-                    {row.actions.map((action) => (
-                      <Button
-                        key={action.label}
-                        type="button"
-                        size="sm"
-                        variant={action.tone === 'danger' ? 'destructive' : action.tone === 'secondary' ? 'secondary' : 'default'}
-                        onClick={action.onClick}
-                        disabled={action.disabled}
-                      >
-                        {action.label}
-                      </Button>
-                    ))}
-                  </div>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div className="flex min-w-0 items-start gap-3">
+                {row.onSelectToggle ? (
+                  <input
+                    type="checkbox"
+                    checked={!!row.selected}
+                    onChange={row.onSelectToggle}
+                    className="mt-1 h-4 w-4 rounded border-gray-300 text-coin-700 focus:ring-coin-700 dark:border-gray-600"
+                  />
                 ) : null}
+
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h4 className="text-base font-semibold text-gray-900 dark:text-gray-100">{row.name}</h4>
+                    <span className="inline-flex items-center rounded-md bg-gray-100 px-2 py-0.5 text-[11px] font-medium text-gray-600 dark:bg-gray-800 dark:text-gray-300">
+                      {row.typeLabel}
+                    </span>
+                  </div>
+                  {row.employeeId ? (
+                    <p className="mt-0.5 text-sm text-gray-500 dark:text-gray-400">Employee ID {row.employeeId}</p>
+                  ) : null}
+                </div>
               </div>
 
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-7">
-                {row.cells.map((cell) => (
-                  <button
-                    key={`${row.id}-${cell.label}`}
-                    type="button"
-                    onClick={cell.onClick}
-                    className={`group min-h-[76px] rounded-lg border px-3 py-2 text-left transition-colors ${toneClasses[cell.tone]}`}
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-xs font-semibold uppercase text-current/60">{cell.label}</span>
-                      <IconMapper name="ChevronRight" size={14} className="text-current/35 transition-transform group-hover:translate-x-0.5" />
-                    </div>
+              {row.actions?.length ? (
+                <div className="flex flex-wrap gap-2 sm:justify-end">
+                  {row.actions.map((action) => (
+                    <Button
+                      key={action.label}
+                      type="button"
+                      size="sm"
+                      variant={action.tone === 'danger' ? 'destructive' : action.tone === 'secondary' ? 'secondary' : 'default'}
+                      onClick={action.onClick}
+                      disabled={action.disabled}
+                    >
+                      {action.label}
+                    </Button>
+                  ))}
+                </div>
+              ) : null}
+            </div>
 
-                    <div className="mt-1.5 min-w-0">
-                      <div className="line-clamp-2 text-sm font-semibold leading-snug">{cell.value}</div>
-                      {cell.badges?.length ? (
-                        <div className="mt-1.5 flex flex-wrap gap-1">
-                          {cell.badges.map((badge) => (
-                            <span
-                              key={badge}
-                              className="inline-flex items-center rounded-md bg-black/5 px-1.5 py-0.5 text-[10px] font-semibold text-current/75 dark:bg-white/10"
-                            >
-                              {badge}
-                            </span>
-                          ))}
-                        </div>
-                      ) : null}
-                    </div>
-                  </button>
-                ))}
-              </div>
+            <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-7">
+              {row.cells.map((cell) => (
+                <button
+                  key={`${row.id}-${cell.label}`}
+                  type="button"
+                  onClick={cell.onClick}
+                  className={`group min-h-[62px] rounded-lg border px-3 py-2 text-left transition-colors ${toneClasses[cell.tone]}`}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[11px] font-semibold uppercase text-current/60">{cell.label}</span>
+                    <IconMapper
+                      name="ChevronRight"
+                      size={14}
+                      className="text-current/35 transition-transform group-hover:translate-x-0.5"
+                    />
+                  </div>
+
+                  <div className="mt-1.5">
+                    <div className="line-clamp-2 text-sm font-semibold leading-snug">{cell.value}</div>
+                    {cell.badges?.length ? (
+                      <div className="mt-1 flex flex-wrap gap-1">
+                        {cell.badges.map((badge) => (
+                          <span
+                            key={badge}
+                            className="inline-flex items-center rounded-md bg-black/5 px-1.5 py-0.5 text-[10px] font-semibold text-current/75 dark:bg-white/10"
+                          >
+                            {badge}
+                          </span>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                </button>
+              ))}
             </div>
           </article>
         ))}

@@ -20,6 +20,13 @@ return new class extends Migration
         // Copy existing active data to is_active
         DB::statement('UPDATE guard_assignments SET is_active = active');
 
+        // MySQL blocks dropping indexes that are referenced by foreign keys.
+        // Drop the FK first, then indexes, then recreate both.
+        $fkName = 'guard_assignments_guard_id_foreign';
+        Schema::table('guard_assignments', function (Blueprint $table) use ($fkName) {
+            $table->dropForeign($fkName);
+        });
+
         // Drop old indexes referencing `active` before dropping the column
         Schema::table('guard_assignments', function (Blueprint $table) {
             $table->dropIndex(['guard_id', 'active']);
@@ -33,10 +40,18 @@ return new class extends Migration
             });
         }
 
-        // Rebuild indexes
+        // Rebuild indexes (now using is_active instead of active)
         Schema::table('guard_assignments', function (Blueprint $table) {
             $table->index(['guard_id', 'is_active']);
             $table->index(['client_site_id', 'is_active']);
+        });
+
+        // Recreate the foreign key on guard_id
+        Schema::table('guard_assignments', function (Blueprint $table) use ($fkName) {
+            $table->foreign('guard_id', $fkName)
+                  ->references('id')
+                  ->on('guards')
+                  ->onDelete('cascade');
         });
     }
 

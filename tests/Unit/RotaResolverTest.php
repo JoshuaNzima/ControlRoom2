@@ -10,8 +10,8 @@ use App\Models\Guards\Guard;
 use App\Models\Guards\GuardOffDay;
 use App\Services\RotaResolver;
 use Carbon\Carbon;
+use PHPUnit\Framework\Attributes\Test;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Schema;
 
 class RotaResolverTest extends TestCase
 {
@@ -34,7 +34,7 @@ class RotaResolverTest extends TestCase
         ], $overrides));
     }
 
-    /** @test */
+    #[Test]
     public function it_returns_work_for_a_guard_with_no_template_and_no_exceptions()
     {
         $guard = $this->createGuard();
@@ -45,7 +45,7 @@ class RotaResolverTest extends TestCase
         $this->assertEquals('work', $status['reason']);
     }
 
-    /** @test */
+    #[Test]
     public function it_returns_off_when_guard_has_off_intent_exception()
     {
         $guard = $this->createGuard();
@@ -64,7 +64,7 @@ class RotaResolverTest extends TestCase
         $this->assertEquals('intent:off', $status['reason']);
     }
 
-    /** @test */
+    #[Test]
     public function it_returns_work_when_guard_has_work_intent_exception_against_template_off()
     {
         $guard = $this->createGuard();
@@ -94,7 +94,7 @@ class RotaResolverTest extends TestCase
         $this->assertEquals('intent:work', $status['reason']);
     }
 
-    /** @test */
+    #[Test]
     public function it_falls_back_to_template_when_no_exception_exists()
     {
         $guard = $this->createGuard();
@@ -122,7 +122,7 @@ class RotaResolverTest extends TestCase
         $this->assertEquals('template_off', $status['reason']);
     }
 
-    /** @test */
+    #[Test]
     public function it_returns_work_when_template_says_work()
     {
         $guard = $this->createGuard();
@@ -143,7 +143,7 @@ class RotaResolverTest extends TestCase
         $this->assertEquals('work', $status['reason']);
     }
 
-    /** @test */
+    #[Test]
     public function it_uses_latest_exception_when_multiple_exist()
     {
         $guard = $this->createGuard();
@@ -169,7 +169,7 @@ class RotaResolverTest extends TestCase
         $this->assertEquals('intent:work', $status['reason']);
     }
 
-    /** @test */
+    #[Test]
     public function it_treats_swap_as_off()
     {
         $guard = $this->createGuard();
@@ -187,7 +187,7 @@ class RotaResolverTest extends TestCase
         $this->assertEquals('intent:swap', $status['reason']);
     }
 
-    /** @test */
+    #[Test]
     public function it_falls_back_to_legacy_guard_off_days_when_no_template()
     {
         $guard = $this->createGuard(['rota_template_id' => null]);
@@ -205,7 +205,7 @@ class RotaResolverTest extends TestCase
         $this->assertEquals('legacy_off_day', $status['reason']);
     }
 
-    /** @test */
+    #[Test]
     public function it_returns_work_when_legacy_off_day_outside_range()
     {
         $guard = $this->createGuard(['rota_template_id' => null]);
@@ -223,7 +223,7 @@ class RotaResolverTest extends TestCase
         $this->assertEquals('work', $status['reason']);
     }
 
-    /** @test */
+    #[Test]
     public function it_favors_exception_over_legacy_off_day()
     {
         $guard = $this->createGuard(['rota_template_id' => null]);
@@ -249,7 +249,7 @@ class RotaResolverTest extends TestCase
         $this->assertEquals('intent:work', $status['reason']);
     }
 
-    /** @test */
+    #[Test]
     public function it_handles_exception_with_null_intent_as_off_fallback()
     {
         $guard = $this->createGuard();
@@ -269,7 +269,7 @@ class RotaResolverTest extends TestCase
         $this->assertEquals('intent:off', $status['reason']);
     }
 
-    /** @test */
+    #[Test]
     public function it_handles_multi_day_exception_range()
     {
         $guard = $this->createGuard();
@@ -292,7 +292,7 @@ class RotaResolverTest extends TestCase
         $this->assertFalse($this->resolver->getDayStatus($guard->id, '2026-07-08')['is_off']);
     }
 
-    /** @test */
+    #[Test]
     public function it_returns_correct_status_for_midweek_days_via_template()
     {
         $guard = $this->createGuard();
@@ -324,7 +324,7 @@ class RotaResolverTest extends TestCase
         $this->assertTrue($this->resolver->getDayStatus($guard->id, '2026-07-05')['is_off']);
     }
 
-    /** @test */
+    #[Test]
     public function it_works_for_guards_without_template_via_getTemplateDayStatus()
     {
         $guard = $this->createGuard(['rota_template_id' => null]);
@@ -335,7 +335,7 @@ class RotaResolverTest extends TestCase
         $this->assertEquals('work', $status['reason']);
     }
 
-    /** @test */
+    #[Test]
     public function template_day_status_respects_template_off_day()
     {
         $guard = $this->createGuard();
@@ -356,7 +356,7 @@ class RotaResolverTest extends TestCase
         $this->assertEquals('template_off', $status['reason']);
     }
 
-    /** @test */
+    #[Test]
     public function it_handles_date_that_is_null_end_date_exception()
     {
         $guard = $this->createGuard();
