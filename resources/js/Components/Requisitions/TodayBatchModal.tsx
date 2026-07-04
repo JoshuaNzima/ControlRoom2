@@ -48,8 +48,9 @@ export default function TodayBatchModal({ open, onClose, isAdmin, isAssetManager
         headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
       });
       const json = await res.json();
-      const nextBatch = json.batch || null;
-      const nextItems = Array.isArray(json.requisitions) ? json.requisitions : [];
+      const payload = json.data || json;
+      const nextBatch = payload.batch || null;
+      const nextItems = Array.isArray(payload.requisitions) ? payload.requisitions : [];
       setBatch(nextBatch);
       setItems(nextItems);
 

@@ -69,7 +69,7 @@ class ZoneCoverageService
      * @param int[] $siteIds
      * @return array<int, int> keyed by site_id
      */
-    protected function requiredGuardsBySiteFromScheduleShifts(array $siteIds): array
+    public function requiredGuardsBySiteFromScheduleShifts(array $siteIds): array
     {
         $siteIds = array_values(array_unique(array_filter(array_map('intval', $siteIds))));
         if (empty($siteIds)) {

@@ -27,6 +27,17 @@ class ClientSite extends Model
         app(ZoneCoverageService::class)->recalculateZone((int) $zoneId);
     }
 
+    /**
+     * Delegate required guard calculation from schedule shifts to ZoneCoverageService.
+     *
+     * @param int[] $siteIds
+     * @return array<int, int>
+     */
+    public static function requiredGuardsBySiteFromScheduleShifts(array $siteIds): array
+    {
+        return app(ZoneCoverageService::class)->requiredGuardsBySiteFromScheduleShifts($siteIds);
+    }
+
     protected $fillable = [
         'client_id',
         'name',

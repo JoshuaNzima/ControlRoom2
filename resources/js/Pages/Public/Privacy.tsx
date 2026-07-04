@@ -6,10 +6,10 @@ export default function Privacy() {
   return (
     <PublicLayout title="Privacy Policy — Coin Security">
       <Head title="Privacy" />
-      <section className="relative overflow-hidden bg-coin-dark pt-28 pb-16">
-        <div className="absolute inset-0 bg-grid opacity-40" />
+      <section className="relative overflow-hidden bg-white pt-28 pb-16">
+        <div className="absolute inset-0 bg-grid opacity-20" />
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
-          <div className="absolute left-0 right-0 h-px bg-gradient-to-r from-transparent via-coin-accent/15 to-transparent animate-scan-line" />
+          <div className="absolute left-0 right-0 h-px bg-gradient-to-r from-transparent via-coin-accent/20 to-transparent animate-scan-line" />
         </div>
         <div className="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="inline-block text-xs font-semibold tracking-widest uppercase text-coin-accent bg-coin-accent/10 px-4 py-1.5 rounded-full mb-4">Privacy</div>

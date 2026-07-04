@@ -57,8 +57,9 @@ export default function BatchDetailsModal({ open, onClose, batchId, isAdmin, isA
         headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
       });
       const json = await res.json();
-      setBatch(json.batch || null);
-      const reqs = Array.isArray(json.requisitions) ? json.requisitions : [];
+      const payload = json.data || json;
+      setBatch(payload.batch || null);
+      const reqs = Array.isArray(payload.requisitions) ? payload.requisitions : [];
       setRequisitions(reqs);
 
       // Auto-select pending_funding items for admin

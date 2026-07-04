@@ -63,7 +63,8 @@ export default function BatchesHistoryModal({ open, onClose, isAdmin, isAssetMan
       }
 
       const json = await res.json();
-      const data = json?.batches;
+      const payload = json.data || json;
+      const data = payload?.batches;
       setItems(data?.data || []);
       setMeta(data?.meta || null);
       setLinks(data?.links || null);

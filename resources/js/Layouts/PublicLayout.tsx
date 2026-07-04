@@ -12,7 +12,7 @@ const navLinks = [
   { label: 'Home', href: '/' },
   { label: 'Services', href: '/services' },
   { label: 'About', href: '/about' },
-  { label: 'Contact', href: '/#intake' },
+  { label: 'Contact Us', href: '/#intake' },
 ];
 
 export default function PublicLayout({ title = 'Coin Security', children }: Props) {
@@ -56,7 +56,7 @@ export default function PublicLayout({ title = 'Coin Security', children }: Prop
   };
 
   return (
-    <div className="min-h-screen overflow-x-hidden bg-coin-dark text-coin-text">
+    <div className="min-h-screen overflow-x-hidden bg-white text-coin-text">
       <Head title={title}>
         <meta
           name="description"
@@ -68,7 +68,7 @@ export default function PublicLayout({ title = 'Coin Security', children }: Prop
       <header
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
           scrolled
-            ? 'bg-coin-dark/85 backdrop-blur-xl border-b border-coin-border'
+            ? 'bg-white/90 backdrop-blur-xl border-b border-coin-border shadow-sm'
             : 'bg-transparent'
         }`}
       >
@@ -81,7 +81,7 @@ export default function PublicLayout({ title = 'Coin Security', children }: Prop
                 alt="Coin Security"
                 className="h-10 w-10 object-contain rounded-full"
               />
-              <span className="text-lg font-bold tracking-tight">
+              <span className="text-lg font-bold tracking-tight text-coin-text">
                 Coin <span className="text-coin-accent">Security</span>
               </span>
             </Link>
@@ -100,7 +100,7 @@ export default function PublicLayout({ title = 'Coin Security', children }: Prop
               ))}
               <Link
                 href={safeRoute('login', undefined, '/login')}
-                className="ml-4 inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-coin-accent hover:bg-coin-accent-light rounded-lg transition-all duration-300 shadow-lg shadow-coin-glow"
+                className="ml-4 inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-coin-accent hover:bg-coin-accent-light rounded-lg transition-all duration-300 shadow-cta"
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
@@ -130,7 +130,7 @@ export default function PublicLayout({ title = 'Coin Security', children }: Prop
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
               transition={{ duration: 0.3, ease: 'easeInOut' }}
-              className="md:hidden overflow-hidden border-t border-coin-border bg-coin-dark/95 backdrop-blur-xl"
+              className="md:hidden overflow-hidden border-t border-coin-border bg-white/95 backdrop-blur-xl"
             >
               <nav className="flex flex-col px-6 py-6 gap-2">
                 {navLinks.map((link) => (
@@ -160,7 +160,7 @@ export default function PublicLayout({ title = 'Coin Security', children }: Prop
       <main className="flex-1">{children}</main>
 
       {/* ═══ FOOTER ═══ */}
-      <footer className="relative border-t border-coin-border bg-coin-dark">
+      <footer className="relative border-t border-coin-border bg-white">
         <div className="mx-auto max-w-7xl px-6 lg:px-8 py-16 md:py-20">
           <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-10 lg:gap-8">
             {/* Brand */}
@@ -171,7 +171,7 @@ export default function PublicLayout({ title = 'Coin Security', children }: Prop
                   alt="Coin Security"
                   className="h-9 w-9 object-contain rounded-full"
                 />
-                <span className="text-base font-bold tracking-tight">
+                <span className="text-base font-bold tracking-tight text-coin-text">
                   Coin <span className="text-coin-accent">Security</span>
                 </span>
               </Link>

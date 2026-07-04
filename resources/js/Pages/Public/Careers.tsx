@@ -24,10 +24,10 @@ export default function Careers({ jobs = [] as Job[] }: { jobs: Job[] }) {
   return (
     <PublicLayout title="Careers — Coin Security">
       <Head title="Careers" />
-      <section className="relative overflow-hidden bg-coin-dark pt-28 pb-16">
-        <div className="absolute inset-0 bg-grid opacity-40" />
+      <section className="relative overflow-hidden bg-white pt-28 pb-16">
+        <div className="absolute inset-0 bg-grid opacity-20" />
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
-          <div className="absolute left-0 right-0 h-px bg-gradient-to-r from-transparent via-coin-accent/15 to-transparent animate-scan-line" />
+          <div className="absolute left-0 right-0 h-px bg-gradient-to-r from-transparent via-coin-accent/20 to-transparent animate-scan-line" />
         </div>
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="inline-block text-xs font-semibold tracking-widest uppercase text-coin-accent bg-coin-accent/10 px-4 py-1.5 rounded-full mb-4">Careers</div>
@@ -42,7 +42,7 @@ export default function Careers({ jobs = [] as Job[] }: { jobs: Job[] }) {
           )}
           <div className="grid grid-cols-1 gap-4">
             {jobs.map(job => (
-              <div key={job.id} className="rounded-2xl border border-coin-border bg-coin-card/60 p-6 flex items-start justify-between">
+              <div key={job.id} className="rounded-2xl border border-coin-border bg-white p-6 flex items-start justify-between shadow-sm hover:shadow-card-hover transition-all">
                 <div>
                   <div className="text-lg font-semibold text-coin-text">{job.title}</div>
                   <div className="text-sm text-coin-muted">{job.location} • {job.type}</div>
@@ -56,7 +56,7 @@ export default function Careers({ jobs = [] as Job[] }: { jobs: Job[] }) {
         </div>
       </section>
       <Modal show={!!selected} onClose={() => setSelected(null)} maxWidth="xl">
-        <div className="p-6 bg-coin-dark text-coin-text">
+        <div className="p-6 bg-white text-coin-text">
           <div className="flex items-center justify-between">
             <div className="text-lg font-semibold">Apply — {selected?.title}</div>
             <button onClick={() => setSelected(null)} className="text-coin-muted hover:text-coin-text">
@@ -68,18 +68,18 @@ export default function Careers({ jobs = [] as Job[] }: { jobs: Job[] }) {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="text-sm text-coin-muted">Full Name *</label>
-                <input value={data.candidate_name} onChange={(e) => setData('candidate_name', e.target.value)} required className="w-full mt-1 rounded-lg border border-coin-border bg-coin-card text-coin-text px-3 py-2 focus:outline-none focus:border-coin-accent/50" />
+                <input value={data.candidate_name} onChange={(e) => setData('candidate_name', e.target.value)} required className="w-full mt-1 rounded-lg border border-coin-border bg-white text-coin-text px-3 py-2 focus:outline-none focus:border-coin-accent/50" />
                 {errors.candidate_name && <div className="text-sm text-red-400">{errors.candidate_name}</div>}
               </div>
               <div>
                 <label className="text-sm text-coin-muted">Email *</label>
-                <input type="email" value={data.email} onChange={(e) => setData('email', e.target.value)} required className="w-full mt-1 rounded-lg border border-coin-border bg-coin-card text-coin-text px-3 py-2 focus:outline-none focus:border-coin-accent/50" />
+                <input type="email" value={data.email} onChange={(e) => setData('email', e.target.value)} required className="w-full mt-1 rounded-lg border border-coin-border bg-white text-coin-text px-3 py-2 focus:outline-none focus:border-coin-accent/50" />
                 {errors.email && <div className="text-sm text-red-400">{errors.email}</div>}
               </div>
             </div>
             <div>
               <label className="text-sm text-coin-muted">Phone</label>
-              <input value={data.phone} onChange={(e) => setData('phone', e.target.value)} className="w-full mt-1 rounded-lg border border-coin-border bg-coin-card text-coin-text px-3 py-2 focus:outline-none focus:border-coin-accent/50" />
+              <input value={data.phone} onChange={(e) => setData('phone', e.target.value)} className="w-full mt-1 rounded-lg border border-coin-border bg-white text-coin-text px-3 py-2 focus:outline-none focus:border-coin-accent/50" />
               {errors.phone && <div className="text-sm text-red-400">{errors.phone}</div>}
             </div>
             <div>
@@ -89,7 +89,7 @@ export default function Careers({ jobs = [] as Job[] }: { jobs: Job[] }) {
             </div>
             <div>
               <label className="text-sm text-coin-muted">Notes</label>
-              <textarea value={data.notes} onChange={(e) => setData('notes', e.target.value)} className="w-full mt-1 rounded-lg border border-coin-border bg-coin-card text-coin-text px-3 py-2 min-h-[120px] focus:outline-none focus:border-coin-accent/50" />
+              <textarea value={data.notes} onChange={(e) => setData('notes', e.target.value)} className="w-full mt-1 rounded-lg border border-coin-border bg-white text-coin-text px-3 py-2 min-h-[120px] focus:outline-none focus:border-coin-accent/50" />
               {errors.notes && <div className="text-sm text-red-400">{errors.notes}</div>}
             </div>
             <div className="flex justify-end">

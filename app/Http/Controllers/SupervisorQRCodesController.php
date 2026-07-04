@@ -17,49 +17,36 @@ class SupervisorQRCodesController extends Controller
 {
     public function index(Request $request)
     {
+        set_time_limit(60); // Allow up to 60s for large datasets
+
         $zones = Zone::select(['id', 'name', 'description', 'code'])
             ->with(['sites' => function($q) {
-                $q->select(['id', 'zone_id', 'name', 'qr_code', 'status']);
-            }, 'sites.checkpoints' => function($q) {
-                $q->select(['id', 'client_site_id', 'name', 'code', 'type', 'is_active']);
+                $q->select(['id', 'zone_id', 'name', 'qr_code', 'status'])->limit(200);
             }])
             ->get()
             ->map(function($zone) {
-                $checkpointCount = $zone->sites->sum(fn($s) => $s->checkpoints->count());
-                $sitesWithQr = $zone->sites->map(function($site) {
-                    $checkpoints = $site->checkpoints->map(function($cp) {
-                        return [
-                            'id' => $cp->id,
-                            'name' => $cp->name,
-                            'code' => $cp->code,
-                            'type' => $cp->type,
-                            'is_active' => $cp->is_active,
-                        ];
-                    });
-                    return [
-                        'id' => $site->id,
-                        'name' => $site->name,
-                        'qr_code' => $site->qr_code,
-                        'status' => $site->status,
-                        'checkpoints' => $checkpoints,
-                    ];
-                });
                 return [
                     'id' => $zone->id,
                     'name' => $zone->name,
                     'code' => $zone->code,
                     'description' => $zone->description,
-                    'checkpoints_count' => $checkpointCount,
-                    'sites' => $sitesWithQr,
+                    'sites' => $zone->sites->map(function($site) {
+                        return [
+                            'id' => $site->id,
+                            'name' => $site->name,
+                            'qr_code' => $site->qr_code,
+                            'status' => $site->status,
+                        ];
+                    }),
                 ];
             });
 
-        // Get all checkpoints with site and client info
-        $checkpoints = Checkpoint::with(['clientSite.client:id,name', 'clientSite:id,name,client_id,qr_code,status'])
+        // Get paginated checkpoints (instead of all at once)
+        $checkpoints = Checkpoint::with(['clientSite.client:id,name'])
             ->select(['id', 'client_site_id', 'name', 'code', 'type', 'is_active'])
             ->orderBy('name')
-            ->get()
-            ->map(function($cp) {
+            ->paginate(500)
+            ->through(function($cp) {
                 return [
                     'id' => $cp->id,
                     'name' => $cp->name,
@@ -297,26 +284,27 @@ class SupervisorQRCodesController extends Controller
         }
 
         // Checkpoints printable QR codes
-        $checkpoints = Checkpoint::with(['site.client:id,name'])->get(['id','code','name','client_site_id']);
-        foreach ($checkpoints as $cp) {
-            $data = json_encode([
-                'issuer' => 'CoinSecurity',
-                'type' => 'checkpoint',
-                'code' => $cp->code,
-                'name' => $cp->name,
-                'version' => 'v1'
-            ]);
-            $url = 'https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=' . urlencode($data);
-            $png = @file_get_contents($url);
-            if ($png !== false) {
-                $clientName = $cp->site?->client?->name ?? 'Unknown Client';
-                $siteName = $cp->site?->name ?? 'Unknown Site';
-                $printablePng = $this->createPrintableQrPng($png, $clientName, $cp->name . ' (' . $siteName . ')', $cp->code);
-                $filename = 'printable/CHK_' . ($cp->code ?: ('CP' . $cp->id)) . '_print.png';
-                $zip->addFromString($filename, $printablePng);
-                Storage::disk('public')->put('qr_codes/' . $filename, $printablePng);
+        Checkpoint::with(['clientSite.client:id,name'])->chunk(50, function ($checkpoints) use ($zip) {
+            foreach ($checkpoints as $cp) {
+                $data = json_encode([
+                    'issuer' => 'CoinSecurity',
+                    'type' => 'checkpoint',
+                    'code' => $cp->code,
+                    'name' => $cp->name,
+                    'version' => 'v1'
+                ]);
+                $url = 'https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=' . urlencode($data);
+                $png = @file_get_contents($url);
+                if ($png !== false) {
+                    $clientName = $cp->clientSite?->client?->name ?? 'Unknown Client';
+                    $siteName = $cp->clientSite?->name ?? 'Unknown Site';
+                    $printablePng = $this->createPrintableQrPng($png, $clientName, $cp->name . ' (' . $siteName . ')', $cp->code);
+                    $filename = 'printable/CHK_' . ($cp->code ?: ('CP' . $cp->id)) . '_print.png';
+                    $zip->addFromString($filename, $printablePng);
+                    Storage::disk('public')->put('qr_codes/' . $filename, $printablePng);
+                }
             }
-        }
+        });
 
         // Zones printable QR codes
         $zones = Zone::select(['id', 'code', 'name'])->get();

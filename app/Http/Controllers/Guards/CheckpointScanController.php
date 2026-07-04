@@ -109,6 +109,12 @@ class CheckpointScanController extends Controller
                         'occurred_at' => now(),
                     ]);
                 } catch (\Throwable $e) {
+                    \Log::warning('CheckpointScanController: failed to create GPSMismatchIncident', [
+                        'error' => $e->getMessage(),
+                        'user_id' => auth()->id(),
+                        'site_id' => $siteId,
+                        'checkpoint_id' => $checkpoint->id,
+                    ]);
                 }
 
                 $accuracyMsg = $accuracyUsed ? "\nGPS accuracy: ±" . round($accuracyUsed) . 'm' : '';
@@ -147,23 +153,33 @@ class CheckpointScanController extends Controller
         TagScanJob::dispatchSync($scan->id);
 
         // Dispatch event for real-time notifications (comprehensive payload)
-        event(new \App\Events\QRScanned(
-            auth()->id(),
-            "Checkpoint scanned successfully",
-            [
-                'id' => $scan->id,
-                'supervisor_name' => auth()->user()->name,
-                'checkpoint_id' => $checkpoint->id,
-                'checkpoint_name' => $checkpoint->name,
-                'checkpoint_code' => $checkpoint->code,
-                'site_name' => $checkpoint->clientSite->name,
-                'client_name' => $checkpoint->clientSite->client->name,
-                'scanned_at' => $scan->scanned_at ? $scan->scanned_at->toIso8601String() : now()->toIso8601String(),
-                'location_verified' => $locationVerified,
-                'latitude' => $validated['latitude'] ?? null,
-                'longitude' => $validated['longitude'] ?? null,
-            ]
-        ));
+        // Broadcasting failures (e.g. Pusher SSL) must not break scan HTTP flows.
+        try {
+            event(new \App\Events\QRScanned(
+                auth()->id(),
+                "Checkpoint scanned successfully",
+                [
+                    'id' => $scan->id,
+                    'supervisor_name' => auth()->user()->name,
+                    'checkpoint_id' => $checkpoint->id,
+                    'checkpoint_name' => $checkpoint->name,
+                    'checkpoint_code' => $checkpoint->code,
+                    'site_name' => optional($checkpoint->clientSite)->name ?? 'Unknown',
+                    'client_name' => optional($checkpoint->clientSite?->client)->name ?? 'Unknown',
+                    'scanned_at' => optional($scan->scanned_at)->toIso8601String() ?? now()->toIso8601String(),
+                    'location_verified' => $locationVerified,
+                    'latitude' => $validated['latitude'] ?? null,
+                    'longitude' => $validated['longitude'] ?? null,
+                ]
+            ));
+        } catch (\Throwable $broadcastError) {
+            \Log::warning('CheckpointScanController: QRScanned broadcast failed (non-fatal)', [
+                'scan_id' => $scan->id ?? null,
+                'user_id' => auth()->id(),
+                'checkpoint_id' => $checkpoint->id ?? null,
+                'error' => $broadcastError->getMessage(),
+            ]);
+        }
 
         // Send push notification to control room operators
         try {
