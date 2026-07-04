@@ -43,41 +43,67 @@ export default defineConfig({
             os: false
         },
         dedupe: [
-            'react', 
-            'react-dom', 
-            'react/jsx-runtime', 
-            'react-is', 
+            'react',
+            'react-dom',
+            'react/jsx-runtime',
+            'react-is',
             '@inertiajs/react',
             'lucide-react',
             'framer-motion',
-            '@headlessui/react'
+            '@headlessui/react',
+            '@heroicons/react',
+            'react-hook-form',
+            'react-datepicker',
+            'react-chartjs-2',
+            'qrcode.react',
+            'react-leaflet',
+            '@react-leaflet/core',
+            '@floating-ui/react',
+            '@react-aria/focus',
+            '@react-aria/utils',
+            '@react-stately/utils',
+            '@react-types/shared',
+            '@tanstack/react-virtual',
         ],
         mainFields: ['module', 'browser', 'main'],
     },
     optimizeDeps: {
         include: [
-            'react', 
-            'react-dom', 
-            'react/jsx-runtime', 
+            'react',
+            'react-dom',
+            'react/jsx-runtime',
             'react-is',
             '@inertiajs/react',
             '@inertiajs/core',
             'lucide-react',
             'framer-motion',
             '@headlessui/react',
+            '@heroicons/react',
             'recharts',
             'react-chartjs-2',
             'react-leaflet',
             '@floating-ui/react',
-            '@floating-ui/react-dom'
+            '@floating-ui/react-dom',
+            'react-hook-form',
+            'react-datepicker',
+            'qrcode.react',
+            '@react-leaflet/core',
+            '@react-aria/focus',
+            '@react-aria/utils',
+            '@react-stately/utils',
+            '@react-types/shared',
+            '@tanstack/react-virtual',
         ],
         exclude: [],
         force: true,
         esbuildOptions: {
             define: {
-                global: 'globalThis'
-            }
-        }
+                global: 'globalThis',
+            },
+        },
+    },
+    esbuild: {
+        jsx: 'automatic',
     },
     define: {
         'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'development'),
@@ -89,27 +115,71 @@ export default defineConfig({
             origin: true,
             credentials: true,
             methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-            allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+            allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
         },
         host: '0.0.0.0',
         port: 5174,
         hmr: {
             host: 'controlroom2.test',
-            port: 5174
+            port: 5174,
         },
-        strictPort: false
+        strictPort: false,
     },
     build: {
         rollupOptions: {
             external: [
                 'http', 'https', 'zlib', 'stream', 'crypto', 'fs', 'path', 'tty', 'os',
-                'node:http', 'node:https', 'node:zlib', 'node:stream', 'node:crypto', 'node:fs', 'node:path', 'node:tty', 'node:os'
+                'node:http', 'node:https', 'node:zlib', 'node:stream', 'node:crypto', 'node:fs', 'node:path', 'node:tty', 'node:os',
             ],
             output: {
-                // NOTE: manualChunks disabled.
-                // The previous manual chunking caused runtime crashes (e.g. leaflet/React interop)
-                // by forcing unsafe chunk boundaries.
-            }
+                manualChunks(id) {
+                    if (!id.includes('node_modules')) return undefined;
+
+                    const nm = id.includes('node_modules/') ? id.split('node_modules/').pop() : id;
+
+                    if (nm.startsWith('react') || nm.startsWith('react-dom') || nm.startsWith('react-is') ||
+                        nm.startsWith('react-hook-form') || nm.startsWith('react-datepicker') ||
+                        nm.startsWith('react-chartjs-2') || nm.startsWith('qrcode.react') ||
+                        nm.startsWith('react-hot-toast') || nm.startsWith('react-redux') ||
+                        nm.startsWith('react-remove-scroll') || nm.startsWith('react-style-singleton') ||
+                        nm.startsWith('@headlessui/react') || nm.startsWith('@heroicons/react') ||
+                        nm.startsWith('@inertiajs/react') || nm.startsWith('react-leaflet') ||
+                        nm.startsWith('@react-leaflet') || nm.startsWith('@floating-ui/react') ||
+                        nm.startsWith('@react-aria') || nm.startsWith('@react-stately') ||
+                        nm.startsWith('@react-types') || nm.startsWith('@tanstack/react') ||
+                        nm.startsWith('@radix-ui/') ||
+                        nm.startsWith('@reduxjs/') ||
+                        nm.startsWith('framer-motion') ||
+                        nm.startsWith('recharts') ||
+                        nm.startsWith('lucide-react') ||
+                        nm.startsWith('use-callback-ref') ||
+                        nm.startsWith('use-sidecar')) {
+                        return 'vendor-react';
+                    }
+
+                    if (nm.startsWith('lucide-react')) {
+                        return 'vendor-lucide';
+                    }
+
+                    if (nm.startsWith('chart.js') || nm.startsWith('react-chartjs-2') || nm.startsWith('recharts')) {
+                        return 'vendor-charts';
+                    }
+
+                    if (nm.startsWith('leaflet') || nm.startsWith('react-leaflet')) {
+                        return 'vendor-leaflet';
+                    }
+
+                    if (nm.startsWith('framer-motion')) {
+                        return 'vendor-framer';
+                    }
+
+                    if (nm.startsWith('@inertiajs')) {
+                        return 'vendor-inertia';
+                    }
+
+                    return 'vendor';
+                },
+            },
         },
         chunkSizeWarningLimit: 250,
         outDir: 'public/build',
@@ -128,13 +198,13 @@ export default defineConfig({
             mangle: true,
             format: {
                 comments: false,
-            }
+            },
         },
         commonjsOptions: {
             include: [/node_modules/],
             transformMixedEsModules: true,
             defaultIsModuleExports: 'auto',
-            requireReturnsDefault: 'auto'
+            requireReturnsDefault: 'auto',
         },
         cssMinify: true,
         maxInitialChunkSize: 250,
@@ -142,7 +212,7 @@ export default defineConfig({
         treeshake: {
             moduleSideEffects: false,
             propertyReadSideEffects: false,
-            tryCatchDeoptimization: false
-        }
+            tryCatchDeoptimization: false,
+        },
     },
 });
