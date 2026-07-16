@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Head, router } from '@inertiajs/react';
-import FrontOfficeLayout from '@/Layouts/FrontOfficeLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import {
     Calendar as CalendarIcon,
     ChevronLeft,
@@ -161,7 +161,7 @@ export default function CalendarIndex() {
     };
 
     return (
-        <FrontOfficeLayout title="Calendar">
+        <AuthenticatedLayout header="Calendar">
             <Head title="Calendar" />
 
             {/* Header */}
@@ -351,6 +351,6 @@ export default function CalendarIndex() {
                     </form>
                 </DialogContent>
             </Dialog>
-        </FrontOfficeLayout>
+        </AuthenticatedLayout>
     );
 }

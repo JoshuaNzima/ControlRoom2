@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState, lazy, Suspense } from 'react';
 import { router, useForm, Head } from '@inertiajs/react';
 import { X, Plus, Trash2, UserPlus, Shield, Search, ChevronLeft, ChevronRight, ChevronDown, ChevronUp } from 'lucide-react';
-import SuperAdminLayout from '@/Layouts/SuperAdminLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import IconMapper from '@/Components/IconMapper';
 
 const ConfirmModal = lazy(() => import('@/Components/ConfirmModal'));
@@ -167,7 +167,7 @@ export default function Roles({ roles, permissions, users, flash = {} }: Props) 
   const userOptions = useMemo(() => users?.data ?? [], [users]);
 
   return (
-    <SuperAdminLayout title="Roles & Permissions">
+    <AuthenticatedLayout header="Roles & Permissions">
       <Head title="Roles & Permissions" />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
         {/* Hero Header */}
@@ -327,6 +327,6 @@ export default function Roles({ roles, permissions, users, flash = {} }: Props) 
         <ConfirmModal open={confirmOpen} title={confirmTitle} message={confirmMessage} onConfirm={() => { setConfirmOpen(false); confirmAction(); }} onCancel={() => setConfirmOpen(false)} />
       </Suspense>
     </div>
-    </SuperAdminLayout>
+    </AuthenticatedLayout>
   )
 }

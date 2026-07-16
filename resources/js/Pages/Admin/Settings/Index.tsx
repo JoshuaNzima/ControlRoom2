@@ -1,6 +1,6 @@
 import React from 'react';
 import { Head, usePage, router } from '@inertiajs/react';
-import AdminLayout from '@/Layouts/AdminLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import Modal from '@/Components/Modal';
 import { useTheme } from '@/Providers/ThemeProvider';
 import IconMapper from '@/Components/IconMapper';
@@ -128,7 +128,7 @@ export default function SettingsIndex() {
   ];
 
   return (
-    <AdminLayout title="Settings" user={auth?.user as any}>
+    <AuthenticatedLayout header="Settings" user={auth?.user as any}>
       <Head title="Settings" />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
         
@@ -393,6 +393,6 @@ export default function SettingsIndex() {
           </div>
         )}
       </div>
-    </AdminLayout>
+    </AuthenticatedLayout>
   );
 }

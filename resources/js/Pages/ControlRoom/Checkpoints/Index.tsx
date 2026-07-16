@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Head, Link, useForm, router, usePage } from '@inertiajs/react';
-import ControlRoomLayout from '@/Layouts/ControlRoomLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import { Card } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/Components/ui/dialog';
@@ -271,7 +271,7 @@ export default function CheckpointsIndex() {
   };
 
   return (
-    <ControlRoomLayout title="Checkpoints">
+    <AuthenticatedLayout header="Checkpoints">
       <Head title="Checkpoint Management" />
       
       <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-4 sm:py-6 space-y-4 sm:space-y-6">
@@ -811,6 +811,6 @@ export default function CheckpointsIndex() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </ControlRoomLayout>
+    </AuthenticatedLayout>
   );
 }

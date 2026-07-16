@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import FinanceLayout from '@/Layouts/FinanceLayout';
-import AdminLayout from '@/Layouts/AdminLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import { formatCurrency, formatDate } from '@/utils/formatters';
 
 type Expense = {
@@ -59,7 +58,7 @@ export default function ApprovalShow({ approval }: Props) {
   const { url } = usePage();
   const isAdminRoute = typeof url === 'string' && url.startsWith('/admin/');
   const prefix = isAdminRoute ? 'admin' : 'finance';
-  const Layout = isAdminRoute ? AdminLayout : FinanceLayout;
+  const Layout = AuthenticatedLayout;
 
   const expense = approval.expense || null;
   const isPending = approval.status === 'pending';
@@ -75,7 +74,7 @@ export default function ApprovalShow({ approval }: Props) {
   };
 
   return (
-    <Layout title="Approval">
+    <Layout header="Approval">
       <Head title="Approval" />
       <div className="py-6">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
@@ -244,5 +243,3 @@ export default function ApprovalShow({ approval }: Props) {
     </Layout>
   );
 }
-
-

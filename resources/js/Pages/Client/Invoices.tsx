@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Head } from '@inertiajs/react';
-import ClientLayout from '@/Layouts/ClientLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import { Card } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import { Badge } from '@/Components/ui/badge';
@@ -110,7 +110,7 @@ export default function ClientInvoices({ auth, client, invoices, paymentSummary 
 
   if (!client) {
     return (
-      <ClientLayout title="Invoices" user={auth?.user}>
+      <AuthenticatedLayout header="Invoices" user={auth?.user}>
         <Head title="Invoices" />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <Card className="p-8 text-center dark:bg-gray-800 dark:border-gray-700">
@@ -127,17 +127,17 @@ export default function ClientInvoices({ auth, client, invoices, paymentSummary 
             </div>
           </Card>
         </div>
-      </ClientLayout>
+      </AuthenticatedLayout>
     );
   }
 
   return (
-    <ClientLayout title="Invoices" user={auth?.user}>
+    <AuthenticatedLayout header="Invoices" user={auth?.user}>
       <Head title="Invoices" />
 
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
         {/* Header */}
-        <div className="bg-gradient-to-br from-red-900 via-red-800 to-rose-900 text-white">
+        <div className="bg-red-900 text-white">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="flex items-center gap-3">
@@ -226,7 +226,7 @@ export default function ClientInvoices({ auth, client, invoices, paymentSummary 
             <Button
               variant={filter === 'sent' ? 'default' : 'outline'}
               onClick={() => setFilter('sent')}
-              className={filter === 'sent' ? 'bg-blue-600' : 'dark:border-gray-600 dark:text-gray-300'}
+              className={filter === 'sent' ? 'bg-red-600' : 'dark:border-gray-600 dark:text-gray-300'}
             >
               Sent
             </Button>
@@ -461,6 +461,6 @@ export default function ClientInvoices({ auth, client, invoices, paymentSummary 
           )}
         </DialogContent>
       </Dialog>
-    </ClientLayout>
+    </AuthenticatedLayout>
   );
 }

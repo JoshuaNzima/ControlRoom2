@@ -1,6 +1,6 @@
 import React from 'react';
 import { Head, Link, usePage } from '@inertiajs/react';
-import ControlRoomLayout from '@/Layouts/ControlRoomLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import { Card, CardContent, CardHeader } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/Components/ui/dialog';
@@ -114,7 +114,7 @@ export default function ZoneMap() {
   };
 
   return (
-    <ControlRoomLayout title={`Zone Map • ${z?.name || 'Zone'}`}>
+    <AuthenticatedLayout header={`Zone Map • ${z?.name || 'Zone'}`}>
       <Head title={`Zone Map • ${z?.name || 'Zone'}`} />
       <div className="space-y-4">
         <Card className="dark:bg-gray-800 dark:border-gray-700">
@@ -309,6 +309,6 @@ export default function ZoneMap() {
           </DialogContent>
         </Dialog>
       </div>
-    </ControlRoomLayout>
+    </AuthenticatedLayout>
   );
 }

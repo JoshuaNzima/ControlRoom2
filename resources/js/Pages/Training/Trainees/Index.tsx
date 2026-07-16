@@ -1,7 +1,7 @@
 import React from 'react';
 import { Head, router, useForm, usePage } from '@inertiajs/react';
 import axios from 'axios';
-import TrainingLayout from '@/Layouts/TrainingLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import { Card, CardContent } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import IconMapper from '@/Components/IconMapper';
@@ -197,7 +197,7 @@ export default function TraineesIndex() {
   const meta = normalizeMeta(trainees, perPage);
 
   return (
-    <TrainingLayout title="Trainees" user={auth?.user as any}>
+    <AuthenticatedLayout header="Trainees" user={auth?.user as any}>
       <Head title="Trainees" />
 
       <div className="space-y-6">
@@ -416,7 +416,7 @@ export default function TraineesIndex() {
 
         <RejectModal open={!!rejecting} onClose={() => setRejecting(null)} trainee={rejecting} />
       </div>
-    </TrainingLayout>
+    </AuthenticatedLayout>
   );
 }
 

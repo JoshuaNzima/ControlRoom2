@@ -1,6 +1,6 @@
 import React from 'react';
 import { Head, Link } from '@inertiajs/react';
-import SupervisorLayout from '@/Layouts/SupervisorLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import IconMapper from '@/Components/IconMapper';
 
 interface AttendanceRecord {
@@ -79,7 +79,7 @@ export default function GuardShow({ guard, recentAttendance, roleType, isSergean
     : 0;
 
   return (
-    <SupervisorLayout title={`${guard.name} - Details`}>
+    <AuthenticatedLayout header={`${guard.name} - Details`}>
       <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
         <Head title={`${guard.name} - Guard Details`} />
         
@@ -307,6 +307,6 @@ export default function GuardShow({ guard, recentAttendance, roleType, isSergean
           </div>
         </div>
       </div>
-    </SupervisorLayout>
+    </AuthenticatedLayout>
   );
 }

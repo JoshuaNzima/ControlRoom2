@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Head, Link, router } from '@inertiajs/react';
-import AdminLayout from '@/Layouts/AdminLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card';
 import { Badge } from '@/Components/ui/badge';
 import { Button } from '@/Components/ui/button';
@@ -31,7 +31,7 @@ export default function Settings({ loyaltyEnabled }: Props) {
   };
 
   return (
-    <AdminLayout title="Loyalty Settings">
+    <AuthenticatedLayout header="Loyalty Settings">
       <Head title="Loyalty Settings" />
 
       <div className="mx-auto max-w-4xl px-4 py-6 sm:px-6 lg:px-8">
@@ -95,6 +95,6 @@ export default function Settings({ loyaltyEnabled }: Props) {
           </CardContent>
         </Card>
       </div>
-    </AdminLayout>
+    </AuthenticatedLayout>
   );
 }

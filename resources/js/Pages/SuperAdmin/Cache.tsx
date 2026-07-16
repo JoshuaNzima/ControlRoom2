@@ -1,6 +1,6 @@
 import React from 'react';
 import { Head, router } from '@inertiajs/react';
-import SuperAdminLayout from '@/Layouts/SuperAdminLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import IconMapper from '@/Components/IconMapper';
 import { route } from 'ziggy-js';
 
@@ -18,7 +18,7 @@ const Cache: React.FC<Props> = ({ auth }) => {
   }, []);
 
   return (
-    <SuperAdminLayout title="Cache" user={auth?.user}>
+    <AuthenticatedLayout header="Cache" user={auth?.user}>
       <Head title="Cache" />
 
       <div className="max-w-4xl mx-auto p-6 space-y-6">
@@ -43,7 +43,7 @@ const Cache: React.FC<Props> = ({ auth }) => {
           </button>
         </div>
       </div>
-    </SuperAdminLayout>
+    </AuthenticatedLayout>
   );
 };
 

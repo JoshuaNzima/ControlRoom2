@@ -1,6 +1,6 @@
 import React from 'react';
 import { Head, router } from '@inertiajs/react';
-import ControlRoomLayout from '@/Layouts/ControlRoomLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import { Badge } from '@/Components/ui/badge';
@@ -91,7 +91,7 @@ const NvrShow: React.FC<Props> = ({ nvr }) => {
 	};
 
 	return (
-		<ControlRoomLayout title={`NVR: ${nvr.name}`}>
+		<AuthenticatedLayout header={`NVR: ${nvr.name}`}>
 			<Head title={`NVR: ${nvr.name}`} />
 
 			<div className="py-6">
@@ -300,7 +300,7 @@ const NvrShow: React.FC<Props> = ({ nvr }) => {
 					</div>
 				</div>
 			</div>
-		</ControlRoomLayout>
+		</AuthenticatedLayout>
 	);
 };
 

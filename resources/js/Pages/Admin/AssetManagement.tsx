@@ -1,6 +1,6 @@
 import React from 'react';
 import { Head } from '@inertiajs/react';
-import AssetManagementLayout from '@/Layouts/AssetManagementLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import { formatCurrencyMWK } from '@/Components/format';
 import RequisitionViewModal from '@/Components/Requisitions/RequisitionViewModal';
 
@@ -62,7 +62,7 @@ export default function AssetManagement({ auth = {}, summary, pendingDisbursemen
   const [selectedId, setSelectedId] = React.useState<number | null>(null);
 
   return (
-    <AssetManagementLayout title="Asset Management" user={auth?.user as any}>
+    <AuthenticatedLayout header="Asset Management" user={auth?.user as any}>
       <Head title="Asset Management" />
       <div className="py-6">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
@@ -145,7 +145,7 @@ export default function AssetManagement({ auth = {}, summary, pendingDisbursemen
         </div>
       </div>
       <RequisitionViewModal open={open} requisitionId={selectedId} onClose={() => setOpen(false)} />
-    </AssetManagementLayout>
+    </AuthenticatedLayout>
   );
 }
 

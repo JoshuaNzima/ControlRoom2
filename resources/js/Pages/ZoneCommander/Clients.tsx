@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Head } from '@inertiajs/react';
-import ZoneCommanderLayout from '@/Layouts/ZoneCommanderLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import { Input } from '@/Components/ui/input';
@@ -48,7 +48,7 @@ export default function Clients({ clients = [] }: ClientsProps) {
   const activeClients = clients.filter(c => c.status === 'active').length;
 
   return (
-    <ZoneCommanderLayout title="Clients">
+    <AuthenticatedLayout header="Clients">
       <Head title="Clients Management" />
 
       <div className="w-full min-h-screen p-3 sm:p-4 lg:p-6 space-y-4 sm:space-y-6">
@@ -238,7 +238,7 @@ export default function Clients({ clients = [] }: ClientsProps) {
           </CardContent>
         </Card>
       </div>
-    </ZoneCommanderLayout>
+    </AuthenticatedLayout>
   );
 }
 

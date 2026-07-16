@@ -1,6 +1,6 @@
 import React from 'react';
 import { Head, router, useForm, usePage } from '@inertiajs/react';
-import HRLayout from '@/Layouts/HRLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import IconMapper from '@/Components/IconMapper';
 import Modal from '@/Components/Modal';
 import { Card } from '@/Components/ui/card';
@@ -32,7 +32,7 @@ export default function HRBenefits() {
   };
 
   return (
-    <HRLayout title="HR - Benefits & Rewards" user={auth?.user as any}>
+    <AuthenticatedLayout header="HR - Benefits & Rewards" user={auth?.user as any}>
       <Head title="Benefits" />
       
       {/* Hero Header */}
@@ -166,7 +166,7 @@ export default function HRBenefits() {
         <BenefitModal open={openBenefit} onClose={() => setOpenBenefit(false)} benefit={editingBenefit} />
         <EnrollModal open={openEnroll} onClose={() => setOpenEnroll(false)} guards={guards} benefit={benefitForEnroll} />
       </div>
-    </HRLayout>
+    </AuthenticatedLayout>
   );
 }
 

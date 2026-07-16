@@ -1,6 +1,6 @@
 import React from 'react';
 import { Head, router, useForm, usePage } from '@inertiajs/react';
-import HRLayout from '@/Layouts/HRLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import IconMapper from '@/Components/IconMapper';
 import Modal from '@/Components/Modal';
 import { Card } from '@/Components/ui/card';
@@ -24,7 +24,7 @@ export default function HRTraining() {
   const cancelEnrollment = (e: any) => { if (!confirm('Cancel this enrollment?')) return; router.post(route('hr.training.enrollments.cancel', { enrollment: e.id }), {}, { preserveScroll: true }); };
 
   return (
-    <HRLayout title="Training" user={auth?.user as any}>
+    <AuthenticatedLayout header="Training" user={auth?.user as any}>
       <Head title="Training" />
       
       {/* Hero Header */}
@@ -196,7 +196,7 @@ export default function HRTraining() {
         <SessionModal open={openSession} onClose={() => setOpenSession(false)} defaultCourseId={flt.course_id} courses={courses?.data || []} />
         <EnrollModal open={openEnroll} onClose={() => setOpenEnroll(false)} defaultCourseId={flt.course_id} courses={courses?.data || []} guards={guards} sessions={sessions?.data || []} />
       </div>
-    </HRLayout>
+    </AuthenticatedLayout>
   );
 }
 

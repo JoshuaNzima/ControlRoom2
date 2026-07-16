@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
-import FinanceLayout from '@/Layouts/FinanceLayout';
-import AdminLayout from '@/Layouts/AdminLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import Modal from '@/Components/Modal';
 import { formatCurrency, formatDate } from '@/utils/formatters';
 
@@ -104,7 +103,7 @@ export default function ExpenseIndex({ expenses, totals, filters }: Props) {
   const { url, props } = usePage<any>();
   const currentUserId = props?.auth?.user?.id as number | undefined;
   const isAdminRoute = typeof url === 'string' && url.startsWith('/admin/');
-  const Layout = isAdminRoute ? AdminLayout : FinanceLayout;
+  const Layout = AuthenticatedLayout;
   const listRouteName = isAdminRoute ? 'admin.requisitions.index' : 'finance.expenses.index';
   const showRouteName = isAdminRoute ? 'admin.requisitions.show' : 'finance.expenses.show';
   const updateRouteName = isAdminRoute ? 'admin.requisitions.update' : 'finance.expenses.update';
@@ -183,7 +182,7 @@ export default function ExpenseIndex({ expenses, totals, filters }: Props) {
   };
 
   return (
-    <Layout title="Requisitions">
+    <Layout header="Requisitions">
       <Head title="Requisitions" />
       
       <div className="py-6">

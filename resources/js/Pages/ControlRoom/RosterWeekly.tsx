@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Head, router, useForm, usePage } from '@inertiajs/react';
-import ControlRoomLayout from '@/Layouts/ControlRoomLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import Modal from '@/Components/Modal';
 import useToast from '@/Components/ui/use-toast';
 import EmptyState from '@/Components/ui/empty-state';
@@ -627,7 +627,7 @@ export default function RosterWeekly() {
   const hasRows = permanentRows.length > 0 || standbyRows.length > 0 || relieverRows.length > 0;
 
   return (
-    <ControlRoomLayout title="Weekly Planner">
+    <AuthenticatedLayout header="Weekly Planner">
       <Head title="Weekly Planner" />
 
       <div className="px-4 py-6 space-y-4 sm:px-6 lg:px-8">
@@ -824,6 +824,6 @@ export default function RosterWeekly() {
         onStage={(entries) => entries.forEach((entry) => stageDraftEntry(entry))}
         onSaved={() => setBulkReliefGuardId(null)}
       />
-    </ControlRoomLayout>
+    </AuthenticatedLayout>
   );
 }

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Head, router } from '@inertiajs/react';
-import DashboardLayout from '@/Layouts/SupervisorLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import IconMapper from '@/Components/IconMapper';
 import { Link } from '@inertiajs/react';
 import { format } from 'date-fns';
@@ -64,7 +64,7 @@ export default function Overview({
   };
 
   return (
-    <DashboardLayout title="Overview">
+    <AuthenticatedLayout>
       <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
         <Head title="Overview" />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
@@ -82,14 +82,14 @@ export default function Overview({
                 </div>
                 <div className="flex flex-col gap-2">
                   <Link
-                    href="/supervisor/attendance"
+                    href={route('supervisor.attendance')}
                     className="px-4 py-2 bg-white/20 hover:bg-white/30 text-white rounded-lg font-semibold transition flex items-center gap-2"
                   >
                     <IconMapper name="Clipboard" size={18} />
                     Attendance
                   </Link>
                   <Link
-                    href="/supervisor/guards"
+                    href={route('supervisor.guards')}
                     className="px-4 py-2 bg-white/20 hover:bg-white/30 text-white rounded-lg font-semibold transition flex items-center gap-2"
                   >
                     <IconMapper name="Users" size={18} />
@@ -223,7 +223,7 @@ export default function Overview({
                 </h3>
                 <div className="space-y-3">
                   <Link
-                    href="/supervisor/attendance"
+                    href={route('supervisor.attendance')}
                     className="flex items-center gap-3 p-3 bg-coin-50 dark:bg-coin-900/20 border border-coin-200 dark:border-coin-900/30 rounded-lg hover:bg-coin-100 dark:hover:bg-coin-900/30 transition"
                   >
                     <div className="w-10 h-10 bg-coin-500 rounded-full flex items-center justify-center">
@@ -235,7 +235,7 @@ export default function Overview({
                     </div>
                   </Link>
                   <Link
-                    href="/supervisor/guards"
+                    href={route('supervisor.guards')}
                     className="flex items-center gap-3 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-900/30 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/30 transition"
                   >
                     <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center">
@@ -247,7 +247,7 @@ export default function Overview({
                     </div>
                   </Link>
                   <Link
-                    href="/supervisor/assignments"
+                    href={route('supervisor.assignments')}
                     className="flex items-center gap-3 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-900/30 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition"
                   >
                     <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
@@ -264,7 +264,7 @@ export default function Overview({
           </div>
         </div>
       </div>
-    </DashboardLayout>
+    </AuthenticatedLayout>
   );
 }
 

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Head, useForm, router } from '@inertiajs/react';
-import BusinessDevLayout from '@/Layouts/BusinessDevLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import PushNotificationSettings from '@/Components/Common/PushNotificationSettings';
 
 interface Settings {
@@ -33,7 +33,7 @@ export default function BusinessDevSettings({ auth = {}, settings, options }: Pr
   };
 
   return (
-    <BusinessDevLayout title="Business Dev Settings" user={auth?.user as any}>
+    <AuthenticatedLayout header="Business Dev Settings" user={auth?.user as any}>
       <Head title="Business Dev Settings" />
       <div className="py-6">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
@@ -111,6 +111,6 @@ export default function BusinessDevSettings({ auth = {}, settings, options }: Pr
           </form>
         </div>
       </div>
-    </BusinessDevLayout>
+    </AuthenticatedLayout>
   );
 }

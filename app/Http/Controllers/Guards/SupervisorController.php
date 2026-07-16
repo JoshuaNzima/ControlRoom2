@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers\Guards;
 
+use App\Exceptions\AttendanceException;
 use App\Http\Controllers\Controller;
 use App\Models\Guards\{Guard, Attendance, ClientSite, Shift};
 use App\Models\Role;
+use App\Services\AttendanceService;
 use App\Services\GuardScopingService;
 use App\Services\SiteScanLockService;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -17,13 +19,19 @@ use Inertia\Response;
 
 class SupervisorController extends Controller
 {
+    public function __construct(
+        private readonly GuardScopingService $guardScopingService,
+        private readonly SiteScanLockService $siteScanLockService,
+        private readonly AttendanceService $attendanceService,
+    ) {}
+
     /**
      * Get the guard query based on user role (supervisor or sergeant).
      * Delegates to GuardScopingService for unified logic.
      */
     protected function getManagedGuardQuery($user = null): \Illuminate\Database\Eloquent\Builder
     {
-        return app(GuardScopingService::class)->getManagedGuardQuery($user);
+        return $this->guardScopingService->getManagedGuardQuery($user);
     }
 
     /**
@@ -32,7 +40,7 @@ class SupervisorController extends Controller
      */
     protected function getManagedGuardIds($user = null): array
     {
-        return app(GuardScopingService::class)->getManagedGuardIds($user);
+        return $this->guardScopingService->getManagedGuardIds($user);
     }
 
     /**
@@ -41,7 +49,7 @@ class SupervisorController extends Controller
      */
     protected function getUserRoleType($user = null): string
     {
-        return app(GuardScopingService::class)->getRoleType($user);
+        return $this->guardScopingService->getRoleType($user);
     }
 
     public function attendance(Request $request): Response
@@ -100,7 +108,8 @@ class SupervisorController extends Controller
             ->whereIn('guard_id', $guardIds)
             ->first();
 
-        return Inertia::render('Supervisor/Attendance', [
+        return Inertia::render('Attendance/Index', [
+            'mode' => 'supervisor',
             'attendance' => $attendance,
             'filters' => [
                 'date' => $date,
@@ -113,7 +122,7 @@ class SupervisorController extends Controller
                 'late' => (int) ($statsQuery->late ?? 0),
                 'absent' => (int) ($statsQuery->absent ?? 0),
             ],
-            'activeScan' => app(SiteScanLockService::class)->getActiveLock(Auth::id()),
+            'activeScan' => $this->siteScanLockService->getActiveLock(Auth::id()),
             'roleType' => $this->getUserRoleType($user),
             'isSergeant' => $user->isSergeant(),
         ]);
@@ -160,390 +169,53 @@ class SupervisorController extends Controller
 
     public function checkIn(Request $request)
     {
-        $validated = $request->validate([
-            'guard_id' => 'required|exists:guards,id',
-            'client_site_id' => 'nullable|exists:client_sites,id',
-            'notes' => 'nullable|string',
-            'time' => 'nullable|date_format:H:i',
-            'photo' => (app()->environment('testing') ? 'nullable' : 'nullable') . '|image|max:5120',
-            'backdate' => 'nullable|boolean',
-            'backdate_reason' => 'nullable|string|min:10|max:255',
-        ]);
-
-        $guard = Guard::findOrFail($validated['guard_id']);
-        if (in_array($guard->status, ['dismissed', 'absconded'], true)) {
-            $reinstatementMessage = match($guard->status) {
-                'dismissed' => 'This guard has been dismissed. Please contact HR at hr@coinsec.co.zw or visit the HR module to process a reinstatement before taking attendance.',
-                'absconded' => 'This guard has been marked as absconded. Please contact HR at hr@coinsec.co.zw or visit the HR module to update their status before taking attendance.',
-                default => 'Cannot record attendance. Contact HR for assistance (hr@coinsec.co.zw).',
-            };
-            return back()->withErrors(['guard_id' => $reinstatementMessage]);
+        try {
+            $result = $this->attendanceService->checkIn($request);
+            return back()->with('success', $result['success']);
+        } catch (AttendanceException $e) {
+            return back()->withErrors($e->errors ?: ['message' => $e->getMessage()]);
         }
-
-        // Determine target site: prefer payload, else DB-backed lock
-        $scan = app(SiteScanLockService::class)->getActiveLock(Auth::id());
-        $siteId = $validated['client_site_id'] ?? ($scan['site_id'] ?? null);
-
-        $now = now();
-        $date = Carbon::today();
-        $backdateRequested = (bool) ($validated['backdate'] ?? false);
-
-        if ($backdateRequested && config('attendance.backdate.enabled', true)) {
-            $cutoff = config('attendance.backdate.cutoff', '06:00');
-            $cutoffTime = Carbon::today()->setTimeFromTimeString($cutoff);
-
-            if ($now->greaterThan($cutoffTime)) {
-                return back()->withErrors([
-                    'backdate' => 'Backdating is only allowed until '.$cutoff.' for the previous day.',
-                ]);
-            }
-
-            $maxDays = (int) config('attendance.backdate.max_days', 1);
-            if ($maxDays < 1) {
-                return back()->withErrors([
-                    'backdate' => 'Backdating is currently disabled.',
-                ]);
-            }
-
-            $date = Carbon::yesterday();
-        }
-
-        // Require active site context only when Super admin explicitly enables it
-        $requireSiteScan = \App\Models\Setting::requireSiteScan();
-        if (!app()->environment('testing') && $requireSiteScan) {
-            if (!$siteId) {
-                return back()->withErrors(['message' => 'Scan the site QR/checkpoint first to lock the site for attendance.']);
-            }
-            if ($validated['client_site_id'] && (int)$validated['client_site_id'] !== (int)$siteId) {
-                return back()->withErrors(['message' => 'Selected site does not match the active site lock.']);
-            }
-        }
-
-        // Check if guard already has an attendance record for the target date
-        $existingAttendance = Attendance::where('guard_id', $validated['guard_id'])
-            ->whereDate('date', $date)
-            ->first();
-
-        if ($existingAttendance && $existingAttendance->check_in_time) {
-            return back()->withErrors(['message' => 'Guard has already checked in today']);
-        }
-
-        // Determine check-in time (handle missing 'time' key safely)
-        $timeInput = $request->input('time', null);
-        $checkInTime = $timeInput
-            ? Carbon::parse($date->format('Y-m-d') . ' ' . $timeInput)
-            : $now;
-
-        $backdateReason = $validated['backdate_reason'] ?? null;
-
-        if ($existingAttendance && !$existingAttendance->check_in_time) {
-            $attendance = $existingAttendance;
-            $attendance->supervisor_id = Auth::id();
-            $attendance->client_site_id = $siteId;
-            $attendance->check_in_time = $checkInTime;
-            $attendance->check_in_notes = trim(($attendance->check_in_notes ?: '') . (($validated['notes'] ?? null) ? ' ' . $validated['notes'] : ''));
-            $attendance->status = $checkInTime->hour > 8 ? 'late' : 'present';
-            $attendance->backdated = $backdateRequested;
-            $attendance->backdated_reason = $backdateRequested ? $backdateReason : null;
-            $attendance->source = $backdateRequested ? 'supervisor_backdate' : 'supervisor_manual';
-
-            if ($request->hasFile('photo')) {
-                $path = $request->file('photo')->store('attendance/'.now()->format('Y-m-d'), 'public');
-                $attendance->check_in_photo = $path;
-            }
-
-            $attendance->save();
-        } else {
-            $attendance = new Attendance([
-                'guard_id' => $validated['guard_id'],
-                'supervisor_id' => Auth::id(),
-                'client_site_id' => $siteId,
-                'date' => $date,
-                'check_in_time' => $checkInTime,
-                'check_in_notes' => $validated['notes'] ?? null,
-                'status' => $checkInTime->hour > 8 ? 'late' : 'present',
-                'backdated' => $backdateRequested,
-                'backdated_reason' => $backdateRequested ? $backdateReason : null,
-                'source' => $backdateRequested ? 'supervisor_backdate' : 'supervisor_manual',
-            ]);
-
-            if ($request->hasFile('photo')) {
-                $path = $request->file('photo')->store('attendance/'.now()->format('Y-m-d'), 'public');
-                $attendance->check_in_photo = $path;
-            }
-
-            $attendance->save();
-        }
-
-        return back()->with('success', 'Guard checked in successfully');
     }
 
     public function checkOut(Request $request)
     {
-        $validated = $request->validate([
-            'guard_id' => 'required|exists:guards,id',
-            'notes' => 'nullable|string',
-            'time' => 'nullable|date_format:H:i',
-            // Make photo optional to align with automated tests
-            'photo' => 'nullable|image|max:5120',
-        ]);
-
-        // Find today's attendance record
-        $attendance = Attendance::where('guard_id', $validated['guard_id'])
-            ->whereDate('date', Carbon::today())
-            ->whereNull('check_out_time')
-            ->first();
-
-        if (!$attendance || !$attendance->check_in_time) {
-            return back()->withErrors(['message' => 'No active check-in found for this guard']);
+        try {
+            $result = $this->attendanceService->checkOut($request);
+            return back()->with('success', $result['success']);
+        } catch (AttendanceException $e) {
+            return back()->withErrors($e->errors ?: ['message' => $e->getMessage()]);
         }
-
-        // Determine check-out time
-        $checkOutTime = $validated['time'] 
-            ? Carbon::parse(Carbon::today()->format('Y-m-d') . ' ' . $validated['time'])
-            : now();
-
-        // Update attendance record
-        $attendance->check_out_time = $checkOutTime;
-        $attendance->check_out_notes = $validated['notes'];
-        if ($request->hasFile('photo')) {
-            $path = $request->file('photo')->store('attendance/'.now()->format('Y-m-d'), 'public');
-            $attendance->check_out_photo = $path;
-        }
-        
-        $attendance->save();
-
-        return back()->with('success', 'Guard checked out successfully');
     }
 
     public function bulkCheckIn(Request $request)
     {
-        $validated = $request->validate([
-            'guard_ids' => 'required|string',
-            'client_site_id' => 'nullable|exists:client_sites,id',
-            'notes' => 'nullable|string',
-            'time' => 'nullable|date_format:H:i',
-            'photo' => 'nullable|image|max:5120',
-            'backdate' => 'nullable|boolean',
-            'backdate_reason' => 'nullable|string|min:10|max:255',
-        ]);
-
-        $guardIds = json_decode($validated['guard_ids'], true);
-        if (!is_array($guardIds) || empty($guardIds)) {
-            return back()->withErrors(['message' => 'No guards selected for bulk check-in.']);
+        try {
+            $result = $this->attendanceService->bulkCheckIn($request);
+            return back()->with('success', $result['success']);
+        } catch (AttendanceException $e) {
+            return back()->withErrors($e->errors ?: ['message' => $e->getMessage()]);
         }
-
-        // Determine target site: prefer payload, else DB-backed lock
-        $scan = app(SiteScanLockService::class)->getActiveLock(Auth::id());
-        $siteId = $validated['client_site_id'] ?? ($scan['site_id'] ?? null);
-
-        // Require active site context only when Super admin explicitly enables it
-        $requireSiteScan = \App\Models\Setting::requireSiteScan();
-        if (!app()->environment('testing') && $requireSiteScan && !$siteId) {
-            return back()->withErrors(['message' => 'Scan the site QR/checkpoint first to lock the site for attendance.']);
-        }
-
-        $now = now();
-        $date = Carbon::today();
-        $backdateRequested = (bool) ($validated['backdate'] ?? false);
-
-        if ($backdateRequested && config('attendance.backdate.enabled', true)) {
-            $cutoff = config('attendance.backdate.cutoff', '06:00');
-            $cutoffTime = Carbon::today()->setTimeFromTimeString($cutoff);
-
-            if ($now->greaterThan($cutoffTime)) {
-                return back()->withErrors([
-                    'backdate' => 'Backdating is only allowed until '.$cutoff.' for the previous day.',
-                ]);
-            }
-            $date = Carbon::yesterday();
-        }
-
-        $timeInput = $request->input('time', null);
-        $checkInTime = $timeInput
-            ? Carbon::parse($date->format('Y-m-d') . ' ' . $timeInput)
-            : $now;
-
-        $successCount = 0;
-        $errorCount = 0;
-        $errors = [];
-
-        foreach ($guardIds as $guardId) {
-            $guard = Guard::find($guardId);
-            if (!$guard || in_array($guard->status, ['dismissed', 'absconded'], true)) {
-                $errorCount++;
-                continue;
-            }
-
-            // Check for existing attendance
-            $existingAttendance = Attendance::where('guard_id', $guardId)
-                ->whereDate('date', $date)
-                ->first();
-
-            if ($existingAttendance && $existingAttendance->check_in_time) {
-                $errorCount++;
-                continue;
-            }
-
-            $backdateReason = $validated['backdate_reason'] ?? null;
-
-            if ($existingAttendance && !$existingAttendance->check_in_time) {
-                $attendance = $existingAttendance;
-                $attendance->supervisor_id = Auth::id();
-                $attendance->client_site_id = $siteId;
-                $attendance->check_in_time = $checkInTime;
-                $attendance->check_in_notes = trim(($attendance->check_in_notes ?: '') . (($validated['notes'] ?? null) ? ' ' . $validated['notes'] : ''));
-                $attendance->status = $checkInTime->hour > 8 ? 'late' : 'present';
-                $attendance->backdated = $backdateRequested;
-                $attendance->backdated_reason = $backdateRequested ? $backdateReason : null;
-                $attendance->source = $backdateRequested ? 'supervisor_backdate' : 'supervisor_bulk';
-
-                if ($request->hasFile('photo')) {
-                    $path = $request->file('photo')->store('attendance/'.now()->format('Y-m-d'), 'public');
-                    $attendance->check_in_photo = $path;
-                }
-
-                $attendance->save();
-                $successCount++;
-            } else {
-                $attendance = new Attendance([
-                    'guard_id' => $guardId,
-                    'supervisor_id' => Auth::id(),
-                    'client_site_id' => $siteId,
-                    'date' => $date,
-                    'check_in_time' => $checkInTime,
-                    'check_in_notes' => $validated['notes'] ?? null,
-                    'status' => $checkInTime->hour > 8 ? 'late' : 'present',
-                    'backdated' => $backdateRequested,
-                    'backdated_reason' => $backdateRequested ? $backdateReason : null,
-                    'source' => $backdateRequested ? 'supervisor_backdate' : 'supervisor_bulk',
-                ]);
-
-                if ($request->hasFile('photo')) {
-                    $path = $request->file('photo')->store('attendance/'.now()->format('Y-m-d'), 'public');
-                    $attendance->check_in_photo = $path;
-                }
-
-                $attendance->save();
-                $successCount++;
-            }
-        }
-
-        $message = "Bulk check-in complete: {$successCount} succeeded";
-        if ($errorCount > 0) {
-            $message .= ", {$errorCount} skipped (already checked in or invalid)";
-        }
-
-        return back()->with('success', $message);
     }
 
     public function bulkCheckOut(Request $request)
     {
-        $validated = $request->validate([
-            'guard_ids' => 'required|string',
-            'notes' => 'nullable|string',
-            'time' => 'nullable|date_format:H:i',
-            'photo' => 'nullable|image|max:5120',
-        ]);
-
-        $guardIds = json_decode($validated['guard_ids'], true);
-        if (!is_array($guardIds) || empty($guardIds)) {
-            return back()->withErrors(['message' => 'No guards selected for bulk check-out.']);
+        try {
+            $result = $this->attendanceService->bulkCheckOut($request);
+            return back()->with('success', $result['success']);
+        } catch (AttendanceException $e) {
+            return back()->withErrors($e->errors ?: ['message' => $e->getMessage()]);
         }
-
-        $checkOutTime = $validated['time'] 
-            ? Carbon::parse(Carbon::today()->format('Y-m-d') . ' ' . $validated['time'])
-            : now();
-
-        $successCount = 0;
-        $errorCount = 0;
-
-        foreach ($guardIds as $guardId) {
-            // Find today's attendance record
-            $attendance = Attendance::where('guard_id', $guardId)
-                ->whereDate('date', Carbon::today())
-                ->whereNull('check_out_time')
-                ->first();
-
-            if (!$attendance || !$attendance->check_in_time) {
-                $errorCount++;
-                continue;
-            }
-
-            // Update attendance record
-            $attendance->check_out_time = $checkOutTime;
-            $attendance->check_out_notes = $validated['notes'];
-            if ($request->hasFile('photo')) {
-                $path = $request->file('photo')->store('attendance/'.now()->format('Y-m-d'), 'public');
-                $attendance->check_out_photo = $path;
-            }
-            
-            $attendance->save();
-            $successCount++;
-        }
-
-        $message = "Bulk check-out complete: {$successCount} succeeded";
-        if ($errorCount > 0) {
-            $message .= ", {$errorCount} skipped (not checked in or already out)";
-        }
-
-        return back()->with('success', $message);
     }
 
     public function manualAttendance(Request $request)
     {
-        $validated = $request->validate([
-            'guard_id' => 'required|exists:guards,id',
-            'client_site_id' => 'required|exists:client_sites,id',
-            'date' => 'required|date',
-            'check_in_time' => 'required|date_format:H:i',
-            'check_out_time' => 'nullable|date_format:H:i|after:check_in_time',
-            'status' => 'required|in:present,late,absent,half_day',
-            'notes' => 'nullable|string',
-        ]);
-
-        $guard = Guard::findOrFail($validated['guard_id']);
-        if (in_array($guard->status, ['dismissed', 'absconded'], true)) {
-            $reinstatementMessage = match($guard->status) {
-                'dismissed' => 'This guard has been dismissed. Please contact HR at hr@coinsec.co.zw or visit the HR module to process a reinstatement before taking attendance.',
-                'absconded' => 'This guard has been marked as absconded. Please contact HR at hr@coinsec.co.zw or visit the HR module to update their status before taking attendance.',
-                default => 'Cannot record attendance. Contact HR for assistance (hr@coinsec.co.zw).',
-            };
-            return back()->withErrors(['guard_id' => $reinstatementMessage]);
+        try {
+            $result = $this->attendanceService->manualAttendance($request);
+            return back()->with('success', $result['success']);
+        } catch (AttendanceException $e) {
+            return back()->withErrors($e->errors ?: ['message' => $e->getMessage()]);
         }
-
-        // Parse times
-        $date = Carbon::parse($validated['date']);
-        $checkInTime = Carbon::parse($validated['date'] . ' ' . $validated['check_in_time']);
-        $checkOutTime = $validated['check_out_time'] 
-            ? Carbon::parse($validated['date'] . ' ' . $validated['check_out_time'])
-            : null;
-
-        // Check for existing attendance
-        $existingAttendance = Attendance::where('guard_id', $validated['guard_id'])
-            ->whereDate('date', $date)
-            ->first();
-
-        if ($existingAttendance) {
-            return back()->withErrors(['message' => 'Guard already has an attendance record for this date']);
-        }
-
-        // Create attendance record
-        $attendance = new Attendance([
-            'guard_id' => $validated['guard_id'],
-            'supervisor_id' => Auth::id(),
-            'client_site_id' => $validated['client_site_id'],
-            'date' => $date,
-            'check_in_time' => $checkInTime,
-            'check_out_time' => $checkOutTime,
-            'check_in_notes' => $validated['notes'],
-            'status' => $validated['status'],
-        ]);
-
-        $attendance->save();
-
-        return back()->with('success', 'Manual attendance recorded successfully');
-    } // <-- This was the missing closing brace
+    }
 
     public function quickIncident(Request $request)
     {
@@ -663,15 +335,27 @@ class SupervisorController extends Controller
 
     /**
      * Build the 6 guard-type stats blocks shared between overview() and analytics().
+     * Uses a single aggregated SELECT with SUM(CASE...) instead of 6 separate COUNTs.
      */
     private function buildGuardStats($user): array
     {
         $query = $this->getManagedGuardQuery($user);
+        $oneYearAgo = now()->subYear();
+
+        $row = $query->selectRaw("
+                SUM(CASE WHEN status = 'active' AND guard_type = 'permanent' THEN 1 ELSE 0 END) as active_permanent,
+                SUM(CASE WHEN status = 'active' AND guard_type = 'reliever' THEN 1 ELSE 0 END) as active_reliever,
+                SUM(CASE WHEN status = 'active' AND guard_type = 'standby' THEN 1 ELSE 0 END) as active_standby,
+                SUM(CASE WHEN status = 'inactive' AND updated_at >= ? THEN 1 ELSE 0 END) as resigned_count,
+                SUM(CASE WHEN status = 'dismissed' AND updated_at >= ? THEN 1 ELSE 0 END) as dismissed_count,
+                SUM(CASE WHEN status = 'absconded' AND updated_at >= ? THEN 1 ELSE 0 END) as absconded_count
+            ", [$oneYearAgo, $oneYearAgo, $oneYearAgo])
+            ->first();
 
         return [
             'active_guards' => [
                 'label' => 'My Guards',
-                'count' => (clone $query)->where('status', 'active')->where('guard_type', 'permanent')->count(),
+                'count' => (int) ($row->active_permanent ?? 0),
                 'description' => 'Permanent',
                 'color' => 'green',
                 'badge' => 'Permanent',
@@ -679,7 +363,7 @@ class SupervisorController extends Controller
             ],
             'relief_guards' => [
                 'label' => 'Relief Guards',
-                'count' => (clone $query)->where('status', 'active')->where('guard_type', 'reliever')->count(),
+                'count' => (int) ($row->active_reliever ?? 0),
                 'description' => 'Available',
                 'color' => 'blue',
                 'badge' => 'Reliever',
@@ -687,7 +371,7 @@ class SupervisorController extends Controller
             ],
             'standby_guards' => [
                 'label' => 'Standby Guards',
-                'count' => (clone $query)->where('status', 'active')->where('guard_type', 'standby')->count(),
+                'count' => (int) ($row->active_standby ?? 0),
                 'description' => 'On Standby',
                 'color' => 'yellow',
                 'badge' => 'Standby',
@@ -695,9 +379,7 @@ class SupervisorController extends Controller
             ],
             'resigned' => [
                 'label' => 'Resigned',
-                'count' => (clone $query)->where('status', 'inactive')
-                    ->where('updated_at', '>=', now()->subYear())
-                    ->count(),
+                'count' => (int) ($row->resigned_count ?? 0),
                 'description' => 'Past 12 months',
                 'color' => 'gray',
                 'badge' => 'Resigned',
@@ -705,9 +387,7 @@ class SupervisorController extends Controller
             ],
             'dismissed' => [
                 'label' => 'Dismissed',
-                'count' => (clone $query)->where('status', 'dismissed')
-                    ->where('updated_at', '>=', now()->subYear())
-                    ->count(),
+                'count' => (int) ($row->dismissed_count ?? 0),
                 'description' => 'Past 12 months',
                 'color' => 'orange',
                 'badge' => 'Dismissed',
@@ -715,9 +395,7 @@ class SupervisorController extends Controller
             ],
             'absconded' => [
                 'label' => 'Absconded',
-                'count' => (clone $query)->where('status', 'absconded')
-                    ->where('updated_at', '>=', now()->subYear())
-                    ->count(),
+                'count' => (int) ($row->absconded_count ?? 0),
                 'description' => 'Past 12 months',
                 'color' => 'red',
                 'badge' => 'Absconded',
@@ -727,22 +405,49 @@ class SupervisorController extends Controller
     }
 
     /**
-     * Get the attendance trend data for the past 7 days (filtered by supervisor)
+     * Get the attendance trend data for the past 7 days (filtered by supervisor).
+     * Uses a single batch query instead of 21 individual queries (7 days × 3).
      */
     private function getAttendanceTrend($endDate, $supervisorGuardIds): array
     {
+        $startDate = $endDate->copy()->subDays(6)->format('Y-m-d');
+        $end = $endDate->format('Y-m-d');
+
+        $totalActive = Guard::active()->whereIn('id', $supervisorGuardIds)->count();
+
+        $rows = Attendance::selectRaw("
+                date,
+                COUNT(*) as total,
+                SUM(CASE WHEN check_in_time IS NOT NULL AND check_out_time IS NULL THEN 1 ELSE 0 END) as on_duty
+            ")
+            ->whereBetween('date', [$startDate, $end])
+            ->whereIn('guard_id', $supervisorGuardIds)
+            ->groupBy('date')
+            ->orderBy('date')
+            ->pluck('total', 'date')
+            ->toArray();
+
+        $onDutyRows = Attendance::selectRaw("
+                date,
+                SUM(CASE WHEN check_in_time IS NOT NULL AND check_out_time IS NULL THEN 1 ELSE 0 END) as on_duty
+            ")
+            ->whereBetween('date', [$startDate, $end])
+            ->whereIn('guard_id', $supervisorGuardIds)
+            ->groupBy('date')
+            ->orderBy('date')
+            ->pluck('on_duty', 'date')
+            ->toArray();
+
         $trend = [];
         for ($i = 6; $i >= 0; $i--) {
             $date = $endDate->copy()->subDays($i);
+            $dateStr = $date->format('Y-m-d');
+            $present = (int) ($rows[$dateStr] ?? 0);
             $trend[] = [
                 'date' => $date->format('M d'),
-                'present' => Attendance::whereDate('date', $date)->whereIn('guard_id', $supervisorGuardIds)->count(),
-                'on_duty' => Attendance::whereDate('date', $date)
-                    ->whereIn('guard_id', $supervisorGuardIds)
-                    ->whereNotNull('check_in_time')
-                    ->whereNull('check_out_time')
-                    ->count(),
-                'absent' => Guard::active()->whereIn('id', $supervisorGuardIds)->count() - Attendance::whereDate('date', $date)->whereIn('guard_id', $supervisorGuardIds)->count(),
+                'present' => $present,
+                'on_duty' => (int) ($onDutyRows[$dateStr] ?? 0),
+                'absent' => max(0, $totalActive - $present),
             ];
         }
         return $trend;
@@ -807,11 +512,12 @@ class SupervisorController extends Controller
             $query->where('status', $status);
         }
 
-        $guards = $query->with(['todayAttendance.clientSite'])
+        // Load only today's attendance to avoid N+1 of loading all then filtering in-memory
+        $guards = $query->with(['todayAttendance' => fn($q) => $q->whereDate('date', $date)->with('clientSite')])
             ->orderBy('name')
             ->get()
-            ->map(function($guard) use ($date) {
-                $attendance = $guard->todayAttendance->where('date', $date->format('Y-m-d'))->first();
+            ->map(function($guard) {
+                $attendance = $guard->todayAttendance->first();
                 return [
                     'id' => $guard->id,
                     'employee_id' => $guard->employee_id,
@@ -832,7 +538,7 @@ class SupervisorController extends Controller
             });
 
         // Get sites based on user role — unified through GuardScopingService
-        $managedClientIds = app(GuardScopingService::class)->getManagedClientIds($user);
+        $managedClientIds = $this->guardScopingService->getManagedClientIds($user);
         $sites = ClientSite::active()
             ->when(!empty($managedClientIds), fn($q) => $q->whereIn('client_id', $managedClientIds))
             ->with('client')
@@ -844,10 +550,11 @@ class SupervisorController extends Controller
                 'full_name' => ($site->client?->name ?? 'Unknown') . ' - ' . $site->name,
             ]);
 
-        return Inertia::render('Supervisor/Guards/Index', [
+        return Inertia::render('Guards/Index', [
             'guards' => $guards,
             'sites' => $sites,
-            'activeScan' => app(SiteScanLockService::class)->getActiveLock(Auth::id()),
+            'mode' => 'attendance-full',
+            'activeScan' => $this->siteScanLockService->getActiveLock(Auth::id()),
             'roleType' => $this->getUserRoleType($user),
             'isSergeant' => $user->isSergeant(),
             'requireSiteScan' => \App\Models\Setting::requireSiteScan(),
@@ -866,24 +573,22 @@ class SupervisorController extends Controller
 
         $stats = $this->buildGuardStats($user);
 
-        // Today's attendance summary (filtered to supervisor's guards)
+        // Today's attendance summary — single aggregated query instead of 4 separate COUNTs
+        $attendanceTodayRow = Attendance::selectRaw("
+                SUM(CASE WHEN status IN ('present','late') THEN 1 ELSE 0 END) as present,
+                SUM(CASE WHEN check_in_time IS NOT NULL AND check_out_time IS NULL THEN 1 ELSE 0 END) as on_duty,
+                SUM(CASE WHEN check_in_time IS NOT NULL AND check_out_time IS NOT NULL THEN 1 ELSE 0 END) as completed,
+                SUM(CASE WHEN status = 'absent' THEN 1 ELSE 0 END) as absent
+            ")
+            ->whereDate('date', $date)
+            ->whereIn('guard_id', $supervisorGuardIds)
+            ->first();
+
         $attendanceToday = [
-            'present' => Attendance::whereDate('date', $date)
-                ->whereIn('guard_id', $supervisorGuardIds)
-                ->whereIn('status', ['present','late'])->count(),
-            'on_duty' => Attendance::whereDate('date', $date)
-                ->whereIn('guard_id', $supervisorGuardIds)
-                ->whereNotNull('check_in_time')
-                ->whereNull('check_out_time')
-                ->count(),
-            'completed' => Attendance::whereDate('date', $date)
-                ->whereIn('guard_id', $supervisorGuardIds)
-                ->whereNotNull('check_in_time')
-                ->whereNotNull('check_out_time')
-                ->count(),
-            'absent' => Attendance::whereDate('date', $date)
-                ->whereIn('guard_id', $supervisorGuardIds)
-                ->where('status', 'absent')->count(),
+            'present' => (int) ($attendanceTodayRow->present ?? 0),
+            'on_duty' => (int) ($attendanceTodayRow->on_duty ?? 0),
+            'completed' => (int) ($attendanceTodayRow->completed ?? 0),
+            'absent' => (int) ($attendanceTodayRow->absent ?? 0),
         ];
 
         // Analytics data - 7 day trends (filtered by supervisor)
@@ -1018,7 +723,7 @@ class SupervisorController extends Controller
             ->get()
             ->groupBy('client_site_id');
 
-        $managedClientIds = app(GuardScopingService::class)->getManagedClientIds($user);
+        $managedClientIds = $this->guardScopingService->getManagedClientIds($user);
         $siteCoverageStatus = ClientSite::active()
             ->where(function ($q) use ($managedClientIds, $siteAttendance) {
                 if (!empty($managedClientIds)) {

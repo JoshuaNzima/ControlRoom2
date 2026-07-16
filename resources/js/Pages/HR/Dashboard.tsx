@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Head, Link, useForm, usePage, router } from '@inertiajs/react';
-import HRLayout from '@/Layouts/HRLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import IconMapper from '@/Components/IconMapper';
 import { Card } from '@/Components/ui/card';
 import EmptyState from '@/Components/ui/empty-state';
@@ -82,7 +82,7 @@ export default function HRDashboard() {
   const formatTime = (date: Date) => date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
   return (
-    <HRLayout title="HR Dashboard" user={auth?.user as any}>
+    <AuthenticatedLayout header="HR Dashboard" user={auth?.user as any}>
       <Head title="HR Dashboard" />
       
       {/* Hero Header */}
@@ -586,7 +586,7 @@ export default function HRDashboard() {
       <QuickOffDayModal open={openOffDay} onClose={() => setOpenOffDay(false)} form={offDayForm} guards={guards || []} />
       <QuickInterviewModal open={openInterview} onClose={() => setOpenInterview(false)} applications={applicationsForSchedule} />
       <QuickChecklistAssignModal open={openAssignChecklist} onClose={() => setOpenAssignChecklist(false)} guards={guards || []} templates={checklists?.templates || []} />
-    </HRLayout>
+    </AuthenticatedLayout>
   );
 }
 

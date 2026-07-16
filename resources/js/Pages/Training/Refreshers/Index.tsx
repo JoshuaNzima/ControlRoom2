@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Head, usePage, router } from '@inertiajs/react';
-import TrainingLayout from '@/Layouts/TrainingLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import IconMapper from '@/Components/IconMapper';
 import { format, parseISO, addMonths } from 'date-fns';
 
@@ -101,7 +101,7 @@ export default function RefreshersIndex() {
   };
 
   return (
-    <TrainingLayout title="Refreshers" user={auth.user}>
+    <AuthenticatedLayout header="Refreshers" user={auth.user}>
       <Head title="Refreshers" />
       <div className="p-4 md:p-6 max-w-7xl mx-auto">
         {/* Header */}
@@ -339,6 +339,6 @@ export default function RefreshersIndex() {
           </div>
         </div>
       )}
-    </TrainingLayout>
+    </AuthenticatedLayout>
   );
 }

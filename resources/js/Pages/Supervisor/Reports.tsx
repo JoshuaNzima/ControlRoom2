@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Head, Link, router } from '@inertiajs/react';
-import SupervisorLayout from '@/Layouts/SupervisorLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import IconMapper from '@/Components/IconMapper';
 import Modal from '@/Components/Modal';
 import { toast } from 'react-hot-toast';
@@ -134,7 +134,7 @@ export default function Reports({
   };
 
   return (
-    <SupervisorLayout title="Reports">
+    <AuthenticatedLayout header="Reports">
       <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
         <Head title="Reports" />
 
@@ -480,6 +480,6 @@ export default function Reports({
           </div>
         </form>
       </Modal>
-    </SupervisorLayout>
+    </AuthenticatedLayout>
   );
 }

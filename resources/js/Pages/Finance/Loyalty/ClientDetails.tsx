@@ -3,7 +3,7 @@ import { Head, Link, router } from '@inertiajs/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card';
 import { Badge } from '@/Components/ui/badge';
 import { Button } from '@/Components/ui/button';
-import FinanceLayout from '@/Layouts/FinanceLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import IconMapper from '@/Components/IconMapper';
 
 interface Client {
@@ -119,7 +119,7 @@ export default function ClientDetails({ client, summary, transactions, redemptio
   };
 
   return (
-    <FinanceLayout title="Client Loyalty Details">
+    <AuthenticatedLayout header="Client Loyalty Details">
       <Head title={`${client.name} Loyalty`} />
 
       <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
@@ -321,6 +321,6 @@ export default function ClientDetails({ client, summary, transactions, redemptio
           </Card>
         </div>
       </div>
-    </FinanceLayout>
+    </AuthenticatedLayout>
   );
 }

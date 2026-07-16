@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Head, router } from '@inertiajs/react';
-import SupervisorLayout from '@/Layouts/SupervisorLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Card } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import { Badge } from '@/Components/ui/badge';
@@ -200,7 +200,7 @@ export default function Assignments({ guards, sites }: AssignmentsProps) {
   };
 
   return (
-    <SupervisorLayout title="Guard Assignments">
+    <AuthenticatedLayout header="Guard Assignments">
       <Head title="Assignments" />
 
       <div className="min-h-screen bg-red-50 dark:bg-gray-900">
@@ -604,6 +604,6 @@ export default function Assignments({ guards, sites }: AssignmentsProps) {
           </div>
         </div>
       </Modal>
-    </SupervisorLayout>
+    </AuthenticatedLayout>
   );
 }

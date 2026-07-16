@@ -11,16 +11,16 @@ use Inertia\Inertia;
 
 class DownController extends Controller
 {
-    private function indexComponent(Request $request): string
+    private function indexMode(Request $request): string
     {
         $name = (string) ($request->route()?->getName() ?? '');
         if (str_starts_with($name, 'admin.')) {
-            return 'Admin/Downs/Index';
+            return 'admin';
         }
         if (str_starts_with($name, 'hr.')) {
-            return 'HR/Downs/Index';
+            return 'admin';
         }
-        return 'ControlRoom/Downs/Index';
+        return 'control-room';
     }
 
     private function redirectToIndex(Request $request)
@@ -51,9 +51,10 @@ class DownController extends Controller
             'absconding' => Down::where('status', 'absconding')->count(),
         ];
 
-        return Inertia::render($this->indexComponent($request), [
+        return Inertia::render('Downs/Index', [
             'downs' => $downs,
             'stats' => $stats,
+            'mode' => $this->indexMode($request),
         ]);
     }
 

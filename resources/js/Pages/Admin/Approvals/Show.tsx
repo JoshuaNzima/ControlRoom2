@@ -1,6 +1,6 @@
 import React from 'react';
 import { Head, router } from '@inertiajs/react';
-import AdminLayout from '@/Layouts/AdminLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 
 function getStatusBadgeClassName(status: string) {
   switch (status) {
@@ -47,7 +47,7 @@ export default function AdminApprovalsShow({ approval }: Props) {
   };
 
   return (
-    <AdminLayout title={`Approval #${approval.id}`}>
+    <AuthenticatedLayout header={`Approval #${approval.id}`}>
       <Head title={`Approval #${approval.id}`} />
       <div className="py-6">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -110,6 +110,6 @@ export default function AdminApprovalsShow({ approval }: Props) {
           </div>
         </div>
       </div>
-    </AdminLayout>
+    </AuthenticatedLayout>
   );
 }

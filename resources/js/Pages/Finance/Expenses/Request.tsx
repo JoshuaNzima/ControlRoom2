@@ -1,5 +1,5 @@
 import React from 'react';
-import FinanceLayout from '@/Layouts/FinanceLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import ExpenseRequestForm from '@/Components/Finance/ExpenseRequestForm';
 
 interface Props {
@@ -8,7 +8,7 @@ interface Props {
 
 export default function RequestExpense({ categories }: Props) {
   return (
-    <FinanceLayout title="Request Requisition">
+    <AuthenticatedLayout header="Request Requisition">
       <div className="max-w-2xl">
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">New Requisition</h1>
@@ -18,6 +18,6 @@ export default function RequestExpense({ categories }: Props) {
           <ExpenseRequestForm categories={categories} />
         </div>
       </div>
-    </FinanceLayout>
+    </AuthenticatedLayout>
   );
 }

@@ -179,8 +179,17 @@ class SiteScanController extends Controller
         ]);
 
         // Tag the scan immediately (synchronous) to ensure it appears in control-room dashboard
-        // This avoids requiring a queue worker on the live server
-        TagScanJob::dispatchSync($scan->id);
+        // This avoids requiring a queue worker on the live server.
+        // Wrapped in try/catch so a job failure (e.g. broadcasting, DB) never causes a 500 response.
+        try {
+            TagScanJob::dispatchSync($scan->id);
+        } catch (\Throwable $e) {
+            \Log::error('SiteScan: TagScanJob failed (non-fatal)', [
+                'scan_id' => $scan->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+        }
 
         // Dispatch event for real-time notifications (control-room + supervisor private channel)
         // Broadcasting failures (e.g. Pusher SSL) must not break scan HTTP flows.

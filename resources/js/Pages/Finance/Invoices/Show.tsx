@@ -1,6 +1,6 @@
 import React from 'react';
 import { Head, Link, router, useForm } from '@inertiajs/react';
-import FinanceLayout from '@/Layouts/FinanceLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import { formatCurrency, formatDate } from '@/utils/formatters';
 
 interface InvoicePayment {
@@ -119,7 +119,7 @@ export default function ShowInvoice({ invoice }: Props) {
   const hasPartialPayments = (invoice.paymentSummary?.payment_count ?? 0) > 0;
 
   return (
-    <FinanceLayout title={`Invoice ${invoice.invoice_number}`}>
+    <AuthenticatedLayout header={`Invoice ${invoice.invoice_number}`}>
       <Head title={`Invoice ${invoice.invoice_number}`} />
 
       <div className="py-6">
@@ -703,6 +703,6 @@ export default function ShowInvoice({ invoice }: Props) {
           </div>
         </div>
       )}
-    </FinanceLayout>
+    </AuthenticatedLayout>
   );
 }

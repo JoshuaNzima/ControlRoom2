@@ -1,7 +1,7 @@
 import React from 'react';
 import { Head, Link, router } from '@inertiajs/react';
 import { route } from 'ziggy-js';
-import SuperAdminLayout from '@/Layouts/SuperAdminLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import IconMapper from '@/Components/IconMapper';
 import ConfirmModal from '@/Components/ConfirmModal';
 
@@ -79,7 +79,7 @@ const Security: React.FC<Props> = ({ auth }) => {
   };
 
   return (
-    <SuperAdminLayout title="Security" user={auth?.user}>
+    <AuthenticatedLayout header="Security" user={auth?.user}>
       <Head title="Security" />
 
       <ConfirmModal
@@ -323,7 +323,7 @@ const Security: React.FC<Props> = ({ auth }) => {
           </ul>
         </div>
       </div>
-    </SuperAdminLayout>
+    </AuthenticatedLayout>
   );
 };
 

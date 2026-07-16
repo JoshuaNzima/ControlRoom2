@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Head, router } from '@inertiajs/react';
-import AdminLayout from '@/Layouts/AdminLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import IconMapper from '@/Components/IconMapper';
 
 interface Supervisor {
@@ -80,7 +80,7 @@ export default function GuardAssignments({ guards, supervisors }: GuardAssignmen
   const assignedGuards = guards.data.filter(g => g.supervisor);
 
   return (
-    <AdminLayout title="Guard Assignments">
+    <AuthenticatedLayout header="Guard Assignments">
       <Head title="Guard Assignments" />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
@@ -178,7 +178,7 @@ export default function GuardAssignments({ guards, supervisors }: GuardAssignmen
           );
         })}
       </div>
-    </AdminLayout>
+    </AuthenticatedLayout>
   );
 }
 

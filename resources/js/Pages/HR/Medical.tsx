@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
-import HRLayout from '@/Layouts/HRLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import IconMapper from '@/Components/IconMapper';
 import { Card } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
@@ -29,7 +29,7 @@ export default function Medical() {
   const reset = () => router.get(route('hr.medical.index'), {}, { preserveState: false });
 
   return (
-    <HRLayout title="Medical Schemes" user={auth?.user as any}>
+    <AuthenticatedLayout header="Medical Schemes" user={auth?.user as any}>
       <Head title="Medical Schemes" />
       
       {/* Hero Header */}
@@ -186,7 +186,7 @@ export default function Medical() {
         <SchemeModal open={createSchemeOpen || !!editScheme} onClose={()=>{ setCreateSchemeOpen(false); setEditScheme(null); }} scheme={editScheme || undefined} />
         <EnrollModal open={enrollOpen} onClose={()=>setEnrollOpen(false)} guards={guards || []} schemes={(schemes?.data || schemes || [])} />
       </div>
-    </HRLayout>
+    </AuthenticatedLayout>
   );
 }
 

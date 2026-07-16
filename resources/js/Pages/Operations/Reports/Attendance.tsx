@@ -1,6 +1,6 @@
 import React from 'react';
 import { Head } from '@inertiajs/react';
-import OperationsLayout from '@/Layouts/OperationsLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card';
 import IconMapper from '@/Components/IconMapper';
 import { Badge } from '@/Components/ui/badge';
@@ -45,7 +45,7 @@ export default function AttendanceReport({ attendance, stats, date, auth }: Prop
   };
 
   return (
-    <OperationsLayout title="Attendance Report" user={user} showQrScanner={true}>
+    <AuthenticatedLayout header="Attendance Report" user={user} showQrScanner={true}>
       <Head title="Attendance Report" />
 
       <div className="space-y-4 sm:space-y-6">
@@ -119,6 +119,6 @@ export default function AttendanceReport({ attendance, stats, date, auth }: Prop
           </CardContent>
         </Card>
       </div>
-    </OperationsLayout>
+    </AuthenticatedLayout>
   );
 }

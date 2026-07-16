@@ -1,6 +1,6 @@
 import React from 'react';
 import { Head, useForm, usePage, router } from '@inertiajs/react';
-import ControlRoomLayout from '@/Layouts/ControlRoomLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import { Card, CardContent, CardHeader } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import { Badge } from '@/Components/ui/badge';
@@ -147,7 +147,7 @@ const Zones = ({ auth, zones: zonesProp = [], commanders = [], sites = [], guard
   };
 
   return (
-    <ControlRoomLayout title="Zone Management" user={auth?.user as User | undefined}>
+    <AuthenticatedLayout header="Zone Management" user={auth?.user as User | undefined}>
       <Head title="Zone Management" />
 
       <div className="space-y-6">
@@ -487,7 +487,7 @@ const Zones = ({ auth, zones: zonesProp = [], commanders = [], sites = [], guard
           </DialogContent>
         </Dialog>
       </div>
-    </ControlRoomLayout>
+    </AuthenticatedLayout>
   );
 };
 

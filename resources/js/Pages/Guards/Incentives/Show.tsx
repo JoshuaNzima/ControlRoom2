@@ -5,7 +5,7 @@ import { Button } from '@/Components/ui/button';
 import { Badge } from '@/Components/ui/badge';
 import { PageProps } from '@/types';
 import { ArrowLeft, DollarSign, Calendar, AlertTriangle, CheckCircle, User, Info } from 'lucide-react';
-import SupervisorLayout from '@/Layouts/SupervisorLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 
 interface IncentiveRecord {
   id: number;
@@ -72,7 +72,7 @@ export default function IncentiveShow() {
   };
 
   return (
-    <SupervisorLayout title="Incentive Details">
+    <AuthenticatedLayout header="Incentive Details">
       <Head title="Incentive Details" />
       
       <div className="p-6 max-w-4xl mx-auto">
@@ -270,6 +270,6 @@ export default function IncentiveShow() {
           </Card>
         )}
       </div>
-    </SupervisorLayout>
+    </AuthenticatedLayout>
   );
 }

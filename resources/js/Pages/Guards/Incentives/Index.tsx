@@ -14,7 +14,7 @@ import {
 import { Pagination } from '@/Components/ui/Pagination';
 import { PageProps } from '@/types';
 import { ArrowLeft, DollarSign, TrendingUp, TrendingDown, Calendar, AlertTriangle, CheckCircle } from 'lucide-react';
-import SupervisorLayout from '@/Layouts/SupervisorLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 
 interface IncentiveRecord {
   id: number;
@@ -76,7 +76,7 @@ export default function MyIncentives() {
   };
 
   return (
-    <SupervisorLayout title="My Incentives">
+    <AuthenticatedLayout header="My Incentives">
       <Head title="My Incentives" />
       
       <div className="p-6 max-w-6xl mx-auto">
@@ -204,6 +204,6 @@ export default function MyIncentives() {
           </CardContent>
         </Card>
       </div>
-    </SupervisorLayout>
+    </AuthenticatedLayout>
   );
 }

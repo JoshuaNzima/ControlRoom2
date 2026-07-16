@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
-import HRLayout from '@/Layouts/HRLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import Modal from '@/Components/Modal';
 import IconMapper from '@/Components/IconMapper';
 
@@ -46,7 +46,7 @@ export default function Interviews() {
   };
 
   return (
-    <HRLayout title="HR Interviews" user={auth?.user as any}>
+    <AuthenticatedLayout header="HR Interviews" user={auth?.user as any}>
       <Head title="HR Interviews" />
       <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
@@ -177,6 +177,6 @@ export default function Interviews() {
           </form>
         </div>
       </Modal>
-    </HRLayout>
+    </AuthenticatedLayout>
   );
 }

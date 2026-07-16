@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Head, Link } from '@inertiajs/react';
-import ControlRoomLayout from '@/Layouts/ControlRoomLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import { Badge } from '@/Components/ui/badge';
@@ -76,7 +76,7 @@ export default function Requisitions({ requisitions, stats }: Props) {
   });
 
   return (
-    <ControlRoomLayout title="Requisitions">
+    <AuthenticatedLayout header="Requisitions">
       <Head title="Control Room - Requisitions" />
       
       <div className="p-4 sm:p-6 lg:p-8">
@@ -210,6 +210,6 @@ export default function Requisitions({ requisitions, stats }: Props) {
           </CardContent>
         </Card>
       </div>
-    </ControlRoomLayout>
+    </AuthenticatedLayout>
   );
 }

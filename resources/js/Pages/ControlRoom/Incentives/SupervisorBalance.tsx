@@ -1,6 +1,6 @@
 import React from 'react';
 import { Head } from '@inertiajs/react';
-import ControlRoomLayout from '@/Layouts/ControlRoomLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import {
   Card,
   CardContent,
@@ -88,7 +88,7 @@ export default function SupervisorBalance({ balance, recentDeductions, pendingDo
   };
 
   return (
-    <ControlRoomLayout title="My Incentive Balance">
+    <AuthenticatedLayout header="My Incentive Balance">
       <Head title="My Incentive Balance" />
 
       <div className="space-y-6 p-4">
@@ -253,6 +253,6 @@ export default function SupervisorBalance({ balance, recentDeductions, pendingDo
           </Card>
         )}
       </div>
-    </ControlRoomLayout>
+    </AuthenticatedLayout>
   );
 }

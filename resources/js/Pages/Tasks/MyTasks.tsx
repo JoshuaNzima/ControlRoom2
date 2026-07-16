@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Head, router, usePage } from '@inertiajs/react';
-import TaskTrackerLayout from '@/Layouts/TaskTrackerLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import { Badge } from '@/Components/ui/badge';
@@ -115,7 +115,7 @@ export default function MyTasks({ auth, tasks, stats, modules, statuses, priorit
   };
 
   return (
-    <TaskTrackerLayout title="My Tasks" user={auth.user}>
+    <AuthenticatedLayout header="My Tasks" user={auth.user}>
       <Head title="My Tasks" />
 
       {/* Stats Cards */}
@@ -401,6 +401,6 @@ export default function MyTasks({ auth, tasks, stats, modules, statuses, priorit
           onClose={() => setCompleteTask(null)}
         />
       )}
-    </TaskTrackerLayout>
+    </AuthenticatedLayout>
   );
 }

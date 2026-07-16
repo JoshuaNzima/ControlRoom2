@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
-import HRLayout from '@/Layouts/HRLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 
 interface Scheme { id: number; name: string; provider?: string|null; plan?: string|null; status: string; created_at?: string }
 interface Enrollment { id: number; member_no?: string|null; status: string; start_date?: string|null; end_date?: string|null; scheme?: { id: number; name: string } | null; guard?: { id: number; name: string; employee_id?: string|null } | null; created_at?: string }
@@ -25,7 +25,7 @@ export default function Pensions() {
   const reset = () => router.get(route('hr.pensions.index'), {}, { preserveState: false });
 
   return (
-    <HRLayout title="Pensions" user={auth?.user as any}>
+    <AuthenticatedLayout header="Pensions" user={auth?.user as any}>
       <Head title="Pensions" />
       <div className="py-6">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
@@ -165,7 +165,7 @@ export default function Pensions() {
           <EnrollModal open={enrollOpen} onClose={()=>setEnrollOpen(false)} guards={guards || []} schemes={(schemes?.data || schemes || [])} />
         </div>
       </div>
-    </HRLayout>
+    </AuthenticatedLayout>
   );
 }
 

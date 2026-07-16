@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { Head, Link, router } from '@inertiajs/react';
-import AdminLayout from '@/Layouts/AdminLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import { formatCurrencyMWK, formatDateMW, formatDistanceToNow } from '@/Components/format';
 import RequisitionViewModal from '@/Components/Requisitions/RequisitionViewModal';
 import { Card } from '@/Components/ui/card';
@@ -177,7 +177,7 @@ export default function AdminApprovalsIndex({ budgets, selectedTab = 'requisitio
   );
 
   return (
-    <AdminLayout title="Approvals">
+    <AuthenticatedLayout header="Approvals">
       <Head title="Approvals" />
       
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -429,6 +429,6 @@ export default function AdminApprovalsIndex({ budgets, selectedTab = 'requisitio
       </div>
 
       <RequisitionViewModal open={reqOpen} requisitionId={reqId} onClose={() => setReqOpen(false)} />
-    </AdminLayout>
+    </AuthenticatedLayout>
   );
 }

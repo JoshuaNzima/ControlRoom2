@@ -1,6 +1,6 @@
 import React from 'react';
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import ControlRoomLayout from '@/Layouts/ControlRoomLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import { Card } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import { Badge } from '@/Components/ui/badge';
@@ -49,7 +49,7 @@ export default function AssignmentsIndex() {
   ];
 
   return (
-    <ControlRoomLayout title="Guard Assignments">
+    <AuthenticatedLayout header="Guard Assignments">
       <Head title="Assignments" />
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
         {/* Header */}
@@ -281,6 +281,6 @@ export default function AssignmentsIndex() {
           </Card>
         </div>
       </div>
-    </ControlRoomLayout>
+    </AuthenticatedLayout>
   );
 }

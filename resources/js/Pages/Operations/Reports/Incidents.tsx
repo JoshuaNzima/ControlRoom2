@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Head } from '@inertiajs/react';
-import OperationsLayout from '@/Layouts/OperationsLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card';
 import IconMapper from '@/Components/IconMapper';
 import { Badge } from '@/Components/ui/badge';
@@ -62,7 +62,7 @@ export default function IncidentsReport({ incidents, downs, auth }: Props) {
   };
 
   return (
-    <OperationsLayout title="Incidents & Issues" user={user} showQrScanner={true}>
+    <AuthenticatedLayout header="Incidents & Issues" user={user} showQrScanner={true}>
       <Head title="Incidents & Issues" />
 
       <div className="space-y-4 sm:space-y-6">
@@ -165,6 +165,6 @@ export default function IncidentsReport({ incidents, downs, auth }: Props) {
           </div>
         )}
       </div>
-    </OperationsLayout>
+    </AuthenticatedLayout>
   );
 }

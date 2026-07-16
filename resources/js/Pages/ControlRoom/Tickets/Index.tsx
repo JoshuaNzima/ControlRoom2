@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Head, router } from '@inertiajs/react';
-import ControlRoomLayout from '@/Layouts/ControlRoomLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import { Card, CardContent, CardHeader } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import { Input } from '@/Components/ui/input';
@@ -104,7 +104,7 @@ export default function TicketsIndex({ tickets, filters, stats, auth }: PageProp
 	}, [tickets?.data, search]);
 
 	return (
-		<ControlRoomLayout title="Tickets" user={auth?.user as any}>
+		<AuthenticatedLayout header="Tickets" user={auth?.user as any}>
 			<Head title="Tickets" />
 
 			<div className="space-y-6">
@@ -314,6 +314,6 @@ export default function TicketsIndex({ tickets, filters, stats, auth }: PageProp
 			<Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
 				<CreateTicketForm onClose={() => setShowCreateDialog(false)} />
 			</Dialog>
-		</ControlRoomLayout>
+		</AuthenticatedLayout>
 	);
 }

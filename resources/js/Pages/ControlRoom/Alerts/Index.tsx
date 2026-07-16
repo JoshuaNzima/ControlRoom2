@@ -1,6 +1,6 @@
 import React from 'react';
 import { Head, router, usePage } from '@inertiajs/react';
-import ControlRoomLayout from '@/Layouts/ControlRoomLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import { Card, CardContent, CardHeader } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import { Badge } from '@/Components/ui/badge';
@@ -76,7 +76,7 @@ export default function AlertsIndex() {
   };
 
   return (
-    <ControlRoomLayout title="Emergency Alerts" user={auth?.user as any}>
+    <AuthenticatedLayout header="Emergency Alerts" user={auth?.user as any}>
       <Head title="Emergency Alerts" />
 
       <div className="space-y-6">
@@ -225,6 +225,6 @@ export default function AlertsIndex() {
           </div>
         </div>
       )}
-    </ControlRoomLayout>
+    </AuthenticatedLayout>
   );
 }

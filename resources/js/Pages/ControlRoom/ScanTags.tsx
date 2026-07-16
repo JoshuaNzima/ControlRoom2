@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { Head, usePage } from '@inertiajs/react';
-import ControlRoomLayout from '@/Layouts/ControlRoomLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import MapView from '@/Components/ControlRoom/MapView';
 import useEcho from '@/Hooks/useEcho';
 import debounce from 'lodash/debounce';
@@ -105,7 +105,7 @@ export default function ScanTags() {
   }, []);
 
   return (
-    <ControlRoomLayout title="Scan Tags">
+    <AuthenticatedLayout header="Scan Tags">
       <Head title="Scan Tags" />
 
       <div className="rounded-xl border border-gray-200 bg-white shadow-sm shadow-black/5 p-4 sm:p-6 dark:border-gray-800 dark:bg-gray-900/60 dark:shadow-none">
@@ -189,6 +189,6 @@ export default function ScanTags() {
           </div>
         )}
       </div>
-    </ControlRoomLayout>
+    </AuthenticatedLayout>
   );
 }

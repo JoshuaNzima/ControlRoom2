@@ -1,10 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Head, Link, router } from '@inertiajs/react';
-import DashboardLayout from '@/Layouts/SupervisorLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import IconMapper from '@/Components/IconMapper';
 import CameraCapture from '@/Components/CameraCapture';
 import ScannerModal from '@/Components/Scanner/ScannerModal';
 import Modal from '@/Components/Modal';
+import GuardFilterBar from '@/Components/Guards/GuardFilterBar';
+import GuardListItem from '@/Components/Guards/GuardListItem';
+import StatusBadge from '@/Components/Guards/StatusBadge';
 
 interface Guard {
   id: number;
@@ -45,12 +48,15 @@ interface Props {
   requireSiteScan?: boolean;
 }
 
+type SortField = 'name' | 'employee_id' | 'status';
+type SortDirection = 'asc' | 'desc';
+
 export default function GuardsIndex({ guards = [], sites = [], activeScan = null, requireSiteScan = false }: Props) {
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState<'all' | 'on_duty' | 'off_duty'>('all');
-  const [filterGuardType, setFilterGuardType] = useState<'all' | 'permanent' | 'reliever' | 'standby'>('all');
-  const [sortField, setSortField] = useState<'name' | 'employee_id' | 'status'>('name');
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [filterStatus, setFilterStatus] = useState('all');
+  const [filterGuardType, setFilterGuardType] = useState('all');
+  const [sortField, setSortField] = useState<SortField>('name');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const [selectedGuard, setSelectedGuard] = useState<Guard | null>(null);
   const [selectedSite, setSelectedSite] = useState<number | null>(null);
   const [action, setAction] = useState<'checkin' | 'checkout' | 'bulk-checkin' | 'bulk-checkout' | null>(null);
@@ -68,7 +74,37 @@ export default function GuardsIndex({ guards = [], sites = [], activeScan = null
   const [selectedGuardIds, setSelectedGuardIds] = useState<Set<number>>(new Set());
   const [bulkMode, setBulkMode] = useState(false);
 
-  // Bulkl toggle all on current filtered page
+  const canPresent = requireSiteScan ? !!activeScan : true;
+
+  // Filter and sort guards
+  const filteredGuards = (guards || [])
+    .filter((guard) => {
+      const term = searchTerm.trim().toLowerCase();
+      const matchesSearch = !term || guard.name.toLowerCase().includes(term) ||
+        (guard.employee_id && guard.employee_id.toLowerCase().includes(term));
+
+      const matchesStatus = filterStatus === 'all' ? true :
+        filterStatus === 'on_duty' ? guard.is_on_duty :
+        !guard.is_on_duty;
+
+      const matchesGuardType = filterGuardType === 'all' ? true :
+        guard.guard_type === filterGuardType;
+
+      return matchesSearch && matchesStatus && matchesGuardType;
+    })
+    .sort((a, b) => {
+      let valueA = a[sortField];
+      let valueB = b[sortField];
+      if (!valueA) return sortDirection === 'asc' ? -1 : 1;
+      if (!valueB) return sortDirection === 'asc' ? 1 : -1;
+      valueA = String(valueA).toLowerCase();
+      valueB = String(valueB).toLowerCase();
+      if (valueA < valueB) return sortDirection === 'asc' ? -1 : 1;
+      if (valueA > valueB) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
+
+  // Bulk helpers
   const toggleSelectAll = () => {
     if (selectedGuardIds.size === filteredGuards.length) {
       setSelectedGuardIds(new Set());
@@ -81,22 +117,21 @@ export default function GuardsIndex({ guards = [], sites = [], activeScan = null
     const next = new Set(selectedGuardIds);
     if (next.has(id)) {
       next.delete(id);
+      setSelectedGuardIds(next);
     } else {
       next.add(id);
+      setSelectedGuardIds(next);
     }
-    setSelectedGuardIds(next);
   };
 
   const bulkCheckIn = () => {
-    const ids = Array.from(selectedGuardIds);
-    if (ids.length === 0) return;
+    if (selectedGuardIds.size === 0) return;
     setSelectedSite(activeScan?.site_id ?? null);
     setAction('bulk-checkin');
   };
 
   const bulkCheckOut = () => {
-    const ids = Array.from(selectedGuardIds);
-    if (ids.length === 0) return;
+    if (selectedGuardIds.size === 0) return;
     setAction('bulk-checkout');
   };
 
@@ -144,34 +179,7 @@ export default function GuardsIndex({ guards = [], sites = [], activeScan = null
     });
   };
 
-  // Filter and sort guards
-  const filteredGuards = (guards || [])
-    .filter((guard) => {
-      const term = searchTerm.trim().toLowerCase();
-      const matchesSearch = !term || guard.name.toLowerCase().includes(term) || 
-        (guard.employee_id && guard.employee_id.toLowerCase().includes(term));
-      
-      const matchesStatus = filterStatus === 'all' ? true :
-        filterStatus === 'on_duty' ? guard.is_on_duty :
-        !guard.is_on_duty;
-      
-      const matchesGuardType = filterGuardType === 'all' ? true :
-        guard.guard_type === filterGuardType;
-      
-      return matchesSearch && matchesStatus && matchesGuardType;
-    })
-    .sort((a, b) => {
-      let valueA = a[sortField];
-      let valueB = b[sortField];
-      if (!valueA) return sortDirection === 'asc' ? -1 : 1;
-      if (!valueB) return sortDirection === 'asc' ? 1 : -1;
-      valueA = String(valueA).toLowerCase();
-      valueB = String(valueB).toLowerCase();
-      if (valueA < valueB) return sortDirection === 'asc' ? -1 : 1;
-      if (valueA > valueB) return sortDirection === 'asc' ? 1 : -1;
-      return 0;
-    });
-
+  // Single check-in/out
   const handleCheckIn = (guard: Guard) => {
     setSelectedGuard(guard);
     setAction('checkin');
@@ -238,7 +246,6 @@ export default function GuardsIndex({ guards = [], sites = [], activeScan = null
   const submitQuickPresent = (guard: Guard) => {
     const siteId = activeScan?.site_id ?? (sites.length > 0 ? sites[0].id : null);
     if (!siteId) {
-      // No site available — open the check-in modal for the user to pick one
       handleCheckIn(guard);
       return;
     }
@@ -257,6 +264,7 @@ export default function GuardsIndex({ guards = [], sites = [], activeScan = null
   };
 
   const submitQuickAbsent = (guard: Guard) => {
+    if (!canPresent) return;
     const siteId = activeScan?.site_id ?? (sites.length > 0 ? sites[0].id : null);
     if (!siteId) return;
     router.post(route('supervisor.attendance.manual'), {
@@ -271,26 +279,75 @@ export default function GuardsIndex({ guards = [], sites = [], activeScan = null
     });
   };
 
-  const getGuardTypeBadge = (type?: string) => {
-    if (!type || type === 'permanent') return null;
-    const styles = {
-      reliever: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200',
-      standby: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200',
-    };
+  // Render guard action buttons
+  const renderGuardActions = (guard: Guard): React.ReactNode => {
+    if (!guard.attendance) {
+      return (
+        <>
+          <button
+            onClick={() => submitQuickPresent(guard)}
+            disabled={!canPresent || submitting}
+            className="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-300 dark:disabled:bg-gray-700 text-white rounded-lg font-medium text-sm transition"
+            title="Quick Check In"
+          >
+            Present
+          </button>
+          <button
+            onClick={() => submitQuickAbsent(guard)}
+            disabled={!canPresent || submitting}
+            className="px-3 py-2 bg-orange-600 hover:bg-orange-700 disabled:bg-gray-300 dark:disabled:bg-gray-700 text-white rounded-lg font-medium text-sm transition"
+            title="Mark Absent"
+          >
+            Absent
+          </button>
+        </>
+      );
+    }
+    if (!guard.attendance.check_out_time) {
+      return (
+        <button
+          onClick={() => handleCheckOut(guard)}
+          className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition"
+        >
+          Check Out
+        </button>
+      );
+    }
     return (
-      <span className={`px-2 py-0.5 text-xs font-medium rounded ${styles[type as keyof typeof styles]}`}>
-        {type === 'reliever' ? 'Reliever' : 'Standby'}
+      <span className="px-4 py-2 bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 rounded-lg font-medium flex items-center gap-2">
+        <IconMapper name="CheckCircle" size={16} className="text-green-500" />
+        Done
       </span>
     );
   };
 
-  const canPresent = requireSiteScan ? !!activeScan : true;
+  // Shared backdate reason input
+  const renderBackdateReason = () => {
+    if (!backdate) return null;
+    const tooShort = backdateReason.length > 0 && backdateReason.length < 10;
+    return (
+      <div>
+        <input
+          value={backdateReason}
+          onChange={(e) => setBackdateReason(e.target.value)}
+          placeholder="Reason for backdate (minimum 10 characters)..."
+          className={`w-full px-3 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-coin-500 ${
+            tooShort ? 'border-red-500' : 'border-gray-300 dark:border-gray-700'
+          }`}
+        />
+        {tooShort && (
+          <p className="text-xs text-red-600 mt-1">Please provide at least 10 characters explaining why backdating is needed.</p>
+        )}
+      </div>
+    );
+  };
 
   return (
-    <DashboardLayout title="Guards">
+    <AuthenticatedLayout header="Guards">
       <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
         <Head title="Guards" />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+
           {/* Header */}
           <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm p-4 mb-6">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -300,7 +357,9 @@ export default function GuardsIndex({ guards = [], sites = [], activeScan = null
                 </div>
                 <div>
                   <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">My Guards</h1>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">{filteredGuards.length} of {guards.length} guards</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    {filteredGuards.length} of {guards.length} guards
+                  </p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
@@ -308,10 +367,7 @@ export default function GuardsIndex({ guards = [], sites = [], activeScan = null
                   <div className="flex items-center gap-2 px-4 py-2 bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-200 rounded-lg">
                     <IconMapper name="MapPin" size={16} />
                     <span className="text-sm font-medium">{activeScan.site_name}</span>
-                    <button
-                      onClick={() => setShowScannerModal(true)}
-                      className="text-xs underline ml-2"
-                    >
+                    <button onClick={() => setShowScannerModal(true)} className="text-xs underline ml-2">
                       Change
                     </button>
                   </div>
@@ -332,72 +388,26 @@ export default function GuardsIndex({ guards = [], sites = [], activeScan = null
             </div>
           </div>
 
-          {/* Filters */}
-          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm p-4 mb-6">
-            <div className="flex flex-col lg:flex-row gap-4">
-              <div className="flex-1">
-                <div className="relative">
-                  <IconMapper name="Search" size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                  <input
-                    type="text"
-                    placeholder="Search guards by name or ID..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-coin-500"
-                  />
-                </div>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <select
-                  value={filterStatus}
-                  onChange={(e) => setFilterStatus(e.target.value as 'all' | 'on_duty' | 'off_duty')}
-                  className="px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-coin-500"
-                >
-                  <option value="all">All Status</option>
-                  <option value="on_duty">On Duty</option>
-                  <option value="off_duty">Off Duty</option>
-                </select>
-                <select
-                  value={filterGuardType}
-                  onChange={(e) => setFilterGuardType(e.target.value as 'all' | 'permanent' | 'reliever' | 'standby')}
-                  className="px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-coin-500"
-                >
-                  <option value="all">All Types</option>
-                  <option value="permanent">Permanent</option>
-                  <option value="reliever">Reliever</option>
-                  <option value="standby">Standby</option>
-                </select>
-                <button
-                  onClick={() => {
-                    setSortField('name');
-                    setSortDirection(current => current === 'asc' ? 'desc' : 'asc');
-                  }}
-                  className={`px-4 py-2 rounded-lg font-medium transition ${sortField === 'name' ? 'bg-coin-100 text-coin-700 dark:bg-coin-900/30 dark:text-coin-200' : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-100'}`}
-                >
-                  Name {sortField === 'name' && (sortDirection === 'asc' ? <IconMapper name="ArrowUp" size={14} className="inline" /> : <IconMapper name="ArrowDown" size={14} className="inline" />)}
-                </button>
-                <button
-                  onClick={() => {
-                    setSortField('employee_id');
-                    setSortDirection(current => current === 'asc' ? 'desc' : 'asc');
-                  }}
-                  className={`px-4 py-2 rounded-lg font-medium transition ${sortField === 'employee_id' ? 'bg-coin-100 text-coin-700 dark:bg-coin-900/30 dark:text-coin-200' : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-100'}`}
-                >
-                  ID {sortField === 'employee_id' && (sortDirection === 'asc' ? <IconMapper name="ArrowUp" size={14} className="inline" /> : <IconMapper name="ArrowDown" size={14} className="inline" />)}
-                </button>
-                <button
-                  onClick={() => setBulkMode(!bulkMode)}
-                  className={`px-4 py-2 rounded-lg font-medium transition flex items-center gap-1 ${
-                    bulkMode
-                      ? 'bg-coin-600 text-white'
-                      : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-100'
-                  }`}
-                >
-                  <IconMapper name={bulkMode ? 'CheckSquare' : 'Square'} size={14} />
-                  Bulk
-                </button>
-              </div>
-            </div>
+          {/* Filter Bar — uses shared GuardFilterBar component */}
+          <div className="mb-6">
+            <GuardFilterBar
+              searchTerm={searchTerm}
+              onSearchChange={setSearchTerm}
+              filterStatus={filterStatus}
+              onFilterStatusChange={setFilterStatus}
+              filterGuardType={filterGuardType}
+              onFilterGuardTypeChange={setFilterGuardType}
+              sortField={sortField}
+              sortDirection={sortDirection}
+              onSortChange={(field, direction) => {
+                setSortField(field);
+                setSortDirection(direction);
+              }}
+              bulkMode={bulkMode}
+              onToggleBulkMode={() => setBulkMode(!bulkMode)}
+              totalCount={guards.length}
+              filteredCount={filteredGuards.length}
+            />
           </div>
 
           {/* Bulk Action Bar */}
@@ -406,7 +416,9 @@ export default function GuardsIndex({ guards = [], sites = [], activeScan = null
               <div className="bg-coin-600 rounded-xl shadow-lg p-4 text-white flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <div className="flex items-center gap-3">
                   <IconMapper name="CheckSquare" size={22} />
-                  <span className="font-semibold">{selectedGuardIds.size} guard{selectedGuardIds.size !== 1 ? 's' : ''} selected</span>
+                  <span className="font-semibold">
+                    {selectedGuardIds.size} guard{selectedGuardIds.size !== 1 ? 's' : ''} selected
+                  </span>
                 </div>
                 <div className="flex items-center gap-2">
                   <button
@@ -435,7 +447,7 @@ export default function GuardsIndex({ guards = [], sites = [], activeScan = null
             </div>
           )}
 
-          {/* Guards List */}
+          {/* Guards List — uses shared GuardListItem and StatusBadge components */}
           <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm overflow-hidden">
             {filteredGuards.length === 0 ? (
               <div className="p-12 text-center">
@@ -444,7 +456,6 @@ export default function GuardsIndex({ guards = [], sites = [], activeScan = null
               </div>
             ) : (
               <>
-                {/* Bulk mode: Select All header */}
                 {bulkMode && (
                   <div className="px-4 py-2 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center gap-3">
                     <input
@@ -462,102 +473,24 @@ export default function GuardsIndex({ guards = [], sites = [], activeScan = null
                 )}
                 <div className="divide-y divide-gray-200 dark:divide-gray-800">
                   {filteredGuards.map((guard) => (
-                    <div key={guard.id} className={`p-4 transition ${selectedGuardIds.has(guard.id) ? 'bg-coin-50 dark:bg-coin-900/15' : 'hover:bg-gray-50 dark:hover:bg-gray-800/50'}`}>
-                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                        <div className="flex items-center gap-3">
-                          {bulkMode && (
-                            <input
-                              type="checkbox"
-                              checked={selectedGuardIds.has(guard.id)}
-                              onChange={() => toggleSelectGuard(guard.id)}
-                              className="w-5 h-5 rounded border-gray-300 dark:border-gray-600 text-coin-600 focus:ring-coin-500 flex-shrink-0"
-                            />
-                          )}
-                          <div className="w-12 h-12 bg-gradient-to-br from-coin-500 to-coin-600 rounded-full flex items-center justify-center text-white font-bold text-lg">
-                            {guard.name.charAt(0)}
-                          </div>
-                          <div>
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <h4 className="font-bold text-gray-900 dark:text-gray-100">{guard.name}</h4>
-                              {getGuardTypeBadge(guard.guard_type)}
-                              {guard.is_on_duty && (
-                                <span className="px-3 py-1 text-xs font-bold bg-green-500 text-white rounded-full">
-                                  On Duty
-                                </span>
-                              )}
-                            </div>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">{guard.employee_id} • {guard.phone}</p>
-                          </div>
-                        </div>
-
-                        {/* Attendance Info */}
-                        <div className="flex-1 min-w-0">
-                          {guard.attendance ? (
-                            <div className="text-sm text-gray-600 dark:text-gray-400">
-                              <div className="flex items-center gap-2">
-                                <IconMapper name="Clock" size={14} />
-                                <span>In: {guard.attendance.check_in_time}</span>
-                                {guard.attendance.site && (
-                                  <span className="text-coin-600 dark:text-coin-400">@ {guard.attendance.site}</span>
-                                )}
-                              </div>
-                              {guard.attendance.check_out_time && (
-                                <div className="flex items-center gap-2 mt-1">
-                                  <IconMapper name="CheckCircle" size={14} />
-                                  <span>Out: {guard.attendance.check_out_time}</span>
-                                  <span className="text-purple-600">({guard.attendance.hours_worked ?? 0}h)</span>
-                                </div>
-                              )}
-                            </div>
-                          ) : (
-                            <span className="text-sm text-gray-400 dark:text-gray-500">No attendance today</span>
-                          )}
-                        </div>
-
-                        {/* Actions */}
-                        <div className="flex items-center gap-1.5">
-                          <Link
-                            href={route('supervisor.guards.show', guard.id)}
-                            className="px-3 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition"
-                            title="View Details"
-                          >
-                            <IconMapper name="Eye" size={18} />
-                          </Link>
-                          {!guard.attendance ? (
-                            <>
-                              <button
-                                onClick={() => submitQuickPresent(guard)}
-                                disabled={!canPresent || submitting}
-                                className="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-300 dark:disabled:bg-gray-700 text-white rounded-lg font-medium text-sm transition"
-                                title="Quick Check In"
-                              >
-                                Present
-                              </button>
-                              <button
-                                onClick={() => submitQuickAbsent(guard)}
-                                disabled={!canPresent || submitting}
-                                className="px-3 py-2 bg-orange-600 hover:bg-orange-700 disabled:bg-gray-300 dark:disabled:bg-gray-700 text-white rounded-lg font-medium text-sm transition"
-                                title="Mark Absent"
-                              >
-                                Absent
-                              </button>
-                            </>
-                          ) : !guard.attendance.check_out_time ? (
-                            <button
-                              onClick={() => handleCheckOut(guard)}
-                              className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition"
-                            >
-                              Check Out
-                            </button>
-                          ) : (
-                            <span className="px-4 py-2 bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 rounded-lg font-medium flex items-center gap-2">
-                              <IconMapper name="CheckCircle" size={16} className="text-green-500" />
-                              Done
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
+                    <GuardListItem
+                      key={guard.id}
+                      guard={{
+                        id: guard.id,
+                        employee_id: guard.employee_id,
+                        name: guard.name,
+                        phone: guard.phone,
+                        status: guard.status,
+                        guard_type: guard.guard_type,
+                        is_on_duty: guard.is_on_duty,
+                        attendance: guard.attendance,
+                      }}
+                      selected={selectedGuardIds.has(guard.id)}
+                      bulkMode={bulkMode}
+                      onToggleSelect={toggleSelectGuard}
+                      detailRoute={route('supervisor.guards.show', guard.id)}
+                      actions={renderGuardActions(guard)}
+                    />
                   ))}
                 </div>
               </>
@@ -613,25 +546,7 @@ export default function GuardsIndex({ guards = [], sites = [], activeScan = null
                   />
                   <span>Mark for yesterday (backdate)</span>
                 </label>
-                {backdate && (
-                  <div>
-                    <input
-                      value={backdateReason}
-                      onChange={(e) => {
-                        setBackdateReason(e.target.value);
-                      }}
-                      placeholder="Reason for backdate (minimum 10 characters)..."
-                      className={`w-full px-3 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-coin-500 ${
-                        backdate && backdateReason.length > 0 && backdateReason.length < 10
-                          ? 'border-red-500'
-                          : 'border-gray-300 dark:border-gray-700'
-                      }`}
-                    />
-                    {backdate && backdateReason.length > 0 && backdateReason.length < 10 && (
-                      <p className="text-xs text-red-600 mt-1">Please provide at least 10 characters explaining why backdating is needed.</p>
-                    )}
-                  </div>
-                )}
+                {renderBackdateReason()}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Notes</label>
@@ -757,23 +672,7 @@ export default function GuardsIndex({ guards = [], sites = [], activeScan = null
                   />
                   <span>Mark for yesterday (backdate)</span>
                 </label>
-                {backdate && (
-                  <div>
-                    <input
-                      value={backdateReason}
-                      onChange={(e) => setBackdateReason(e.target.value)}
-                      placeholder="Reason for backdate (minimum 10 characters)..."
-                      className={`w-full px-3 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-coin-500 ${
-                        backdate && backdateReason.length > 0 && backdateReason.length < 10
-                          ? 'border-red-500'
-                          : 'border-gray-300 dark:border-gray-700'
-                      }`}
-                    />
-                    {backdate && backdateReason.length > 0 && backdateReason.length < 10 && (
-                      <p className="text-xs text-red-600 mt-1">Please provide at least 10 characters explaining why backdating is needed.</p>
-                    )}
-                  </div>
-                )}
+                {renderBackdateReason()}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Photo *</label>
@@ -920,6 +819,6 @@ export default function GuardsIndex({ guards = [], sites = [], activeScan = null
           </div>
         )}
       </div>
-    </DashboardLayout>
+    </AuthenticatedLayout>
   );
 }

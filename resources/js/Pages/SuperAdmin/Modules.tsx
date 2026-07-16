@@ -1,6 +1,6 @@
 import React from 'react';
 import { Head, Link, usePage } from '@inertiajs/react';
-import SuperAdminLayout from '@/Layouts/SuperAdminLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import IconMapper from '@/Components/IconMapper';
 
 export default function Modules() {
@@ -19,7 +19,7 @@ export default function Modules() {
   const filtered = category ? moduleCategories.filter(c => c.key === String(category)) : moduleCategories;
 
   return (
-    <SuperAdminLayout title="Module Management">
+    <AuthenticatedLayout header="Module Management">
       <Head title="Super Admin • Modules" />
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
@@ -89,6 +89,6 @@ export default function Modules() {
           </div>
         </div>
       </div>
-    </SuperAdminLayout>
+    </AuthenticatedLayout>
   );
 }

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Head, router, usePage } from '@inertiajs/react';
-import FrontOfficeLayout from '@/Layouts/FrontOfficeLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import useNotification from '@/Providers/useNotifications';
 import {
     CheckSquare,
@@ -307,7 +307,7 @@ export default function TasksIndex({ tasks, users = [], templates = [], filters 
     const completedCount = (tasks?.data || []).filter(t => t.status === 'completed').length;
 
     return (
-        <FrontOfficeLayout>
+        <AuthenticatedLayout>
             <Head title="Task Management" />
 
             {/* Header */}
@@ -934,6 +934,6 @@ export default function TasksIndex({ tasks, users = [], templates = [], filters 
                     )}
                 </DialogContent>
             </Dialog>
-        </FrontOfficeLayout>
+        </AuthenticatedLayout>
     );
 }

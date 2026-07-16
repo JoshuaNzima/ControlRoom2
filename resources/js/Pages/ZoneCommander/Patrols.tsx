@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Head, Link } from '@inertiajs/react';
-import ZoneCommanderLayout from '@/Layouts/ZoneCommanderLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import { Badge } from '@/Components/ui/badge';
@@ -41,7 +41,7 @@ export default function Patrols({ patrols = [] }: PatrolsProps) {
   const missedPatrols = patrols.filter(p => p.status === 'missed').length;
 
   return (
-    <ZoneCommanderLayout title="Patrols">
+    <AuthenticatedLayout header="Patrols">
       <Head title="Patrol Management" />
 
       <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-4 sm:py-6 space-y-4 sm:space-y-6">
@@ -180,7 +180,7 @@ export default function Patrols({ patrols = [] }: PatrolsProps) {
         open={scannerOpen}
         onClose={() => setScannerOpen(false)}
       />
-    </ZoneCommanderLayout>
+    </AuthenticatedLayout>
   );
 }
 

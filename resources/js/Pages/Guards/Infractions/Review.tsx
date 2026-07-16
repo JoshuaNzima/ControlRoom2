@@ -1,6 +1,6 @@
 import React from 'react';
 import { Head, useForm } from '@inertiajs/react';
-import AdminLayout from '@/Layouts/AdminLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import { Label } from '@/Components/ui/label';
@@ -72,7 +72,7 @@ export default function Review({ infraction }: ReviewProps) {
   };
 
   return (
-    <AdminLayout title="Review Infraction">
+    <AuthenticatedLayout header="Review Infraction">
       <Head title="Review Infraction" />
 
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
@@ -153,6 +153,6 @@ export default function Review({ infraction }: ReviewProps) {
           </CardContent>
         </Card>
       </div>
-    </AdminLayout>
+    </AuthenticatedLayout>
   );
 }

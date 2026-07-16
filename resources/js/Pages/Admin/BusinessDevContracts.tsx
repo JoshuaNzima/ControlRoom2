@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Head, Link, router, useForm } from '@inertiajs/react';
-import BusinessDevLayout from '@/Layouts/BusinessDevLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import Modal from '@/Components/Modal';
 
 interface Contract { id: number; client_name?: string | null; title: string; value: number; status: string; start_date?: string | null; end_date?: string | null; renewal_date?: string | null }
@@ -39,7 +39,7 @@ export default function BusinessDevContracts({ auth = {}, contracts, filters, su
   const applyFilters = () => router.get(route('admin.business-dev.contracts.index'), { status, search }, { preserveState: true });
 
   return (
-    <BusinessDevLayout title="Contracts" user={auth?.user as any}>
+    <AuthenticatedLayout header="Contracts" user={auth?.user as any}>
       <Head title="Contracts" />
       <div className="py-6">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
@@ -212,7 +212,7 @@ export default function BusinessDevContracts({ auth = {}, contracts, filters, su
           )}
         </div>
       </div>
-    </BusinessDevLayout>
+    </AuthenticatedLayout>
   );
 }
 

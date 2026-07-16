@@ -137,44 +137,30 @@ export default defineConfig({
 
                     const nm = id.includes('node_modules/') ? id.split('node_modules/').pop() : id;
 
+                    // ALL packages that depend on React must go into one single chunk
+                    // to avoid circular dependencies between vendor chunks.
+                    // React + its ecosystem (UI libs, state management, animation, charts, maps, etc.)
                     if (nm.startsWith('react') || nm.startsWith('react-dom') || nm.startsWith('react-is') ||
                         nm.startsWith('react-hook-form') || nm.startsWith('react-datepicker') ||
                         nm.startsWith('react-chartjs-2') || nm.startsWith('qrcode.react') ||
                         nm.startsWith('react-hot-toast') || nm.startsWith('react-redux') ||
                         nm.startsWith('react-remove-scroll') || nm.startsWith('react-style-singleton') ||
+                        nm.startsWith('lucide-react') ||
+                        nm.startsWith('framer-motion') ||
+                        nm.startsWith('recharts') ||
+                        nm.startsWith('chart.js') ||
+                        nm.startsWith('leaflet') || nm.startsWith('react-leaflet') ||
                         nm.startsWith('@headlessui/react') || nm.startsWith('@heroicons/react') ||
-                        nm.startsWith('@inertiajs/react') || nm.startsWith('react-leaflet') ||
+                        nm.startsWith('@inertiajs') ||
                         nm.startsWith('@react-leaflet') || nm.startsWith('@floating-ui/react') ||
                         nm.startsWith('@react-aria') || nm.startsWith('@react-stately') ||
                         nm.startsWith('@react-types') || nm.startsWith('@tanstack/react') ||
                         nm.startsWith('@radix-ui/') ||
                         nm.startsWith('@reduxjs/') ||
-                        nm.startsWith('framer-motion') ||
-                        nm.startsWith('recharts') ||
-                        nm.startsWith('lucide-react') ||
                         nm.startsWith('use-callback-ref') ||
-                        nm.startsWith('use-sidecar')) {
+                        nm.startsWith('use-sidecar') ||
+                        nm.startsWith('use-sync-external-store')) {
                         return 'vendor-react';
-                    }
-
-                    if (nm.startsWith('lucide-react')) {
-                        return 'vendor-lucide';
-                    }
-
-                    if (nm.startsWith('chart.js') || nm.startsWith('react-chartjs-2') || nm.startsWith('recharts')) {
-                        return 'vendor-charts';
-                    }
-
-                    if (nm.startsWith('leaflet') || nm.startsWith('react-leaflet')) {
-                        return 'vendor-leaflet';
-                    }
-
-                    if (nm.startsWith('framer-motion')) {
-                        return 'vendor-framer';
-                    }
-
-                    if (nm.startsWith('@inertiajs')) {
-                        return 'vendor-inertia';
                     }
 
                     return 'vendor';

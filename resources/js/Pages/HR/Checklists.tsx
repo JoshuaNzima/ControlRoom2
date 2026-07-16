@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Head, router, useForm, usePage } from '@inertiajs/react';
-import HRLayout from '@/Layouts/HRLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import IconMapper from '@/Components/IconMapper';
 import Modal from '@/Components/Modal';
 
@@ -55,7 +55,7 @@ export default function HRChecklists() {
   };
 
   return (
-    <HRLayout title="HR - Checklists" user={auth?.user as any}>
+    <AuthenticatedLayout header="HR - Checklists" user={auth?.user as any}>
       <Head title="Checklists" />
       <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0 space-y-6">
@@ -265,7 +265,7 @@ export default function HRChecklists() {
           <TemplateItemModal open={openItem} onClose={() => setOpenItem(false)} template={templateForItem} item={editingItem} />
         </div>
       </div>
-    </HRLayout>
+    </AuthenticatedLayout>
   );
 }
 

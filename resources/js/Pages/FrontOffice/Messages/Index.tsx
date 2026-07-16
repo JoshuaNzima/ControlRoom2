@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Head, router } from '@inertiajs/react';
-import FrontOfficeLayout from '@/Layouts/FrontOfficeLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import {
     MessageSquare,
     Send,
@@ -100,7 +100,7 @@ export default function MessagesIndex({ received, sent, unreadCount, staff }: Me
     };
 
     return (
-        <FrontOfficeLayout>
+        <AuthenticatedLayout>
             <Head title="Messages" />
 
             {/* Header */}
@@ -386,6 +386,6 @@ export default function MessagesIndex({ received, sent, unreadCount, staff }: Me
                     )}
                 </DialogContent>
             </Dialog>
-        </FrontOfficeLayout>
+        </AuthenticatedLayout>
     );
 }

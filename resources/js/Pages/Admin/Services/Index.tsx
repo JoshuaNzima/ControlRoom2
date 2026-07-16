@@ -1,5 +1,5 @@
 import React from 'react';
-import AdminLayout from '@/Layouts/AdminLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import { Head, useForm, router } from '@inertiajs/react';
 import { Card } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
@@ -160,7 +160,7 @@ export default function ServicesIndex({ services, stats }: {
 
 
   return (
-    <AdminLayout title="Services">
+    <AuthenticatedLayout header="Services">
       <Head title="Services" />
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4 sm:mb-6">
@@ -475,6 +475,6 @@ export default function ServicesIndex({ services, stats }: {
           </div>
         </Modal>
       </div>
-    </AdminLayout>
+    </AuthenticatedLayout>
   );
 }

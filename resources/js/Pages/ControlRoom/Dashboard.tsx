@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Head, Link } from '@inertiajs/react';
-import ControlRoomLayout from '@/Layouts/ControlRoomLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import IconMapper from '@/Components/IconMapper';
 import StatCard from '@/Components/ControlRoom/StatCard';
 import ActionTile from '@/Components/ControlRoom/ActionTile';
@@ -173,7 +173,7 @@ export default function ControlRoomDashboard({
   ];
 
   return (
-    <ControlRoomLayout title="Control Room Dashboard" user={auth?.user as User | undefined}>
+    <AuthenticatedLayout header="Control Room Dashboard" user={auth?.user as User | undefined}>
       <Head title="Control Room Dashboard" />
       <RequisitionSummary />
 
@@ -272,6 +272,6 @@ export default function ControlRoomDashboard({
         onClose={closeScanModal}
         initialData={preloadedScanDetail}
       />
-    </ControlRoomLayout>
+    </AuthenticatedLayout>
   );
 }

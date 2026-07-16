@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Head, usePage } from '@inertiajs/react';
-import TrainingLayout from '@/Layouts/TrainingLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import IconMapper from '@/Components/IconMapper';
 
 interface Guard {
@@ -45,7 +45,7 @@ export default function GuardsIndex() {
   const [selectedGuard, setSelectedGuard] = useState<Guard | null>(null);
 
   return (
-    <TrainingLayout title="Guards Directory" user={auth?.user}>
+    <AuthenticatedLayout header="Guards Directory" user={auth?.user}>
       <Head title="Guards" />
       <div className="p-4 md:p-6 max-w-7xl mx-auto">
         {/* Header */}
@@ -206,6 +206,6 @@ export default function GuardsIndex() {
           </div>
         </div>
       )}
-    </TrainingLayout>
+    </AuthenticatedLayout>
   );
 }

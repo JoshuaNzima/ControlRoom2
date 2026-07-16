@@ -1,6 +1,6 @@
 import React from 'react';
 import { Head, router, usePage } from '@inertiajs/react';
-import SuperAdminLayout from '@/Layouts/SuperAdminLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import IconMapper from '@/Components/IconMapper';
 import Modal from '@/Components/Modal';
 import useNotification from '@/Providers/useNotifications';
@@ -219,7 +219,7 @@ export default function SuperAdminUsers({ users, filters, roles, zones }: UsersI
   };
 
   return (
-    <SuperAdminLayout title="Users Management">
+    <AuthenticatedLayout header="Users Management">
       <Head title="Users" />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
@@ -690,6 +690,6 @@ export default function SuperAdminUsers({ users, filters, roles, zones }: UsersI
           }}
         />
       </div>
-    </SuperAdminLayout>
+    </AuthenticatedLayout>
   );
 }

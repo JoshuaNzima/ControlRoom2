@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Head, router, useForm, usePage } from '@inertiajs/react';
-import AssetManagementLayout from '@/Layouts/AssetManagementLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 
 const assetFieldClassName =
   'w-full rounded-md border border-gray-300 dark:border-gray-700 px-3 py-2 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:border-red-500 focus:ring-1 focus:ring-red-500';
@@ -17,7 +17,7 @@ export default function AssetFuel() {
   const reset = () => { setVehicleId(0); setPerPage(15); router.get(route('assets.fuel.index'), {}, { preserveState: false }); };
 
   return (
-    <AssetManagementLayout title="Fuel Logs" user={auth?.user as any}>
+    <AuthenticatedLayout header="Fuel Logs" user={auth?.user as any}>
       <Head title="Fuel Logs" />
       <div className="py-6">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
@@ -102,7 +102,7 @@ export default function AssetFuel() {
           <CreateFuelModal open={openCreate} onClose={() => setOpenCreate(false)} vehicles={vehicles || []} />
         </div>
       </div>
-    </AssetManagementLayout>
+    </AuthenticatedLayout>
   );
 }
 

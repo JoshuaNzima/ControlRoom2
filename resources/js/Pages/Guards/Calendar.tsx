@@ -1,6 +1,6 @@
 import React from 'react';
 import { Head, router, usePage } from '@inertiajs/react';
-import SupervisorLayout from '@/Layouts/SupervisorLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 
 type DayStatus = {
   date: string;
@@ -77,7 +77,7 @@ export default function Calendar() {
   };
 
   return (
-    <SupervisorLayout title="Attendance Calendar">
+    <AuthenticatedLayout header="Attendance Calendar">
       <Head title="Attendance Calendar" />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -185,6 +185,6 @@ export default function Calendar() {
           </div>
         </div>
       </div>
-    </SupervisorLayout>
+    </AuthenticatedLayout>
   );
 }

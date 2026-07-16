@@ -1,6 +1,6 @@
 import React from 'react';
 import { Head, Link } from '@inertiajs/react';
-import AdminLayout from '@/Layouts/AdminLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import { Card } from '@/Components/ui/card';
 import IconMapper from '@/Components/IconMapper';
 import { formatCurrencyMWK } from '@/Components/format';
@@ -71,7 +71,7 @@ export default function FinancePage({
   }));
 
   return (
-    <AdminLayout title="Finance" user={auth?.user as any}>
+    <AuthenticatedLayout header="Finance" user={auth?.user as any}>
       <Head title="Finance" />
 
       <div className="py-6">
@@ -311,6 +311,6 @@ export default function FinancePage({
           </div>
         </div>
       </div>
-    </AdminLayout>
+    </AuthenticatedLayout>
   );
 }

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Head, router } from '@inertiajs/react';
-import ControlRoomLayout from '@/Layouts/ControlRoomLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import { Card, CardContent, CardHeader } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import { PageHeader } from '@/Components/ui/page-header';
@@ -129,7 +129,7 @@ const NvrDevicesPage: React.FC<Props> = ({
 	const nvrList = nvrs?.data ?? [];
 
 	return (
-		<ControlRoomLayout title="NVR/DVR Devices">
+		<AuthenticatedLayout header="NVR/DVR Devices">
 			<Head title="NVR/DVR Devices" />
 
 			<div className="py-6">
@@ -435,7 +435,7 @@ const NvrDevicesPage: React.FC<Props> = ({
 					<ImportCamerasModal nvr={importNvr} onClose={() => setImportNvr(null)} />
 				)}
 			</Dialog>
-		</ControlRoomLayout>
+		</AuthenticatedLayout>
 	);
 };
 

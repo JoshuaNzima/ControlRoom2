@@ -1,13 +1,13 @@
 import React from 'react';
 import { Head, Link } from '@inertiajs/react';
-import SuperAdminLayout from '@/Layouts/SuperAdminLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import IconMapper from '@/Components/IconMapper';
 import { Card } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 
 export default function HRManage() {
   return (
-    <SuperAdminLayout title="HR">
+    <AuthenticatedLayout header="HR">
       <Head title="Super Admin • Manage HR" />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
         <div className="flex items-center justify-between">
@@ -44,6 +44,6 @@ export default function HRManage() {
           </Card>
         </div>
       </div>
-    </SuperAdminLayout>
+    </AuthenticatedLayout>
   );
 }

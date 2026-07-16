@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Head, router } from '@inertiajs/react';
-import FrontOfficeLayout from '@/Layouts/FrontOfficeLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import QuickRequisitionButton from '@/Components/Requisitions/FrontOfficeRequisitionButton';
 import {
     ShoppingCart,
@@ -91,7 +91,7 @@ export default function RequisitionsIndex({ requisitions, stats, filters, can }:
     };
 
     return (
-        <FrontOfficeLayout title="Requisitions">
+        <AuthenticatedLayout header="Requisitions">
             <Head title="Requisitions" />
 
             {/* Header */}
@@ -248,6 +248,6 @@ export default function RequisitionsIndex({ requisitions, stats, filters, can }:
                     </div>
                 </CardContent>
             </Card>
-        </FrontOfficeLayout>
+        </AuthenticatedLayout>
     );
 }

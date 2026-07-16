@@ -1,6 +1,6 @@
 import React from 'react';
 import { Head, useForm } from '@inertiajs/react';
-import ControlRoomLayout from '@/Layouts/ControlRoomLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import { Card, CardContent, CardHeader } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import { Input } from '@/Components/ui/input';
@@ -76,7 +76,7 @@ const CreateIncident = ({ auth }: CreateIncidentProps) => {
   };
 
   return (
-    <ControlRoomLayout title="Create Incident" user={auth?.user as any}>
+    <AuthenticatedLayout header="Create Incident" user={auth?.user as any}>
       <Head title="Create Incident" />
 
       <div className="px-4 sm:px-6 lg:px-8 py-6">
@@ -314,7 +314,7 @@ const CreateIncident = ({ auth }: CreateIncidentProps) => {
         </Card>
       </div>
     </div>
-    </ControlRoomLayout>
+    </AuthenticatedLayout>
   );
 };
 

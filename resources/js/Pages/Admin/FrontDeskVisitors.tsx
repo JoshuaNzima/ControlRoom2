@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Head, Link, router, useForm } from '@inertiajs/react';
-import FrontDeskLayout from '@/Layouts/FrontDeskLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import Modal from '@/Components/Modal';
 
 const frontDeskFieldClassName =
@@ -38,7 +38,7 @@ export default function FrontDeskVisitors({ auth = {}, visitors, filters = {}, o
   const applyFilters = () => router.get(route('admin.front-desk.visitors.index'), { status, search }, { preserveState: true });
 
   return (
-    <FrontDeskLayout title="Visitors" user={auth?.user as any}>
+    <AuthenticatedLayout header="Visitors" user={auth?.user as any}>
       <Head title="Visitors" />
       <div className="py-6">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
@@ -141,7 +141,7 @@ export default function FrontDeskVisitors({ auth = {}, visitors, filters = {}, o
           )}
         </div>
       </div>
-    </FrontDeskLayout>
+    </AuthenticatedLayout>
   );
 }
 

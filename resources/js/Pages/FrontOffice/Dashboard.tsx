@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Head, router } from '@inertiajs/react';
-import FrontOfficeLayout from '@/Layouts/FrontOfficeLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import {
     Users,
     Calendar,
@@ -174,7 +174,7 @@ export default function Dashboard({ stats, recentVisitors, todayEvents, tasks, r
     };
 
     return (
-        <FrontOfficeLayout title="Dashboard">
+        <AuthenticatedLayout header="Dashboard">
             <Head title="Front Office Dashboard" />
 
             {/* Welcome Header */}
@@ -511,6 +511,6 @@ export default function Dashboard({ stats, recentVisitors, todayEvents, tasks, r
                     </Card>
                 </div>
             </div>
-        </FrontOfficeLayout>
+        </AuthenticatedLayout>
     );
 }

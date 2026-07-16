@@ -3,7 +3,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/Components/u
 import { Badge } from '@/Components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/Components/ui/tabs';
+import { Button } from '@/Components/ui/button';
 import IconMapper from '@/Components/IconMapper';
+import AddSiteModal from '@/Components/Clients/AddSiteModal';
+import EditSiteModal from '@/Components/Clients/EditSiteModal';
+import axios from 'axios';
 
 interface ClientDetailsModalProps {
   client: any;
@@ -39,226 +43,339 @@ export default function ClientDetailsModal({
   open,
   onClose,
   services = [],
+  zones = [],
+  onClientUpdated,
 }: ClientDetailsModalProps) {
   const [activeTab, setActiveTab] = useState('overview');
+  const [showAddSite, setShowAddSite] = useState(false);
+  const [editingSite, setEditingSite] = useState<{ id: number } | null>(null);
 
   if (!open || !client) return null;
 
   const paymentSummary = client.payment_summary ?? {};
   const isOverdue = paymentSummary.is_overdue ?? false;
   const outstandingMonths = (paymentSummary as any)?.outstanding_months ?? 0;
+
+  const handleSiteDeleted = async (siteId: number) => {
+    if (!confirm('Are you sure you want to delete this site? This action cannot be undone.')) return;
+    try {
+      await axios.delete(route('admin.clients.sites.destroy', { client: client.id, site: siteId }), {
+        headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+      });
+      // Reload client data after deletion
+      const res = await axios.get(route('admin.clients.json', { client: client.id }), {
+        headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+      });
+      onClientUpdated?.(res.data);
+    } catch (e: any) {
+      const msg = e?.response?.data?.message || 'Failed to delete site.';
+      alert(msg);
+    }
+  };
+
+  const refreshClientSites = async () => {
+    try {
+      const res = await axios.get(route('admin.clients.json', { client: client.id }), {
+        headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+      });
+      onClientUpdated?.(res.data);
+    } catch {
+      // silent
+    }
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-2xl bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 p-6">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <IconMapper name="Building2" size={24} />
-            Client Details
-          </DialogTitle>
-        </DialogHeader>
+    <>
+      <Dialog open={open} onOpenChange={onClose}>
+        <DialogContent className="w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-2xl bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 p-6">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <IconMapper name="Building2" size={24} />
+              {client.name}
+            </DialogTitle>
+          </DialogHeader>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="billing">Billing</TabsTrigger>
-            <TabsTrigger value="contacts">Contacts</TabsTrigger>
-          </TabsList>
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <TabsList className="grid w-full grid-cols-4">
+              <TabsTrigger value="overview">Overview</TabsTrigger>
+              <TabsTrigger value="sites">
+                Sites ({client.sites?.length ?? 0})
+              </TabsTrigger>
+              <TabsTrigger value="billing">Billing</TabsTrigger>
+              <TabsTrigger value="contacts">Contacts</TabsTrigger>
+            </TabsList>
 
-          {/* Overview Tab */}
-          <TabsContent value="overview" className="space-y-4 mt-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Card>
-                <CardContent className="pt-6">
-                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Client Name</p>
-                  <p className="mt-2 text-lg font-semibold text-gray-900 dark:text-gray-100">{client.name}</p>
-                </CardContent>
-              </Card>
+            {/* Overview Tab */}
+            <TabsContent value="overview" className="space-y-4 mt-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Card>
+                  <CardContent className="pt-6">
+                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Client Name</p>
+                    <p className="mt-2 text-lg font-semibold text-gray-900 dark:text-gray-100">{client.name}</p>
+                  </CardContent>
+                </Card>
 
-              <Card>
-                <CardContent className="pt-6">
-                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Status</p>
-                  <div className="mt-2">{statusBadge(client.status)}</div>
-                </CardContent>
-              </Card>
+                <Card>
+                  <CardContent className="pt-6">
+                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Status</p>
+                    <div className="mt-2">{statusBadge(client.status)}</div>
+                  </CardContent>
+                </Card>
 
-              <Card>
-                <CardContent className="pt-6">
-                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Contact Person</p>
-                  <p className="mt-2 text-base text-gray-900 dark:text-gray-100">{client.contact_person || '—'}</p>
-                </CardContent>
-              </Card>
+                <Card>
+                  <CardContent className="pt-6">
+                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Contact Person</p>
+                    <p className="mt-2 text-base text-gray-900 dark:text-gray-100">{client.contact_person || '—'}</p>
+                  </CardContent>
+                </Card>
 
-              <Card>
-                <CardContent className="pt-6">
-                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Monthly Rate</p>
-                  <p className="mt-2 text-lg font-semibold text-blue-600 dark:text-blue-400">
-                    {client.monthly_rate ? `$${(client.monthly_rate as number).toLocaleString()}` : '—'}
-                  </p>
-                </CardContent>
-              </Card>
-            </div>
-
-            {client.address && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Address</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-gray-700 dark:text-gray-300">{client.address}</p>
-                </CardContent>
-              </Card>
-            )}
-
-            {client.services && Array.isArray(client.services) && client.services.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Services ({client.services.length})</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    {client.services.map((service: any) => (
-                      <div key={service.id} className="flex items-center justify-between text-sm">
-                        <span className="text-gray-700 dark:text-gray-300">{service.name}</span>
-                        {service.pivot?.quantity && (
-                          <span className="text-gray-500 dark:text-gray-400">× {service.pivot.quantity}</span>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {client.sites && Array.isArray(client.sites) && client.sites.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Sites ({client.sites.length})</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    {client.sites.map((site: any) => (
-                      <div key={site.id} className="flex items-center justify-between text-sm">
-                        <span className="text-gray-700 dark:text-gray-300">{site.name}</span>
-                        {site.guards_count !== undefined && (
-                          <span className="text-gray-500 dark:text-gray-400">{site.guards_count} guard{site.guards_count !== 1 ? 's' : ''}</span>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-          </TabsContent>
-
-          {/* Billing Tab */}
-          <TabsContent value="billing" className="space-y-4 mt-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Card>
-                <CardContent className="pt-6">
-                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Total Due</p>
-                  <p className="mt-2 text-2xl font-bold text-gray-900 dark:text-gray-100">
-                    ${(paymentSummary.total_due ?? 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="pt-6">
-                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Total Paid</p>
-                  <p className="mt-2 text-2xl font-bold text-green-600 dark:text-green-400">
-                    ${(paymentSummary.total_paid ?? 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="pt-6">
-                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Outstanding</p>
-                  <p className={`mt-2 text-2xl font-bold ${isOverdue ? 'text-red-600 dark:text-red-400' : 'text-amber-600 dark:text-amber-400'}`}>
-                    ${(paymentSummary.outstanding_amount ?? 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="pt-6">
-                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Outstanding Months</p>
-                  <div className="mt-2 flex items-center gap-2">
-                    <p className={`text-2xl font-bold ${isOverdue ? 'text-red-600 dark:text-red-400' : 'text-amber-600 dark:text-amber-400'}`}>
-                      {outstandingMonths}
+                <Card>
+                  <CardContent className="pt-6">
+                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Monthly Rate</p>
+                    <p className="mt-2 text-lg font-semibold text-blue-600 dark:text-blue-400">
+                      {client.monthly_rate ? `$${(client.monthly_rate as number).toLocaleString()}` : '—'}
                     </p>
-                    {isOverdue && (
-                      <Badge className="bg-red-100 dark:bg-red-900/40 text-red-800 dark:text-red-300">
-                        Overdue
-                      </Badge>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+                  </CardContent>
+                </Card>
+              </div>
 
-            {paymentSummary.billing_start && (
-              <Card>
-                <CardContent className="pt-6">
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Billing Start Date</p>
-                  <p className="mt-1 text-base text-gray-900 dark:text-gray-100">
-                    {new Date(paymentSummary.billing_start).toLocaleDateString()}
-                  </p>
-                </CardContent>
-              </Card>
-            )}
-          </TabsContent>
-
-          {/* Contacts Tab */}
-          <TabsContent value="contacts" className="space-y-4 mt-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {client.email && (
+              {client.address && (
                 <Card>
-                  <CardContent className="pt-6">
-                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Email</p>
-                    <p className="mt-2 text-sm text-blue-600 dark:text-blue-400 break-all">{client.email}</p>
+                  <CardHeader>
+                    <CardTitle className="text-base">Address</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-gray-700 dark:text-gray-300">{client.address}</p>
                   </CardContent>
                 </Card>
               )}
 
-              {client.phone && (
+              {client.services && Array.isArray(client.services) && client.services.length > 0 && (
                 <Card>
-                  <CardContent className="pt-6">
-                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Phone</p>
-                    <p className="mt-2 text-sm text-gray-900 dark:text-gray-100">{client.phone}</p>
+                  <CardHeader>
+                    <CardTitle className="text-base">Services ({client.services.length})</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      {client.services.map((service: any) => (
+                        <div key={service.id} className="flex items-center justify-between text-sm">
+                          <span className="text-gray-700 dark:text-gray-300">{service.name}</span>
+                          {service.pivot?.quantity && (
+                            <span className="text-gray-500 dark:text-gray-400">× {service.pivot.quantity}</span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
                   </CardContent>
                 </Card>
               )}
-            </div>
+            </TabsContent>
 
-            {client.users && Array.isArray(client.users) && client.users.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Client Users ({client.users.length})</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {client.users.map((user: any) => (
-                      <div key={user.id} className="border-b border-gray-200 dark:border-gray-800 pb-3 last:border-b-0">
-                        <p className="font-medium text-gray-900 dark:text-gray-100">{user.name}</p>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">{user.email}</p>
-                        {user.phone && (
-                          <p className="text-sm text-gray-600 dark:text-gray-400">{user.phone}</p>
-                        )}
-                        {user.pivot?.role && (
-                          <Badge className="mt-2 bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300">
-                            {user.pivot.role}
-                          </Badge>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-          </TabsContent>
-        </Tabs>
-      </DialogContent>
-    </Dialog>
+            {/* Sites Tab */}
+            <TabsContent value="sites" className="space-y-4 mt-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                  Sites ({client.sites?.length ?? 0})
+                </h3>
+                <Button size="sm" onClick={() => setShowAddSite(true)} className="flex items-center gap-1.5">
+                  <IconMapper name="Plus" size={14} />
+                  Add Site
+                </Button>
+              </div>
+
+              {client.sites && Array.isArray(client.sites) && client.sites.length > 0 ? (
+                <div className="space-y-3">
+                  {client.sites.map((site: any) => (
+                    <Card key={site.id} className="border border-gray-200 dark:border-gray-800">
+                      <CardContent className="p-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <h4 className="font-medium text-gray-900 dark:text-gray-100">{site.name}</h4>
+                              <Badge className={site.status === 'active' ? 'bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-300' : 'bg-gray-100 dark:bg-gray-900/40 text-gray-800 dark:text-gray-300'}>
+                                {site.status || 'active'}
+                              </Badge>
+                            </div>
+                            <p className="text-sm text-gray-600 dark:text-gray-400">{site.address || 'No address'}</p>
+                            <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1.5 text-xs text-gray-500 dark:text-gray-400">
+                              {site.contact_person && <span>Contact: {site.contact_person}</span>}
+                              {site.phone && <span>{site.phone}</span>}
+                              {site.required_guards && <span>{site.required_guards} guard(s) required</span>}
+                              {site.guard_count !== undefined && <span>{site.guard_count} guard(s) assigned</span>}
+                              {site.site_type && <span className="capitalize">{site.site_type}</span>}
+                              {site.zone && <span>Zone: {site.zone?.name ?? site.zone_id}</span>}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-1 shrink-0">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setEditingSite({ id: site.id })}
+                              className="text-blue-600 hover:text-blue-700"
+                              title="Edit site"
+                            >
+                              <IconMapper name="Pencil" size={14} />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleSiteDeleted(site.id)}
+                              className="text-red-500 hover:text-red-600"
+                              title="Delete site"
+                            >
+                              <IconMapper name="Trash" size={14} />
+                            </Button>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <Card>
+                  <CardContent className="py-8 text-center">
+                    <IconMapper name="MapPin" size={40} className="mx-auto text-gray-300 dark:text-gray-600 mb-3" />
+                    <p className="text-gray-500 dark:text-gray-400">No sites configured for this client.</p>
+                    <Button size="sm" variant="outline" className="mt-3" onClick={() => setShowAddSite(true)}>
+                      <IconMapper name="Plus" size={14} className="mr-1" />
+                      Add Site
+                    </Button>
+                  </CardContent>
+                </Card>
+              )}
+            </TabsContent>
+
+            {/* Billing Tab */}
+            <TabsContent value="billing" className="space-y-4 mt-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Card>
+                  <CardContent className="pt-6">
+                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Total Due</p>
+                    <p className="mt-2 text-2xl font-bold text-gray-900 dark:text-gray-100">
+                      ${(paymentSummary.total_due ?? 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                    </p>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardContent className="pt-6">
+                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Total Paid</p>
+                    <p className="mt-2 text-2xl font-bold text-green-600 dark:text-green-400">
+                      ${(paymentSummary.total_paid ?? 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                    </p>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardContent className="pt-6">
+                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Outstanding</p>
+                    <p className={`mt-2 text-2xl font-bold ${isOverdue ? 'text-red-600 dark:text-red-400' : 'text-amber-600 dark:text-amber-400'}`}>
+                      ${(paymentSummary.outstanding_amount ?? 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                    </p>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardContent className="pt-6">
+                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Outstanding Months</p>
+                    <div className="mt-2 flex items-center gap-2">
+                      <p className={`text-2xl font-bold ${isOverdue ? 'text-red-600 dark:text-red-400' : 'text-amber-600 dark:text-amber-400'}`}>
+                        {outstandingMonths}
+                      </p>
+                      {isOverdue && (
+                        <Badge className="bg-red-100 dark:bg-red-900/40 text-red-800 dark:text-red-300">
+                          Overdue
+                        </Badge>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {paymentSummary.billing_start && (
+                <Card>
+                  <CardContent className="pt-6">
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Billing Start Date</p>
+                    <p className="mt-1 text-base text-gray-900 dark:text-gray-100">
+                      {new Date(paymentSummary.billing_start).toLocaleDateString()}
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
+            </TabsContent>
+
+            {/* Contacts Tab */}
+            <TabsContent value="contacts" className="space-y-4 mt-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {client.email && (
+                  <Card>
+                    <CardContent className="pt-6">
+                      <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Email</p>
+                      <p className="mt-2 text-sm text-blue-600 dark:text-blue-400 break-all">{client.email}</p>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {client.phone && (
+                  <Card>
+                    <CardContent className="pt-6">
+                      <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Phone</p>
+                      <p className="mt-2 text-sm text-gray-900 dark:text-gray-100">{client.phone}</p>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+
+              {client.users && Array.isArray(client.users) && client.users.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base">Client Users ({client.users.length})</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {client.users.map((user: any) => (
+                        <div key={user.id} className="border-b border-gray-200 dark:border-gray-800 pb-3 last:border-b-0">
+                          <p className="font-medium text-gray-900 dark:text-gray-100">{user.name}</p>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">{user.email}</p>
+                          {user.phone && (
+                            <p className="text-sm text-gray-600 dark:text-gray-400">{user.phone}</p>
+                          )}
+                          {user.pivot?.role && (
+                            <Badge className="mt-2 bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300">
+                              {user.pivot.role}
+                            </Badge>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </TabsContent>
+          </Tabs>
+        </DialogContent>
+      </Dialog>
+
+      {showAddSite && (
+        <AddSiteModal
+          open={showAddSite}
+          onClose={() => setShowAddSite(false)}
+          clientId={client.id}
+          zones={zones}
+          onAdded={refreshClientSites}
+        />
+      )}
+
+      {editingSite && (
+        <EditSiteModal
+          open={!!editingSite}
+          onClose={() => setEditingSite(null)}
+          clientId={client.id}
+          siteId={editingSite.id}
+          zones={zones}
+          onSaved={refreshClientSites}
+        />
+      )}
+    </>
   );
 }

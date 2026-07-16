@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
-import FinanceLayout from '@/Layouts/FinanceLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import { formatCurrency, formatDate } from '@/utils/formatters';
 import Modal from '@/Components/Modal';
 
@@ -172,7 +172,7 @@ export default function InvoiceIndex({ invoices, summary, filters, clients, defa
   };
 
   return (
-    <FinanceLayout title="Invoices">
+    <AuthenticatedLayout header="Invoices">
       <Head title="Invoices" />
 
       <div className="py-6">
@@ -482,7 +482,7 @@ export default function InvoiceIndex({ invoices, summary, filters, clients, defa
           )}
         </div>
       </div>
-    </FinanceLayout>
+    </AuthenticatedLayout>
   );
 }
 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Head } from '@inertiajs/react';
-import ZoneCommanderLayout from '@/Layouts/ZoneCommanderLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import IconMapper from '@/Components/IconMapper';
@@ -225,7 +225,7 @@ export default function ZoneDashboard({ zone, sites, at_risk_guards, recent_aler
   };
 
   return (
-    <ZoneCommanderLayout title="Zone Dashboard">
+    <AuthenticatedLayout header="Zone Dashboard">
       <Head title={`${zone.name} Zone Dashboard`} />
 
       <ScannerModal open={scannerOpen} onClose={() => setScannerOpen(false)} />
@@ -590,6 +590,6 @@ export default function ZoneDashboard({ zone, sites, at_risk_guards, recent_aler
           </CardContent>
         </Card>
       </div>
-    </ZoneCommanderLayout>
+    </AuthenticatedLayout>
   );
 }

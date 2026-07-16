@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card';
 import { Badge } from '@/Components/ui/badge';
 import { Button } from '@/Components/ui/button';
 import IconMapper from '@/Components/IconMapper';
-import AdminLayout from '@/Layouts/AdminLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 
 interface LoyaltyTier {
   id: number;
@@ -25,7 +25,7 @@ interface Props {
 
 export default function Tiers({ tiers }: Props) {
   return (
-    <AdminLayout title="Loyalty Tiers">
+    <AuthenticatedLayout header="Loyalty Tiers">
       <Head title="Loyalty Tiers" />
 
       <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
@@ -105,6 +105,6 @@ export default function Tiers({ tiers }: Props) {
           )}
         </div>
       </div>
-    </AdminLayout>
+    </AuthenticatedLayout>
   );
 }

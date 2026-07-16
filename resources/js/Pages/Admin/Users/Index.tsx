@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Head, Link, router, useForm } from '@inertiajs/react';
-import AdminLayout from '@/Layouts/AdminLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import IconMapper from '@/Components/IconMapper';
 import useNotification from '@/Providers/useNotifications';
 import Modal from '@/Components/Modal';
@@ -223,7 +223,7 @@ export default function UsersIndex({ users, filters, roles, zones, clients }: Us
   const handleEditClose = () => { if (!updating) setShowEdit(false); };
 
   return (
-    <AdminLayout title="Users Management">
+    <AuthenticatedLayout header="Users Management">
       <Head title="Users" />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
@@ -824,6 +824,6 @@ export default function UsersIndex({ users, filters, roles, zones, clients }: Us
         )}
       </div>
     </Modal>
-  </AdminLayout>
+  </AuthenticatedLayout>
 );
 }

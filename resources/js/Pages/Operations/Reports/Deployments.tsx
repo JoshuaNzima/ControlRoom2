@@ -1,6 +1,6 @@
 import React from 'react';
 import { Head } from '@inertiajs/react';
-import OperationsLayout from '@/Layouts/OperationsLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import { Card, CardContent } from '@/Components/ui/card';
 import IconMapper from '@/Components/IconMapper';
 
@@ -13,7 +13,7 @@ export default function DeploymentsReport({ message, auth }: Props) {
   const user = auth?.user;
 
   return (
-    <OperationsLayout title="Deployment Reports" user={user} showQrScanner={true}>
+    <AuthenticatedLayout header="Deployment Reports" user={user} showQrScanner={true}>
       <Head title="Deployment Reports" />
 
       <div className="space-y-4 sm:space-y-6">
@@ -27,6 +27,6 @@ export default function DeploymentsReport({ message, auth }: Props) {
           </CardContent>
         </Card>
       </div>
-    </OperationsLayout>
+    </AuthenticatedLayout>
   );
 }

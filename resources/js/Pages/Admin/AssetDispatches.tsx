@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Head, useForm } from '@inertiajs/react';
-import AssetManagementLayout from '@/Layouts/AssetManagementLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import { Card } from '@/Components/ui/card';
 import Modal from '@/Components/Modal';
 
@@ -27,7 +27,7 @@ export default function AssetDispatches({ auth = {}, openDispatches = [], recent
   const [returnOpen, setReturnOpen] = useState<{ open: boolean; id: number|null }>(() => ({ open: false, id: null }));
 
   return (
-    <AssetManagementLayout title="Vehicle Dispatches" user={auth?.user as any}>
+    <AuthenticatedLayout header="Vehicle Dispatches" user={auth?.user as any}>
       <Head title="Vehicle Dispatches" />
       <div className="py-6">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
@@ -94,7 +94,7 @@ export default function AssetDispatches({ auth = {}, openDispatches = [], recent
 
       <CreateDispatchModal open={createOpen} onClose={() => setCreateOpen(false)} vehicles={vehicles} drivers={drivers} sites={sites} />
       <ReturnDispatchModal open={returnOpen.open} onClose={() => setReturnOpen({ open: false, id: null })} id={returnOpen.id} />
-    </AssetManagementLayout>
+    </AuthenticatedLayout>
   );
 }
 

@@ -1,13 +1,13 @@
 import React from 'react';
 import { Head, Link, usePage } from '@inertiajs/react';
-import ControlRoomLayout from '@/Layouts/ControlRoomLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import { Card, CardContent, CardHeader } from '@/Components/ui/card';
 
 export default function ZoneReports() {
   const { zone, stats } = usePage().props as any;
 
   return (
-    <ControlRoomLayout title={`Zone Reports • ${zone.name}`}>
+    <AuthenticatedLayout header={`Zone Reports • ${zone.name}`}>
       <Head title={`Zone Reports • ${zone.name}`} />
       <div className="space-y-4">
         <Card className="dark:bg-gray-800 dark:border-gray-700">
@@ -31,6 +31,6 @@ export default function ZoneReports() {
           </CardContent>
         </Card>
       </div>
-    </ControlRoomLayout>
+    </AuthenticatedLayout>
   );
 }

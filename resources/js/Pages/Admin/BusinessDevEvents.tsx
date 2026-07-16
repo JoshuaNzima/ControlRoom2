@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Head, Link, router, useForm } from '@inertiajs/react';
-import BusinessDevLayout from '@/Layouts/BusinessDevLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import Modal from '@/Components/Modal';
 
 interface ClientOption { id: number; name: string }
@@ -56,7 +56,7 @@ export default function BusinessDevEvents({ auth = {}, events, clients = [] }: P
   };
 
   return (
-    <BusinessDevLayout title="Events" user={auth?.user as any}>
+    <AuthenticatedLayout header="Events" user={auth?.user as any}>
       <Head title="Events" />
       <div className="py-6">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
@@ -194,7 +194,7 @@ export default function BusinessDevEvents({ auth = {}, events, clients = [] }: P
           )}
         </div>
       </div>
-    </BusinessDevLayout>
+    </AuthenticatedLayout>
   );
 }
 

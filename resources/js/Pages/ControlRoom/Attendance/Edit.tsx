@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Head, router, usePage } from '@inertiajs/react';
-import ControlRoomLayout from '@/Layouts/ControlRoomLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import { Card } from '@/Components/ui/card';
 import PageHeader from '@/Components/ui/page-header';
 import IconMapper from '@/Components/IconMapper';
@@ -109,7 +109,7 @@ export default function AttendanceEdit() {
   const currentSite = sites.find((s: any) => s.id === Number(form.client_site_id));
 
   return (
-    <ControlRoomLayout title="Edit Attendance Record">
+    <AuthenticatedLayout header="Edit Attendance Record">
       <Head title="Edit Attendance" />
 
       <div className="max-w-4xl mx-auto mt-6 px-4 sm:px-6 lg:px-8">
@@ -381,6 +381,6 @@ export default function AttendanceEdit() {
           </form>
         </Card>
       </div>
-    </ControlRoomLayout>
+    </AuthenticatedLayout>
   );
 }

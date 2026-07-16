@@ -1,5 +1,5 @@
 import React from 'react';
-import HRLayout from '@/Layouts/HRLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import { Head, router, usePage } from '@inertiajs/react';
 import { Card } from '@/Components/ui/card';
 import { StatCard } from '@/Components/StatCard';
@@ -44,7 +44,7 @@ export default function HRDownsIndex() {
   }
 
   return (
-    <HRLayout title="Downs" user={auth?.user as any}>
+    <AuthenticatedLayout header="Downs" user={auth?.user as any}>
       <Head title="Downs" />
 
       <div className="space-y-6">
@@ -131,6 +131,6 @@ export default function HRDownsIndex() {
           )}
         </Card>
       </div>
-    </HRLayout>
+    </AuthenticatedLayout>
   );
 }

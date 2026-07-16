@@ -1,6 +1,6 @@
 import React from 'react';
 import { Head, router } from '@inertiajs/react';
-import ControlRoomLayout from '@/Layouts/ControlRoomLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import { Card, CardContent, CardHeader } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import { Badge } from '@/Components/ui/badge';
@@ -13,7 +13,7 @@ export default function ShiftsRedirect() {
   }, []);
 
   return (
-    <ControlRoomLayout title="Shifts">
+    <AuthenticatedLayout header="Shifts">
       <Head title="Redirecting..." />
       <div className="flex items-center justify-center h-64">
         <div className="flex items-center gap-2 text-gray-500">
@@ -21,6 +21,6 @@ export default function ShiftsRedirect() {
           <span>Redirecting to Shift Management...</span>
         </div>
       </div>
-    </ControlRoomLayout>
+    </AuthenticatedLayout>
   );
 }

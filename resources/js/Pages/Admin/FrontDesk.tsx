@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Head, Link } from '@inertiajs/react';
-import FrontDeskLayout from '@/Layouts/FrontDeskLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import IconMapper from '@/Components/IconMapper';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/Components/ui/dialog';
 import { Button } from '@/Components/ui/button';
@@ -200,7 +200,7 @@ export default function AssistantDashboard({
   ];
 
   return (
-    <FrontDeskLayout title="Assistant Dashboard" user={auth?.user as any}>
+    <AuthenticatedLayout header="Assistant Dashboard" user={auth?.user as any}>
       <Head title="Assistant Dashboard" />
 
       <div className="min-h-screen bg-red-50 dark:bg-gray-900">
@@ -602,7 +602,7 @@ export default function AssistantDashboard({
           </form>
         </DialogContent>
       </Dialog>
-    </FrontDeskLayout>
+    </AuthenticatedLayout>
   );
 }
 

@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import ControlRoomLayout from '@/Layouts/ControlRoomLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 
 type Incident = {
   id: number;
@@ -57,7 +57,7 @@ export default function Index() {
   };
 
   return (
-    <ControlRoomLayout title="GPS Mismatch Incidents">
+    <AuthenticatedLayout header="GPS Mismatch Incidents">
       <Head title="GPS Mismatch Incidents" />
 
       <div className="space-y-4">
@@ -231,6 +231,6 @@ export default function Index() {
           </div>
         </div>
       </div>
-    </ControlRoomLayout>
+    </AuthenticatedLayout>
   );
 }

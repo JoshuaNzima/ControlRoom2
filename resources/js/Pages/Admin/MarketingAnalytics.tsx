@@ -1,6 +1,6 @@
 import React from 'react';
 import { Head, Link } from '@inertiajs/react';
-import MarketingLayout from '@/Layouts/MarketingLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import { Card } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import IconMapper from '@/Components/IconMapper';
@@ -17,7 +17,7 @@ interface Props {
 
 export default function MarketingAnalytics({ auth = {}, campaignsByStatus = [], leadsBySource = [], budgetByMonth = [], conversions = 0 }: Props) {
   return (
-    <MarketingLayout title="Marketing Analytics" user={auth?.user as any}>
+    <AuthenticatedLayout header="Marketing Analytics" user={auth?.user as any}>
       <Head title="Marketing Analytics" />
       
       {/* Hero Header */}
@@ -125,7 +125,7 @@ export default function MarketingAnalytics({ auth = {}, campaignsByStatus = [], 
           </Card>
         </div>
       </div>
-    </MarketingLayout>
+    </AuthenticatedLayout>
   );
 }
 

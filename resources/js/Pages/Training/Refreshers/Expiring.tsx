@@ -1,6 +1,6 @@
 import React from 'react';
 import { Head, usePage } from '@inertiajs/react';
-import TrainingLayout from '@/Layouts/TrainingLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import IconMapper from '@/Components/IconMapper';
 import { format, parseISO, isPast, addDays } from 'date-fns';
 
@@ -44,7 +44,7 @@ export default function RefreshersExpiring() {
   const expired = props.expired || [];
 
   return (
-    <TrainingLayout title="Expiring Refreshers" user={auth.user}>
+    <AuthenticatedLayout header="Expiring Refreshers" user={auth.user}>
       <Head title="Expiring Refreshers" />
       <div className="p-4 md:p-6 max-w-7xl mx-auto">
         {/* Header */}
@@ -194,6 +194,6 @@ export default function RefreshersExpiring() {
           </div>
         </div>
       </div>
-    </TrainingLayout>
+    </AuthenticatedLayout>
   );
 }

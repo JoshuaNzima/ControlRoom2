@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Head, Link } from '@inertiajs/react';
-import AdminLayout from '@/Layouts/AdminLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import { Card } from '@/Components/ui/card';
 import IconMapper from '@/Components/IconMapper';
 import { formatCurrencyMWK } from '@/Components/format';
@@ -343,7 +343,7 @@ export default function Dashboard({
   ], []);
 
   return (
-    <AdminLayout title="Admin Dashboard" user={auth?.user as any}>
+    <AuthenticatedLayout header="Admin Dashboard" user={auth?.user as any}>
       <Head title="Admin Dashboard" />
 
       <ScannerModal open={scannerOpen} onClose={() => setScannerOpen(false)} />
@@ -1480,6 +1480,6 @@ export default function Dashboard({
           </div>
         )}
       </div>
-    </AdminLayout>
+    </AuthenticatedLayout>
   );
 }

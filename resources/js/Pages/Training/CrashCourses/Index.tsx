@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Head, usePage, router } from '@inertiajs/react';
-import TrainingLayout from '@/Layouts/TrainingLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import IconMapper from '@/Components/IconMapper';
 
 interface CrashCourse {
@@ -96,7 +96,7 @@ export default function CrashCoursesIndex() {
   };
 
   return (
-    <TrainingLayout title="Crash Courses" user={auth.user}>
+    <AuthenticatedLayout header="Crash Courses" user={auth.user}>
       <Head title="Crash Courses" />
       <div className="p-4 md:p-6 max-w-7xl mx-auto">
         {/* Header */}
@@ -300,6 +300,6 @@ export default function CrashCoursesIndex() {
           </div>
         </div>
       )}
-    </TrainingLayout>
+    </AuthenticatedLayout>
   );
 }

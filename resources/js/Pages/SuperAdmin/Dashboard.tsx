@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Head, Link, router } from '@inertiajs/react';
-import SuperAdminLayout from '@/Layouts/SuperAdminLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import { route } from 'ziggy-js';
 import IconMapper from '@/Components/IconMapper';
 import RequisitionSummary from '@/Components/Requisitions/RequisitionSummary';
@@ -382,7 +382,7 @@ const Dashboard: React.FC<SuperAdminDashboardProps> = ({
   ], []);
 
   return (
-    <SuperAdminLayout title="Super Admin Dashboard" user={auth.user}>
+    <AuthenticatedLayout header="Super Admin Dashboard" user={auth.user}>
       <Head title="Super Admin Dashboard" />
       
       <ScannerModal open={scannerOpen} onClose={() => setScannerOpen(false)} />
@@ -943,7 +943,7 @@ const Dashboard: React.FC<SuperAdminDashboardProps> = ({
           </div>
         )}
       </div>
-    </SuperAdminLayout>
+    </AuthenticatedLayout>
   );
 };
 

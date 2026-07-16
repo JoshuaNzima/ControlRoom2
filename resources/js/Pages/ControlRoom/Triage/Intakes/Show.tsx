@@ -1,6 +1,6 @@
 import React from 'react';
 import { Head, Link, useForm } from '@inertiajs/react';
-import ControlRoomLayout from '@/Layouts/ControlRoomLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import IconMapper from '@/Components/IconMapper';
 
 interface Intake {
@@ -35,7 +35,7 @@ export default function Show({ intake }: Props) {
   };
 
   return (
-    <ControlRoomLayout title="Public Intake — Triage">
+    <AuthenticatedLayout header="Public Intake — Triage">
       <Head title="Triage — Intake" />
 
       <div className="space-y-6">
@@ -152,6 +152,6 @@ export default function Show({ intake }: Props) {
           </div>
         </div>
       </div>
-    </ControlRoomLayout>
+    </AuthenticatedLayout>
   );
 }

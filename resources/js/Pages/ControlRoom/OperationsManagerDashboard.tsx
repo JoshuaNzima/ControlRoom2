@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Head, Link } from '@inertiajs/react';
-import OperationsLayout from '@/Layouts/OperationsLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import { Badge } from '@/Components/ui/badge';
@@ -211,7 +211,7 @@ export default function OperationsManagerDashboard({ stats, sites, deployments, 
   const getScanTypeLabel = (type: string) => type === 'check_in' ? 'Check In' : type === 'check_out' ? 'Check Out' : type === 'patrol' ? 'Patrol' : type;
 
   return (
-    <OperationsLayout title="Operations Manager Dashboard" user={auth?.user as User | undefined}>
+    <AuthenticatedLayout header="Operations Manager Dashboard" user={auth?.user as User | undefined}>
       <Head title="Operations Manager Dashboard" />
       <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6">
 
@@ -583,6 +583,6 @@ export default function OperationsManagerDashboard({ stats, sites, deployments, 
       </div>
       <QrScanDetailModal isOpen={showScanModal} scanId={selectedScanId} onClose={closeScanModal} />
       <CheckpointDetailModal isOpen={showCheckpointModal} checkpointId={selectedCheckpointId} onClose={closeCheckpointModal} />
-    </OperationsLayout>
+    </AuthenticatedLayout>
   );
 }

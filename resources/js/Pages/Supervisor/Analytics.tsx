@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Head, Link } from '@inertiajs/react';
-import DashboardLayout from '@/Layouts/SupervisorLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import IconMapper from '@/Components/IconMapper';
 import SiteCoverageMap from '@/Components/ControlRoom/SiteCoverageMap';
 
@@ -87,7 +87,7 @@ export default function Analytics({
   };
 
   return (
-    <DashboardLayout title="Analytics">
+    <AuthenticatedLayout>
       <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
         <Head title="Analytics" />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
@@ -353,6 +353,6 @@ export default function Analytics({
           </div>
         </div>
       </div>
-    </DashboardLayout>
+    </AuthenticatedLayout>
   );
 }

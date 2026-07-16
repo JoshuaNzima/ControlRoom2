@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Head, Link, router, useForm } from '@inertiajs/react';
-import AssetManagementLayout from '@/Layouts/AssetManagementLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import Modal from '@/Components/Modal';
 
 interface Vehicle { id: number; tag: string; make?: string|null; model?: string|null; year?: number|null; status: string; odometer?: number|null; assigned_to?: number|null; notes?: string|null }
@@ -40,7 +40,7 @@ export default function AssetVehicles({ auth = {}, vehicles, options, openHandov
   const [returnTarget, setReturnTarget] = useState<{ asset: Vehicle; handover: Handover } | null>(null);
 
   return (
-    <AssetManagementLayout title="Vehicles" user={auth?.user as any}>
+    <AuthenticatedLayout header="Vehicles" user={auth?.user as any}>
       <Head title="Vehicles" />
       <div className="py-6">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
@@ -159,7 +159,7 @@ export default function AssetVehicles({ auth = {}, vehicles, options, openHandov
           )}
         </div>
       </div>
-    </AssetManagementLayout>
+    </AuthenticatedLayout>
   );
 }
 

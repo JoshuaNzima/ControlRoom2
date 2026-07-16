@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Head, useForm } from '@inertiajs/react';
-import FinanceLayout from '@/Layouts/FinanceLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import { formatCurrency } from '@/utils/formatters';
 import { useNotification } from '@/Providers/NotificationProvider';
 
@@ -225,7 +225,7 @@ export default function CreateInvoice({ clients = [], defaultBilling }: Props) {
   const hasValidItem = useMemo(() => lineItems.some(i => (i.description || '').trim().length > 0 && (i.quantity ?? 0) > 0), [lineItems]);
 
   return (
-    <FinanceLayout title="Create Invoice">
+    <AuthenticatedLayout header="Create Invoice">
       <Head title="Create Invoice" />
 
       <div className="py-6">
@@ -606,6 +606,6 @@ export default function CreateInvoice({ clients = [], defaultBilling }: Props) {
           </form>
         </div>
       </div>
-    </FinanceLayout>
+    </AuthenticatedLayout>
   );
 }

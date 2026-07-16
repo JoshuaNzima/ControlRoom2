@@ -1,15 +1,7 @@
 import React, { useState, createContext, useContext } from 'react';
 import { Head, Link, usePage, router } from '@inertiajs/react';
 import type { User } from '@/types';
-import AdminLayout from '@/Layouts/AdminLayout';
-import SuperAdminLayout from '@/Layouts/SuperAdminLayout';
-import ControlRoomLayout from '@/Layouts/ControlRoomLayout';
-import FinanceLayout from '@/Layouts/FinanceLayout';
-import AssetManagementLayout from '@/Layouts/AssetManagementLayout';
-import HRLayout from '@/Layouts/HRLayout';
-import SupervisorLayout from '@/Layouts/SupervisorLayout';
-import ZoneCommanderLayout from '@/Layouts/ZoneCommanderLayout';
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import { Button } from '@/Components/ui/button';
 import { Input } from '@/Components/ui/input';
 import { Badge } from '@/Components/ui/badge';
@@ -441,14 +433,14 @@ export default function MessagesLayout({
   const isZoneCommander = has('zone_commander');
   const isSupervisor = roles.some((r: string) => ['supervisor', 'sergeant'].includes(r));
 
-  if (isSuperAdmin) return <SuperAdminLayout title={title} user={user}>{content}</SuperAdminLayout>;
-  if (isAdmin) return <AdminLayout title={title} user={user}>{content}</AdminLayout>;
-  if (isControlRoom) return <ControlRoomLayout title={title} user={user}>{content}</ControlRoomLayout>;
-  if (isFinance) return <FinanceLayout title={title} user={user}>{content}</FinanceLayout>;
-  if (isAssets) return <AssetManagementLayout title={title} user={user}>{content}</AssetManagementLayout>;
-  if (isHr) return <HRLayout title={title} user={user}>{content}</HRLayout>;
-  if (isZoneCommander) return <ZoneCommanderLayout title={title}>{content}</ZoneCommanderLayout>;
-  if (isSupervisor) return <SupervisorLayout title={title}>{content}</SupervisorLayout>;
+  if (isSuperAdmin) return <AuthenticatedLayout header={title} user={user}>{content}</AuthenticatedLayout>;
+  if (isAdmin) return <AuthenticatedLayout header={title} user={user}>{content}</AuthenticatedLayout>;
+  if (isControlRoom) return <AuthenticatedLayout header={title} user={user}>{content}</AuthenticatedLayout>;
+  if (isFinance) return <AuthenticatedLayout header={title} user={user}>{content}</AuthenticatedLayout>;
+  if (isAssets) return <AuthenticatedLayout header={title} user={user}>{content}</AuthenticatedLayout>;
+  if (isHr) return <AuthenticatedLayout header={title} user={user}>{content}</AuthenticatedLayout>;
+  if (isZoneCommander) return <AuthenticatedLayout header={title}>{content}</AuthenticatedLayout>;
+  if (isSupervisor) return <AuthenticatedLayout header={title}>{content}</AuthenticatedLayout>;
 
   return (
     <AuthenticatedLayout user={user as any} header={<h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">{title}</h2>}>

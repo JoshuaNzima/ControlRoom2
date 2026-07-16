@@ -5,7 +5,7 @@ import { Badge } from '@/Components/ui/badge';
 import { Button } from '@/Components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/Components/ui/tabs';
 import IconMapper from '@/Components/IconMapper';
-import ClientLayout from '@/Layouts/ClientLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 
 interface LoyaltySummary {
   total_points: number;
@@ -115,7 +115,7 @@ export default function LoyaltyDashboard({
   };
 
   return (
-    <ClientLayout title="Loyalty Points">
+    <AuthenticatedLayout header="Loyalty Points">
       <Head title="Loyalty Points" />
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -427,6 +427,6 @@ export default function LoyaltyDashboard({
           </>
         )}
       </div>
-    </ClientLayout>
+    </AuthenticatedLayout>
   );
 }

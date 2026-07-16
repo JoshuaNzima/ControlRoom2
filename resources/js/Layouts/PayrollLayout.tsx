@@ -1,6 +1,6 @@
 import React from 'react';
 import { Head, Link, usePage } from '@inertiajs/react';
-import FinanceLayout from './FinanceLayout';
+import AuthenticatedLayout from './AuthenticatedLayout';
 
 interface Props {
   title?: string;
@@ -20,7 +20,7 @@ export default function PayrollLayout({ title = 'Payroll', children }: Props) {
   };
 
   return (
-    <FinanceLayout title={title}>
+    <AuthenticatedLayout header={title}>
       <Head title={title} />
       <div className="mb-4">
         <div className="inline-flex rounded-full bg-red-100 p-1">
@@ -29,6 +29,6 @@ export default function PayrollLayout({ title = 'Payroll', children }: Props) {
         </div>
       </div>
       {children}
-    </FinanceLayout>
+    </AuthenticatedLayout>
   );
 }

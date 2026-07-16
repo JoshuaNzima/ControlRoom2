@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Head, Link, useForm } from '@inertiajs/react';
-import AssetManagementLayout from '@/Layouts/AssetManagementLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import Modal from '@/Components/Modal';
 import IconMapper from '@/Components/IconMapper';
 
@@ -67,7 +67,7 @@ export default function AssetHandovers({ auth = {}, handovers, filters }: Props)
   const [returnTarget, setReturnTarget] = useState<Handover | null>(null);
 
   return (
-    <AssetManagementLayout title="Handovers" user={auth?.user as any}>
+    <AuthenticatedLayout header="Handovers" user={auth?.user as any}>
       <Head title="Asset Handovers" />
       <div className="py-6">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
@@ -177,7 +177,7 @@ export default function AssetHandovers({ auth = {}, handovers, filters }: Props)
           )}
         </div>
       </div>
-    </AssetManagementLayout>
+    </AuthenticatedLayout>
   );
 }
 

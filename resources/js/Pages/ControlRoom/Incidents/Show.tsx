@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { Head, Link, router, useForm } from '@inertiajs/react';
-import ControlRoomLayout from '@/Layouts/ControlRoomLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import Modal from '@/Components/Modal';
 import { Card, CardContent, CardHeader } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
@@ -109,7 +109,7 @@ const ShowIncident = ({ auth, incident }: ShowIncidentProps) => {
   };
 
   return (
-    <ControlRoomLayout title={`Incident: ${incident.title}`} user={auth?.user as any}>
+    <AuthenticatedLayout header={`Incident: ${incident.title}`} user={auth?.user as any}>
       <Head title={`Incident: ${incident.title}`} />
 
       <div className="px-4 sm:px-6 lg:px-8 py-6 space-y-6">
@@ -427,7 +427,7 @@ const ShowIncident = ({ auth, incident }: ShowIncidentProps) => {
           </form>
         </div>
       </Modal>
-    </ControlRoomLayout>
+    </AuthenticatedLayout>
   );
 };
 

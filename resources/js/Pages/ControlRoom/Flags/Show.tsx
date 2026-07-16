@@ -22,7 +22,7 @@ type FlagShowFlag = {
 	review_date?: string | null;
 	resolution_notes?: string | null;
 };
-import ControlRoomLayout from '@/Layouts/ControlRoomLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import { Textarea } from '@/Components/ui/textarea';
@@ -64,7 +64,7 @@ const { data, setData, patch, processing } = useForm<FormData>({
 	};
 
 	return (
-		<ControlRoomLayout title={`Flag #${flag.id}`}>
+		<AuthenticatedLayout header={`Flag #${flag.id}`}>
 			<Head title={`Flag #${flag.id}`} />
 
 			<div className="py-6">
@@ -189,7 +189,7 @@ const { data, setData, patch, processing } = useForm<FormData>({
 					</div>
 				</div>
 			</div>
-		</ControlRoomLayout>
+		</AuthenticatedLayout>
 	);
 };
 

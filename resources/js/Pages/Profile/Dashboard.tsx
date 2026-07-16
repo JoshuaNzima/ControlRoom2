@@ -1,20 +1,6 @@
 import React from 'react';
 import { Head, router, usePage } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import AdminLayout from '@/Layouts/AdminLayout';
-import SuperAdminLayout from '@/Layouts/SuperAdminLayout';
-import ControlRoomLayout from '@/Layouts/ControlRoomLayout';
-import FinanceLayout from '@/Layouts/FinanceLayout';
-import HRLayout from '@/Layouts/HRLayout';
-import AssetManagementLayout from '@/Layouts/AssetManagementLayout';
-import TrainingLayout from '@/Layouts/TrainingLayout';
-import FrontOfficeLayout from '@/Layouts/FrontOfficeLayout';
-import SupervisorLayout from '@/Layouts/SupervisorLayout';
-import ZoneCommanderLayout from '@/Layouts/ZoneCommanderLayout';
-import MarketingLayout from '@/Layouts/MarketingLayout';
-import BusinessDevLayout from '@/Layouts/BusinessDevLayout';
-import FrontDeskLayout from '@/Layouts/FrontDeskLayout';
-import OperationsLayout from '@/Layouts/OperationsLayout';
 import RequisitionSummary from '@/Components/Requisitions/RequisitionSummary';
 import EditProfileModal from '@/Components/Profile/EditProfileModal';
 import ChangePasswordModal from '@/Components/Profile/ChangePasswordModal';
@@ -66,46 +52,46 @@ export default function ProfileDashboard() {
     const title = 'My Dashboard';
 
     if (currentRouteName === 'admin.profile') {
-      return <AdminLayout title={title}>{children}</AdminLayout>;
+      return <AuthenticatedLayout header={title}>{children}</AuthenticatedLayout>;
     }
     if (currentRouteName === 'superadmin.profile') {
-      return <SuperAdminLayout title={title}>{children}</SuperAdminLayout>;
+      return <AuthenticatedLayout header={title}>{children}</AuthenticatedLayout>;
     }
     if (currentRouteName === 'control-room.profile') {
-      return <ControlRoomLayout title={title}>{children}</ControlRoomLayout>;
+      return <AuthenticatedLayout header={title}>{children}</AuthenticatedLayout>;
     }
     if (currentRouteName === 'finance.profile') {
-      return <FinanceLayout title={title}>{children}</FinanceLayout>;
+      return <AuthenticatedLayout header={title}>{children}</AuthenticatedLayout>;
     }
     if (currentRouteName === 'hr.profile') {
-      return <HRLayout title={title}>{children}</HRLayout>;
+      return <AuthenticatedLayout header={title}>{children}</AuthenticatedLayout>;
     }
     if (currentRouteName === 'assets.profile') {
-      return <AssetManagementLayout title={title}>{children}</AssetManagementLayout>;
+      return <AuthenticatedLayout header={title}>{children}</AuthenticatedLayout>;
     }
     if (currentRouteName === 'training.profile') {
-      return <TrainingLayout title={title}>{children}</TrainingLayout>;
+      return <AuthenticatedLayout header={title}>{children}</AuthenticatedLayout>;
     }
     if (currentRouteName === 'front-office.profile') {
-      return <FrontOfficeLayout title={title}>{children}</FrontOfficeLayout>;
+      return <AuthenticatedLayout header={title}>{children}</AuthenticatedLayout>;
     }
     if (currentRouteName === 'admin.marketing.profile') {
-      return <MarketingLayout title={title}>{children}</MarketingLayout>;
+      return <AuthenticatedLayout header={title}>{children}</AuthenticatedLayout>;
     }
     if (currentRouteName === 'admin.business-dev.profile') {
-      return <BusinessDevLayout title={title}>{children}</BusinessDevLayout>;
+      return <AuthenticatedLayout header={title}>{children}</AuthenticatedLayout>;
     }
     if (currentRouteName === 'admin.front-desk.profile') {
-      return <FrontDeskLayout title={title}>{children}</FrontDeskLayout>;
+      return <AuthenticatedLayout header={title}>{children}</AuthenticatedLayout>;
     }
     if (currentRouteName === 'supervisor.profile') {
-      return <SupervisorLayout title={title}>{children}</SupervisorLayout>;
+      return <AuthenticatedLayout header={title}>{children}</AuthenticatedLayout>;
     }
     if (currentRouteName === 'zone.profile') {
-      return <ZoneCommanderLayout title={title}>{children}</ZoneCommanderLayout>;
+      return <AuthenticatedLayout header={title}>{children}</AuthenticatedLayout>;
     }
     if (currentRouteName === 'operations.profile') {
-      return <OperationsLayout title={title}>{children}</OperationsLayout>;
+      return <AuthenticatedLayout header={title}>{children}</AuthenticatedLayout>;
     }
 
     return <AuthenticatedLayout header={<h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">My Dashboard</h2>}>{children}</AuthenticatedLayout>;

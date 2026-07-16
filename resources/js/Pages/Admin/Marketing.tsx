@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Head, Link, router, useForm } from '@inertiajs/react';
-import MarketingLayout from '@/Layouts/MarketingLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import { Card } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import IconMapper from '@/Components/IconMapper';
@@ -109,7 +109,7 @@ export default function MarketingPage({
   const totalBudget = summary.total_budget ?? 0;
 
   return (
-    <MarketingLayout title="Marketing" user={auth?.user as any}>
+    <AuthenticatedLayout header="Marketing" user={auth?.user as any}>
       <Head title="Marketing" />
       
       {/* Hero Header */}
@@ -440,7 +440,7 @@ export default function MarketingPage({
             />
           )}
       </div>
-    </MarketingLayout>
+    </AuthenticatedLayout>
   );
 }
 

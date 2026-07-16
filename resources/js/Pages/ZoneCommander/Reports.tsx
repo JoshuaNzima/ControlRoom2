@@ -1,13 +1,13 @@
 import React from 'react';
 import { Head } from '@inertiajs/react';
-import ZoneCommanderLayout from '@/Layouts/ZoneCommanderLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import { Card } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import IconMapper from '@/Components/IconMapper';
 
 export default function Reports() {
 	return (
-		<ZoneCommanderLayout title="Reports">
+		<AuthenticatedLayout header="Reports">
 			<Head title="Zone Reports" />
 
 			<div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-4 sm:py-6 space-y-4 sm:space-y-6">
@@ -100,7 +100,7 @@ export default function Reports() {
 					</Card>
 				</div>
 			</div>
-		</ZoneCommanderLayout>
+		</AuthenticatedLayout>
 	);
 }
 

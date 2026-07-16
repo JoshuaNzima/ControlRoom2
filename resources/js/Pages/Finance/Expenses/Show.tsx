@@ -1,7 +1,6 @@
 import React from 'react';
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import FinanceLayout from '@/Layouts/FinanceLayout';
-import AdminLayout from '@/Layouts/AdminLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import { formatCurrency, formatDate } from '@/utils/formatters';
 
 interface Expense {
@@ -32,7 +31,7 @@ interface Props {
 export default function ShowExpense({ expense }: Props) {
   const { url } = usePage();
   const isAdminRoute = typeof url === 'string' && url.startsWith('/admin/');
-  const Layout = isAdminRoute ? AdminLayout : FinanceLayout;
+  const Layout = AuthenticatedLayout;
   const listRouteName = isAdminRoute ? 'admin.requisitions.index' : 'finance.expenses.index';
   const editRouteName = isAdminRoute ? 'admin.requisitions.edit' : 'finance.expenses.edit';
   const destroyRouteName = isAdminRoute ? 'admin.requisitions.destroy' : 'finance.expenses.destroy';
@@ -54,7 +53,7 @@ export default function ShowExpense({ expense }: Props) {
   const canModify = expense.status === 'pending';
 
   return (
-    <Layout title={`Requisition #${expense.id}`}>
+    <Layout header={`Requisition #${expense.id}`}>
       <Head title={`Requisition #${expense.id}`} />
       
       <div className="py-6">

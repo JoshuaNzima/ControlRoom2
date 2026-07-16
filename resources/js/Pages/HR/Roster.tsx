@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Head, useForm, usePage } from '@inertiajs/react';
-import HRLayout from '@/Layouts/HRLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import Modal from '@/Components/Modal';
 import { Card } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
@@ -249,7 +249,7 @@ export default function Roster() {
   };
 
   return (
-    <HRLayout title="Leave Management" user={auth?.user as any}>
+    <AuthenticatedLayout header="Leave Management" user={auth?.user as any}>
       <Head title="Leave Management" />
       <div className="min-h-screen bg-red-50 dark:bg-gray-900">
         {/* Hero Header */}
@@ -496,7 +496,7 @@ export default function Roster() {
           }}
         />
       </div>
-    </HRLayout>
+    </AuthenticatedLayout>
   );
 }
 

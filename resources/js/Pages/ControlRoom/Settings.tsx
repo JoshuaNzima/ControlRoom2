@@ -1,6 +1,6 @@
 import React from 'react';
 import { Head, useForm, usePage } from '@inertiajs/react';
-import ControlRoomLayout from '@/Layouts/ControlRoomLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import { Card, CardContent, CardHeader } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import { Badge } from '@/Components/ui/badge';
@@ -63,7 +63,7 @@ const Settings = ({ auth, settings }: SettingsProps) => {
   };
 
   return (
-    <ControlRoomLayout title="Control Room Settings" user={auth?.user as User | undefined}>
+    <AuthenticatedLayout header="Control Room Settings" user={auth?.user as User | undefined}>
       <Head title="Control Room Settings" />
       {flash?.success && (
         <div className="mb-4 rounded-lg border border-green-200 bg-green-50 text-green-800 px-4 py-3 dark:border-green-900 dark:bg-green-900/30 dark:text-green-300">
@@ -292,7 +292,7 @@ const Settings = ({ auth, settings }: SettingsProps) => {
           </CardContent>
         </Card>
       </div>
-    </ControlRoomLayout>
+    </AuthenticatedLayout>
   );
 };
 

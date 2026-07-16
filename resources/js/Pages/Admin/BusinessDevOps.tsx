@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Head, Link, usePage } from '@inertiajs/react';
-import BusinessDevLayout from '@/Layouts/BusinessDevLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import { Card } from '@/Components/ui/card';
 import IconMapper from '@/Components/IconMapper';
 
@@ -55,7 +55,7 @@ export default function BusinessDevOps() {
   }, [search]);
 
   return (
-    <BusinessDevLayout title="Business Dev • Ops" user={auth?.user as any}>
+    <AuthenticatedLayout header="Business Dev • Ops" user={auth?.user as any}>
       <Head title="Business Dev Ops" />
       <div className="py-6">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
@@ -171,6 +171,6 @@ export default function BusinessDevOps() {
           </Card>
         </div>
       </div>
-    </BusinessDevLayout>
+    </AuthenticatedLayout>
   );
 }

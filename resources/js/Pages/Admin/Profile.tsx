@@ -1,7 +1,7 @@
 import React from 'react';
 import { Head, usePage } from '@inertiajs/react';
 import ProfilePage from '@/Components/Profile/ProfilePage';
-import AdminLayout from '@/Layouts/AdminLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import { PageProps } from '@/types';
 
 interface UserData {
@@ -72,7 +72,7 @@ export default function AdminProfile() {
                 tabs={['overview', 'earnings', 'settings']}
                 pageTitle="Profile - Admin"
                 renderLayout={(children) => (
-                    <AdminLayout title="Profile">{children}</AdminLayout>
+                    <AuthenticatedLayout header="Profile">{children}</AuthenticatedLayout>
                 )}
             />
         </>

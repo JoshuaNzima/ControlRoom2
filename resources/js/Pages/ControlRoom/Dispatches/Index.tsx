@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Head, useForm } from '@inertiajs/react';
-import ControlRoomLayout from '@/Layouts/ControlRoomLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import { Card } from '@/Components/ui/card';
 import PageHeader from '@/Components/ui/page-header';
 import EmptyState from '@/Components/ui/empty-state';
@@ -26,7 +26,7 @@ export default function DispatchesIndex({ auth = {}, openDispatches = [], recent
   const [returnOpen, setReturnOpen] = useState<{ open: boolean; id: number|null }>(() => ({ open: false, id: null }));
 
   return (
-    <ControlRoomLayout title="Vehicle Dispatches" user={auth?.user as any}>
+    <AuthenticatedLayout header="Vehicle Dispatches" user={auth?.user as any}>
       <Head title="Vehicle Dispatches" />
       <div className="py-6">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
@@ -100,7 +100,7 @@ export default function DispatchesIndex({ auth = {}, openDispatches = [], recent
 
       <CreateDispatchModal open={createOpen} onClose={() => setCreateOpen(false)} vehicles={vehicles} drivers={drivers} sites={sites} />
       <ReturnDispatchModal open={returnOpen.open} onClose={() => setReturnOpen({ open: false, id: null })} id={returnOpen.id} />
-    </ControlRoomLayout>
+    </AuthenticatedLayout>
   );
 }
 

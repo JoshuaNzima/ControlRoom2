@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Head, router } from '@inertiajs/react';
-import ClientLayout from '@/Layouts/ClientLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import { Card } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import IconMapper from '@/Components/IconMapper';
@@ -104,7 +104,7 @@ export default function ClientSchedules({ auth, client, shifts, sites, filters }
 
   if (!client) {
     return (
-      <ClientLayout title="Shift Schedules" user={auth?.user}>
+      <AuthenticatedLayout header="Shift Schedules" user={auth?.user}>
         <Head title="Shift Schedules" />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <Card className="p-8 text-center dark:bg-gray-800 dark:border-gray-700">
@@ -121,12 +121,12 @@ export default function ClientSchedules({ auth, client, shifts, sites, filters }
             </div>
           </Card>
         </div>
-      </ClientLayout>
+      </AuthenticatedLayout>
     );
   }
 
   return (
-    <ClientLayout title="Shift Schedules" user={auth?.user}>
+    <AuthenticatedLayout header="Shift Schedules" user={auth?.user}>
       <Head title="Shift Schedules" />
 
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -272,6 +272,6 @@ export default function ClientSchedules({ auth, client, shifts, sites, filters }
           )}
         </div>
       </div>
-    </ClientLayout>
+    </AuthenticatedLayout>
   );
 }

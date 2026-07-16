@@ -1,6 +1,6 @@
 import React from 'react';
 import { Head, router } from '@inertiajs/react';
-import SuperAdminLayout from '@/Layouts/SuperAdminLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import IconMapper from '@/Components/IconMapper';
 import useNotification from '@/Providers/useNotifications';
 import Modal from '@/Components/Modal';
@@ -413,7 +413,7 @@ export default function SuperAdminGuards({ guards, inactiveGuards, filters, supe
   };
 
   return (
-    <SuperAdminLayout title="Guards Management">
+    <AuthenticatedLayout header="Guards Management">
       <Head title="Guards" />
 
       <div className="min-h-screen bg-red-50 dark:bg-gray-900">
@@ -1345,6 +1345,6 @@ export default function SuperAdminGuards({ guards, inactiveGuards, filters, supe
           </div>
         </Modal>
       </div>
-    </SuperAdminLayout>
+    </AuthenticatedLayout>
   );
 }

@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card';
 import { Badge } from '@/Components/ui/badge';
 import { Button } from '@/Components/ui/button';
 import IconMapper from '@/Components/IconMapper';
-import AdminLayout from '@/Layouts/AdminLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 
 interface LoyaltyReward {
   id: number;
@@ -67,7 +67,7 @@ export default function Rewards({ rewards }: Props) {
   const totalRewards = rewards.meta?.total ?? rewards.data.length;
 
   return (
-    <AdminLayout title="Loyalty Rewards">
+    <AuthenticatedLayout header="Loyalty Rewards">
       <Head title="Loyalty Rewards" />
 
       <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
@@ -249,6 +249,6 @@ export default function Rewards({ rewards }: Props) {
           </CardContent>
         </Card>
       </div>
-    </AdminLayout>
+    </AuthenticatedLayout>
   );
 }

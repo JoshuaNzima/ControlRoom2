@@ -1,6 +1,6 @@
 import React from 'react';
 import { Head, router, useForm, usePage } from '@inertiajs/react';
-import TrainingLayout from '@/Layouts/TrainingLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import IconMapper from '@/Components/IconMapper';
@@ -74,7 +74,7 @@ export default function RegimensIndex() {
   };
 
   return (
-    <TrainingLayout title="Regimens" user={auth?.user as any}>
+    <AuthenticatedLayout header="Regimens" user={auth?.user as any}>
       <Head title="Regimens" />
 
       <div className="space-y-6">
@@ -182,7 +182,7 @@ export default function RegimensIndex() {
           minTrainingDays={minTrainingDays}
         />
       </div>
-    </TrainingLayout>
+    </AuthenticatedLayout>
   );
 }
 

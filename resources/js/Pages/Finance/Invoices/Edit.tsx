@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Head, useForm } from '@inertiajs/react';
-import FinanceLayout from '@/Layouts/FinanceLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import { formatCurrency } from '@/utils/formatters';
 
 interface InvoiceLineItem {
@@ -128,7 +128,7 @@ export default function EditInvoice({ invoice }: Props) {
   };
 
   return (
-    <FinanceLayout title="Edit Invoice">
+    <AuthenticatedLayout header="Edit Invoice">
       <Head title="Edit Invoice" />
 
       <div className="py-6">
@@ -388,6 +388,6 @@ export default function EditInvoice({ invoice }: Props) {
           </div>
         </div>
       </div>
-    </FinanceLayout>
+    </AuthenticatedLayout>
   );
 }

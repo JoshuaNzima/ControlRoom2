@@ -1,6 +1,6 @@
 import React from 'react';
 import { Head, Link } from '@inertiajs/react';
-import SuperAdminLayout from '@/Layouts/SuperAdminLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import IconMapper from '@/Components/IconMapper';
 
 export default function HRIndex() {
@@ -14,7 +14,7 @@ export default function HRIndex() {
   ];
 
   return (
-    <SuperAdminLayout title="HR">
+    <AuthenticatedLayout header="HR">
       <Head title="Super Admin • HR" />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">HR</h1>
@@ -60,6 +60,6 @@ export default function HRIndex() {
           </div>
         </div>
       </div>
-    </SuperAdminLayout>
+    </AuthenticatedLayout>
   );
 }

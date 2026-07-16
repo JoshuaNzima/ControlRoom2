@@ -1,6 +1,6 @@
 import React from 'react';
 import { Head, Link, usePage } from '@inertiajs/react';
-import AdminLayout from '@/Layouts/AdminLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import { Card } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import IconMapper from '@/Components/IconMapper';
@@ -44,7 +44,7 @@ export default function QRCodes() {
   };
 
   return (
-    <AdminLayout title="QR Codes">
+    <AuthenticatedLayout header="QR Codes">
       <Head title="QR Codes" />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -218,6 +218,6 @@ export default function QRCodes() {
           </Card>
         </div>
       </div>
-    </AdminLayout>
+    </AuthenticatedLayout>
   );
 }

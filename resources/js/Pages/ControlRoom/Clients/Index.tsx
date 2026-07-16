@@ -1,7 +1,7 @@
 import React from 'react';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import type { PageProps as InertiaPageProps } from '@inertiajs/core';
-import ControlRoomLayout from '@/Layouts/ControlRoomLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import { Card, CardContent, CardHeader } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import { Input } from '@/Components/ui/input';
@@ -47,7 +47,7 @@ export default function ClientsIndex() {
   ];
 
   return (
-    <ControlRoomLayout title="Clients Management">
+    <AuthenticatedLayout header="Clients Management">
       <Head title="Clients" />
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
         {/* Header */}
@@ -247,6 +247,6 @@ export default function ClientsIndex() {
           </Card>
         </div>
       </div>
-    </ControlRoomLayout>
+    </AuthenticatedLayout>
   );
 }

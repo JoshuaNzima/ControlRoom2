@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Head, router } from '@inertiajs/react';
-import HRLayout from '@/Layouts/HRLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import { Input } from '@/Components/ui/input';
@@ -214,7 +214,7 @@ export default function SupervisorIncentives({ profiles, leaders }: PageProps) {
   const availableLeaders = leaders.filter(l => !profiles.some(p => p.guard_id === l.id));
 
   return (
-    <HRLayout title="Supervisor Incentives">
+    <AuthenticatedLayout header="Supervisor Incentives">
       <Head title="Supervisor Incentives" />
 
       <div className="w-full px-4 py-6 space-y-6">
@@ -612,6 +612,6 @@ export default function SupervisorIncentives({ profiles, leaders }: PageProps) {
           </div>
         </DialogContent>
       </Dialog>
-    </HRLayout>
+    </AuthenticatedLayout>
   );
 }

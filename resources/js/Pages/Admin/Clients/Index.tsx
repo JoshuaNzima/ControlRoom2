@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { Head, Link, router } from '@inertiajs/react';
 import axios from 'axios';
-import AdminLayout from '@/Layouts/AdminLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import IconMapper from '@/Components/IconMapper';
 import { Card } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
@@ -482,7 +482,7 @@ export default function ClientsIndex({ clients, filters, services = [], zones = 
   }, []);
 
   return (
-    <AdminLayout title="Clients Management">
+    <AuthenticatedLayout header="Clients Management">
       <Head title="Clients" />
       
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -720,6 +720,6 @@ export default function ClientsIndex({ clients, filters, services = [], zones = 
           />
         </div>
       </div>
-    </AdminLayout>
+    </AuthenticatedLayout>
   );
 }

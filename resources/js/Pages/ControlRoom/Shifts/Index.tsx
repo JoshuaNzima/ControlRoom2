@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Head, Link, usePage, useForm, router } from '@inertiajs/react';
-import ControlRoomLayout from '@/Layouts/ControlRoomLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import { Card, CardContent, CardHeader } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import Modal from '@/Components/Modal';
@@ -209,7 +209,7 @@ export default function ShiftsIndex() {
   const clearGuardShiftSel = () => setSelectedGuardShiftIds({});
 
   return (
-    <ControlRoomLayout title="Shift Management">
+    <AuthenticatedLayout header="Shift Management">
       <Head title="Shift Management" />
       <div className="space-y-4">
         {/* Hero Header */}
@@ -850,7 +850,7 @@ export default function ShiftsIndex() {
           />
         )}
       </div>
-    </ControlRoomLayout>
+    </AuthenticatedLayout>
   );
 }
 

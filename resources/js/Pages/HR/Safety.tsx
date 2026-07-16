@@ -1,6 +1,6 @@
 import React from 'react';
 import { Head, router, useForm, usePage } from '@inertiajs/react';
-import HRLayout from '@/Layouts/HRLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import IconMapper from '@/Components/IconMapper';
 import Modal from '@/Components/Modal';
 
@@ -18,7 +18,7 @@ export default function HRSafety() {
   const resolveIncident = (inc: any) => { if (!confirm('Resolve this incident?')) return; router.post(route('hr.safety.incidents.resolve', { incident: inc.id }), {}, { preserveScroll: true }); };
 
   return (
-    <HRLayout title="HR - Safety" user={auth?.user as any}>
+    <AuthenticatedLayout header="HR - Safety" user={auth?.user as any}>
       <Head title="Safety" />
       <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0 space-y-6">
@@ -135,7 +135,7 @@ export default function HRSafety() {
           <NearMissModal open={openNearMiss} onClose={() => setOpenNearMiss(false)} />
         </div>
       </div>
-    </HRLayout>
+    </AuthenticatedLayout>
   );
 }
 

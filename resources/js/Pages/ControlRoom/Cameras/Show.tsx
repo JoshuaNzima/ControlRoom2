@@ -1,7 +1,7 @@
 import React, { useRef, useEffect } from 'react';
 import { Head } from '@inertiajs/react';
 import { router } from '@inertiajs/react';
-import ControlRoomLayout from '@/Layouts/ControlRoomLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import { Badge } from '@/Components/ui/badge';
@@ -66,7 +66,7 @@ const CameraShow: React.FC<{ camera: Camera; recentRecordings?: any[]; activeAle
 	};
 
 	return (
-		<ControlRoomLayout title={`Camera: ${camera?.name || ''}`}>
+		<AuthenticatedLayout header={`Camera: ${camera?.name || ''}`}>
 			<Head title={`Camera: ${camera?.name || ''}`} />
 
 			<div className="py-6">
@@ -198,7 +198,7 @@ const CameraShow: React.FC<{ camera: Camera; recentRecordings?: any[]; activeAle
 					</div>
 				</div>
 			</div>
-		</ControlRoomLayout>
+		</AuthenticatedLayout>
 	);
 };
 

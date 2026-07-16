@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { router } from '@inertiajs/react';
 import { Html5QrcodeScanner, Html5QrcodeScanType } from 'html5-qrcode';
-import CameraCapture from '@/Components/CameraCapture';
-import { Toaster } from 'react-hot-toast';
 import IconMapper from '@/Components/IconMapper';
 import useScanner from '@/Hooks/useScanner';
 import toast from 'react-hot-toast';
+
+const QR_READER_CONTAINER = 'qr-reader';
+const SCAN_COOLDOWN_MS = 10_000; // 10 second cooldown per QR code
 
 interface Props {
   open: boolean;
@@ -32,6 +33,15 @@ export default function ScannerModal({ open, onClose, activeScan }: Props) {
   const [downPhoto, setDownPhoto] = useState<File | null>(null);
   const [manualNotFound, setManualNotFound] = useState('');
 
+  const scannerRef = useRef<Html5QrcodeScanner | null>(null);
+  const scanningRef = useRef(false);
+  const initLockRef = useRef(false);
+  const processingRef = useRef(false); // Prevents concurrent scan processing
+  const handleScanRef = useRef<(code: string) => void>();
+
+  // Track recently scanned QR codes to prevent duplicates.
+  const recentScansRef = useRef<Map<string, number>>(new Map());
+
   const {
     location,
     gpsStatus,
@@ -48,65 +58,137 @@ export default function ScannerModal({ open, onClose, activeScan }: Props) {
     resetScanState,
   } = useScanner({
     onScanSuccess: () => {
+      toast.success('Scan successful!', { duration: 3000, icon: '✅' });
       setTimeout(() => onClose(), 2000);
+    },
+    onScanError: (error) => {
+      toast.error(error || 'Scan failed. Please try again.', { duration: 5000, icon: '❌' });
     },
   });
 
+  // Keep the ref updated with the latest handleScan from useScanner
+  handleScanRef.current = handleScan;
+
+  const stopScanner = useCallback(() => {
+    if (scannerRef.current) {
+      try {
+        scannerRef.current.clear();
+      } catch {
+        // DOM may already be gone — ignore
+      }
+      scannerRef.current = null;
+    }
+  }, []);
+
+  const startScanner = useCallback(() => {
+    if (initLockRef.current) return;
+    initLockRef.current = true;
+
+    stopScanner();
+    setCameraError(null);
+
+    try {
+      const container = document.getElementById(QR_READER_CONTAINER);
+      if (!container) {
+        setTimeout(() => {
+          initLockRef.current = false;
+          startScanner();
+        }, 200);
+        return;
+      }
+
+      const scanner = new Html5QrcodeScanner(
+        QR_READER_CONTAINER,
+        {
+          fps: 10,
+          qrbox: { width: 250, height: 250 },
+          experimentalFeatures: {
+            useBarCodeDetectorIfSupported: true,
+          },
+          rememberLastUsedCamera: true,
+          aspectRatio: 1.0,
+          supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA],
+          showTorchButtonIfSupported: true,
+        },
+        false,
+      );
+
+      scannerRef.current = scanner;
+
+      scanner.render(
+        (decodedText) => {
+          // --- CRITICAL: Cooldown check BEFORE stopping scanner or processing ---
+          // This prevents the same QR from being re-decoded if stopScanner
+          // doesn't take effect before the next video frame.
+          const now = Date.now();
+          const lastScanned = recentScansRef.current.get(decodedText);
+          if (lastScanned && (now - lastScanned < SCAN_COOLDOWN_MS)) {
+            const remaining = Math.ceil((SCAN_COOLDOWN_MS - (now - lastScanned)) / 1000);
+            toast(`QR code already scanned. Try again in ${remaining}s.`, {
+              duration: 3000,
+              icon: '⏳',
+              id: 'scan-cooldown-modal',
+            });
+            return;
+          }
+          recentScansRef.current.set(decodedText, now);
+
+          // --- CRITICAL: Lock out concurrent processing ---
+          if (processingRef.current) return;
+          processingRef.current = true;
+
+          // --- Stop scanner before ANY async work ---
+          stopScanner();
+          setScanning(false);
+
+          // --- Process the scan ---
+          handleScanRef.current?.(decodedText);
+        },
+        (errorMessage) => {
+          const msg = errorMessage?.toString() || '';
+          if (msg.includes('NotAllowedError')) {
+            setCameraError('Camera access was denied. Please allow camera access and try again.');
+            stopScanner();
+            setScanning(false);
+          } else if (msg.includes('NotFoundError')) {
+            setCameraError('No camera found. Please ensure your device has a working camera.');
+            stopScanner();
+            setScanning(false);
+          }
+        },
+      );
+    } catch (error) {
+      console.error('Scanner initialization error:', error);
+      setCameraError('Failed to start the camera. Please try again or use manual entry.');
+      setScanning(false);
+    } finally {
+      initLockRef.current = false;
+    }
+  }, [stopScanner]);
+
   // Auto-start scanner once modal opens and we have a location fix
   useEffect(() => {
-    if (open && location && !scanning) {
+    if (open && location && !scanning && !scanningRef.current) {
+      scanningRef.current = true;
       setScanning(true);
     }
   }, [open, location, scanning]);
 
+  // Manage scanner lifecycle
   useEffect(() => {
     if (scanning && open) {
-      try {
-        const scanner = new Html5QrcodeScanner(
-          'qr-reader',
-          {
-            fps: 10,
-            qrbox: { width: 250, height: 250 },
-            experimentalFeatures: {
-              useBarCodeDetectorIfSupported: true,
-            },
-            rememberLastUsedCamera: true,
-            aspectRatio: 1.0,
-            supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA],
-            showTorchButtonIfSupported: true,
-          },
-          false,
-        );
-
-        scanner.render(
-          (decodedText) => {
-            scanner.clear();
-            setScanning(false);
-            handleScan(decodedText);
-          },
-          (error) => {
-            if (error.toString().includes('NotAllowedError')) {
-              setCameraError('Camera access was denied. Please allow camera access and try again.');
-              setScanning(false);
-              scanner.clear();
-            } else if (error.toString().includes('NotFoundError')) {
-              setCameraError('No camera found. Please ensure your device has a working camera.');
-              setScanning(false);
-              scanner.clear();
-            }
-          },
-        );
-
-        return () => {
-          scanner.clear();
-        };
-      } catch (error) {
-        console.error('Scanner initialization error:', error);
-        setCameraError('Failed to start the camera. Please try again or use manual entry.');
-        setScanning(false);
-      }
+      const timer = setTimeout(() => startScanner(), 300);
+      return () => {
+        clearTimeout(timer);
+        scanningRef.current = false;
+        stopScanner();
+      };
+    } else {
+      // Reset processing lock when scanning stops for any reason
+      processingRef.current = false;
+      stopScanner();
     }
-  }, [scanning, open, handleScan]);
+  }, [scanning, open, startScanner, stopScanner]);
 
   const handleManualSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -114,12 +196,8 @@ export default function ScannerModal({ open, onClose, activeScan }: Props) {
       toast.error('Location is required to submit manual scan. Please enable GPS and try again.');
       if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
-          (position) => {
-            acquireGps();
-          },
-          () => {
-            toast.error('Unable to acquire location.');
-          },
+          () => acquireGps(),
+          () => toast.error('Unable to acquire location.'),
           { enableHighAccuracy: true, timeout: 10000 },
         );
       }
@@ -149,116 +227,11 @@ export default function ScannerModal({ open, onClose, activeScan }: Props) {
 
   if (!open) return null;
 
-  // Success Screen Overlay
-  if (showSuccess && scanResult) {
-    return (
-      <>
-        <Toaster position="top-right" />
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-900 dark:text-gray-100 rounded-xl w-11/12 max-w-md p-8 text-center">
-            <div className="mb-6">
-              <div className="w-24 h-24 mx-auto bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center animate-bounce">
-                <IconMapper name="CheckCircle" size={48} className="text-green-600 dark:text-green-400" />
-              </div>
-            </div>
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
-              Scan Successful!
-            </h2>
-            <p className="text-gray-600 dark:text-gray-400 mb-6">
-              {scanResult.type === 'site' ? 'Site' : 'Checkpoint'} verified and locked
-            </p>
-            <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 mb-6 text-left">
-              {scanResult.clientName && (
-                <div className="flex items-center gap-2 mb-2">
-                  <IconMapper name="Building2" size={16} className="text-red-600 dark:text-red-400" />
-                  <span className="font-medium text-gray-900 dark:text-gray-100">{scanResult.clientName}</span>
-                </div>
-              )}
-              {scanResult.siteName && (
-                <div className="flex items-center gap-2 mb-2">
-                  <IconMapper name="MapPin" size={16} className="text-red-600 dark:text-red-400" />
-                  <span className="font-medium text-gray-900 dark:text-gray-100">{scanResult.siteName}</span>
-                </div>
-              )}
-              {scanResult.type === 'checkpoint' && scanResult.checkpointName && (
-                <div className="flex items-center gap-2 mb-2 text-sm">
-                  <IconMapper name="ScanLine" size={14} className="text-coin-600 dark:text-coin-400" />
-                  <span className="text-gray-700 dark:text-gray-300 font-medium">Checkpoint: {scanResult.checkpointName}</span>
-                </div>
-              )}
-              <div className="flex items-center gap-2 text-sm mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
-                <span className={scanResult.locationVerified ? 'text-green-600 dark:text-green-400' : 'text-yellow-600 dark:text-yellow-400'}>
-                  {scanResult.locationVerified ? '✓ Location verified' : '⚠ Location not verified'}
-                </span>
-              </div>
-              <div className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                {new Date(scanResult.timestamp).toLocaleTimeString()}
-              </div>
-            </div>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              Redirecting to dashboard...
-            </p>
-          </div>
-        </div>
-      </>
-    );
-  }
-
-  // Error Retry Screen
-  if (scanError) {
-    return (
-      <>
-        <Toaster position="top-right" />
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-900 dark:text-gray-100 rounded-xl w-11/12 max-w-md p-8 text-center">
-            <div className="mb-6">
-              <div className="w-24 h-24 mx-auto bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center">
-                <IconMapper name="XCircle" size={48} className="text-red-600 dark:text-red-400" />
-              </div>
-            </div>
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
-              Scan Failed
-            </h2>
-            <p className="text-red-600 dark:text-red-400 mb-6">
-              {scanError}
-            </p>
-            <div className="space-y-3">
-              <button
-                onClick={() => {
-                  resetScanState();
-                  setScanning(true);
-                }}
-                className="w-full py-3 bg-coin-600 hover:bg-coin-700 text-white rounded-lg font-medium transition"
-              >
-                Try Again
-              </button>
-              <button
-                onClick={() => {
-                  resetScanState();
-                  setScanning(false);
-                }}
-                className="w-full py-3 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg font-medium transition"
-              >
-                Use Manual Entry
-              </button>
-              <button
-                onClick={onClose}
-                className="w-full py-3 border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 rounded-lg font-medium transition"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      </>
-    );
-  }
-
   return (
     <>
-      <Toaster position="top-right" />
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div className="bg-white dark:bg-gray-900 dark:text-gray-100 rounded-xl w-11/12 max-w-2xl p-6 max-h-[90vh] overflow-y-auto">
+        <div className="bg-white dark:bg-gray-900 dark:text-gray-100 rounded-xl w-11/12 max-w-2xl p-6 max-h-[90vh] overflow-y-auto relative">
+
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-bold text-gray-900">Scan Checkpoint</h2>
             <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
@@ -268,12 +241,9 @@ export default function ScannerModal({ open, onClose, activeScan }: Props) {
 
           {/* Active Scan Display */}
           {activeScan && (
-            <div className="bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl shadow-lg p-6 text-white relative overflow-hidden mb-6">
-              <div className="absolute inset-0">
-                <div className="absolute inset-0 bg-white opacity-10 animate-pulse"></div>
-              </div>
+            <div className="bg-green-600 rounded-xl shadow-lg p-6 text-white relative overflow-hidden mb-6">
 
-              <div className="relative flex items-start justify-between">
+              <div className="flex items-start justify-between">
                 <div>
                   <div className="flex items-center gap-2 mb-2">
                     <span className="text-2xl">+</span>
@@ -341,6 +311,8 @@ export default function ScannerModal({ open, onClose, activeScan }: Props) {
             {!scanning ? (
               <button
                 onClick={() => {
+                  // Reset processing lock when user manually starts scanner
+                  processingRef.current = false;
                   setCameraError(null);
                   if (!location) {
                     toast.error('Location is required to scan. Please enable GPS and try again.');
@@ -374,7 +346,10 @@ export default function ScannerModal({ open, onClose, activeScan }: Props) {
               <div className="space-y-4">
                 <div id="qr-reader" className="rounded-lg overflow-hidden shadow-inner"></div>
                 <button
-                  onClick={() => setScanning(false)}
+                  onClick={() => {
+                    processingRef.current = false;
+                    setScanning(false);
+                  }}
                   className="w-full py-3 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-medium transition"
                 >
                   Cancel Scanning
@@ -391,13 +366,13 @@ export default function ScannerModal({ open, onClose, activeScan }: Props) {
                   value={manualCode}
                   onChange={(e) => setManualCode(e.target.value)}
                   placeholder="Enter checkpoint code (e.g., CHK-XXXXXXXXXXXX)"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
                   disabled={isLoading}
                 />
                 <button
                   type="submit"
                   disabled={!manualCode.trim() || isLoading}
-                  className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-300 text-white rounded-lg font-medium transition flex items-center justify-center gap-2"
+                  className="w-full py-3 bg-red-600 hover:bg-red-700 disabled:bg-gray-400 text-white rounded-lg font-medium transition flex items-center justify-center gap-2"
                 >
                   {isLoading ? (
                     <>
@@ -459,7 +434,7 @@ export default function ScannerModal({ open, onClose, activeScan }: Props) {
                 <button
                   onClick={() => acquireGps()}
                   disabled={gpsStatus === 'acquiring'}
-                  className="text-coin-600 hover:text-coin-700 dark:text-coin-400 dark:hover:text-coin-300 text-xs font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+                  className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 text-xs font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
                 >
                   <IconMapper name="RefreshCw" size={12} className={gpsStatus === 'acquiring' ? 'animate-spin' : ''} />
                   Refresh GPS
@@ -487,7 +462,7 @@ export default function ScannerModal({ open, onClose, activeScan }: Props) {
                   value={manualNotFound}
                   onChange={(e) => setManualNotFound(e.target.value)}
                   placeholder="Type the site name..."
-                  className="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-coin-500"
+                  className="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-red-500"
                   disabled={isLoading}
                 />
                 <button
@@ -501,9 +476,9 @@ export default function ScannerModal({ open, onClose, activeScan }: Props) {
             </div>
 
             {/* Instructions */}
-            <div className="mt-6 pt-6 border-t bg-blue-50 border border-blue-200 dark:bg-gray-800 dark:border-gray-700 rounded-xl p-6">
-              <h3 className="font-bold text-blue-900 mb-3">How It Works</h3>
-              <ol className="space-y-2 text-sm text-blue-800">
+            <div className="mt-6 pt-6 border-t bg-amber-50 border-2 border-amber-200 dark:bg-gray-800 dark:border-yellow-700 rounded-xl p-6">
+              <h3 className="font-bold text-amber-900 mb-3">How It Works</h3>
+              <ol className="space-y-2 text-sm text-amber-800">
                 <li>1. Arrive at the client site</li>
                 <li>2. Ensure location access is enabled for accurate tracking</li>
                 <li>3. Scan the site's QR code or use manual entry</li>

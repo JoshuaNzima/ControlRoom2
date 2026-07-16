@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
-import AdminLayout from '@/Layouts/AdminLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import IconMapper from '@/Components/IconMapper';
 import Modal from '@/Components/Modal';
 import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card';
@@ -147,7 +147,7 @@ export default function Index({ infractions, guards, show_add }: PageProps) {
   };
 
   return (
-    <AdminLayout title="Infractions">
+    <AuthenticatedLayout header="Infractions">
       <Head title="Infractions" />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
@@ -391,6 +391,6 @@ export default function Index({ infractions, guards, show_add }: PageProps) {
           </form>
         </div>
       </Modal>
-    </AdminLayout>
+    </AuthenticatedLayout>
   );
 }

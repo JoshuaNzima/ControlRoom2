@@ -1,6 +1,6 @@
 import { Head, router } from '@inertiajs/react';
 import { useState } from 'react';
-import FrontOfficeLayout from '@/Layouts/FrontOfficeLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import {
     FileText,
     Download,
@@ -115,7 +115,7 @@ export default function Reports({
     };
 
     return (
-        <FrontOfficeLayout>
+        <AuthenticatedLayout>
             <Head title="Reports & Analytics" />
 
             {/* Header */}
@@ -589,6 +589,6 @@ export default function Reports({
                     </div>
                 </TabsContent>
             </Tabs>
-        </FrontOfficeLayout>
+        </AuthenticatedLayout>
     );
 }

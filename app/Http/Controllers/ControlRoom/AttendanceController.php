@@ -430,7 +430,8 @@ class AttendanceController extends Controller
         $user = Auth::user();
         $isSuperAdmin = $user && $user->hasRole('super_admin');
 
-        return Inertia::render('ControlRoom/Attendance/Index', [
+        return Inertia::render('Attendance/Index', [
+            'mode' => 'control-room',
             'attendance' => $attendance,
             'filters' => $request->only(['search', 'status', 'site_id', 'date', 'per_page']),
             'sites' => $sites,

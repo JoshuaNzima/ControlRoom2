@@ -1,5 +1,5 @@
 import React from 'react';
-import AdminLayout from '@/Layouts/AdminLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import { Head, Link } from '@inertiajs/react';
 import IconMapper from '@/Components/IconMapper';
 
@@ -15,7 +15,7 @@ interface ModuleIndexProps {
 
 export default function ModuleIndex({ modules }: ModuleIndexProps) {
   return (
-    <AdminLayout title="Modules">
+    <AuthenticatedLayout header="Modules">
       <Head title="Modules" />
       <div className="py-6">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
@@ -40,6 +40,6 @@ export default function ModuleIndex({ modules }: ModuleIndexProps) {
           </div>
         </div>
       </div>
-    </AdminLayout>
+    </AuthenticatedLayout>
   );
 }

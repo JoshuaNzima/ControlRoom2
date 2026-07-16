@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Head, Link, router, useForm } from '@inertiajs/react';
-import FinanceLayout from '@/Layouts/FinanceLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import Modal from '@/Components/Modal';
 import { formatCurrency, formatPercent } from '@/utils/formatters';
 
@@ -97,7 +97,7 @@ export default function ShowBudget({
   };
 
   return (
-    <FinanceLayout title={budget.name}>
+    <AuthenticatedLayout header={budget.name}>
       <Head title={budget.name} />
 
       <div className="py-6">
@@ -395,6 +395,6 @@ export default function ShowBudget({
           </form>
         </div>
       </Modal>
-    </FinanceLayout>
+    </AuthenticatedLayout>
   );
 }

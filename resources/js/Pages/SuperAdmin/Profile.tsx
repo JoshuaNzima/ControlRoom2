@@ -1,7 +1,7 @@
 import React from 'react';
 import { Head, usePage } from '@inertiajs/react';
 import ProfilePage from '@/Components/Profile/ProfilePage';
-import SuperAdminLayout from '@/Layouts/SuperAdminLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import { PageProps } from '@/types';
 
 interface UserData {
@@ -48,7 +48,7 @@ export default function SuperAdminProfile() {
                 tabs={['overview', 'system', 'settings']}
                 pageTitle="Profile - Super Admin"
                 renderLayout={(children) => (
-                    <SuperAdminLayout title="Profile">{children}</SuperAdminLayout>
+                    <AuthenticatedLayout header="Profile">{children}</AuthenticatedLayout>
                 )}
             />
         </>

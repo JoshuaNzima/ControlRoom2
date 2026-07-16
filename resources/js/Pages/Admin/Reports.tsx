@@ -1,7 +1,7 @@
 
 import { useState } from 'react';
 import { Head, usePage } from '@inertiajs/react';
-import AdminLayout from '@/Layouts/AdminLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import PrimaryButton from '@/Components/PrimaryButton';
 import axios from 'axios';
 
@@ -184,7 +184,7 @@ export default function ReportsIndex() {
   );
 
   return (
-    <AdminLayout title="Reports">
+    <AuthenticatedLayout header="Reports">
       <Head title="Reports" />
       <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
@@ -280,6 +280,6 @@ export default function ReportsIndex() {
           </div>
         </div>
       </div>
-    </AdminLayout>
+    </AuthenticatedLayout>
   );
 }

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Head, router } from '@inertiajs/react';
-import SuperAdminLayout from '@/Layouts/SuperAdminLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import IconMapper from '@/Components/IconMapper';
 import { route } from 'ziggy-js';
 
@@ -59,7 +59,7 @@ const Backup: React.FC<Props> = ({ auth }) => {
     });
   };
   return (
-    <SuperAdminLayout title="Backup" user={auth?.user}>
+    <AuthenticatedLayout header="Backup" user={auth?.user}>
       <Head title="Backup" />
 
       <div className="max-w-6xl mx-auto p-6 space-y-6">
@@ -114,7 +114,7 @@ const Backup: React.FC<Props> = ({ auth }) => {
           </div>
         </div>
       </div>
-    </SuperAdminLayout>
+    </AuthenticatedLayout>
   );
 };
 

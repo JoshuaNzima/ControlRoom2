@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Head, Link, usePage, router } from '@inertiajs/react';
-import ZoneCommanderLayout from '@/Layouts/ZoneCommanderLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import { Card } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/Components/ui/dialog';
@@ -153,7 +153,7 @@ export default function ZoneCommanderCheckpoints() {
   };
 
   return (
-    <ZoneCommanderLayout title="Checkpoints">
+    <AuthenticatedLayout header="Checkpoints">
       <Head title="Zone Checkpoints" />
 
       <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-4 sm:py-6 space-y-4 sm:space-y-6">
@@ -388,6 +388,6 @@ export default function ZoneCommanderCheckpoints() {
           </div>
         </DialogContent>
       </Dialog>
-    </ZoneCommanderLayout>
+    </AuthenticatedLayout>
   );
 }

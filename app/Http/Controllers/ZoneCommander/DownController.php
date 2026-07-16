@@ -106,9 +106,10 @@ class DownController extends Controller
 			];
 		});
 
-		return Inertia::render('ZoneCommander/Downs', [
+		return Inertia::render('Downs/Index', [
 			'downs' => $downs->values(),
 			'guards' => $guardsPayload->values(),
+			'mode' => 'zone-commander',
 		]);
 	}
 

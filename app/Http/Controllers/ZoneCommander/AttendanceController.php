@@ -90,7 +90,8 @@ class AttendanceController extends Controller
 			];
 		});
 
-		return Inertia::render('ZoneCommander/Attendance', [
+		return Inertia::render('Attendance/Index', [
+			'mode' => 'zone-commander',
 			'sites' => $sitePayload->values(),
 			'guards' => $guardsPayload->values(),
 		]);
@@ -324,5 +325,3 @@ class AttendanceController extends Controller
 		return back()->with('success', 'Guard marked present.');
 	}
 }
-
-

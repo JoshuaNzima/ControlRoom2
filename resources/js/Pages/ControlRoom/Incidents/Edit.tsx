@@ -1,6 +1,6 @@
 import React from 'react';
 import { Head, Link, useForm } from '@inertiajs/react';
-import ControlRoomLayout from '@/Layouts/ControlRoomLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import { Card, CardContent, CardHeader } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import { Input } from '@/Components/ui/input';
@@ -68,7 +68,7 @@ export default function EditIncident({ auth, incident }: EditIncidentProps) {
   };
 
   return (
-    <ControlRoomLayout title={`Edit Incident #${incident.id}`} user={auth?.user as any}>
+    <AuthenticatedLayout header={`Edit Incident #${incident.id}`} user={auth?.user as any}>
       <Head title={`Edit Incident #${incident.id}`} />
 
       <div className="max-w-2xl mx-auto space-y-4">
@@ -236,6 +236,6 @@ export default function EditIncident({ auth, incident }: EditIncidentProps) {
           </CardContent>
         </Card>
       </div>
-    </ControlRoomLayout>
+    </AuthenticatedLayout>
   );
 }

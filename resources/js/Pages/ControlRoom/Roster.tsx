@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Head, router, useForm, usePage } from '@inertiajs/react';
-import ControlRoomLayout from '@/Layouts/ControlRoomLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import Modal from '@/Components/Modal';
 import ManualRosterEntryModal from '@/Components/Roster/ManualRosterEntryModal';
 import EmptyState from '@/Components/ui/empty-state';
@@ -173,7 +173,7 @@ export default function Roster() {
   };
 
   return (
-    <ControlRoomLayout title="Roster Management" user={auth?.user as any}>
+    <AuthenticatedLayout header="Roster Management" user={auth?.user as any}>
       <Head title="Roster Management" />
       <div className="space-y-4">
         <section className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900">
@@ -482,7 +482,7 @@ export default function Roster() {
           loadEvents();
         }}
       />
-    </ControlRoomLayout>
+    </AuthenticatedLayout>
   );
 }
 

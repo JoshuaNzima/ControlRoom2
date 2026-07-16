@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Head, Link, usePage } from '@inertiajs/react';
-import TrainingLayout from '@/Layouts/TrainingLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import { Card } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import IconMapper from '@/Components/IconMapper';
@@ -265,7 +265,7 @@ export default function TrainingDashboard() {
   const inProgressRate = safeStats.total > 0 ? Math.round((safeStats.in_training / safeStats.total) * 100) : 0;
 
   return (
-    <TrainingLayout title="Training Dashboard" user={auth?.user as any}>
+    <AuthenticatedLayout header="Training Dashboard" user={auth?.user as any}>
       <Head title="Training Dashboard" />
 
       <ScannerModal open={scannerOpen} onClose={() => setScannerOpen(false)} />
@@ -640,6 +640,6 @@ export default function TrainingDashboard() {
           </div>
         )}
       </div>
-    </TrainingLayout>
+    </AuthenticatedLayout>
   );
 }

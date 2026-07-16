@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card';
 import { Badge } from '@/Components/ui/badge';
 import { Button } from '@/Components/ui/button';
 import IconMapper from '@/Components/IconMapper';
-import FinanceLayout from '@/Layouts/FinanceLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 
 interface Client {
   id: number;
@@ -61,7 +61,7 @@ export default function LoyaltyDashboard({ clients, stats }: Props) {
   });
 
   return (
-    <FinanceLayout title="Loyalty Program">
+    <AuthenticatedLayout header="Loyalty Program">
       <Head title="Loyalty Program Management" />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -258,6 +258,6 @@ export default function LoyaltyDashboard({ clients, stats }: Props) {
           </CardContent>
         </Card>
       </div>
-    </FinanceLayout>
+    </AuthenticatedLayout>
   );
 }

@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { formatDateMW } from '@/Components/format';
 import { Head, router } from '@inertiajs/react';
-import ControlRoomLayout from '@/Layouts/ControlRoomLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import { Card, CardContent, CardHeader } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import PageHeader from '@/Components/ui/page-header';
@@ -422,7 +422,7 @@ const CameraList: React.FC<Props> = ({
 	})();
 
 	return (
-		<ControlRoomLayout title="CCTV Management">
+		<AuthenticatedLayout header="CCTV Management">
 			<Head title="CCTV Management" />
 
 			<div className="py-6">
@@ -551,7 +551,7 @@ const CameraList: React.FC<Props> = ({
 					</Card>
 				</div>
 			</div>
-		</ControlRoomLayout>
+		</AuthenticatedLayout>
 	);
 };
 

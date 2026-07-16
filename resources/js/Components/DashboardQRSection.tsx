@@ -73,11 +73,11 @@ const DashboardQRSection: React.FC<Props> = ({ zones = [], checkpoints = [] }) =
 						</div>
 
 						{/* Best Practices */}
-						<Card className="p-4 bg-blue-50 border-blue-100">
-							<h3 className="text-sm font-medium text-blue-800 mb-2">
+						<Card className="p-4 bg-amber-50 border-2 border-amber-200">
+							<h3 className="text-sm font-medium text-amber-800 mb-2">
 								QR Code Tips
 							</h3>
-							<ul className="text-sm text-blue-700 space-y-1 list-disc list-inside">
+							<ul className="text-sm text-amber-700 space-y-1 list-disc list-inside">
 								<li>Use weather-resistant materials for outdoor QR codes</li>
 								<li>Test scan functionality before deployment</li>
 								<li>Keep digital backups of all generated codes</li>

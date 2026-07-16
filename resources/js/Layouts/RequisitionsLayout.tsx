@@ -1,10 +1,9 @@
 import React from 'react';
 import { usePage } from '@inertiajs/react';
-import AdminLayout from '@/Layouts/AdminLayout';
-import FinanceLayout from '@/Layouts/FinanceLayout';
-import AssetManagementLayout from '@/Layouts/AssetManagementLayout';
-import OperationsLayout from '@/Layouts/OperationsLayout';
-import AppLayout from '@/Layouts/AppLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
+import AppShellLayout from '@/Layouts/AppShellLayout';
+import { getNavConfig, getProfileRoute, getRoleDisplay, getAIContext, LayoutContext } from '@/config/navigation';
+import useCounters from '@/Hooks/useCounters';
 import type { PageProps } from '@/types';
 
 interface Props {
@@ -14,6 +13,7 @@ interface Props {
 
 export default function RequisitionsLayout({ title = 'Requisitions', children }: Props) {
   const page = usePage<PageProps<any>>();
+  const { counters } = useCounters();
   const rawRoles = ((page.props as any)?.auth?.user?.roles ?? []) as (string | { id: number; name: string })[];
   const roles = rawRoles.map((r) => (typeof r === 'string' ? r : r.name));
 
@@ -23,22 +23,39 @@ export default function RequisitionsLayout({ title = 'Requisitions', children }:
   const isOperations = roles.some((r) => ['operations_officer', 'operations_manager'].includes(r));
 
   if (isAdmin) {
-    return <AdminLayout title={title}>{children}</AdminLayout>;
+    return <AuthenticatedLayout header={title}>{children}</AuthenticatedLayout>;
   }
   if (isFinance) {
-    return <FinanceLayout title={title}>{children}</FinanceLayout>;
+    return <AuthenticatedLayout header={title}>{children}</AuthenticatedLayout>;
   }
   if (isAssets) {
-    return <AssetManagementLayout title={title}>{children}</AssetManagementLayout>;
+    return <AuthenticatedLayout header={title}>{children}</AuthenticatedLayout>;
   }
   if (isOperations) {
-    return <OperationsLayout title={title} showQrScanner={false}>{children}</OperationsLayout>;
+    return <AuthenticatedLayout header={title}>{children}</AuthenticatedLayout>;
   }
 
   // Fallback for general authenticated users
+  const ctx: LayoutContext = {
+    roles,
+    isSuperAdmin: roles.includes('super_admin'),
+    isAdminUser: false,
+    isClientUser: roles.includes('client'),
+    isOpsManager: roles.includes('operations_manager'),
+    counters,
+  };
+
   return (
-    <AppLayout title={title}>
+    <AppShellLayout
+      title={title}
+      sidebarTitle="Requisitions"
+      sidebarIcon="ClipboardList"
+      navSections={getNavConfig(ctx)}
+      profileRoute={getProfileRoute(roles)}
+      roleDisplay={getRoleDisplay(roles)}
+      aiContext={getAIContext(roles)}
+    >
       {children}
-    </AppLayout>
+    </AppShellLayout>
   );
 }

@@ -1,5 +1,5 @@
 import React from 'react';
-import SuperAdminLayout from '@/Layouts/SuperAdminLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import { Head, usePage, router } from '@inertiajs/react';
 import Modal from '@/Components/Modal';
 import IconMapper from '@/Components/IconMapper';
@@ -244,7 +244,7 @@ export default function SuperAdminSettings() {
   };
 
   return (
-    <SuperAdminLayout title="System Settings" user={auth?.user as any}>
+    <AuthenticatedLayout header="System Settings" user={auth?.user as any}>
       <Head title="System Settings" />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
         {/* Hero Header */}
@@ -704,6 +704,6 @@ export default function SuperAdminSettings() {
           </section>
         )}
       </div>
-    </SuperAdminLayout>
+    </AuthenticatedLayout>
   );
 }

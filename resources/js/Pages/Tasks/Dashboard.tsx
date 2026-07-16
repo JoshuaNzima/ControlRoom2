@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Head, router } from '@inertiajs/react';
-import TaskTrackerLayout from '@/Layouts/TaskTrackerLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import { Badge } from '@/Components/ui/badge';
@@ -142,7 +142,7 @@ export default function TaskDashboard({ auth, tasks, stats, isExecutiveAssistant
   };
 
   return (
-    <TaskTrackerLayout title="Task Dashboard" user={auth.user}>
+    <AuthenticatedLayout header="Task Dashboard" user={auth.user}>
       <Head title="Task Dashboard" />
 
       {/* Stats Cards */}
@@ -565,6 +565,6 @@ export default function TaskDashboard({ auth, tasks, stats, isExecutiveAssistant
           onClose={() => setDeleteTask(null)}
         />
       )}
-    </TaskTrackerLayout>
+    </AuthenticatedLayout>
   );
 }

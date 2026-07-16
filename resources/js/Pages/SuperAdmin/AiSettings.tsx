@@ -1,5 +1,5 @@
 import React from 'react';
-import SuperAdminLayout from '@/Layouts/SuperAdminLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import { Head, router, usePage } from '@inertiajs/react';
 import IconMapper from '@/Components/IconMapper';
 import useToast from '@/Components/ui/use-toast';
@@ -211,7 +211,7 @@ export default function AiSettings() {
   const assistantSlugs = ['control-room', 'help-center'];
 
   return (
-    <SuperAdminLayout title="AI Settings" user={auth?.user as any}>
+    <AuthenticatedLayout header="AI Settings" user={auth?.user as any}>
       <Head title="AI Settings" />
       <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-4 sm:py-6 space-y-4 sm:space-y-6">
         {/* Hero Header */}
@@ -536,6 +536,6 @@ export default function AiSettings() {
           </div>
         </div>
       </div>
-    </SuperAdminLayout>
+    </AuthenticatedLayout>
   );
 }

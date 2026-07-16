@@ -1,6 +1,6 @@
 import React from 'react';
 import { Head, Link, router } from '@inertiajs/react';
-import ControlRoomLayout from '@/Layouts/ControlRoomLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import IconMapper from '@/Components/IconMapper';
 
 interface Intake {
@@ -38,7 +38,7 @@ export default function Index({ intakes, filters }: Props) {
   };
 
   return (
-    <ControlRoomLayout title="Public Intake Triage">
+    <AuthenticatedLayout header="Public Intake Triage">
       <Head title="Triage — Public Intakes" />
 
       <div className="space-y-6">
@@ -112,6 +112,6 @@ export default function Index({ intakes, filters }: Props) {
           <button disabled={!intakes.next_page_url} onClick={() => intakes.next_page_url && router.get(intakes.next_page_url)} className="px-3 py-1.5 rounded border border-red-200 dark:border-gray-700 text-sm text-red-900 dark:text-gray-100 bg-white dark:bg-gray-900 disabled:opacity-50">Next</button>
         </div>
       </div>
-    </ControlRoomLayout>
+    </AuthenticatedLayout>
   );
 }

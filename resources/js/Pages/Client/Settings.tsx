@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Head, router } from '@inertiajs/react';
-import ClientLayout from '@/Layouts/ClientLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import { Card } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import IconMapper from '@/Components/IconMapper';
@@ -113,7 +113,7 @@ export default function ClientSettings({ auth, client, settings }: ClientSetting
   );
 
   return (
-    <ClientLayout title="Settings" user={auth?.user}>
+    <AuthenticatedLayout header="Settings" user={auth?.user}>
       <Head title="Settings" />
 
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -306,6 +306,6 @@ export default function ClientSettings({ auth, client, settings }: ClientSetting
           )}
         </div>
       </div>
-    </ClientLayout>
+    </AuthenticatedLayout>
   );
 }

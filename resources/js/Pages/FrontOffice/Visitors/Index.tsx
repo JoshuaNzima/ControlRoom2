@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Head, router } from '@inertiajs/react';
-import FrontOfficeLayout from '@/Layouts/FrontOfficeLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import {
     Users,
     Plus,
@@ -90,7 +90,7 @@ export default function VisitorsIndex({ visitors, stats, filters }: VisitorsProp
     );
 
     return (
-        <FrontOfficeLayout>
+        <AuthenticatedLayout>
             <Head title="Visitor Management" />
 
             {/* Header */}
@@ -367,6 +367,6 @@ export default function VisitorsIndex({ visitors, stats, filters }: VisitorsProp
                     </div>
                 </CardContent>
             </Card>
-        </FrontOfficeLayout>
+        </AuthenticatedLayout>
     );
 }

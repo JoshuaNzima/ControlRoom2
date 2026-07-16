@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Head, Link, router } from '@inertiajs/react';
-import AdminLayout from '@/Layouts/AdminLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import IconMapper from '@/Components/IconMapper';
 import GuardDetailsModal from '@/Components/Guards/GuardDetailsModal';
 import { Card } from '@/Components/ui/card';
@@ -215,7 +215,7 @@ export default function GuardsIndex({ guards, filters, stats }: GuardsIndexProps
   };
 
   return (
-    <AdminLayout title="Guards Directory">
+    <AuthenticatedLayout header="Guards Directory">
       <Head title="Guards Directory" />
       
       <div className="min-h-screen bg-red-50 dark:bg-gray-900">
@@ -421,6 +421,6 @@ export default function GuardsIndex({ guards, filters, stats }: GuardsIndexProps
           onComplianceUpdate={handleComplianceUpdate}
         />
       </div>
-    </AdminLayout>
+    </AuthenticatedLayout>
   );
 }

@@ -1,10 +1,10 @@
 import React from 'react';
 import { Head } from '@inertiajs/react';
-import AdminLayout from '@/Layouts/AdminLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 
 export default function ZoneCommanderWindow() {
   return (
-    <AdminLayout title="Zone Commander Window">
+    <AuthenticatedLayout header="Zone Commander Window">
       <Head title="Zone Commander Window" />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
@@ -20,7 +20,7 @@ export default function ZoneCommanderWindow() {
           </div>
         </div>
       </div>
-    </AdminLayout>
+    </AuthenticatedLayout>
   );
 }
 

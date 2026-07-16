@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Head, router } from '@inertiajs/react';
-import HRLayout from '@/Layouts/HRLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import PushNotificationSettings from '@/Components/Common/PushNotificationSettings';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
@@ -354,7 +354,7 @@ export default function IncentiveSettings({ types, settings, stats }: PageProps)
   };
 
   return (
-    <HRLayout title="Incentive Settings">
+    <AuthenticatedLayout header="Incentive Settings">
       <Head title="Incentive Settings" />
 
       <div className="w-full px-4 py-6 space-y-6">
@@ -984,6 +984,6 @@ export default function IncentiveSettings({ types, settings, stats }: PageProps)
           </div>
         </DialogContent>
       </Dialog>
-    </HRLayout>
+    </AuthenticatedLayout>
   );
 }

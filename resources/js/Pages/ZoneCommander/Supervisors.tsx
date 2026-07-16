@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Head } from '@inertiajs/react';
-import ZoneCommanderLayout from '@/Layouts/ZoneCommanderLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import { Input } from '@/Components/ui/input';
@@ -69,7 +69,7 @@ export default function Supervisors({ supervisors = [] }: SupervisorsProps) {
   const averagePerformance = supervisors.reduce((sum, s) => sum + s.performance_score, 0) / supervisors.length;
 
   return (
-    <ZoneCommanderLayout title="Supervisors">
+    <AuthenticatedLayout header="Supervisors">
       <Head title="Supervisors Management" />
 
       <div className="w-full min-h-screen p-3 sm:p-4 lg:p-6 space-y-4 sm:space-y-6">
@@ -308,7 +308,7 @@ export default function Supervisors({ supervisors = [] }: SupervisorsProps) {
           </CardContent>
         </Card>
       </div>
-    </ZoneCommanderLayout>
+    </AuthenticatedLayout>
   );
 }
 

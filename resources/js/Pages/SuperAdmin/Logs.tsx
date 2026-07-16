@@ -1,6 +1,6 @@
 import React from 'react';
 import { Head } from '@inertiajs/react';
-import SuperAdminLayout from '@/Layouts/SuperAdminLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import IconMapper from '@/Components/IconMapper';
 import { route } from 'ziggy-js';
 
@@ -38,7 +38,7 @@ const Logs: React.FC<Props> = ({ auth, logLines = [] }) => {
   };
 
   return (
-    <SuperAdminLayout title="System Logs" user={auth?.user}>
+    <AuthenticatedLayout header="System Logs" user={auth?.user}>
       <Head title="System Logs" />
 
       <div className="max-w-6xl mx-auto p-6 space-y-6">
@@ -78,7 +78,7 @@ const Logs: React.FC<Props> = ({ auth, logLines = [] }) => {
           </pre>
         </div>
       </div>
-    </SuperAdminLayout>
+    </AuthenticatedLayout>
   );
 };
 

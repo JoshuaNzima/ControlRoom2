@@ -1,6 +1,6 @@
 import React from 'react';
 import { Head } from '@inertiajs/react';
-import OperationsLayout from '@/Layouts/OperationsLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card';
 import IconMapper from '@/Components/IconMapper';
 import { Progress } from '@/Components/ui/progress';
@@ -32,7 +32,7 @@ export default function CoverageIndex({ zones, auth }: Props) {
   const coveragePct = totalSites > 0 ? Math.round((activeSites / totalSites) * 100) : 0;
 
   return (
-    <OperationsLayout title="Site Coverage" user={user} showQrScanner={true}>
+    <AuthenticatedLayout header="Site Coverage" user={user} showQrScanner={true}>
       <Head title="Site Coverage" />
 
       <div className="space-y-4 sm:space-y-6">
@@ -127,6 +127,6 @@ export default function CoverageIndex({ zones, auth }: Props) {
           </Card>
         )}
       </div>
-    </OperationsLayout>
+    </AuthenticatedLayout>
   );
 }

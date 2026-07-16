@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Head, useForm } from '@inertiajs/react';
-import TaskTrackerLayout from '@/Layouts/TaskTrackerLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import { Input } from '@/Components/ui/input';
@@ -65,7 +65,7 @@ export default function TaskTemplates({ auth, templates, modules, priorities }: 
   };
 
   return (
-    <TaskTrackerLayout title="Task Templates" user={auth.user}>
+    <AuthenticatedLayout header="Task Templates" user={auth.user}>
       <Head title="Task Templates" />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -209,6 +209,6 @@ export default function TaskTemplates({ auth, templates, modules, priorities }: 
           </CardContent>
         </Card>
       </div>
-    </TaskTrackerLayout>
+    </AuthenticatedLayout>
   );
 }

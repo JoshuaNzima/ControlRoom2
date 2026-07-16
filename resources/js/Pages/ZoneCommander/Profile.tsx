@@ -1,7 +1,7 @@
 import React from 'react';
 import { Head, usePage } from '@inertiajs/react';
 import ProfilePage from '@/Components/Profile/ProfilePage';
-import ZoneCommanderLayout from '@/Layouts/ZoneCommanderLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import { PageProps } from '@/types';
 
 interface UserData {
@@ -85,7 +85,7 @@ export default function ZoneCommanderProfile() {
                 tabs={['overview', 'zones', 'resolutions', 'settings']}
                 pageTitle="Profile - Zone Commander"
                 renderLayout={(children) => (
-                    <ZoneCommanderLayout title="Profile">{children}</ZoneCommanderLayout>
+                    <AuthenticatedLayout header="Profile">{children}</AuthenticatedLayout>
                 )}
             />
         </>

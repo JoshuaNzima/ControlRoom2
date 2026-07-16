@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card';
 import { Badge } from '@/Components/ui/badge';
 import { Button } from '@/Components/ui/button';
 import IconMapper from '@/Components/IconMapper';
-import AdminLayout from '@/Layouts/AdminLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 
 interface LoyaltyRule {
   id: number;
@@ -93,7 +93,7 @@ export default function Rules({ rules }: Props) {
   };
 
   return (
-    <AdminLayout title="Loyalty Rules">
+    <AuthenticatedLayout header="Loyalty Rules">
       <Head title="Loyalty Rules" />
 
       <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6 lg:px-8 space-y-6">
@@ -275,6 +275,6 @@ export default function Rules({ rules }: Props) {
           )}
         </div>
       </div>
-    </AdminLayout>
+    </AuthenticatedLayout>
   );
 }

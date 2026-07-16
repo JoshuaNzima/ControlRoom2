@@ -3,7 +3,7 @@ import { Head, Link, router } from '@inertiajs/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card';
 import { Badge } from '@/Components/ui/badge';
 import { Button } from '@/Components/ui/button';
-import FinanceLayout from '@/Layouts/FinanceLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import IconMapper from '@/Components/IconMapper';
 
 interface Client {
@@ -126,7 +126,7 @@ export default function PendingRedemptions({ redemptions }: Props) {
   };
 
   return (
-    <FinanceLayout title="Pending Redemptions">
+    <AuthenticatedLayout header="Pending Redemptions">
       <Head title="Pending Redemptions" />
 
       <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
@@ -327,6 +327,6 @@ export default function PendingRedemptions({ redemptions }: Props) {
           </CardContent>
         </Card>
       </div>
-    </FinanceLayout>
+    </AuthenticatedLayout>
   );
 }

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Head, usePage } from '@inertiajs/react';
 import ProfilePage from '@/Components/Profile/ProfilePage';
-import SupervisorLayout from '@/Layouts/SupervisorLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { PageProps } from '@/types';
 
 interface UserData {
@@ -91,7 +91,7 @@ export default function SupervisorProfile() {
                 tabs={['overview', 'incentives', 'assignments', 'settings']}
                 pageTitle={`Profile - ${isSergeant ? 'Sergeant' : 'Supervisor'}`}
                 renderLayout={(children) => (
-                    <SupervisorLayout title="Profile">{children}</SupervisorLayout>
+                    <AuthenticatedLayout header="Profile">{children}</AuthenticatedLayout>
                 )}
             />
         </>

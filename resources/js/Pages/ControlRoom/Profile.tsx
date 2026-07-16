@@ -1,7 +1,7 @@
 import React from 'react';
 import { Head, usePage } from '@inertiajs/react';
 import ProfilePage from '@/Components/Profile/ProfilePage';
-import ControlRoomLayout from '@/Layouts/ControlRoomLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import { PageProps } from '@/types';
 
 interface UserData {
@@ -64,7 +64,7 @@ export default function ControlRoomProfile() {
                 tabs={['overview', 'settings']}
                 pageTitle="Profile - Control Room"
                 renderLayout={(children) => (
-                    <ControlRoomLayout title="Profile">{children}</ControlRoomLayout>
+                    <AuthenticatedLayout header="Profile">{children}</AuthenticatedLayout>
                 )}
             />
         </>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Head, Link, useForm, router } from '@inertiajs/react';
-import ControlRoomLayout from '@/Layouts/ControlRoomLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import Modal from '@/Components/Modal';
 import { Card, CardContent, CardHeader } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
@@ -128,7 +128,7 @@ const IncidentsIndex = ({ auth, incidents, show_add }: IncidentsIndexProps) => {
   };
 
   return (
-    <ControlRoomLayout title="Incident Management" user={auth?.user as any}>
+    <AuthenticatedLayout header="Incident Management" user={auth?.user as any}>
       <Head title="Incident Management" />
 
       <div className="px-4 sm:px-6 lg:px-8 py-6 space-y-6">
@@ -444,7 +444,7 @@ const IncidentsIndex = ({ auth, incidents, show_add }: IncidentsIndexProps) => {
           </form>
         </div>
       </Modal>
-    </ControlRoomLayout>
+    </AuthenticatedLayout>
   );
 };
 

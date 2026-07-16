@@ -1,6 +1,6 @@
 import React from 'react';
 import { Head, Link } from '@inertiajs/react';
-import OperationsLayout from '@/Layouts/OperationsLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card';
 import IconMapper from '@/Components/IconMapper';
 import { Badge } from '@/Components/ui/badge';
@@ -37,7 +37,7 @@ export default function Sites({ sites, filters, auth }: Props) {
   };
 
   return (
-    <OperationsLayout title="Deployments" user={user} showQrScanner={true}>
+    <AuthenticatedLayout header="Deployments" user={user} showQrScanner={true}>
       <Head title="Deployments" />
 
       <div className="space-y-4 sm:space-y-6">
@@ -100,6 +100,6 @@ export default function Sites({ sites, filters, auth }: Props) {
           </div>
         )}
       </div>
-    </OperationsLayout>
+    </AuthenticatedLayout>
   );
 }

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Head, router, useForm, usePage } from '@inertiajs/react';
-import HRLayout from '@/Layouts/HRLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import IconMapper from '@/Components/IconMapper';
 import Modal from '@/Components/Modal';
 
@@ -45,7 +45,7 @@ export default function HRPolicies() {
   };
 
   return (
-    <HRLayout title="HR - Policies" user={auth?.user as any}>
+    <AuthenticatedLayout header="HR - Policies" user={auth?.user as any}>
       <Head title="Policies" />
       <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0 space-y-6">
@@ -150,7 +150,7 @@ export default function HRPolicies() {
           <CategoryModal open={openCategory} onClose={() => setOpenCategory(false)} category={editingCategory} />
         </div>
       </div>
-    </HRLayout>
+    </AuthenticatedLayout>
   );
 }
 

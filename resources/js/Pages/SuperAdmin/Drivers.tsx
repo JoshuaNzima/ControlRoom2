@@ -1,6 +1,6 @@
 import React from 'react';
 import { Head, router } from '@inertiajs/react';
-import SuperAdminLayout from '@/Layouts/SuperAdminLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import IconMapper from '@/Components/IconMapper';
 import useNotification from '@/Providers/useNotifications';
 import Modal from '@/Components/Modal';
@@ -206,7 +206,7 @@ export default function SuperAdminDrivers({ guards, filters, supervisors = [], g
   };
 
   return (
-    <SuperAdminLayout title="Drivers Management">
+    <AuthenticatedLayout header="Drivers Management">
       <Head title="Drivers" />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
@@ -698,6 +698,6 @@ export default function SuperAdminDrivers({ guards, filters, supervisors = [], g
           onCancel={() => setReasonOpen(false)}
         />
       </div>
-    </SuperAdminLayout>
+    </AuthenticatedLayout>
   );
 }

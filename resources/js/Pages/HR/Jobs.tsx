@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
-import HRLayout from '@/Layouts/HRLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import Modal from '@/Components/Modal';
 import IconMapper from '@/Components/IconMapper';
 
@@ -75,7 +75,7 @@ export default function HRJobs() {
   const jobsData: JobPosting[] = useMemo(() => (jobs?.data || jobs || []), [jobs]);
 
   return (
-    <HRLayout title="HR Careers" user={auth?.user as any}>
+    <AuthenticatedLayout header="HR Careers" user={auth?.user as any}>
       <Head title="HR Careers" />
       <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
@@ -255,6 +255,6 @@ export default function HRJobs() {
           </form>
         </div>
       </Modal>
-    </HRLayout>
+    </AuthenticatedLayout>
   );
 }

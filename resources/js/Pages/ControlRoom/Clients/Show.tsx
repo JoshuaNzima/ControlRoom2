@@ -1,6 +1,6 @@
 import React from 'react';
 import { Head, Link, useForm, usePage, router } from '@inertiajs/react';
-import ControlRoomLayout from '@/Layouts/ControlRoomLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import { Card, CardContent, CardHeader } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/Components/ui/dialog';
@@ -46,7 +46,7 @@ export default function ClientShow() {
   };
 
   return (
-    <ControlRoomLayout title={`Client • ${client.name}`}>
+    <AuthenticatedLayout header={`Client • ${client.name}`}>
       <Head title={`Client • ${client.name}`} />
       
       <div className="space-y-4 max-w-7xl mx-auto">
@@ -454,6 +454,6 @@ export default function ClientShow() {
           </div>
         </DialogContent>
       </Dialog>
-    </ControlRoomLayout>
+    </AuthenticatedLayout>
   );
 }

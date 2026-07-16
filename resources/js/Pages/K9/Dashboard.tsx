@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Head, usePage, Link } from '@inertiajs/react';
-import BusinessDevLayout from '@/Layouts/BusinessDevLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import { Card } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import IconMapper from '@/Components/IconMapper';
@@ -120,7 +120,7 @@ export default function K9Dashboard() {
   ], []);
 
   return (
-    <BusinessDevLayout title="K9 Dashboard" user={auth?.user as any}>
+    <AuthenticatedLayout header="K9 Dashboard" user={auth?.user as any}>
       <Head title="K9 Dashboard" />
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
@@ -217,6 +217,6 @@ export default function K9Dashboard() {
           </div>
         </Card>
       </div>
-    </BusinessDevLayout>
+    </AuthenticatedLayout>
   );
 }

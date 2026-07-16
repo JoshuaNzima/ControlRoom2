@@ -1,6 +1,6 @@
 import React from 'react';
 import { Head, useForm, router } from '@inertiajs/react';
-import MarketingLayout from '@/Layouts/MarketingLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import { Card } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import IconMapper from '@/Components/IconMapper';
@@ -66,7 +66,7 @@ export default function MarketingSettings({ auth = {}, settings, options, users 
   };
 
   return (
-    <MarketingLayout title="Marketing Settings" user={auth?.user as any}>
+    <AuthenticatedLayout header="Marketing Settings" user={auth?.user as any}>
       <Head title="Marketing Settings" />
       
       {/* Hero Header */}
@@ -222,6 +222,6 @@ export default function MarketingSettings({ auth = {}, settings, options, users 
           </div>
         </form>
       </div>
-    </MarketingLayout>
+    </AuthenticatedLayout>
   );
 }

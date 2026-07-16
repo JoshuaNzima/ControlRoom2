@@ -3,7 +3,7 @@ import { Head, Link, router } from '@inertiajs/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card';
 import { Badge } from '@/Components/ui/badge';
 import { Button } from '@/Components/ui/button';
-import ClientLayout from '@/Layouts/ClientLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import IconMapper from '@/Components/IconMapper';
 
 interface Client {
@@ -87,7 +87,7 @@ export default function Redemptions({
   };
 
   return (
-    <ClientLayout title="Loyalty Redemptions">
+    <AuthenticatedLayout header="Loyalty Redemptions">
       <Head title="Loyalty Redemptions" />
 
       <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
@@ -254,6 +254,6 @@ export default function Redemptions({
           </>
         )}
       </div>
-    </ClientLayout>
+    </AuthenticatedLayout>
   );
 }

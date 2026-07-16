@@ -1,6 +1,6 @@
 import React from 'react';
 import { Head } from '@inertiajs/react';
-import AdminLayout from '@/Layouts/AdminLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import { Card, CardContent, CardHeader } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import IconMapper from '@/Components/IconMapper';
@@ -110,7 +110,7 @@ export default function AdminControlRoom({ auth = {} as any, stats, recentScans 
   ];
 
   return (
-    <AdminLayout title="Control Room" user={auth?.user}>
+    <AuthenticatedLayout header="Control Room" user={auth?.user}>
       <Head title="Admin • Control Room" />
 
       <div className="py-6">
@@ -391,7 +391,7 @@ export default function AdminControlRoom({ auth = {} as any, stats, recentScans 
           <CreateFlagForm onClose={() => setShowReportIssue(false)} />
         )}
       </Dialog>
-    </AdminLayout>
+    </AuthenticatedLayout>
   );
 }
 

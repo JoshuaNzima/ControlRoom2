@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Head, usePage, router } from '@inertiajs/react';
-import TrainingLayout from '@/Layouts/TrainingLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import IconMapper from '@/Components/IconMapper';
 import { format, parseISO } from 'date-fns';
 
@@ -110,7 +110,7 @@ export default function AttendanceIndex() {
   };
 
   return (
-    <TrainingLayout title="Trainee Attendance" user={auth.user}>
+    <AuthenticatedLayout header="Trainee Attendance" user={auth.user}>
       <Head title="Attendance" />
       <div className="p-4 md:p-6 max-w-7xl mx-auto">
         {/* Header */}
@@ -235,6 +235,6 @@ export default function AttendanceIndex() {
           )}
         </div>
       </div>
-    </TrainingLayout>
+    </AuthenticatedLayout>
   );
 }

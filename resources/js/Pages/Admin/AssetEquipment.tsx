@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Head, Link, router, useForm } from '@inertiajs/react';
-import AssetManagementLayout from '@/Layouts/AssetManagementLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import Modal from '@/Components/Modal';
 
 interface Equipment { id: number; tag: string; name: string; category?: string|null; status: string; assigned_to?: number|null; notes?: string|null }
@@ -41,7 +41,7 @@ export default function AssetEquipment({ auth = {}, equipment, options, openHand
   const [returnTarget, setReturnTarget] = useState<{ asset: Equipment; handover: Handover } | null>(null);
 
   return (
-    <AssetManagementLayout title="Equipment" user={auth?.user as any}>
+    <AuthenticatedLayout header="Equipment" user={auth?.user as any}>
       <Head title="Equipment" />
       <div className="py-6">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
@@ -167,7 +167,7 @@ export default function AssetEquipment({ auth = {}, equipment, options, openHand
           )}
         </div>
       </div>
-    </AssetManagementLayout>
+    </AuthenticatedLayout>
   );
 }
 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Head, Link, router, useForm } from '@inertiajs/react';
-import FinanceLayout from '@/Layouts/FinanceLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import Modal from '@/Components/Modal';
 import { formatCurrency } from '@/utils/formatters';
 
@@ -110,7 +110,7 @@ export default function BudgetIndex({ budgets, summary, filters, years, categori
   };
 
   return (
-    <FinanceLayout title="Budgets">
+    <AuthenticatedLayout header="Budgets">
       <Head title="Budgets" />
 
       <div className="py-6">
@@ -411,6 +411,6 @@ export default function BudgetIndex({ budgets, summary, filters, years, categori
           </form>
         </div>
       </Modal>
-    </FinanceLayout>
+    </AuthenticatedLayout>
   );
 }

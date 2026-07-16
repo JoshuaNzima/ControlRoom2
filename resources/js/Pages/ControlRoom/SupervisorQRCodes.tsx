@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Head, Link } from '@inertiajs/react';
-import ControlRoomLayout from '@/Layouts/ControlRoomLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import { Card } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/Components/ui/dialog';
@@ -95,7 +95,7 @@ export default function SupervisorQRCodes({ zones, checkpoints }: PageProps) {
   const activeQrCheckpoints = qrCheckpoints.filter(c => c.is_active);
 
   return (
-    <ControlRoomLayout title="QR Code Management">
+    <AuthenticatedLayout header="QR Code Management">
       <Head title="QR Code Management" />
 
       <div className="py-6">
@@ -391,6 +391,6 @@ export default function SupervisorQRCodes({ zones, checkpoints }: PageProps) {
           </div>
         </DialogContent>
       </Dialog>
-    </ControlRoomLayout>
+    </AuthenticatedLayout>
   );
 }

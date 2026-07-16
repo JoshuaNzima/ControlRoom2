@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Head, router } from '@inertiajs/react';
-import AdminLayout from '@/Layouts/AdminLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import { Card } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import Modal from '@/Components/Modal';
@@ -208,7 +208,7 @@ export default function PaymentsIndex({
   };
 
   return (
-    <AdminLayout title="Payments Checker">
+    <AuthenticatedLayout header="Payments Checker">
       <Head title="Payments Checker" />
 
       <Modal show={prepayModalOpen} onClose={() => setPrepayModalOpen(false)} maxWidth="sm">
@@ -702,7 +702,7 @@ export default function PaymentsIndex({
           </Card>
         </div>
       </div>
-    </AdminLayout>
+    </AuthenticatedLayout>
   );
 }
 

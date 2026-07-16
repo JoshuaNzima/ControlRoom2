@@ -1,6 +1,6 @@
 import React from 'react';
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
-import ControlRoomLayout from '@/Layouts/ControlRoomLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import { Card, CardContent, CardHeader } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/Components/ui/dialog';
@@ -35,7 +35,7 @@ export default function ZoneAssign() {
   };
 
   return (
-    <ControlRoomLayout title={`Assign Guards • ${zone.name}`}>
+    <AuthenticatedLayout header={`Assign Guards • ${zone.name}`}>
       <Head title={`Assign Guards • ${zone.name}`} />
       <div className="space-y-4">
         <Card className="dark:bg-gray-800 dark:border-gray-700">
@@ -114,6 +114,6 @@ export default function ZoneAssign() {
           </DialogContent>
         </Dialog>
       </div>
-    </ControlRoomLayout>
+    </AuthenticatedLayout>
   );
 }

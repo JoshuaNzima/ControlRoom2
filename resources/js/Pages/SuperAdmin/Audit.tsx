@@ -1,6 +1,6 @@
 import React from 'react';
 import { Head } from '@inertiajs/react';
-import SuperAdminLayout from '@/Layouts/SuperAdminLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import IconMapper from '@/Components/IconMapper';
 import { route } from 'ziggy-js';
 
@@ -34,7 +34,7 @@ const Audit: React.FC<Props> = ({ auth, entries = [] }) => {
     } catch (e) {}
   };
   return (
-    <SuperAdminLayout title="Audit Trail" user={auth?.user}>
+    <AuthenticatedLayout header="Audit Trail" user={auth?.user}>
       <Head title="Audit Trail" />
 
       <div className="max-w-6xl mx-auto p-6 space-y-6">
@@ -67,7 +67,7 @@ const Audit: React.FC<Props> = ({ auth, entries = [] }) => {
           )}
         </div>
       </div>
-    </SuperAdminLayout>
+    </AuthenticatedLayout>
   );
 };
 

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Head, Link, router } from '@inertiajs/react';
-import SuperAdminLayout from '@/Layouts/SuperAdminLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import IconMapper from '@/Components/IconMapper';
 import { Card } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
@@ -155,7 +155,7 @@ export default function Manage({ clients, filters, services = [], zones = [] }: 
   };
 
   return (
-    <SuperAdminLayout title="Clients">
+    <AuthenticatedLayout header="Clients">
       <Head title="Super Admin • Manage Clients" />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
         {bulkMessage && (
@@ -407,6 +407,6 @@ export default function Manage({ clients, filters, services = [], zones = [] }: 
           </DialogContent>
         </Dialog>
       </div>
-    </SuperAdminLayout>
+    </AuthenticatedLayout>
   );
 }

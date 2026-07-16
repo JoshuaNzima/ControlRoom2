@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import HRLayout from '@/Layouts/HRLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import PromoteGuardModal from '@/Components/HR/PromoteGuardModal';
 import GuardDetailsModal from '@/Components/Guards/GuardDetailsModal';
 import ConfirmModal from '@/Components/ConfirmModal';
@@ -200,7 +200,7 @@ export default function HREmployees() {
   };
 
   return (
-    <HRLayout title="Guards & Promotions" user={auth?.user as any}>
+    <AuthenticatedLayout header="Guards & Promotions" user={auth?.user as any}>
       <Head title="Guards & Promotions" />
       
       {/* Hero Header */}
@@ -497,6 +497,6 @@ export default function HREmployees() {
         onConfirm={(reason) => { setReasonOpen(false); reasonSubmit && reasonSubmit(reason); }}
         onCancel={() => setReasonOpen(false)}
       />
-    </HRLayout>
+    </AuthenticatedLayout>
   );
 }

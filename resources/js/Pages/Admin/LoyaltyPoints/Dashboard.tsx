@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Head, Link, router } from '@inertiajs/react';
-import AdminLayout from '@/Layouts/AdminLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card';
 import { Badge } from '@/Components/ui/badge';
 import { Button } from '@/Components/ui/button';
@@ -134,7 +134,7 @@ export default function Dashboard({ clients, rules, tiers, rewards, stats }: Pro
   };
 
   return (
-    <AdminLayout title="Loyalty Management">
+    <AuthenticatedLayout header="Loyalty Management">
       <Head title="Loyalty Management" />
 
       <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 space-y-6">
@@ -421,6 +421,6 @@ export default function Dashboard({ clients, rules, tiers, rewards, stats }: Pro
           </Card>
         </div>
       </div>
-    </AdminLayout>
+    </AuthenticatedLayout>
   );
 }

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Head, useForm, router } from '@inertiajs/react';
-import AssetManagementLayout from '@/Layouts/AssetManagementLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import PushNotificationSettings from '@/Components/Common/PushNotificationSettings';
 
 const assetFieldClassName =
@@ -33,7 +33,7 @@ export default function AssetSettings({ auth = {}, settings }: Props) {
   };
 
   return (
-    <AssetManagementLayout title="Asset Settings" user={auth?.user as any}>
+    <AuthenticatedLayout header="Asset Settings" user={auth?.user as any}>
       <Head title="Asset Settings" />
       <div className="py-6">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
@@ -98,6 +98,6 @@ export default function AssetSettings({ auth = {}, settings }: Props) {
           </form>
         </div>
       </div>
-    </AssetManagementLayout>
+    </AuthenticatedLayout>
   );
 }

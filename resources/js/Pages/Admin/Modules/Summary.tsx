@@ -1,6 +1,6 @@
 import React from 'react';
 import { Head, Link, usePage } from '@inertiajs/react';
-import AdminLayout from '@/Layouts/AdminLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import IconMapper from '@/Components/IconMapper';
 
 interface Props {
@@ -16,7 +16,7 @@ export default function ModuleSummary({ auth = {}, module, summary }: Props) {
   const title = `${labelize(module)} — Summary`;
 
   return (
-    <AdminLayout title={title} user={auth?.user as any}>
+    <AuthenticatedLayout header={title} user={auth?.user as any}>
       <Head title={title} />
       <div className="py-6">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -45,6 +45,6 @@ export default function ModuleSummary({ auth = {}, module, summary }: Props) {
           )}
         </div>
       </div>
-    </AdminLayout>
+    </AuthenticatedLayout>
   );
 }

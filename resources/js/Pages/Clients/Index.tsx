@@ -1,6 +1,6 @@
 import React from 'react';
 import { Head, router, usePage } from '@inertiajs/react';
-import SupervisorLayout from '@/Layouts/SupervisorLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import { Card, CardContent, CardHeader } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import { Input } from '@/Components/ui/input';
@@ -55,7 +55,7 @@ export default function ClientsIndex({ clients, filters = {} }: ClientsIndexProp
   ];
 
   return (
-    <SupervisorLayout title="Clients">
+    <AuthenticatedLayout header="Clients">
       <Head title="Clients" />
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
         {/* Header */}
@@ -256,6 +256,6 @@ export default function ClientsIndex({ clients, filters = {} }: ClientsIndexProp
           </Card>
         </div>
       </div>
-    </SupervisorLayout>
+    </AuthenticatedLayout>
   );
 }

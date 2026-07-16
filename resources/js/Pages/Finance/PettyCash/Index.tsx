@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Head, router } from '@inertiajs/react';
-import FinanceLayout from '@/Layouts/FinanceLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import {
     Wallet,
     Plus,
@@ -177,7 +177,7 @@ export default function PettyCashIndex({ entries, balance, stats, category_break
     };
 
     return (
-        <FinanceLayout title="Petty Cash Management">
+        <AuthenticatedLayout header="Petty Cash Management">
             <Head title="Petty Cash" />
 
             {/* Header */}
@@ -632,6 +632,6 @@ export default function PettyCashIndex({ entries, balance, stats, category_break
                     </div>
                 </CardContent>
             </Card>
-        </FinanceLayout>
+        </AuthenticatedLayout>
     );
 }

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Head } from '@inertiajs/react';
-import ControlRoomLayout from '@/Layouts/ControlRoomLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import { Card, CardContent, CardHeader } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import { Badge } from '@/Components/ui/badge';
@@ -172,7 +172,7 @@ const Monitoring = ({ auth, metrics, liveStatus: initialLiveStatus = [], recentA
   }
 
   return (
-    <ControlRoomLayout title="Live Monitoring" user={auth?.user as User | undefined}>
+    <AuthenticatedLayout header="Live Monitoring" user={auth?.user as User | undefined}>
       <Head title="Live Monitoring" />
 
       <div className="space-y-6">
@@ -592,7 +592,7 @@ const Monitoring = ({ auth, metrics, liveStatus: initialLiveStatus = [], recentA
           </CardContent>
         </Card>
       </div>
-    </ControlRoomLayout>
+    </AuthenticatedLayout>
   );
 };
 

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Head, router, useForm } from '@inertiajs/react';
-import AdminLayout from '@/Layouts/AdminLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import IconMapper from '@/Components/IconMapper';
 import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
@@ -180,7 +180,7 @@ export default function ClientUsersIndex({ users, filters, clients, clientsWitho
   };
 
   return (
-    <AdminLayout title="Client Users">
+    <AuthenticatedLayout header="Client Users">
       <Head title="Client Users" />
 
       <div className="min-h-screen bg-gray-50 dark:bg-gray-950 p-4 sm:p-6">
@@ -459,6 +459,6 @@ export default function ClientUsersIndex({ users, filters, clients, clientsWitho
           )}
         </div>
       </Modal>
-    </AdminLayout>
+    </AuthenticatedLayout>
   );
 }

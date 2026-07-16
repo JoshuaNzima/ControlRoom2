@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Head } from '@inertiajs/react';
-import ZoneCommanderLayout from '@/Layouts/ZoneCommanderLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import { Input } from '@/Components/ui/input';
@@ -70,7 +70,7 @@ export default function Sites({ sites = [] }: SitesProps) {
   const presentGuards = sites.reduce((sum, site) => sum + site.attendance_today, 0);
 
   return (
-    <ZoneCommanderLayout title="Sites">
+    <AuthenticatedLayout header="Sites">
       <Head title="Sites Management" />
 
       <div className="w-full min-h-screen p-3 sm:p-4 lg:p-6 space-y-4 sm:space-y-6">
@@ -302,7 +302,7 @@ export default function Sites({ sites = [] }: SitesProps) {
           </CardContent>
         </Card>
       </div>
-    </ZoneCommanderLayout>
+    </AuthenticatedLayout>
   );
 }
 

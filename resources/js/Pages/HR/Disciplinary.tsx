@@ -1,6 +1,6 @@
 import React from 'react';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
-import HRLayout from '@/Layouts/HRLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import IconMapper from '@/Components/IconMapper';
 import Modal from '@/Components/Modal';
 import { Card } from '@/Components/ui/card';
@@ -33,7 +33,7 @@ export default function DisciplinaryPage() {
   };
 
   return (
-    <HRLayout title="HR - Disciplinary" user={auth?.user as any}>
+    <AuthenticatedLayout header="HR - Disciplinary" user={auth?.user as any}>
       <Head title="Disciplinary" />
       
       {/* Hero Header */}
@@ -141,7 +141,7 @@ export default function DisciplinaryPage() {
         <ScheduleModal open={openSchedule} onClose={() => setOpenSchedule(false)} current={activeCase} />
         <OutcomeModal open={openOutcome} onClose={() => setOpenOutcome(false)} current={activeCase} />
       </div>
-    </HRLayout>
+    </AuthenticatedLayout>
   );
 }
 

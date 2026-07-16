@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Head, Link } from '@inertiajs/react';
-import FinanceLayout from '@/Layouts/FinanceLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import IconMapper from '@/Components/IconMapper';
 import { formatCurrencyMWK } from '@/Components/format';
 import { Card } from '@/Components/ui/card';
@@ -245,7 +245,7 @@ export default function FinanceDashboard(props: Props) {
   };
 
   return (
-    <FinanceLayout title="Finance Dashboard" user={auth?.user}>
+    <AuthenticatedLayout header="Finance Dashboard" user={auth?.user}>
       <Head title="Finance Dashboard" />
       
       {/* Hero Header */}
@@ -704,7 +704,7 @@ export default function FinanceDashboard(props: Props) {
       </div>
 
       <FinanceDrilldownPanel open={modalOpen} title={modalTitle} data={modalData} onClose={() => setModalOpen(false)} />
-    </FinanceLayout>
+    </AuthenticatedLayout>
   );
 }
 

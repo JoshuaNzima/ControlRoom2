@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Head, Link, router, useForm } from '@inertiajs/react';
-import FrontDeskLayout from '@/Layouts/FrontDeskLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import Modal from '@/Components/Modal';
 
 const frontDeskFieldClassName =
@@ -40,7 +40,7 @@ export default function FrontDeskTickets({ auth = {}, tickets, filters = {}, opt
   const applyFilters = () => router.get(route('admin.front-desk.tickets.index'), { status, priority, search }, { preserveState: true });
 
   return (
-    <FrontDeskLayout title="Tickets" user={auth?.user as any}>
+    <AuthenticatedLayout header="Tickets" user={auth?.user as any}>
       <Head title="Tickets" />
       <div className="py-6">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
@@ -147,7 +147,7 @@ export default function FrontDeskTickets({ auth = {}, tickets, filters = {}, opt
           )}
         </div>
       </div>
-    </FrontDeskLayout>
+    </AuthenticatedLayout>
   );
 }
 

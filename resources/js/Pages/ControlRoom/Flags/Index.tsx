@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Head, router } from '@inertiajs/react';
-import ControlRoomLayout from '@/Layouts/ControlRoomLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import { Card, CardContent, CardHeader } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import { Input } from '@/Components/ui/input';
@@ -112,7 +112,7 @@ const FlagList: React.FC<Props> = ({ auth, flags = { data: [] }, statuses = [], 
 	};
 
 	return (
-		<ControlRoomLayout title="Review Flags" user={auth?.user as any}>
+		<AuthenticatedLayout header="Review Flags" user={auth?.user as any}>
 			<Head title="Review Flags" />
 
 			<div className="py-6 space-y-6">
@@ -297,7 +297,7 @@ const FlagList: React.FC<Props> = ({ auth, flags = { data: [] }, statuses = [], 
 					</Dialog>
 				</div>
 			</div>
-		</ControlRoomLayout>
+		</AuthenticatedLayout>
 	);
 };
 

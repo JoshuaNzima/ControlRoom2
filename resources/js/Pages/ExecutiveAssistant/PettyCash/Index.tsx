@@ -1,6 +1,6 @@
 import { Head, router } from '@inertiajs/react';
 import { useState } from 'react';
-import FrontOfficeLayout from '@/Layouts/FrontOfficeLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import { Input } from '@/Components/ui/input';
@@ -125,7 +125,7 @@ export default function PettyCashIndex({ entries, stats, filters, categories }: 
     };
 
     return (
-        <FrontOfficeLayout title="Petty Cash">
+        <AuthenticatedLayout header="Petty Cash">
             <Head title="Petty Cash" />
 
             {/* Header */}
@@ -410,6 +410,6 @@ export default function PettyCashIndex({ entries, stats, filters, categories }: 
                     </div>
                 </CardContent>
             </Card>
-        </FrontOfficeLayout>
+        </AuthenticatedLayout>
     );
 }

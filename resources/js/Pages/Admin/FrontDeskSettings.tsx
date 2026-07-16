@@ -1,6 +1,6 @@
 import React from 'react';
 import { Head, useForm, router } from '@inertiajs/react';
-import FrontDeskLayout from '@/Layouts/FrontDeskLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import PushNotificationSettings from '@/Components/Common/PushNotificationSettings';
 
 const frontDeskFieldClassName =
@@ -34,7 +34,7 @@ export default function FrontDeskSettings({ auth = {}, settings, options = { pri
   };
 
   return (
-    <FrontDeskLayout title="Front Desk Settings" user={auth?.user as any}>
+    <AuthenticatedLayout header="Front Desk Settings" user={auth?.user as any}>
       <Head title="Front Desk Settings" />
       <div className="py-6">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
@@ -100,6 +100,6 @@ export default function FrontDeskSettings({ auth = {}, settings, options = { pri
           </form>
         </div>
       </div>
-    </FrontDeskLayout>
+    </AuthenticatedLayout>
   );
 }

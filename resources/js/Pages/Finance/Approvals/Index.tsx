@@ -1,7 +1,6 @@
 import React from 'react';
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import FinanceLayout from '@/Layouts/FinanceLayout';
-import AdminLayout from '@/Layouts/AdminLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import { formatCurrency, formatDate } from '@/utils/formatters';
 import PageHeader from '@/Components/ui/page-header';
 import EmptyState from '@/Components/ui/empty-state';
@@ -16,7 +15,7 @@ export default function ApprovalsIndex({ approvals, budgets = { data: [], links:
   const { url } = usePage();
   const isAdminRoute = typeof url === 'string' && url.startsWith('/admin/');
   const prefix = isAdminRoute ? 'admin' : 'finance';
-  const Layout = isAdminRoute ? AdminLayout : FinanceLayout;
+  const Layout = AuthenticatedLayout;
   const expenseShowRoute = isAdminRoute ? 'admin.requisitions.show' : 'finance.expenses.show';
   const requisitionsIndexRoute = isAdminRoute ? 'admin.requisitions.index' : 'finance.expenses.index';
 
@@ -36,7 +35,7 @@ export default function ApprovalsIndex({ approvals, budgets = { data: [], links:
   };
 
   return (
-    <Layout title="Approvals">
+    <Layout header="Approvals">
       <Head title="Approvals" />
       <div className="py-6">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
