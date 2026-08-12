@@ -1,8 +1,16 @@
-import React, { useState } from 'react';
-import { Head, Link, router } from '@inertiajs/react';
-import AdminLayout from '@/Layouts/AdminLayout';
+import React, { useEffect, useState } from 'react';
+import { Head, Link, router, useForm } from '@inertiajs/react';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import IconMapper from '@/Components/IconMapper';
 import useNotification from '@/Providers/useNotifications';
+import Modal from '@/Components/Modal';
+import { Card } from '@/Components/ui/card';
+import { Button } from '@/Components/ui/button';
+import { Badge } from '@/Components/ui/badge';
+import EmptyState from '@/Components/ui/empty-state';
+
+const adminFieldClassName =
+  'mt-1 w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950';
 
 interface User {
   id: number;
@@ -14,57 +22,290 @@ interface User {
   status?: string;
   created_at: string;
   updated_at: string;
+  phone?: string;
+  zone_id?: number | null;
 }
 
 interface Filters {
   search?: string;
+  per_page?: number | string;
+}
+
+interface Role { id: number; name: string }
+interface Zone { id: number; name: string }
+
+interface Client { id: number; name: string }
+
+interface CreateUserForm {
+  name: string;
+  email: string;
+  phone?: string;
+  employee_id?: string;
+  role?: string;
+  zone_id?: number | null | '';
+  status: 'active' | 'inactive';
+  client_id?: number | null | '';
+  client_role?: 'primary' | 'contact' | 'viewer';
+}
+
+interface EditUserForm {
+  name: string;
+  email: string;
+  phone?: string;
+  employee_id?: string;
+  role: string;
+  status: string;
+  zone_id: number | null | '';
+  client_id?: number | null | '';
+  client_role?: 'primary' | 'contact' | 'viewer';
 }
 
 interface UsersIndexProps {
   users: {
     data: User[];
     meta?: any;
+    links?: Array<{ url: string | null; label: string; active: boolean }>;
   };
   filters: Filters;
+  roles: Role[];
+  zones: Zone[];
+  clients: Client[];
 }
 
-export default function UsersIndex({ users, filters }: UsersIndexProps) {
+export default function UsersIndex({ users, filters, roles, zones, clients }: UsersIndexProps) {
   const [search, setSearch] = useState(filters.search || '');
   const [loadingId, setLoadingId] = useState<number | null>(null);
+  const initialPerPage = Number(filters?.per_page ?? users.meta?.per_page ?? 20);
+  const [perPage, setPerPage] = useState<number>(initialPerPage);
   const { push } = useNotification();
+
+  // Create User modal state
+  const [showCreate, setShowCreate] = useState(false);
+  const {
+    data: createData,
+    setData: setCreateData,
+    post: postCreate,
+    transform: transformCreate,
+    processing: creating,
+    errors: createErrors,
+    reset: resetCreate,
+  } = useForm<CreateUserForm>({
+    name: '',
+    email: '',
+    phone: '',
+    employee_id: '',
+    role: roles?.[0]?.name || 'admin',
+    zone_id: null,
+    status: 'active',
+    client_id: null,
+    client_role: 'contact',
+  });
+
+  const openCreate = () => {
+    resetCreate();
+    setCreateData('role', roles?.[0]?.name || 'admin');
+    setCreateData('status', 'active');
+    setCreateData('zone_id', null as any);
+    setCreateData('employee_id', '');
+    setCreateData('client_id', null as any);
+    setCreateData('client_role', 'contact');
+    setShowCreate(true);
+  };
+
+  const roleNormalized = (createData.role || '').toLowerCase().replace(' ', '_');
+  const zoneRequired = roleNormalized === 'zone_commander';
+  const clientRequired = roleNormalized === 'client';
+  const zoneValid = !zoneRequired || !!createData.zone_id;
+  const clientValid = !clientRequired || !!createData.client_id;
+  const canCreate = !!createData.name && !!createData.email && !!(createData.role && createData.role.length) && zoneValid && clientValid && !creating;
+
+  useEffect(() => {
+    if (roleNormalized !== 'zone_commander' && createData.zone_id !== null) {
+      setCreateData('zone_id', null as any);
+    } else if (roleNormalized === 'zone_commander' && (createData.zone_id === null || createData.zone_id === '')) {
+      if (zones && zones.length > 0) {
+        setCreateData('zone_id', zones[0].id as any);
+      }
+    }
+    
+    // Reset client fields when role is not client
+    if (roleNormalized !== 'client') {
+      setCreateData('client_id', null as any);
+      setCreateData('client_role', 'contact');
+    } else if (roleNormalized === 'client' && !createData.client_id && clients.length > 0) {
+      setCreateData('client_id', clients[0].id as any);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [createData.role]);
+
+  const submitCreate = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!canCreate) return;
+    transformCreate((data) => ({
+      ...data,
+      zone_id: (data.zone_id === '' ? null : data.zone_id) as any,
+      client_id: (data.client_id === '' ? null : data.client_id) as any,
+      role: (data.role || '').trim(),
+    }));
+    postCreate(route('admin.users.store'), {
+      preserveScroll: true,
+      onSuccess: () => {
+        setShowCreate(false);
+        resetCreate();
+        push('User created');
+      },
+      onError: () => push('Failed to create user'),
+    });
+  };
+
+  const isCreateZoneCommander = roleNormalized === 'zone_commander';
+  const isCreateClient = roleNormalized === 'client';
+
+  // Edit User modal state
+  const [showEdit, setShowEdit] = useState(false);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [editForm, setEditForm] = useState<EditUserForm | null>(null);
+  const [updating, setUpdating] = useState(false);
 
   function showToast(message: string) {
     push(message, 'info');
   }
 
   const handleSearch = () => {
-    router.get(route('admin.users.index'), { search }, { preserveState: true });
+    router.get(route('admin.users.index'), { search, per_page: perPage }, { preserveState: true });
   };
 
+  const openEdit = (user: User) => {
+    setEditingUser(user);
+    setEditForm({
+      name: user.name,
+      email: user.email,
+      phone: user.phone || '',
+      employee_id: user.employee_id || '',
+      role: user.roles[0]?.name || '',
+      status: user.status || 'active',
+      zone_id: (user.zone_id ?? null) as any,
+      client_id: (user as any).client_id ?? null,
+      client_role: ((user as any).client_role as 'primary' | 'contact' | 'viewer') ?? 'contact',
+    });
+    setShowEdit(true);
+  };
+
+  const isEditZoneCommander = (editForm?.role || '').toLowerCase().replace(' ', '_') === 'zone_commander';
+  const isEditClient = (editForm?.role || '').toLowerCase().replace(' ', '_') === 'client';
+
+  const submitEdit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingUser || !editForm) return;
+    setUpdating(true);
+    router.put(
+      route('admin.users.update', { user: editingUser.id }),
+      {
+        name: editForm.name,
+        email: editForm.email,
+        phone: editForm.phone,
+        employee_id: editForm.employee_id,
+        role: editForm.role,
+        status: editForm.status,
+        zone_id: editForm.zone_id === '' ? null : editForm.zone_id,
+        client_id: editForm.client_id === '' ? null : editForm.client_id,
+        client_role: editForm.client_role,
+      } as any,
+      {
+        preserveScroll: true,
+        onFinish: () => setUpdating(false),
+        onSuccess: () => setShowEdit(false),
+      }
+    );
+  };
+
+  const handleCreateClose = () => { if (!creating) setShowCreate(false); };
+  const handleEditClose = () => { if (!updating) setShowEdit(false); };
+
   return (
-    <AdminLayout title="Users Management">
+    <AuthenticatedLayout header="Users Management">
       <Head title="Users" />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-        {/* Notifications are displayed by the global NotificationProvider */}
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Users Management</h1>
-            <p className="text-gray-600">Manage system users and permissions</p>
+        {/* Hero Header */}
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-coin-700 via-coin-600 to-coin-500 text-white shadow-2xl">
+          <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg%20width%3D%2260%22%20height%3D%2260%22%20viewBox%3D%220%200%2060%2060%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%3E%3Cg%20fill%3D%22none%22%20fill-rule%3D%22evenodd%22%3E%3Cg%20fill%3D%22%23ffffff%22%20fill-opacity%3D%220.05%22%3E%3Cpath%20d%3D%22M36%2034v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6%2034v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6%204V0H4v4H0v2h4v4h2V6h4V4H6z%22/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] opacity-20" />
+          <div className="relative p-6 sm:p-8">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div className="p-4 bg-white/10 rounded-xl backdrop-blur-sm">
+                  <IconMapper name="Users" size={32} />
+                </div>
+                <div>
+                  <h1 className="text-2xl sm:text-3xl font-bold">Users Management</h1>
+                  <p className="text-coin-100 mt-1">Manage system users and permissions</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={openCreate}
+                className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-white text-coin-700 hover:bg-coin-50 rounded-lg font-bold shadow-lg transition-all transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-coin-600"
+              >
+                <IconMapper name="Plus" size={20} />
+                Add User
+              </button>
+            </div>
           </div>
-            <Link
-            href={route('admin.users.create')}
-            className="flex items-center gap-2 px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-bold shadow-md transition-all transform hover:scale-105"
-          >
-            <IconMapper name="Plus" size={20} />
-            Add User
-          </Link>
+        </div>
+
+        {/* Stats Cards */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-100 dark:bg-blue-900/20 rounded-lg text-blue-600">
+                <IconMapper name="Users" size={20} />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{users.meta?.total ?? users.data.length}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Total Users</p>
+              </div>
+            </div>
+          </div>
+          <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-green-100 dark:bg-green-900/20 rounded-lg text-green-600">
+                <IconMapper name="UserCheck" size={20} />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                  {users.data.filter((u: User) => u.status === 'active').length}
+                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Active</p>
+              </div>
+            </div>
+          </div>
+          <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-purple-100 dark:bg-purple-900/20 rounded-lg text-purple-600">
+                <IconMapper name="Shield" size={20} />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{roles.length}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Roles</p>
+              </div>
+            </div>
+          </div>
+          <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-amber-100 dark:bg-amber-900/20 rounded-lg text-amber-600">
+                <IconMapper name="MapPin" size={20} />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{zones.length}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Zones</p>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Search */}
-        <div className="bg-white rounded-xl shadow-lg p-6">
-          <div className="flex gap-4">
+        <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm shadow-black/5 dark:shadow-none p-6">
+          <div className="flex flex-col sm:flex-row gap-4 mb-4">
               <div className="flex-1 relative">
               <span className="absolute left-3 top-3 text-gray-400"><IconMapper name="Search" size={20} /></span>
               <input
@@ -73,105 +314,516 @@ export default function UsersIndex({ users, filters }: UsersIndexProps) {
                 onChange={(e) => setSearch(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
                 placeholder="Search by name or email..."
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950"
               />
             </div>
             <button
               onClick={handleSearch}
-              className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium"
+              className="w-full sm:w-auto px-6 py-2 bg-coin-700 hover:bg-coin-600 text-white rounded-lg font-medium focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950"
             >
               Search
             </button>
           </div>
+          <div className="flex items-center gap-3">
+            <label className="text-sm text-gray-600 dark:text-gray-400">Per Page:</label>
+            <select
+              value={String(perPage)}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                setPerPage(v);
+                router.get(route('admin.users.index'), { search, per_page: v, page: 1 }, { preserveState: true });
+              }}
+              className="px-3 py-1.5 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-coin-500"
+            >
+              <option value={10}>10</option>
+              <option value={20}>20</option>
+              <option value={50}>50</option>
+              <option value={100}>100</option>
+            </select>
+            {users.meta && (
+              <span className="text-sm text-gray-500 dark:text-gray-400">
+                Showing {users.meta.from || 0} to {users.meta.to || 0} of {users.meta.total || 0}
+              </span>
+            )}
+          </div>
         </div>
 
-        {/* Users Table */}
-        <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">User</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Role</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {users.data.map((user) => (
-                <tr key={user.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-gradient-to-br from-red-500 to-rose-600 rounded-full flex items-center justify-center text-white font-bold">
-                        {user.name.charAt(0)}
+        {/* Users List - Card Based */}
+        {users.data.length === 0 ? (
+          <EmptyState
+            title="No users found"
+            description={search ? "Try adjusting your search." : "Add your first user to get started."}
+          />
+        ) : (
+          <div className="space-y-3">
+            {users.data.map((user) => (
+              <Card
+                key={user.id}
+                className="overflow-hidden hover:shadow-lg transition-shadow"
+              >
+                <div className="flex flex-col sm:flex-row">
+                  {/* Left accent bar based on status */}
+                  <div className={`w-full sm:w-1.5 ${
+                    user.status === 'active' ? 'bg-emerald-500' : 'bg-gray-500'
+                  }`} />
+
+                  <div className="flex-1 p-4 sm:p-5">
+                    <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-3 flex-wrap">
+                          {/* Avatar */}
+                          <div className="w-12 h-12 bg-gradient-to-br from-coin-600 to-coin-700 rounded-full flex items-center justify-center text-white font-bold text-lg shadow-sm shrink-0">
+                            {user.name.charAt(0).toUpperCase()}
+                          </div>
+                          <div>
+                            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                              {user.name}
+                            </h3>
+                            <span className="text-sm text-gray-500 dark:text-gray-400">
+                              {user.email}
+                            </span>
+                          </div>
+                          <Badge className={`text-xs ${
+                            user.status === 'active'
+                              ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-300 dark:border-emerald-500/40'
+                              : 'bg-gray-100 text-gray-800 dark:bg-gray-700/40 dark:text-gray-300 dark:border-gray-600'
+                          }`}>
+                            <IconMapper name={user.status === 'active' ? 'CheckCircle' : 'XCircle'} size={12} className="mr-1 inline" />
+                            {user.status || 'Active'}
+                          </Badge>
+                          <Badge className="bg-coin-100 text-coin-800 dark:bg-coin-500/10 dark:text-coin-200 text-xs">
+                            {user.roles[0]?.name?.replace('_', ' ') || 'No Role'}
+                          </Badge>
+                        </div>
+
+                        {/* Info Row */}
+                        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-600 dark:text-gray-400">
+                          <span className="flex items-center gap-1">
+                            <IconMapper name="IDCard" size={14} />
+                            {user.employee_id || 'N/A'}
+                          </span>
+                          {user.phone && (
+                            <span className="flex items-center gap-1">
+                              <IconMapper name="Phone" size={14} />
+                              {user.phone}
+                            </span>
+                          )}
+                        </div>
                       </div>
-                      <div>
-                        <div className="font-medium text-gray-900">{user.name}</div>
-                        <div className="text-sm text-gray-500">{user.employee_id || 'N/A'}</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-900">{user.email}</td>
-                  <td className="px-6 py-4">
-                    <span className="px-3 py-1 bg-indigo-100 text-indigo-800 rounded-full text-xs font-semibold">
-                      {user.roles[0]?.name || 'No Role'}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                      user.status === 'active' 
-                        ? 'bg-green-100 text-green-800' 
-                        : 'bg-gray-100 text-gray-800'
-                    }`}>
-                      {user.status || 'Active'}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-2">
-                        <Link
-                        href={route('admin.users.edit', { id: user.id })}
-                        className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition"
-                      >
-                        <IconMapper name="Pencil" size={18} />
-                      </Link>
-                        <button
-                        onClick={() => {
-                          if (confirm('Are you sure you want to delete this user?')) {
-                            router.delete(route('admin.users.destroy', { id: user.id }));
-                          }
-                        }}
-                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition"
+
+                      {/* Right side: Actions */}
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => openEdit(user)}
+                          title="Edit user"
                         >
-                        <IconMapper name="Trash" size={18} />
-                      </button>
-                      <button
-                        onClick={async () => {
-                          const newStatus = user.status === 'active' ? 'inactive' : 'active';
-                          if (!confirm(`Are you sure you want to set status to ${newStatus}?`)) return;
-                          setLoadingId(user.id);
-                          try {
-                            await router.put(route('admin.users.update', { user: user.id }), { status: newStatus });
-                            showToast(`User ${user.name} set to ${newStatus}`);
-                          } catch (e) {
-                            showToast('Failed to update user status');
-                          } finally {
-                            setLoadingId(null);
-                          }
-                        }}
-                        className="p-2 text-yellow-600 hover:bg-yellow-50 rounded-lg transition"
-                        title={user.status === 'active' ? 'Deactivate user' : 'Activate user'}
-                        disabled={loadingId === user.id}
-                      >
-                        {loadingId === user.id ? '...' : user.status === 'active' ? 'Deactivate' : 'Activate'}
-                      </button>
+                          <IconMapper name="Pencil" size={16} />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={async () => {
+                            const newStatus = user.status === 'active' ? 'inactive' : 'active';
+                            if (!confirm(`Are you sure you want to set status to ${newStatus}?`)) return;
+                            setLoadingId(user.id);
+                            try {
+                              await router.put(route('admin.users.update', { user: user.id }), { status: newStatus });
+                              showToast(`User ${user.name} set to ${newStatus}`);
+                            } catch (e) {
+                              showToast('Failed to update user status');
+                            } finally {
+                              setLoadingId(null);
+                            }
+                          }}
+                          disabled={loadingId === user.id}
+                          title={user.status === 'active' ? 'Deactivate user' : 'Activate user'}
+                          className={user.status === 'active' ? 'text-amber-600' : 'text-emerald-600'}
+                        >
+                          <IconMapper name={user.status === 'active' ? 'PauseCircle' : 'PlayCircle'} size={16} />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            if (confirm('Are you sure you want to delete this user?')) {
+                              router.delete(route('admin.users.destroy', { user: user.id }));
+                            }
+                          }}
+                          title="Delete user"
+                          className="text-red-500"
+                        >
+                          <IconMapper name="Trash" size={16} />
+                        </Button>
+                      </div>
                     </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+        )}
+
+        {/* Pagination */}
+        {users.meta && users.meta.last_page > 1 && (
+          <div className="flex flex-wrap justify-center gap-2">
+            {users.links && users.links.map((link: any, index: number) => (
+              <Link
+                key={index}
+                href={link.url || '#'}
+                className={`px-3 py-2 rounded ${
+                  link.active
+                    ? 'bg-coin-700 text-white'
+                    : link.url
+                    ? 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 dark:bg-gray-900 dark:text-gray-200 dark:border-gray-700 dark:hover:bg-gray-800'
+                    : 'bg-transparent text-gray-400 cursor-default'
+                }`}
+                dangerouslySetInnerHTML={{ __html: link.label }}
+              />
+            ))}
+          </div>
+        )}
       </div>
-    </AdminLayout>
-  );
+
+      {/* Create User Modal */}
+    <Modal show={showCreate} onClose={handleCreateClose} maxWidth="2xl">
+      <div className="p-4 sm:p-6 bg-white dark:bg-gray-900">
+        <div className="flex items-center gap-2 mb-4">
+          <IconMapper name="UserPlus" size={20} className="text-coin-600" />
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Add User</h2>
+        </div>
+        <div className="mb-4 p-3 bg-coin-50 dark:bg-coin-950/30 border border-coin-200 dark:border-coin-800 rounded-lg">
+          <p className="text-sm text-coin-800 dark:text-coin-200">
+            <IconMapper name="Info" size={14} className="inline mr-1" />
+            User ID will be auto-generated. A password reset email will be sent to the user.
+          </p>
+        </div>
+        <form onSubmit={submitCreate} className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Name</label>
+              <input
+                className={adminFieldClassName}
+                value={createData.name}
+                onChange={(e) => setCreateData('name', e.target.value)}
+                required
+              />
+              {createErrors.name && <p className="text-xs text-red-600 mt-1">{createErrors.name}</p>}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Employee ID <span className="text-gray-400">(Auto-generated if empty)</span></label>
+              <input
+                className={adminFieldClassName}
+                value={createData.employee_id || ''}
+                onChange={(e) => setCreateData('employee_id', e.target.value)}
+                placeholder="Leave empty to auto-generate"
+              />
+              {createErrors.employee_id && <p className="text-xs text-red-600 mt-1">{createErrors.employee_id}</p>}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Email</label>
+              <input
+                type="email"
+                className={adminFieldClassName}
+                value={createData.email}
+                onChange={(e) => setCreateData('email', e.target.value)}
+                required
+              />
+              {createErrors.email && <p className="text-xs text-red-600 mt-1">{createErrors.email}</p>}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Phone</label>
+              <input
+                className={adminFieldClassName}
+                value={createData.phone || ''}
+                onChange={(e) => setCreateData('phone', e.target.value)}
+              />
+              {createErrors.phone && <p className="text-xs text-red-600 mt-1">{createErrors.phone}</p>}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Role</label>
+              <select
+                className={adminFieldClassName}
+                value={createData.role || ''}
+                onChange={(e) => setCreateData('role', e.target.value)}
+              >
+                {roles.map((role) => (
+                  <option key={role.id} value={role.name}>
+                    {role.name.replace('_', ' ')}
+                  </option>
+                ))}
+              </select>
+              {createErrors.role && <p className="text-xs text-red-600 mt-1">{createErrors.role}</p>}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Status</label>
+              <select
+                className={adminFieldClassName}
+                value={createData.status}
+                onChange={(e) => setCreateData('status', e.target.value as 'active' | 'inactive')}
+              >
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+              </select>
+              {createErrors.status && <p className="text-xs text-red-600 mt-1">{createErrors.status}</p>}
+            </div>
+
+            {isCreateZoneCommander && (
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Assigned Zone</label>
+                <select
+                  className={adminFieldClassName}
+                  value={createData.zone_id === null ? '' : String(createData.zone_id)}
+                  onChange={(e) =>
+                    setCreateData('zone_id', e.target.value ? (parseInt(e.target.value, 10) as any) : (null as any))
+                  }
+                >
+                  <option value="">No Zone Assigned</option>
+                  {zones.map((zone) => (
+                    <option key={zone.id} value={zone.id}>
+                      {zone.name}
+                    </option>
+                  ))}
+                </select>
+                {createErrors.zone_id && <p className="text-xs text-red-600 mt-1">{createErrors.zone_id}</p>}
+                {!zoneValid && (
+                  <p className="text-xs text-red-600 mt-1">Zone is required for Zone Commander.</p>
+                )}
+              </div>
+            )}
+
+            {isCreateClient && (
+              <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Linked Client <span className="text-red-500">*</span></label>
+                  <select
+                    className={adminFieldClassName}
+                    value={createData.client_id === null ? '' : String(createData.client_id)}
+                    onChange={(e) =>
+                      setCreateData('client_id', e.target.value ? (parseInt(e.target.value, 10) as any) : (null as any))
+                    }
+                  >
+                    <option value="">Select a client...</option>
+                    {clients.map((client) => (
+                      <option key={client.id} value={client.id}>
+                        {client.name}
+                      </option>
+                    ))}
+                  </select>
+                  {createErrors.client_id && <p className="text-xs text-red-600 mt-1">{createErrors.client_id}</p>}
+                  {!clientValid && (
+                    <p className="text-xs text-red-600 mt-1">Client is required for client users.</p>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Client Role</label>
+                  <select
+                    className={adminFieldClassName}
+                    value={createData.client_role || 'contact'}
+                    onChange={(e) => setCreateData('client_role', e.target.value as 'primary' | 'contact' | 'viewer')}
+                  >
+                    <option value="primary">Primary Contact</option>
+                    <option value="contact">Contact</option>
+                    <option value="viewer">Viewer</option>
+                  </select>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Primary: Full access | Contact: Standard access | Viewer: Read-only
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="mt-4 flex items-center justify-end gap-3">
+            <button
+              type="button"
+              onClick={handleCreateClose}
+              className="px-4 py-2 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800"
+              disabled={creating}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={!canCreate}
+              className={`px-4 py-2 rounded-md text-white ${canCreate ? 'bg-coin-700 hover:bg-coin-600' : 'bg-gray-400 cursor-not-allowed'}`}
+            >
+              {creating ? 'Creating...' : 'Create User'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </Modal>
+
+    {/* Edit User Modal */}
+    <Modal show={showEdit} onClose={handleEditClose} maxWidth="2xl">
+      <div className="p-4 sm:p-6 bg-white dark:bg-gray-800">
+        <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">Edit User</h2>
+        {!editForm ? (
+          <div className="text-sm text-gray-500 dark:text-gray-400">Loading...</div>
+        ) : (
+          <form onSubmit={submitEdit} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Name</label>
+                <input
+                  className={adminFieldClassName}
+                  value={editForm.name}
+                  onChange={(e) => setEditForm({ ...(editForm as EditUserForm), name: e.target.value })}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Email</label>
+                <input
+                  className={adminFieldClassName}
+                  value={editForm.email}
+                  onChange={(e) => setEditForm({ ...(editForm as EditUserForm), email: e.target.value })}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Phone</label>
+                <input
+                  className={adminFieldClassName}
+                  value={editForm.phone || ''}
+                  onChange={(e) => setEditForm({ ...(editForm as EditUserForm), phone: e.target.value })}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Employee ID</label>
+                <input
+                  className={adminFieldClassName}
+                  value={editForm.employee_id || ''}
+                  onChange={(e) => setEditForm({ ...(editForm as EditUserForm), employee_id: e.target.value })}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Role</label>
+                <select
+                  className={adminFieldClassName}
+                  value={editForm.role}
+                  onChange={(e) => setEditForm({ ...(editForm as EditUserForm), role: e.target.value })}
+                >
+                  <option value="">-- Select Role --</option>
+                  {roles.map((r) => (
+                    <option key={r.id} value={r.name}>
+                      {r.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Status</label>
+                <select
+                  className={adminFieldClassName}
+                  value={editForm.status}
+                  onChange={(e) => setEditForm({ ...(editForm as EditUserForm), status: e.target.value })}
+                >
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                </select>
+              </div>
+
+              {isEditZoneCommander && (
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Assigned Zone</label>
+                  <select
+                    className={adminFieldClassName}
+                    value={editForm.zone_id === null ? '' : String(editForm.zone_id)}
+                    onChange={(e) =>
+                      setEditForm({
+                        ...(editForm as EditUserForm),
+                        zone_id: e.target.value ? Number(e.target.value) : null,
+                      })
+                    }
+                  >
+                    <option value="">-- Unassigned --</option>
+                    {zones.map((z) => (
+                      <option key={z.id} value={z.id}>
+                        {z.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {isEditClient && (
+                <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Linked Client <span className="text-red-500">*</span></label>
+                    <select
+                      className={adminFieldClassName}
+                      value={editForm.client_id === null ? '' : String(editForm.client_id)}
+                      onChange={(e) =>
+                        setEditForm({
+                          ...(editForm as EditUserForm),
+                          client_id: e.target.value ? Number(e.target.value) : null,
+                        })
+                      }
+                    >
+                      <option value="">Select a client...</option>
+                      {clients.map((client) => (
+                        <option key={client.id} value={client.id}>
+                          {client.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Client Role</label>
+                    <select
+                      className={adminFieldClassName}
+                      value={editForm.client_role || 'contact'}
+                      onChange={(e) =>
+                        setEditForm({
+                          ...(editForm as EditUserForm),
+                          client_role: e.target.value as 'primary' | 'contact' | 'viewer',
+                        })
+                      }
+                    >
+                      <option value="primary">Primary Contact</option>
+                      <option value="contact">Contact</option>
+                      <option value="viewer">Viewer</option>
+                    </select>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Primary: Full access | Contact: Standard access | Viewer: Read-only
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="mt-4 flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={handleEditClose}
+                className="px-4 py-2 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950"
+                disabled={updating}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={updating}
+                className="px-4 py-2 rounded-md bg-coin-700 text-white hover:bg-coin-600 focus:outline-none focus:ring-2 focus:ring-coin-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-950 disabled:opacity-60"
+              >
+                {updating ? 'Saving...' : 'Save Changes'}
+              </button>
+            </div>
+          </form>
+        )}
+      </div>
+    </Modal>
+  </AuthenticatedLayout>
+);
 }

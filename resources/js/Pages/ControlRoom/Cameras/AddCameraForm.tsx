@@ -1,9 +1,15 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useForm } from '@inertiajs/react';
 import { Button } from '@/Components/ui/button';
 import { Input } from '@/Components/ui/input';
 import { Label } from '@/Components/ui/label';
-import Select from '@/Components/Select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/Components/ui/select';
 import {
   DialogContent,
   DialogHeader,
@@ -15,21 +21,53 @@ interface AddCameraFormProps {
   sites: any[];
 }
 
+declare const route: any;
+
+const buildStreamUrl = (protocol: string, host: string, port?: string, path?: string) => {
+  const p = (protocol || 'http').trim();
+  const h = (host || '').trim();
+  if (!h) return '';
+  const portPart = port && String(port).trim() !== '' ? `:${String(port).trim()}` : '';
+  const rawPath = (path || '').trim();
+  const pathPart = rawPath ? (rawPath.startsWith('/') ? rawPath : `/${rawPath}`) : '';
+  return `${p}://${h}${portPart}${pathPart}`;
+};
+
 export default function AddCameraForm({ onClose, sites }: AddCameraFormProps) {
   const { data, setData, post, processing, errors } = useForm({
     name: '',
     location: '',
-    site_id: '',
+    client_site_id: '',
+    type: 'fixed',
+    status: 'offline',
+    stream_url: '',
     ip_address: '',
     port: '',
+    public_protocol: 'https',
+    public_host: '',
+    public_port: '',
+    public_path: '',
     username: '',
     password: '',
-    status: 'active',
   } as any);
+
+  const generatedStreamUrl = buildStreamUrl(
+    String((data as any).public_protocol ?? ''),
+    String((data as any).public_host ?? ''),
+    String((data as any).public_port ?? ''),
+    String((data as any).public_path ?? '')
+  );
+
+  const getSiteLabel = (site: any) => {
+    const clientName = String(site?.client?.name ?? '').trim();
+    const siteName = String(site?.name ?? '').trim();
+    if (clientName && siteName) return `${clientName} • ${siteName}`;
+    return siteName || clientName || '-';
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    post(route('cameras.store'), {
+    post(route('control-room.cameras.store'), {
       onSuccess: () => {
         onClose();
       }
@@ -65,20 +103,134 @@ export default function AddCameraForm({ onClose, sites }: AddCameraFormProps) {
         </div>
 
         <div>
-          <Label htmlFor="site_id">Site</Label>
-          <Select
-            value={data.site_id}
-            onChange={(e: any) => (setData as any)('site_id', e.target.value)}
-            required
-          >
-            <option value="">Select a site</option>
-            {sites.map((site: any) => (
-              <option key={site.id} value={site.id}>
-                {site.name}
-              </option>
-            ))}
+          <Label htmlFor="client_site_id">Site</Label>
+          <Select value={String(data.client_site_id ?? '')} onValueChange={(value) => (setData as any)('client_site_id', value)}>
+            <SelectTrigger id="client_site_id">
+              <SelectValue placeholder="Select a site" />
+            </SelectTrigger>
+            <SelectContent>
+              {(sites || []).map((site: any) => (
+                <SelectItem key={site.id} value={String(site.id)}>
+                  {getSiteLabel(site)}
+                </SelectItem>
+              ))}
+            </SelectContent>
           </Select>
-          {errors.site_id && <p className="text-sm text-red-600">{errors.site_id}</p>}
+          {errors.client_site_id && <p className="text-sm text-red-600">{errors.client_site_id}</p>}
+        </div>
+
+        <div>
+          <Label htmlFor="type">Camera Type</Label>
+          <Select value={String(data.type ?? '')} onValueChange={(value) => (setData as any)('type', value)}>
+            <SelectTrigger id="type">
+              <SelectValue placeholder="Select type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="fixed">Fixed</SelectItem>
+              <SelectItem value="dome">Dome</SelectItem>
+              <SelectItem value="ptz">PTZ</SelectItem>
+              <SelectItem value="thermal">Thermal</SelectItem>
+            </SelectContent>
+          </Select>
+          {errors.type && <p className="text-sm text-red-600">{errors.type}</p>}
+        </div>
+
+        <div>
+          <Label htmlFor="status">Status</Label>
+          <Select value={String(data.status ?? '')} onValueChange={(value) => (setData as any)('status', value)}>
+            <SelectTrigger id="status">
+              <SelectValue placeholder="Select status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="online">Online</SelectItem>
+              <SelectItem value="offline">Offline</SelectItem>
+              <SelectItem value="maintenance">Maintenance</SelectItem>
+              <SelectItem value="disabled">Disabled</SelectItem>
+            </SelectContent>
+          </Select>
+          {errors.status && <p className="text-sm text-red-600">{errors.status}</p>}
+        </div>
+
+        <div>
+          <Label htmlFor="stream_url">Stream URL</Label>
+          <Input
+            id="stream_url"
+            value={data.stream_url}
+            onChange={(e: any) => (setData as any)('stream_url', e.target.value)}
+            placeholder="https://..."
+          />
+          {errors.stream_url && <p className="text-sm text-red-600">{errors.stream_url}</p>}
+        </div>
+
+        <div className="rounded-lg border border-gray-200 dark:border-gray-800 p-3">
+          <div className="text-sm font-medium text-gray-900 dark:text-gray-100">DDNS / Port Forward (optional)</div>
+          <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <Label htmlFor="public_protocol">Protocol</Label>
+              <Select value={String((data as any).public_protocol ?? '')} onValueChange={(value) => (setData as any)('public_protocol', value)}>
+                <SelectTrigger id="public_protocol">
+                  <SelectValue placeholder="Select protocol" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="https">https</SelectItem>
+                  <SelectItem value="http">http</SelectItem>
+                  <SelectItem value="rtsp">rtsp</SelectItem>
+                  <SelectItem value="rtsps">rtsps</SelectItem>
+                </SelectContent>
+              </Select>
+              {errors.public_protocol && <p className="text-sm text-red-600">{errors.public_protocol}</p>}
+            </div>
+
+            <div>
+              <Label htmlFor="public_host">Public Host (DDNS)</Label>
+              <Input
+                id="public_host"
+                value={(data as any).public_host}
+                onChange={(e: any) => (setData as any)('public_host', e.target.value)}
+                placeholder="camera.exampleddns.net"
+              />
+              {errors.public_host && <p className="text-sm text-red-600">{errors.public_host}</p>}
+            </div>
+
+            <div>
+              <Label htmlFor="public_port">Public Port</Label>
+              <Input
+                id="public_port"
+                value={(data as any).public_port}
+                onChange={(e: any) => (setData as any)('public_port', e.target.value)}
+                placeholder="443"
+              />
+              {errors.public_port && <p className="text-sm text-red-600">{errors.public_port}</p>}
+            </div>
+
+            <div>
+              <Label htmlFor="public_path">Stream Path</Label>
+              <Input
+                id="public_path"
+                value={(data as any).public_path}
+                onChange={(e: any) => (setData as any)('public_path', e.target.value)}
+                placeholder="/live/stream.m3u8"
+              />
+              {errors.public_path && <p className="text-sm text-red-600">{errors.public_path}</p>}
+            </div>
+          </div>
+
+          <div className="mt-3">
+            <div className="text-xs text-gray-500 dark:text-gray-400">Generated URL</div>
+            <div className="mt-1 text-xs font-mono text-gray-700 dark:text-gray-200 break-all">
+              {generatedStreamUrl || '-'}
+            </div>
+            <div className="mt-2">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={!generatedStreamUrl}
+                onClick={() => (setData as any)('stream_url', generatedStreamUrl)}
+              >
+                Use Generated URL
+              </Button>
+            </div>
+          </div>
         </div>
 
         <div>
@@ -87,7 +239,6 @@ export default function AddCameraForm({ onClose, sites }: AddCameraFormProps) {
             id="ip_address"
             value={data.ip_address}
             onChange={(e: any) => (setData as any)('ip_address', e.target.value)}
-            required
           />
           {errors.ip_address && <p className="text-sm text-red-600">{errors.ip_address}</p>}
         </div>
@@ -98,7 +249,6 @@ export default function AddCameraForm({ onClose, sites }: AddCameraFormProps) {
             id="port"
             value={data.port}
             onChange={(e: any) => (setData as any)('port', e.target.value)}
-            required
           />
           {errors.port && <p className="text-sm text-red-600">{errors.port}</p>}
         </div>

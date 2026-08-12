@@ -20,9 +20,28 @@ class FlagController extends Controller
 
         $flags = $query->paginate(20)->withQueryString();
 
+        $user = $request->user();
+        $canReview = false;
+        if ($user) {
+            $canReview = $user->can('review flags')
+                || (method_exists($user, 'hasAnyRole') && $user->hasAnyRole([
+                    'super_admin', 'control_room_operator', 'operations_officer', 'supervisor',
+                ]));
+        }
+
+        // Compute stats from all flags (not just current page)
+        $stats = [
+            'total' => Flag::count(),
+            'pending_review' => Flag::where('status', 'pending_review')->count(),
+            'under_review' => Flag::where('status', 'under_review')->count(),
+            'resolved' => Flag::where('status', 'resolved')->count(),
+        ];
+
         return Inertia::render('ControlRoom/Flags/Index', [
             'flags' => $flags,
             'statuses' => Flag::STATUSES,
+            'canReview' => $canReview,
+            'stats' => $stats,
         ]);
     }
 
@@ -53,16 +72,26 @@ class FlagController extends Controller
         ]);
 
         return redirect()->route('control-room.flags.show', $flag)
-            ->with('success', 'Flag created successfully.');
+            ->withSuccess('Flag created successfully.');
     }
 
     public function show(Flag $flag)
     {
         $flag->load(['flaggable', 'reporter', 'reviewer']);
 
+        $user = auth()->user();
+        $canReview = false;
+        if ($user) {
+            // Allow users with explicit permission OR typical control room roles to review
+            $canReview = $user->can('review flags')
+                || (method_exists($user, 'hasAnyRole') && $user->hasAnyRole([
+                    'super_admin', 'control_room_operator', 'operations_officer', 'supervisor', 
+                ]));
+        }
+
         return Inertia::render('ControlRoom/Flags/Show', [
             'flag' => $flag,
-            'canReview' => auth()->user() ? auth()->user()->can('review flags') : false,
+            'canReview' => $canReview,
         ]);
     }
 
@@ -102,7 +131,7 @@ class FlagController extends Controller
         $flag->update($data);
 
         return redirect()->route('control-room.flags.show', $flag)
-            ->with('success', 'Flag updated successfully.');
+            ->withSuccess('Flag updated successfully.');
     }
 
     public function destroy(Flag $flag)
@@ -110,7 +139,7 @@ class FlagController extends Controller
         $flag->delete();
 
         return redirect()->route('control-room.flags.index')
-            ->with('success', 'Flag deleted successfully.');
+            ->withSuccess('Flag deleted successfully.');
     }
 
     public function acknowledge(Request $request, Flag $flag)
@@ -121,7 +150,7 @@ class FlagController extends Controller
             'review_date' => now(),
         ]);
 
-        return back()->with('success', 'Flag acknowledged successfully.');
+        return back()->withSuccess('Flag acknowledged successfully.');
     }
 
     public function resolve(Request $request, Flag $flag)
@@ -132,7 +161,7 @@ class FlagController extends Controller
             'review_date' => now(),
         ]);
 
-        return back()->with('success', 'Flag resolved successfully.');
+        return back()->withSuccess('Flag resolved successfully.');
     }
 
     public function escalate(Request $request, Flag $flag)
@@ -145,6 +174,6 @@ class FlagController extends Controller
             'status' => 'under_review',
         ]);
 
-        return back()->with('success', 'Flag escalated successfully.');
+        return back()->withSuccess('Flag escalated successfully.');
     }
 }

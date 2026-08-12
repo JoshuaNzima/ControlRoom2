@@ -35,22 +35,21 @@ class InfractionController extends Controller
 
         $infractions = $query->paginate(15);
 
+        // Get guards for the modal (same logic as create method)
+        $guards = Auth::user()->hasRole('supervisor') 
+            ? Guard::where('supervisor_id', Auth::id())->get(['id', 'name', 'employee_id'])
+            : Guard::all(['id', 'name', 'employee_id']);
+
         return Inertia::render('Guards/Infractions/Index', [
-            'infractions' => $infractions
+            'infractions' => $infractions,
+            'guards' => $guards,
         ]);
     }
 
     public function create()
     {
-        $this->authorize('create_infractions');
-
-        $guards = Auth::user()->hasRole('supervisor') 
-            ? Guard::where('supervisor_id', Auth::id())->get()
-            : Guard::all();
-
-        return Inertia::render('Guards/Infractions/Create', [
-            'guards' => $guards
-        ]);
+        // Deprecated: redirect to index with modal trigger
+        return redirect()->route('infractions.index', ['show_add' => 1]);
     }
 
     public function store(Request $request)

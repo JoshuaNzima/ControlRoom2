@@ -21,6 +21,7 @@ class Incident extends Model
         'escalation_level',
         'reporter_id',
         'assigned_to',
+        'guard_id',
         'client_id',
         'client_site_id',
         'resolved_at',
@@ -39,6 +40,11 @@ class Incident extends Model
     public function assignedTo(): BelongsTo
     {
         return $this->belongsTo(User::class, 'assigned_to');
+    }
+
+    public function guardRelation(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\Guards\Guard::class, 'guard_id');
     }
 
     public function client(): BelongsTo

@@ -43,7 +43,7 @@ return new class extends Migration
                 $table->timestamp('last_restart')->nullable()->after('last_connection_test');
             }
             if (! Schema::hasColumn('cameras', 'created_by')) {
-                $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete()->after('site_id');
+                $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete()->after('client_site_id');
             }
         });
     }

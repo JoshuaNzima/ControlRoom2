@@ -1,6 +1,6 @@
 import React from 'react';
 import { Head } from '@inertiajs/react';
-import ControlRoomLayout from '@/Layouts/ControlRoomLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import { Card, CardContent, CardHeader } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import { Badge } from '@/Components/ui/badge';
@@ -96,7 +96,7 @@ const Alerts = ({ auth }: AlertsProps) => {
   };
 
   return (
-    <ControlRoomLayout title="Emergency Alerts" user={auth?.user as any}>
+    <AuthenticatedLayout header="Emergency Alerts" user={auth?.user as any}>
       <Head title="Emergency Alerts" />
 
       <div className="space-y-6">
@@ -254,7 +254,7 @@ const Alerts = ({ auth }: AlertsProps) => {
           </CardContent>
         </Card>
       </div>
-    </ControlRoomLayout>
+    </AuthenticatedLayout>
   );
 };
 

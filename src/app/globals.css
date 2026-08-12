@@ -1,0 +1,96 @@
+@import "tailwindcss";
+
+@theme inline {
+  --color-coin-dark: #030712;
+  --color-coin-surface: #0a0f1e;
+  --color-coin-card: #111827;
+  --color-coin-card-hover: #1e293b;
+  --color-coin-gold: #f59e0b;
+  --color-coin-gold-light: #fbbf24;
+  --color-coin-gold-dark: #d97706;
+  --color-coin-text: #f8fafc;
+  --color-coin-muted: #94a3b8;
+  --color-coin-border: rgba(245, 158, 11, 0.12);
+  --color-coin-glow: rgba(245, 158, 11, 0.08);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@layer base {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(245, 158, 11, 0.25) transparent;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background: #030712;
+    color: #f8fafc;
+    font-family: var(--font-sans), system-ui, sans-serif;
+  }
+
+  ::selection {
+    background: rgba(245, 158, 11, 0.25);
+    color: #f8fafc;
+  }
+}
+
+@layer utilities {
+  .bg-grid {
+    background-image:
+      linear-gradient(rgba(245, 158, 11, 0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(245, 158, 11, 0.03) 1px, transparent 1px);
+    background-size: 60px 60px;
+  }
+
+  .bg-gradient-radial {
+    background: radial-gradient(ellipse at center, rgba(245, 158, 11, 0.08) 0%, transparent 70%);
+  }
+
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
+@keyframes float-slow {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  25% { transform: translateY(-15px) rotate(2deg); }
+  50% { transform: translateY(-8px) rotate(-1deg); }
+  75% { transform: translateY(-18px) rotate(1deg); }
+}
+
+@keyframes float-medium {
+  0%, 100% { transform: translateY(0px) translateX(0px); }
+  33% { transform: translateY(-12px) translateX(8px); }
+  66% { transform: translateY(6px) translateX(-5px); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { opacity: 0.3; transform: scale(1); }
+  50% { opacity: 0.7; transform: scale(1.15); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+.animate-float-slow {
+  animation: float-slow 10s ease-in-out infinite;
+}
+
+.animate-float-medium {
+  animation: float-medium 8s ease-in-out infinite;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 4s ease-in-out infinite;
+}
+
+.animate-shimmer {
+  background-size: 200% auto;
+  animation: shimmer 3s linear infinite;
+}

@@ -17,11 +17,11 @@ export default function Create({ auth, guards = [], sites = [] }: Props) {
 			<div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
 				<div className="px-4 py-6 sm:px-0">
 					<div className="mb-6">
-						<h1 className="text-3xl font-bold text-gray-900">Create New Shift</h1>
+						<h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Create New Shift</h1>
 					</div>
 
-					<div className="bg-white shadow rounded-lg">
-						<div className="p-6">
+					<div className="bg-white dark:bg-gray-900/60 border border-gray-200 dark:border-gray-800 shadow-sm shadow-black/5 dark:shadow-none rounded-lg">
+						<div className="p-4 sm:p-6">
 							<ShiftForm guards={guards} sites={sites} />
 						</div>
 					</div>

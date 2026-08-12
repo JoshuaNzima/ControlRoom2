@@ -14,12 +14,14 @@ class ClientPayment extends Model
         'paid',
         'amount_due',
         'amount_paid',
+        'prepaid_amount',
     ];
 
     protected $casts = [
         'paid' => 'boolean',
         'amount_due' => 'decimal:2',
         'amount_paid' => 'decimal:2',
+        'prepaid_amount' => 'decimal:2',
     ];
 
     public function client(): BelongsTo

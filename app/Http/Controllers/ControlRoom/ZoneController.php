@@ -5,7 +5,11 @@ namespace App\Http\Controllers\ControlRoom;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreZoneRequest;
 use App\Http\Requests\UpdateZoneRequest;
+use App\Models\Guards\ClientSite;
+use App\Models\User;
 use App\Models\Zone;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
 class ZoneController extends Controller
@@ -16,6 +20,11 @@ class ZoneController extends Controller
             ->select(['id', 'name', 'code', 'description', 'status', 'required_guard_count', 'target_sites_count'])
             ->get()
             ->map(function (Zone $zone) {
+                $commander = User::role('zone_commander')
+                    ->select(['id', 'name'])
+                    ->where('zone_id', $zone->id)
+                    ->first();
+
                 return [
                     'id' => $zone->id,
                     'name' => $zone->name,
@@ -27,39 +36,51 @@ class ZoneController extends Controller
                     'coverage_rate' => $zone->coverage_rate,
                     'active_guard_count' => $zone->active_guard_count,
                     'sites_count' => $zone->sites()->where('status', 'active')->count(),
+                    'commander_id' => $commander?->id,
+                    'commander_name' => $commander?->name,
                 ];
             });
 
-        $commanders = \App\Models\User::role('zone_commander')->select(['id','name'])->orderBy('name')->get();
-        $sites = \App\Models\Guards\ClientSite::select(['id','name','zone_id'])->orderBy('name')->get();
+        $commanders = User::role('zone_commander')->select(['id','name'])->orderBy('name')->get();
+        $sites = ClientSite::select(['id','name','zone_id'])->orderBy('name')->get();
+        $guards = \App\Models\Guards\Guard::select(['id','name','status'])->where('status','active')->orderBy('name')->get();
 
         return Inertia::render('ControlRoom/Zones', [
             'zones' => $zones,
             'commanders' => $commanders,
             'sites' => $sites,
+            'guards' => $guards,
         ]);
     }
 
     public function store(StoreZoneRequest $request)
     {
         $data = $request->validated();
-        if (empty($data['code'])) {
-            $prefix = strtoupper(collect(explode(' ', $data['name']))->map(fn($w) => substr($w,0,1))->implode(''));
-            $data['code'] = $prefix . '-' . strtoupper(str_pad(dechex(random_int(0, 0xFFFF)), 4, '0', STR_PAD_LEFT));
-        }
+        // Always generate a new code
+        $prefix = strtoupper(collect(explode(' ', $data['name']))->map(fn($w) => substr($w,0,1))->implode(''));
+        $data['code'] = $prefix . '-' . strtoupper(str_pad(dechex(random_int(0, 0xFFFF)), 4, '0', STR_PAD_LEFT));
 
-        $zone = Zone::create($data);
+        $commanderId = $data['commander_id'] ?? null;
+        $siteIds = $data['site_ids'] ?? null;
+        unset($data['commander_id'], $data['site_ids']);
 
-        if (!empty($data['commander_id'])) {
-            \App\Models\User::where('id', $data['commander_id'])->update(['zone_id' => $zone->id]);
-        }
+        $affectedZoneIds = [];
+        $zone = DB::transaction(function () use ($data, $commanderId, $siteIds, &$affectedZoneIds) {
+            $zone = Zone::create($data);
 
-        if (!empty($data['site_ids'])) {
-            \App\Models\Guards\ClientSite::whereIn('id', $data['site_ids'])->update(['zone_id' => $zone->id]);
-        }
+            $this->syncZoneCommander($zone, $commanderId);
 
-        return redirect()->route('control-room.zones.index')
-            ->with('success', 'Zone created successfully');
+            if (is_array($siteIds)) {
+                $affectedZoneIds = array_merge($affectedZoneIds, $this->syncZoneSites($zone, $siteIds));
+            }
+
+            $affectedZoneIds[] = $zone->id;
+            $this->recalcRequiredGuardsForZones(array_unique(array_filter($affectedZoneIds)));
+
+            return $zone;
+        });
+
+        return redirect()->route('control-room.zones.index')->withSuccess('Zone created successfully');
     }
 
     public function update(UpdateZoneRequest $request, Zone $zone)
@@ -70,25 +91,95 @@ class ZoneController extends Controller
             $data['code'] = $prefix . '-' . strtoupper(str_pad(dechex(random_int(0, 0xFFFF)), 4, '0', STR_PAD_LEFT));
         }
 
-        $zone->update($data);
+        $commanderId = array_key_exists('commander_id', $data) ? ($data['commander_id'] ?: null) : null;
+        $hasCommanderKey = array_key_exists('commander_id', $data);
+        $siteIds = $data['site_ids'] ?? null;
+        $hasSiteIdsKey = array_key_exists('site_ids', $data);
+        unset($data['commander_id'], $data['site_ids']);
 
-        if (array_key_exists('commander_id', $data) && $data['commander_id']) {
-            \App\Models\User::where('id', $data['commander_id'])->update(['zone_id' => $zone->id]);
+        DB::transaction(function () use ($zone, $data, $hasCommanderKey, $commanderId, $hasSiteIdsKey, $siteIds) {
+            $zone->update($data);
+
+            if ($hasCommanderKey) {
+                $this->syncZoneCommander($zone, $commanderId);
+            }
+
+            $affectedZoneIds = [$zone->id];
+            if ($hasSiteIdsKey && is_array($siteIds)) {
+                $affectedZoneIds = array_merge($affectedZoneIds, $this->syncZoneSites($zone, $siteIds));
+            }
+
+            $this->recalcRequiredGuardsForZones(array_unique(array_filter($affectedZoneIds)));
+        });
+
+        return redirect()->route('control-room.zones.index')->withSuccess('Zone updated successfully');
+    }
+
+    protected function syncZoneCommander(Zone $zone, ?int $commanderId): void
+    {
+        $query = User::role('zone_commander')->where('zone_id', $zone->id);
+
+        if ($commanderId) {
+            $query->where('id', '!=', $commanderId)->update(['zone_id' => null]);
+            User::whereKey($commanderId)->update(['zone_id' => $zone->id]);
+            return;
         }
 
-        if (!empty($data['site_ids'])) {
-            \App\Models\Guards\ClientSite::whereIn('id', $data['site_ids'])->update(['zone_id' => $zone->id]);
+        $query->update(['zone_id' => null]);
+    }
+
+    protected function syncZoneSites(Zone $zone, array $siteIds): array
+    {
+        $siteIds = array_values(array_unique(array_filter(array_map('intval', $siteIds))));
+
+        $currentSiteIds = ClientSite::query()
+            ->where('zone_id', $zone->id)
+            ->pluck('id')
+            ->all();
+
+        $toDetach = array_values(array_diff($currentSiteIds, $siteIds));
+        $toAttach = array_values(array_diff($siteIds, $currentSiteIds));
+
+        $affectedZoneIds = [$zone->id];
+
+        if (!empty($toAttach)) {
+            $movedFromZoneIds = ClientSite::query()
+                ->whereIn('id', $toAttach)
+                ->pluck('zone_id')
+                ->filter()
+                ->unique()
+                ->all();
+
+            $affectedZoneIds = array_merge($affectedZoneIds, $movedFromZoneIds);
         }
 
-        return redirect()->route('control-room.zones.index')
-            ->with('success', 'Zone updated successfully');
+        if (!empty($toDetach)) {
+            ClientSite::query()->whereIn('id', $toDetach)->update(['zone_id' => null]);
+        }
+
+        if (!empty($toAttach)) {
+            ClientSite::query()->whereIn('id', $toAttach)->update(['zone_id' => $zone->id]);
+        }
+
+        return array_unique($affectedZoneIds);
+    }
+
+    protected function recalcRequiredGuardsForZones(array $zoneIds): void
+    {
+        if (empty($zoneIds)) {
+            return;
+        }
+
+        foreach ($zoneIds as $zoneId) {
+            ClientSite::recalcZoneRequiredGuards($zoneId);
+        }
     }
 
     public function destroy(Zone $zone)
     {
         $zone->delete();
         return redirect()->route('control-room.zones.index')
-            ->with('success', 'Zone deleted successfully');
+            ->withSuccess('Zone deleted successfully');
     }
 
     public function assign(Zone $zone)
@@ -143,25 +234,44 @@ class ZoneController extends Controller
         // Ensure site belongs to the zone
         $siteBelongs = $zone->sites()->where('id', $data['client_site_id'])->exists();
         if (!$siteBelongs) {
-            return back()->with('error', 'Selected site does not belong to this zone.');
+            return back()->withError('Selected site does not belong to this zone.');
         }
+
+        $startDate = $data['start_date'] ?? now()->toDateString();
+
+        // If already actively assigned to the same site, do nothing
+        $alreadyAssigned = \App\Models\Guards\GuardAssignment::where('guard_id', $data['guard_id'])
+            ->where('client_site_id', $data['client_site_id'])
+            ->where('is_active', true)
+            ->whereNull('end_date')
+            ->exists();
+        if ($alreadyAssigned) {
+            return back()->withSuccess('Guard already assigned to this site.');
+        }
+
+        // End any other active assignments for this guard
+        \App\Models\Guards\GuardAssignment::where('guard_id', $data['guard_id'])
+            ->where('is_active', true)
+            ->whereNull('end_date')
+            ->update(['end_date' => $startDate, 'is_active' => false]);
 
         \App\Models\Guards\GuardAssignment::create([
             'guard_id' => $data['guard_id'],
             'client_site_id' => $data['client_site_id'],
             'assigned_by' => $request->user()?->id,
-            'start_date' => $data['start_date'] ?? now()->startOfDay(),
+            'start_date' => $startDate,
+            'end_date' => null,
             'is_active' => true,
         ]);
 
-        return back()->with('success', 'Guard assigned to site.');
+        return back()->withSuccess('Guard assigned to site.');
     }
 
     public function unassign(Zone $zone, \App\Models\Guards\GuardAssignment $assignment)
     {
         // Only allow if assignment site is in this zone
         if ($assignment->clientSite?->zone_id !== $zone->id) {
-            return back()->with('error', 'Assignment not in this zone.');
+            return back()->withError('Assignment not in this zone.');
         }
 
         $assignment->update([
@@ -169,8 +279,47 @@ class ZoneController extends Controller
             'end_date' => now()->startOfDay(),
         ]);
 
-        return back()->with('success', 'Guard unassigned from site.');
+        return back()->withSuccess('Guard unassigned from site.');
+    }
+
+    public function recalculate(Zone $zone)
+    {
+        app(\App\Services\ZoneCoverageService::class)->recalculateZone($zone->id);
+        $zone->refresh();
+
+        return redirect()->back()->withSuccess(
+            "Zone \"{$zone->name}\" required_guard_count recalculated to {$zone->required_guard_count}"
+        );
+    }
+
+    public function recalculateAll()
+    {
+        app(\App\Services\ZoneCoverageService::class)->recalculateAll();
+
+        return redirect()->back()->withSuccess('All zones recalculated successfully.');
+    }
+
+    public function endAssignment(Request $request, Zone $zone, \App\Models\Guards\GuardAssignment $assignment)
+    {
+        // Ensure the assignment belongs to this zone
+        if ($assignment->clientSite?->zone_id !== $zone->id) {
+            return back()->withError('Assignment not in this zone.');
+        }
+
+        $data = $request->validate([
+            'end_date' => ['required','date'],
+        ]);
+
+        // Prevent ending before start date when known
+        if ($assignment->start_date && \Carbon\Carbon::parse($data['end_date'])->lt($assignment->start_date)) {
+            return back()->withError('End date cannot be before the start date.');
+        }
+
+        $assignment->update([
+            'end_date' => $data['end_date'],
+            'is_active' => false,
+        ]);
+
+        return back()->withSuccess('Assignment ended successfully.');
     }
 }
-
-

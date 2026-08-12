@@ -37,18 +37,28 @@ export function DialogContent({ className = '', children }: { className?: string
   const ctx = React.useContext(DialogContext);
   if (!ctx) return null;
   return (
-    <Modal show={ctx.open} onClose={() => ctx.setOpen(false)}>
-      <div className={`p-4 ${className}`}>{children}</div>
+    <Modal show={ctx.open} onClose={() => ctx.setOpen(false)} closeable={true}>
+      <div 
+        className={`p-4 ${className}`}
+        onClick={(e) => e.stopPropagation()}
+        onMouseDown={(e) => e.stopPropagation()}
+      >
+        {children}
+      </div>
     </Modal>
   );
 }
 
 export function DialogHeader({ children }: { children: React.ReactNode }) {
-  return <div className="px-4 pt-4 pb-2 border-b bg-white">{children}</div>;
+  return <div className="px-4 pt-4 pb-2 border-b border-gray-100 bg-white/80 backdrop-blur-sm dark:border-gray-800 dark:bg-gray-950/80">{children}</div>;
 }
 
-export function DialogTitle({ children }: { children: React.ReactNode }) {
-  return <h3 className="text-lg font-semibold text-gray-900">{children}</h3>;
+export function DialogTitle({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+  return <h3 className={`text-lg font-semibold text-gray-900 dark:text-gray-100 ${className}`}>{children}</h3>;
+}
+
+export function DialogFooter({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+  return <div className={`px-4 py-3 bg-gray-50 dark:bg-gray-900 flex flex-col sm:flex-row sm:justify-end gap-2 ${className}`}>{children}</div>;
 }
 
 export default Dialog;

@@ -4,7 +4,10 @@ namespace App\Models\Guards;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Client extends Model
 {
@@ -22,6 +25,8 @@ class Client extends Model
         'contract_end_date',
         'monthly_rate',
         'notes',
+        'supervisor_id',
+        'sergeant_id',
     ];
 
     protected $casts = [
@@ -31,14 +36,68 @@ class Client extends Model
         'monthly_rate' => 'decimal:2',
     ];
 
+    /**
+     * Boot the model - ensure relationships are properly initialized.
+     */
+    protected static function boot()
+    {
+        parent::boot();
+    }
+
     public function services()
     {
-        return $this->belongsToMany(\App\Models\Service::class, 'client_service')->withPivot('custom_price')->withTimestamps();
+        return $this->belongsToMany(\App\Models\Service::class, 'client_service')
+                    ->withPivot('custom_price', 'quantity')
+                    ->withTimestamps();
     }
 
     public function sites(): HasMany
     {
         return $this->hasMany(ClientSite::class);
+    }
+
+    public function supervisor(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\User::class, 'supervisor_id');
+    }
+
+    public function sergeant(): BelongsTo
+    {
+        return $this->belongsTo(Guard::class, 'sergeant_id');
+    }
+
+    public function payments(): HasMany
+    {
+        return $this->hasMany(\App\Models\ClientPayment::class);
+    }
+
+    public function loyaltyPoints(): HasOne
+    {
+        return $this->hasOne(\App\Models\ClientLoyaltyPoints::class, 'client_id');
+    }
+
+    /**
+     * Get loyalty points safely, handling cases where relationship may not be loaded.
+     */
+    public function getLoyaltyPoints(): ?\App\Models\ClientLoyaltyPoints
+    {
+        try {
+            return $this->loyaltyPoints;
+        } catch (\Illuminate\Database\Eloquent\RelationNotFoundException $e) {
+            return $this->loyaltyPoints()->first();
+        }
+    }
+
+    public function users(): BelongsToMany
+    {
+        return $this->belongsToMany(\App\Models\User::class, 'client_user')
+            ->withPivot('role')
+            ->withTimestamps();
+    }
+
+    public function contracts(): HasMany
+    {
+        return $this->hasMany(\App\Models\Contract::class);
     }
 
     public function scopeActive($query)
@@ -52,16 +111,182 @@ class Client extends Model
      */
     public function getMonthlyDueAmount(): float
     {
-        // If the client has services assigned, sum service prices (allow custom pivot price)
-        if ($this->relationLoaded('services') || $this->services()->exists()) {
-            $total = 0.0;
-            foreach ($this->services as $service) {
-                $price = $service->pivot->custom_price ?? $service->monthly_price;
-                $total += (float) $price;
+        try {
+            $services = $this->relationLoaded('services')
+                ? $this->services
+                : $this->services()->get();
+
+            if ($services->isNotEmpty()) {
+                $total = 0.0;
+                foreach ($services as $service) {
+                    $price = $service->pivot->custom_price ?? $service->monthly_price;
+                    $quantity = $service->pivot->quantity ?? 1;
+                    $total += (float) $price * (int) $quantity;
+                }
+                $this->monthly_rate = $total;
+                return (float) $total;
             }
-            return (float) $total;
+
+            return (float) ($this->monthly_rate ?? 0);
+        } catch (\Throwable $e) {
+            // Fallback if relationships fail to load
+            return (float) ($this->monthly_rate ?? 0);
+        }
+    }
+
+  
+    /**
+     * Get the billing start date considering fallbacks.
+     */
+    public function getEffectiveBillingStartAttribute()
+    {
+        return $this->billing_start_date ?? $this->contract_start_date ?? $this->created_at;
+    }
+
+    /**
+     * Calculate payment summary for a given year.
+     */
+    public function getPaymentSummary(int $year): array
+    {
+        try {
+            $currentYear = now()->year;
+            $currentMonth = now()->month;
+
+            $limitMonth = $year < $currentYear ? 12 : ($year > $currentYear ? 0 : $currentMonth);
+
+            $paymentsForYear = $this->relationLoaded('payments')
+                ? $this->payments->where('year', $year)
+                : $this->payments()->where('year', $year)->get(['month', 'paid', 'amount_due', 'amount_paid', 'prepaid_amount']);
+
+            $yearPayments = $paymentsForYear->keyBy('month');
+
+            $unpaidCount = 0;
+            $totalDue = 0;
+            $totalPaid = 0;
+            $totalCovered = 0;
+
+            // Ensure effective billing start is safely usable as a Carbon instance
+            $effectiveStart = $this->effective_billing_start;
+            if ($effectiveStart && !($effectiveStart instanceof \Illuminate\Support\Carbon)) {
+                try {
+                    $effectiveStart = \Illuminate\Support\Carbon::parse($effectiveStart);
+                } catch (\Throwable $e) {
+                    $effectiveStart = null;
+                }
+            }
+
+            $startMonth = 1;
+            if ($effectiveStart) {
+                if ($effectiveStart->year === $year) {
+                    $startMonth = (int) $effectiveStart->month;
+                } elseif ($effectiveStart->year > $year) {
+                    $startMonth = 13; // No months to bill this year
+                }
+            }
+
+            $monthlyRate = $this->getMonthlyDueAmount();
+
+            // Calculate totals for each applicable month
+            for ($month = $startMonth; $month <= $limitMonth; $month++) {
+                $payment = $yearPayments->get($month);
+                $isInBillingWindow = $this->isInBillingWindow($year, $month);
+
+                $computedDue = $isInBillingWindow ? (float) $monthlyRate : 0.0;
+
+                $monthDue = $isInBillingWindow
+                    ? (float) (($payment && (float) $payment->amount_due > 0) ? $payment->amount_due : $computedDue)
+                    : 0.0;
+
+                $monthPaid = (float) ($payment?->amount_paid ?? 0);
+                $monthPrepaid = (float) ($payment?->prepaid_amount ?? 0);
+                $covered = $monthPaid + $monthPrepaid;
+
+                $totalDue += $monthDue;
+                $totalPaid += $monthPaid;
+                $totalCovered += $covered;
+
+                if ($monthDue > 0 && $monthDue > $covered) {
+                    $unpaidCount++;
+                }
+            }
+
+            return [
+                'expected_amount' => round($totalDue, 2),
+                'total_due' => round($totalDue, 2),
+                'total_paid' => round($totalPaid, 2),
+                'outstanding_amount' => round($totalDue - $totalCovered, 2),
+                'outstanding_months' => $unpaidCount,
+                'billing_start' => $effectiveStart?->toDateString(),
+                'is_overdue' => $unpaidCount >= 3
+            ];
+        } catch (\Throwable $e) {
+            // Return safe fallback if any relationship loading fails
+            return [
+                'expected_amount' => 0,
+                'total_due' => 0,
+                'total_paid' => 0,
+                'outstanding_amount' => 0,
+                'outstanding_months' => 0,
+                'billing_start' => null,
+                'is_overdue' => false
+            ];
+        }
+    }
+
+    /**
+     * Check if a given year/month falls within the client's billing window.
+     */
+    protected function isInBillingWindow(int $year, int $month): bool
+    {
+        $date = now()->setYear($year)->setMonth($month)->startOfMonth();
+
+        $effectiveStart = $this->effective_billing_start;
+        if ($effectiveStart && !($effectiveStart instanceof \Illuminate\Support\Carbon)) {
+            try {
+                $effectiveStart = \Illuminate\Support\Carbon::parse($effectiveStart);
+            } catch (\Throwable $e) {
+                $effectiveStart = null;
+            }
         }
 
-        return (float) ($this->monthly_rate ?? 0);
+        if ($effectiveStart && $date->lt($effectiveStart->startOfMonth())) {
+            return false;
+        }
+
+        if ($this->contract_end_date && $date->gt($this->contract_end_date->endOfMonth())) {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Scope query to clients with overdue payments.
+     */
+    public function scopeWithOverduePayments($query, int $year)
+    {
+        return $query->whereHas('payments', function ($query) use ($year) {
+            $query->where('year', $year)
+                  ->where('month', '<=', now()->year === $year ? now()->month : 12)
+                  ->where('paid', false)
+                  ->havingRaw('COUNT(*) >= 3')
+                  ->groupBy('client_id');
+        });
+    }
+
+    /**
+     * Scope query to filter by payment status.
+     */
+    public function scopeByPaymentStatus($query, string $status, int $year)
+    {
+        if ($status === 'all') {
+            return $query;
+        }
+
+        return $query->whereHas('payments', function ($query) use ($status, $year) {
+            $query->where('year', $year)
+                  ->where('month', '<=', now()->year === $year ? now()->month : 12)
+                  ->where('paid', $status === 'paid');
+        });
     }
 }

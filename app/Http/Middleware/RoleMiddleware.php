@@ -21,10 +21,26 @@ class RoleMiddleware
 
         $user = auth()->user();
 
+        if ($user && method_exists($user, 'hasRole') && $user->hasRole('super_admin')) {
+            return $next($request);
+        }
+
+        $expanded = [];
         foreach ($roles as $role) {
+            foreach (preg_split('/[\|,]/', (string) $role) as $r) {
+                $r = trim((string) $r);
+                if ($r !== '') {
+                    $expanded[] = $r;
+                }
+            }
+        }
+
+        foreach ($expanded as $role) {
             if ($user->hasRole($role)) {
                 return $next($request);
             }
         }
-        abort(403, 'Unauthorized. You do not have permission to access this page');}
+
+        abort(403, 'Unauthorized. You do not have permission to access this page');
+    }
 }

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Guards\{Guard, Shift, Attendance, ClientSite};
 use App\Models\User;
+use App\Services\GuardScopingService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
@@ -11,6 +12,30 @@ use Carbon\Carbon;
 
 class ReportsController extends Controller
 {
+    /**
+     * Apply guard-scoping for supervisor/sergeant roles via GuardScopingService.
+     * For other roles (admin, etc.), no scoping is applied.
+     */
+    protected function applyGuardScoping($query): void
+    {
+        $user = Auth::user();
+        if ($user && ($user->hasRole('supervisor') || $user->hasRole('sergeant'))) {
+            $guardIds = app(GuardScopingService::class)->getManagedGuardIds($user);
+            $query->whereIn('guard_id', $guardIds);
+        }
+    }
+
+    /**
+     * Apply guard-scoping for supervisor/sergeant roles to a guard query.
+     */
+    protected function applyGuardEntityScoping($query): void
+    {
+        $user = Auth::user();
+        if ($user && ($user->hasRole('supervisor') || $user->hasRole('sergeant'))) {
+            $guardIds = app(GuardScopingService::class)->getManagedGuardIds($user);
+            $query->whereIn('id', $guardIds);
+        }
+    }
     public function index()
     {
         $guards = Guard::query()
@@ -56,11 +81,7 @@ class ReportsController extends Controller
         $query = Attendance::with(['guardRelation', 'clientSite'])
             ->whereBetween('date', [$params['start_date'], $params['end_date']]);
 
-        if (Auth::user()->hasRole('supervisor')) {
-            $query->whereHas('guardRelation', function($q) {
-                $q->forSupervisor(Auth::id());
-            });
-        }
+        $this->applyGuardScoping($query);
 
         if (isset($params['guard_id'])) {
             $query->where('guard_id', $params['guard_id']);
@@ -88,11 +109,7 @@ class ReportsController extends Controller
         $query = Shift::with(['guardRelation', 'clientSite'])
             ->whereBetween('date', [$params['start_date'], $params['end_date']]);
 
-        if (Auth::user()->hasRole('supervisor')) {
-            $query->whereHas('guardRelation', function($q) {
-                $q->forSupervisor(Auth::id());
-            });
-        }
+        $this->applyGuardScoping($query);
 
         if (isset($params['guard_id'])) {
             $query->where('guard_id', $params['guard_id']);
@@ -122,9 +139,7 @@ class ReportsController extends Controller
             $q->whereBetween('date', [$params['start_date'], $params['end_date']]);
         }]);
 
-        if (Auth::user()->hasRole('supervisor')) {
-            $query->forSupervisor(Auth::id());
-        }
+        $this->applyGuardEntityScoping($query);
 
         if (isset($params['guard_id'])) {
             $query->where('id', $params['guard_id']);

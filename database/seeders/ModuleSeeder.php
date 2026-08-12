@@ -48,6 +48,21 @@ class ModuleSeeder extends Seeder
                 ],
             ],
             [
+                'name' => 'training',
+                'display_name' => 'Training',
+                'description' => 'Trainee pipeline, trainers, and training tracks',
+                'icon' => 'HiOutlineAcademicCap',
+                'color' => '#DC2626',
+                'is_active' => true,
+                'is_core' => false,
+                'sort_order' => 3,
+                'features' => [
+                    'dashboard' => 'Training overview and progress',
+                    'trainees' => 'Manage trainees and trainer assignments',
+                    'regimens' => 'Manage training regimens and goals',
+                ],
+            ],
+            [
                 'name' => 'clients',
                 'display_name' => 'Client Management',
                 'description' => 'Client relationships and locations',
@@ -55,7 +70,7 @@ class ModuleSeeder extends Seeder
                 'color' => '#0891B2',
                 'is_active' => true,
                 'is_core' => true,
-                'sort_order' => 3,
+                'sort_order' => 4,
                 'features' => [
                     'clients' => 'Client locations and details',
                     'sites' => 'Client site management',
@@ -70,7 +85,7 @@ class ModuleSeeder extends Seeder
                 'color' => '#D97706',
                 'is_active' => false,
                 'is_core' => false,
-                'sort_order' => 4,
+                'sort_order' => 5,
                 'features' => [
                     'dogs' => 'Trained dogs database',
                     'handlers' => 'K9 handler management',
@@ -86,7 +101,7 @@ class ModuleSeeder extends Seeder
                 'color' => '#1D4ED8',
                 'is_active' => false,
                 'is_core' => false,
-                'sort_order' => 5,
+                'sort_order' => 6,
                 'features' => [
                     'live_dashboard' => 'Real-time monitoring',
                     'incidents' => 'Incident management',
@@ -103,7 +118,7 @@ class ModuleSeeder extends Seeder
                 'color' => '#EA580C',
                 'is_active' => true,
                 'is_core' => true,
-                'sort_order' => 6,
+                'sort_order' => 7,
                 'features' => [
                     'reports' => 'Generate operational reports',
                     'activity_logs' => 'User actions & history',

@@ -42,37 +42,47 @@ class ZoneCommanderDemoSeeder extends Seeder
         // Create a few demo sites and checkpoints without relying on factories
         $sites = [];
         for ($i = 1; $i <= 2; $i++) {
-            $site = ClientSite::create([
-                'client_id' => 1,
-                'name' => "Demo Site {$i}",
-                'address' => 'N/A',
-                'status' => 'active',
-            ]);
+            $site = ClientSite::firstOrCreate(
+                [
+                    'client_id' => 1,
+                    'name' => "Demo Site {$i}",
+                ],
+                [
+                    'address' => 'N/A',
+                    'status' => 'active',
+                ]
+            );
             // attach zone id if present on table
             $site->zone_id = $zone->id;
             $site->save();
             $sites[] = $site;
 
             for ($j = 1; $j <= 2; $j++) {
-                Checkpoint::create([
-                    'client_site_id' => $site->id,
-                    'name' => "Gate {$j}",
-                    'type' => 'qr',
-                    'is_active' => true,
-                ]);
+                Checkpoint::firstOrCreate(
+                    [
+                        'client_site_id' => $site->id,
+                        'name' => "Gate {$j}",
+                    ],
+                    [
+                        'type' => 'qr',
+                        'is_active' => true,
+                    ]
+                );
             }
         }
 
 		// Minimal demo guards (ensure hire_date provided to satisfy NOT NULL constraints)
-		for ($g = 1; $g <= 4; $g++) {
-			Guard::create([
-				'name' => "Guard {$g}",
-				'employee_id' => "EMP{$g}",
-				'phone' => '0700000000',
-				'status' => 'active',
-				'hire_date' => now()->subYears(1),
-			]);
-		}
+		        for ($g = 1; $g <= 4; $g++) {
+            Guard::firstOrCreate(
+                ['employee_id' => "EMP{$g}"],
+                [
+                    'name' => "Guard {$g}",
+                    'phone' => '0700000000',
+                    'status' => 'active',
+                    'hire_date' => now()->subYears(1),
+                ]
+            );
+        }
 
 		// Demo user
 		$user = User::firstOrCreate([

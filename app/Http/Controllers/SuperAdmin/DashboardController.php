@@ -5,15 +5,18 @@ namespace App\Http\Controllers\SuperAdmin;
 use App\Http\Controllers\Controller;
 use App\Models\Guards\{Guard, Attendance, Client, Shift};
 use App\Models\User;
-use App\Models\Core\Module;
+use App\Models\Module as AppModule;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\{DB, Cache, Artisan, File};
+use Illuminate\Support\Facades\{DB, Cache, Artisan, File, Schema};
 use Inertia\Inertia;
+use App\Services\OperationalAnalyticsService;
 
 class DashboardController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
+        $user = $request->user();
+		$opsAnalytics = (new OperationalAnalyticsService())->getSummary(now()->toDateString());
         // System Overview
         $systemStats = [
             'total_users' => User::count(),
@@ -26,17 +29,22 @@ class DashboardController extends Controller
             'cache_size' => $this->getCacheSize(),
         ];
 
-        // Modules Management
-        $modules = Module::orderBy('sort_order')->get()->map(fn($m) => [
+        // Role-based KPI visibility flags
+        $canSeePendingAdmin = $user && $user->hasAnyRole(['super_admin', 'admin', 'finance_officer', 'accountant', 'finance', 'accounting']);
+        $canSeeFinanceApprovals = $user && $user->hasAnyRole(['super_admin', 'finance_officer', 'accountant', 'finance', 'accounting']);
+
+        // Modules Management (App\Models\Module)
+        $modules = AppModule::orderBy('order')->get()->map(fn($m) => [
             'id' => $m->id,
-            'name' => $m->name,
             'display_name' => $m->display_name,
             'description' => $m->description,
-            'is_active' => $m->is_active,
-            'is_core' => $m->is_core,
+            'is_active' => (bool) $m->is_active,
+            'is_core' => (bool) $m->is_core,
             'version' => $m->version,
             'icon' => $m->icon,
-            'color' => $m->color,
+            'category' => $m->category,
+            'route' => $m->route,
+            'order' => $m->order,
         ]);
 
         // System Health
@@ -124,6 +132,7 @@ class DashboardController extends Controller
 
         return Inertia::render('SuperAdmin/Dashboard', [
             'systemStats' => $systemStats,
+            'ops_analytics' => $opsAnalytics,
             'modules' => $modules,
             'systemHealth' => $systemHealth,
             'recentLogs' => $recentLogs,
@@ -131,8 +140,11 @@ class DashboardController extends Controller
             'databaseInfo' => $databaseInfo,
             'auditTrail' => $auditTrail,
             'adminActions' => $adminActions,
+			'isSuperAdmin' => $user ? $user->hasRole('super_admin') : false,
             'isMaintenance' => file_exists(storage_path('framework/down')),
             'maintenanceSecret' => env('APP_MAINTENANCE_SECRET', 'super-secret-token'),
+            'canSeePendingAdmin' => $canSeePendingAdmin,
+            'canSeeFinanceApprovals' => $canSeeFinanceApprovals,
         ]);
     }
 
@@ -221,14 +233,29 @@ class DashboardController extends Controller
         }
 
         $lines = file($logFile);
-        $recentLines = array_slice($lines, -20);
-        
-        return array_map(function($line) {
-            return [
-                'message' => substr($line, 0, 100),
-                'time' => now()->subMinutes(rand(1, 60))->diffForHumans(),
+        $recentLines = array_slice($lines, -40);
+
+        $out = [];
+        foreach ($recentLines as $line) {
+            $msg = trim((string) $line);
+            if ($msg === '') continue;
+
+            $time = '';
+            if (preg_match('/^\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\]/', $msg, $m)) {
+                try {
+                    $time = \Carbon\Carbon::parse($m[1])->diffForHumans();
+                } catch (\Throwable $e) {
+                    $time = '';
+                }
+            }
+
+            $out[] = [
+                'message' => mb_substr($msg, 0, 180),
+                'time' => $time,
             ];
-        }, $recentLines);
+        }
+
+        return array_slice($out, -20);
     }
 
     private function getUserActivity(): array
@@ -262,27 +289,38 @@ class DashboardController extends Controller
 
     private function getAuditTrail(): array
     {
-        // This would come from an audit log table
-        // For now, return sample data
-        return [
-            [
-                'user' => 'Admin User',
-                'action' => 'Created new guard',
-                'time' => now()->subMinutes(15)->diffForHumans(),
-                'ip' => '192.168.1.1',
-            ],
-            [
-                'user' => 'Supervisor',
-                'action' => 'Checked in guard',
-                'time' => now()->subMinutes(30)->diffForHumans(),
-                'ip' => '192.168.1.2',
-            ],
-        ];
+        try {
+            if (Schema::hasTable('audit_log')) {
+                $rows = DB::table('audit_log')
+                    ->orderByDesc('id')
+                    ->limit(12)
+                    ->get(['user', 'action', 'ip_address', 'created_at']);
+
+                return $rows->map(function ($row) {
+                    $time = '';
+                    try {
+                        $time = $row->created_at ? \Carbon\Carbon::parse($row->created_at)->diffForHumans() : '';
+                    } catch (\Throwable $e) {
+                        $time = '';
+                    }
+
+                    return [
+                        'user' => (string) ($row->user ?? ''),
+                        'action' => (string) ($row->action ?? ''),
+                        'time' => $time,
+                        'ip' => (string) ($row->ip_address ?? ''),
+                    ];
+                })->toArray();
+            }
+        } catch (\Throwable $e) {
+        }
+
+        return [];
     }
 
     public function toggleModule(Request $request, $moduleId)
     {
-        $module = Module::findOrFail($moduleId);
+        $module = AppModule::findOrFail($moduleId);
         
         if ($module->is_core) {
             return back()->with('error', 'Cannot disable core modules.');

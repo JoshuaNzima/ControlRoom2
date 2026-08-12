@@ -4,18 +4,38 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Guards\{Guard, Attendance, Client, ClientSite, Shift};
+use App\Models\ClientPayment;
 use App\Models\User;
 use App\Models\Core\Module;
+use App\Models\Approval;
+use App\Models\Incident;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
+use App\Models\VehicleDispatch;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Storage;
+use App\Services\OperationalAnalyticsService;
+use App\Models\SupervisorIncentiveProfile;
+use App\Models\SupervisorIncentiveRecord;
+use App\Models\IncentiveType;
+use App\Models\IncentiveRule;
+use App\Models\IncentiveEntry;
+use App\Models\ScanTag;
+use Illuminate\Support\Facades\Log;
 
 class DashboardController extends Controller
 {
     public function index()
     {
         $today = today();
-        
+		$opsAnalytics = (new OperationalAnalyticsService())->getSummary($today->toDateString());
+
+        // QR Scan data for Control Room tab
+        $recentQrScans = $this->getRecentQrScans();
+        $todayScansCount = ScanTag::whereDate('created_at', $today)->count();
+
         // Overall Statistics
         $stats = [
             'total_guards' => Guard::count(),
@@ -82,25 +102,101 @@ class DashboardController extends Controller
             'sites_coverage_pct' => $totalSites > 0 ? round(($sitesCoveredToday / $totalSites) * 100, 1) : 0,
         ];
 
+        $recognizedRevenueYtd = 0.0;
+        try {
+            $recognizedRevenueYtd = (float) ClientPayment::where('year', now()->year)
+                ->where('month', '<=', now()->month)
+                ->sum('amount_paid');
+        } catch (\Throwable $e) {
+            $recognizedRevenueYtd = 0.0;
+        }
+
         // Payments summary (top-level): total_clients_due, total_clients_outstanding_value
         $paymentsSummary = [
             'total_clients' => \App\Models\Guards\Client::count(),
             'clients_with_outstanding' => 0,
             'outstanding_value' => 0.0,
         ];
+        $totalDueYtd = 0.0;
+        $totalPaidYtd = 0.0;
+        $totalCoveredYtd = 0.0;
         try {
             $year = now()->year;
-            $clientPayments = \App\Models\ClientPayment::where('year', $year)->get();
-            $grouped = $clientPayments->groupBy('client_id');
-            foreach ($grouped as $clientId => $rows) {
-                $due = $rows->sum('amount_due');
-                $paid = $rows->sum('amount_paid');
-                if ($due > $paid) {
-                    $paymentsSummary['clients_with_outstanding']++;
-                    $paymentsSummary['outstanding_value'] += ($due - $paid);
-                }
-            }
-            $paymentsSummary['outstanding_value'] = round($paymentsSummary['outstanding_value'], 2);
+            $limitMonth = now()->month;
+
+            Client::select(['id', 'monthly_rate', 'billing_start_date', 'contract_start_date', 'contract_end_date', 'created_at'])
+                ->orderBy('id')
+                ->chunkById(200, function ($clientsChunk) use ($year, $limitMonth, &$paymentsSummary, &$totalDueYtd, &$totalPaidYtd, &$totalCoveredYtd) {
+                    $clientIds = $clientsChunk->pluck('id')->all();
+                    $rawPayments = ClientPayment::where('year', $year)
+                        ->whereIn('client_id', $clientIds)
+                        ->get(['client_id', 'month', 'amount_due', 'amount_paid', 'prepaid_amount'])
+                        ->groupBy('client_id');
+
+                    foreach ($clientsChunk as $client) {
+                        $rows = $rawPayments->get($client->id) ?? collect();
+                        $byMonth = $rows->keyBy('month');
+
+                        $billingStart = null;
+                        if (!empty($client->billing_start_date)) {
+                            $billingStart = Carbon::parse($client->billing_start_date);
+                        } else {
+                            $billingStart = $client->contract_start_date ? Carbon::parse($client->contract_start_date) : ($client->created_at ? Carbon::parse($client->created_at) : null);
+                        }
+                        $contractEnd = $client->contract_end_date ? Carbon::parse($client->contract_end_date) : null;
+                        $monthlyRate = (float) ($client->monthly_rate ?? optional($client)->getMonthlyDueAmount() ?? 0);
+
+                        $startMonth = 1;
+                        if ($billingStart) {
+                            if ((int) $billingStart->year > $year) {
+                                continue;
+                            }
+                            if ((int) $billingStart->year === $year) {
+                                $startMonth = (int) $billingStart->month;
+                            }
+                        }
+
+                        $clientDue = 0.0;
+                        $clientPaid = 0.0;
+                        $clientCovered = 0.0;
+
+                        for ($m = $startMonth; $m <= $limitMonth; $m++) {
+                            $ym = Carbon::createFromDate($year, $m, 1);
+                            $inWindow = true;
+                            if ($billingStart && $ym->lt($billingStart->copy()->startOfMonth())) {
+                                $inWindow = false;
+                            }
+                            if ($contractEnd && $ym->gt($contractEnd->copy()->endOfMonth())) {
+                                $inWindow = false;
+                            }
+                            $baseDue = $inWindow ? $monthlyRate : 0.0;
+
+                            $row = $byMonth->get($m);
+                            $rowDue = $row ? (float) ($row->amount_due ?? 0) : 0.0;
+                            $monthDue = $rowDue > 0 ? $rowDue : (float) round($baseDue, 2);
+
+                            $monthPaid = $row ? (float) ($row->amount_paid ?? 0) : 0.0;
+                            $monthPrepaid = $row ? (float) ($row->prepaid_amount ?? 0) : 0.0;
+                            $covered = $monthPaid + $monthPrepaid;
+
+                            $clientDue += $monthDue;
+                            $clientPaid += $monthPaid;
+                            $clientCovered += $covered;
+                        }
+
+                        $totalDueYtd += $clientDue;
+                        $totalPaidYtd += $clientPaid;
+                        $totalCoveredYtd += $clientCovered;
+
+                        $outstanding = round($clientDue - $clientCovered, 2);
+                        if ($outstanding > 0) {
+                            $paymentsSummary['clients_with_outstanding']++;
+                            $paymentsSummary['outstanding_value'] += $outstanding;
+                        }
+                    }
+                });
+
+            $paymentsSummary['outstanding_value'] = round((float) $paymentsSummary['outstanding_value'], 2);
         } catch (\Throwable $e) {
             // ignore if table missing during early dev
         }
@@ -133,6 +229,11 @@ class DashboardController extends Controller
                 'unpaid_invoices_count' => 0,
                 'unpaid_invoices_value' => 0,
                 'cash_flow_indicator' => 'neutral',
+                // merged metrics
+                'requisitions_mtd_total' => 0,
+                'pending_requisitions_count' => 0,
+                'collection_rate' => $totalDueYtd > 0 ? round(($totalPaidYtd / $totalDueYtd) * 100, 1) : 100,
+                'recognized_revenue_ytd' => round($recognizedRevenueYtd, 2),
             ],
             'it' => [
                 'uptime_30d' => 99.9,
@@ -147,8 +248,9 @@ class DashboardController extends Controller
                 'guards_on_duty' => $stats['on_duty_today'] ?? 0,
                 'cameras_online' => 0,
                 'cameras_offline' => 0,
-                'dispatches_today' => 0,
+                'dispatches_today' => (int) VehicleDispatch::whereDate('dispatched_at', $today)->count(),
                 'avg_response_time_min' => 0,
+                'today_scans' => $todayScansCount,
             ],
             'operations' => [
                 'active_contracts' => 0,
@@ -175,6 +277,28 @@ class DashboardController extends Controller
                 'documents_new_month' => 0,
                 'compliance_updates_pending' => 0,
             ],
+            'supervisor_incentives' => [
+                'total_profiles' => SupervisorIncentiveProfile::where('is_active', true)->count(),
+                'pending_calculations' => SupervisorIncentiveRecord::where('status', 'pending')->count(),
+                'approved_pending_payment' => SupervisorIncentiveRecord::where('status', 'approved')->count(),
+                'total_paid_this_month' => SupervisorIncentiveRecord::where('status', 'paid')
+                    ->whereMonth('created_at', now()->month)
+                    ->count(),
+                'pending_amount_total' => SupervisorIncentiveRecord::whereIn('status', ['pending', 'approved'])
+                    ->sum('net_amount') ?? 0,
+                'supervisors_count' => Guard::whereIn('position', ['supervisor', 'sergeant'])->where('status', 'active')->count(),
+            ],
+            'incentive_system' => [
+                'total_types' => IncentiveType::where('is_active', true)->count(),
+                'total_rules' => IncentiveRule::where('is_active', true)->count(),
+                'pending_entries' => IncentiveEntry::where('status', 'pending')->count(),
+                'approved_entries' => IncentiveEntry::where('status', 'approved')->count(),
+                'paid_entries' => IncentiveEntry::where('status', 'paid')->count(),
+                'pending_amount' => IncentiveEntry::whereIn('status', ['pending', 'approved'])->sum('final_amount') ?? 0,
+                'paid_amount_mtd' => IncentiveEntry::where('status', 'paid')
+                    ->whereMonth('paid_at', now()->month)
+                    ->sum('final_amount') ?? 0,
+            ],
             'cross_module' => [
                 'critical_alerts_today' => 0,
                 'overall_incident_trend' => 'stable',
@@ -185,24 +309,122 @@ class DashboardController extends Controller
             ],
         ];
 
+        // Merge Requisitions metrics into Finance KPIs (Admin mini-dashboard)
+        $kpis['finance']['requisitions_mtd_total'] = (float) \App\Models\Expense::whereYear('expense_date', now()->year)
+            ->whereMonth('expense_date', now()->month)
+            ->sum('amount');
+        // Show pending approvals assigned to the current user to avoid mismatch with Approvals list
+        $kpis['finance']['pending_requisitions_count'] = (int) Approval::where('status', 'pending')
+            ->where('approver_id', auth()->id())
+            ->count();
+
+        // System health snapshot
+        $systemHealth = [
+            'database' => 'unavailable',
+            'cache' => 'unavailable',
+            'queue' => config('queue.default') ?: 'default',
+            'storage' => null,
+        ];
+        try {
+            DB::connection()->getPdo();
+            $systemHealth['database'] = 'healthy';
+        } catch (\Throwable $e) {
+            $systemHealth['database'] = 'error';
+        }
+        try {
+            $key = 'health_ping_' . uniqid();
+            Cache::put($key, 'ok', 5);
+            $systemHealth['cache'] = Cache::get($key) === 'ok' ? 'healthy' : 'error';
+            Cache::forget($key);
+        } catch (\Throwable $e) {
+            $systemHealth['cache'] = 'error';
+        }
+        try {
+            $root = base_path();
+            $free = @disk_free_space($root);
+            $total = @disk_total_space($root);
+            $systemHealth['storage'] = ($free !== false && $total !== false && $total > 0)
+                ? (int) round((($total - $free) / $total) * 100)
+                : null;
+        } catch (\Throwable $e) {
+            $systemHealth['storage'] = null;
+        }
+
+        $approvalsPending = (int) Approval::where('status', 'pending')->count();
+
+        // Approvals detail
+        $approvalsDetail = [
+            'mine_pending' => (int) Approval::where('status', 'pending')->where('approver_id', auth()->id())->count(),
+            'all_pending' => (int) $approvalsPending,
+            'approved' => (int) Approval::where('status', 'approved')->count(),
+            'rejected' => (int) Approval::where('status', 'rejected')->count(),
+        ];
+
+        // Incidents overview
+        $statusCounts = [
+            'open' => (int) Incident::where('status', 'open')->count(),
+            'in_progress' => (int) Incident::where('status', 'in_progress')->count(),
+            'resolved' => (int) Incident::where('status', 'resolved')->count(),
+            'closed' => (int) Incident::where('status', 'closed')->count(),
+            'escalated' => (int) Incident::where('status', 'escalated')->count(),
+        ];
+        $severityCounts = [
+            'low' => (int) Incident::where('severity', 'low')->count(),
+            'medium' => (int) Incident::where('severity', 'medium')->count(),
+            'high' => (int) Incident::where('severity', 'high')->count(),
+            'critical' => (int) Incident::where('severity', 'critical')->count(),
+        ];
+        $latestIncidents = Incident::select('id','title','severity','status','created_at')
+            ->latest()
+            ->take(6)
+            ->get()
+            ->map(fn($i) => [
+                'id' => $i->id,
+                'title' => $i->title,
+                'severity' => $i->severity,
+                'status' => $i->status,
+                'time' => optional($i->created_at)->diffForHumans(),
+            ]);
+
+        $openIncidents = (int) ($statusCounts['open'] ?? 0);
+        $recentIncidents = (int) Incident::whereDate('created_at', $today)->count();
+        $incidents = [
+            'open' => $openIncidents,
+            'recent' => $recentIncidents,
+            'latest' => $latestIncidents,
+        ];
+
+        $incidentsOverview = [
+            'status' => $statusCounts,
+            'severity' => $severityCounts,
+            'incidents' => $incidents,
+        ];
+
         return Inertia::render('Admin/Dashboard', [
             'stats' => $stats,
+            'ops_analytics' => $opsAnalytics,
             'modules' => $modules,
             'recentActivity' => $recentActivity,
             'guardStats' => $guardStats,
             'attendanceTrend' => $attendanceTrend,
-            'topGuards' => $topGuards,
             'zoneCoverage' => $zoneCoverage,
             'coverageSummary' => $coverageSummary,
             'kpis' => $kpis,
             'paymentsSummary' => $paymentsSummary,
+            'recognizedRevenueYtd' => round($recognizedRevenueYtd, 2),
+            'systemHealth' => $systemHealth,
+            'approvalsPending' => $approvalsPending,
+            'approvalsDetail' => $approvalsDetail,
+            'incidentsOverview' => $incidentsOverview,
+            'recentQrScans' => $recentQrScans,
             'auth' => [
             'user' => [
                 'name' => auth()->user()->name,
                 'roles' => auth()->user()->roles ?? ['admin'], // Ensure roles array exists
                 'permissions' => auth()->user()->permissions ?? [], // Ensure permissions exist
                     ]
-            ]
+            ],
+            // financeOverview removed; merged into kpis.finance
         ]);
     }
 
@@ -221,7 +443,7 @@ class DashboardController extends Controller
 
         // Recent Check-ins
         $recentCheckIns = Attendance::whereDate('created_at', today())
-            ->with('guard')
+            ->with('guardRelation')
             ->latest()
             ->take(5)
             ->get();
@@ -230,7 +452,7 @@ class DashboardController extends Controller
             $activities[] = [
                 'id' => 'check-in-' . $attendance->id,
                 'type' => 'check_in',
-                'message' => "{$attendance->guard->name} checked in",
+                'message' => "{$attendance->guardRelation->name} checked in",
                 'time' => $attendance->created_at->diffForHumans(),
                 'icon' => 'LogIn',
                 'color' => 'green',
@@ -290,5 +512,38 @@ class DashboardController extends Controller
             ];
         }
         return $series;
+    }
+
+    /**
+     * Get recent QR scans for Control Room tab
+     */
+    private function getRecentQrScans(): array
+    {
+        try {
+            return ScanTag::with(['checkpointScan.supervisor'])
+                ->orderBy('created_at', 'desc')
+                ->limit(10)
+                ->get()
+                ->map(function ($tag) {
+                    $tags = $tag->tags ?? [];
+                    return [
+                        'id' => $tag->id,
+                        'supervisor_name' => $tags['supervisor_name']
+                            ?? $tag->checkpointScan?->supervisor?->name
+                            ?? 'Unknown',
+                        'site_name' => $tags['site_name'] ?? 'Unknown',
+                        'client_name' => $tags['client_name'] ?? '',
+                        'checkpoint_name' => $tags['checkpoint_name'] ?? '',
+                        'scanned_at' => $tags['scanned_at'] ?? $tag->created_at?->toIso8601String(),
+                        'location_quality' => $tags['location_quality'] ?? 'unknown',
+                        'location_verified' => $tags['location_verified'] ?? false,
+                        'gps_distance' => $tags['gps_distance_m'] ?? null,
+                    ];
+                })
+                ->toArray();
+        } catch (\Throwable $e) {
+            Log::warning('Failed to load recent QR scans: ' . $e->getMessage());
+            return [];
+        }
     }
 }

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\ControlRoom;
 
 use App\Http\Controllers\Controller;
 use App\Models\Incident;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -11,7 +12,7 @@ class IncidentController extends Controller
 {
     public function index()
     {
-        $incidents = Incident::with(['reporter', 'assignedTo', 'client', 'clientSite'])
+        $incidents = Incident::with(['reporter', 'assignedTo', 'guardRelation', 'client', 'clientSite'])
             ->latest()
             ->paginate(20);
 
@@ -22,7 +23,8 @@ class IncidentController extends Controller
 
     public function create()
     {
-        return Inertia::render('ControlRoom/Incidents/Create');
+        // Deprecated: redirect to index with modal trigger
+        return redirect()->route('control-room.incidents.index', ['show_add' => 1]);
     }
 
     public function store(Request $request)
@@ -35,7 +37,18 @@ class IncidentController extends Controller
             'location' => 'required|string|max:255',
             'client_id' => 'nullable|exists:clients,id',
             'client_site_id' => 'nullable|exists:client_sites,id',
+            'guard_id' => 'nullable|exists:guards,id',
+            'flag_guard' => 'sometimes|boolean',
+            'flag_reason' => 'required_if:flag_guard,1|nullable|string|max:255',
+            'flag_details' => 'nullable|string',
         ]);
+
+        if (($validated['client_id'] ?? null) === null && ($validated['client_site_id'] ?? null)) {
+            $site = \App\Models\ClientSite::find($validated['client_site_id']);
+            if ($site) {
+                $validated['client_id'] = $site->client_id;
+            }
+        }
 
         $incident = Incident::create([
             ...$validated,
@@ -44,21 +57,57 @@ class IncidentController extends Controller
             'escalation_level' => 0,
         ]);
 
+        if ($request->boolean('flag_guard') && ($validated['guard_id'] ?? null)) {
+            \App\Models\Flag::create([
+                'flaggable_type' => \App\Models\Guards\Guard::class,
+                'flaggable_id' => $validated['guard_id'],
+                'reason' => $request->input('flag_reason') ?? 'Incident involvement',
+                'details' => $request->input('flag_details') ?? ('Guard was linked to incident ID: ' . $incident->id),
+                'reported_by' => auth()->id(),
+                'status' => 'pending_review',
+                'site_id' => $incident->client_site_id,
+            ]);
+        }
+
         return redirect()->route('control-room.incidents.show', $incident)
-            ->with('success', 'Incident created successfully.');
+            ->withSuccess('Incident created successfully.');
     }
 
     public function show(Incident $incident)
     {
-        $incident->load(['reporter', 'assignedTo', 'client', 'clientSite', 'comments.user']);
+        $incident->load(['reporter', 'assignedTo', 'guardRelation', 'client', 'clientSite', 'comments.user', 'resolvedBy']);
 
         return Inertia::render('ControlRoom/Incidents/Show', [
             'incident' => $incident,
         ]);
     }
 
+    public function print(Request $request, Incident $incident)
+    {
+        $incident->load(['reporter', 'assignedTo', 'guardRelation', 'client', 'clientSite', 'comments.user', 'resolvedBy']);
+
+        return Inertia::render('ControlRoom/Incidents/Print', [
+            'incident' => $incident,
+        ]);
+    }
+
+    public function pdf(Request $request, Incident $incident)
+    {
+        $incident->load(['reporter', 'assignedTo', 'guardRelation', 'client', 'clientSite', 'comments.user', 'resolvedBy']);
+
+        $file = sprintf('Incident-%s.pdf', $incident->id);
+        $pdf = Pdf::loadView('pdf.incident', [
+            'incident' => $incident,
+            'appName' => config('app.name'),
+        ])->setPaper('a4', 'portrait');
+
+        return $pdf->download($file);
+    }
+
     public function edit(Incident $incident)
     {
+        $incident->load(['client', 'clientSite']);
+
         return Inertia::render('ControlRoom/Incidents/Edit', [
             'incident' => $incident,
         ]);
@@ -72,15 +121,22 @@ class IncidentController extends Controller
             'severity' => 'required|in:low,medium,high,critical',
             'description' => 'required|string',
             'location' => 'required|string|max:255',
-            'status' => 'required|in:open,in_progress,resolved,closed',
+            'status' => 'required|in:open,in_progress,escalated,resolved,closed',
             'client_id' => 'nullable|exists:clients,id',
             'client_site_id' => 'nullable|exists:client_sites,id',
         ]);
 
+        if (($validated['client_id'] ?? null) === null && ($validated['client_site_id'] ?? null)) {
+            $site = \App\Models\ClientSite::find($validated['client_site_id']);
+            if ($site) {
+                $validated['client_id'] = $site->client_id;
+            }
+        }
+
         $incident->update($validated);
 
         return redirect()->route('control-room.incidents.show', $incident)
-            ->with('success', 'Incident updated successfully.');
+            ->withSuccess('Incident updated successfully.');
     }
 
     public function destroy(Incident $incident)
@@ -88,7 +144,7 @@ class IncidentController extends Controller
         $incident->delete();
 
         return redirect()->route('control-room.incidents.index')
-            ->with('success', 'Incident deleted successfully.');
+            ->withSuccess('Incident deleted successfully.');
     }
 
     public function escalate(Request $request, Incident $incident)
@@ -98,7 +154,7 @@ class IncidentController extends Controller
             'status' => 'escalated',
         ]);
 
-        return back()->with('success', 'Incident escalated successfully.');
+        return back()->withSuccess('Incident escalated successfully.');
     }
 
     public function resolve(Request $request, Incident $incident)
@@ -109,7 +165,7 @@ class IncidentController extends Controller
             'resolved_by' => auth()->id(),
         ]);
 
-        return back()->with('success', 'Incident resolved successfully.');
+        return back()->withSuccess('Incident resolved successfully.');
     }
 
     public function assign(Request $request, Incident $incident)
@@ -123,6 +179,6 @@ class IncidentController extends Controller
             'status' => 'in_progress',
         ]);
 
-        return back()->with('success', 'Incident assigned successfully.');
+        return back()->withSuccess('Incident assigned successfully.');
     }
 }

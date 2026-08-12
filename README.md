@@ -1,11 +1,73 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# ControlRoom2 - Security Management System
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+## Permissions System
+
+### Guard Management
+- `view-guards`: View list of guards and their details
+- `create-guards`: Create new guard profiles
+- `edit-guards`: Edit existing guard information
+- `delete-guards`: Remove guards from the system
+- `assign-supervisor`: Assign or change guard supervisors
+- `view-guard-documents`: Access guard documentation
+- `manage-guard-documents`: Upload and manage guard documents
+
+### Client Management
+- `view-clients`: View client information
+- `create-clients`: Add new clients
+- `edit-clients`: Modify client details
+- `delete-clients`: Remove clients from system
+- `view-client-payments`: View client payment history
+- `manage-client-payments`: Process and manage client payments
+- `view-client-sites`: View client site information
+- `manage-client-sites`: Add/edit client site details
+
+### Camera System
+- `view-cameras`: View camera feeds and status
+- `manage-cameras`: Configure camera settings
+- `view-recordings`: Access camera recordings
+- `manage-recordings`: Download/delete camera recordings
+- `view-alerts`: View camera alerts
+- `manage-alerts`: Configure and respond to camera alerts
+
+### Incident Management
+- `view-incidents`: View incident reports
+- `create-incidents`: Create new incident reports
+- `edit-incidents`: Update incident information
+- `delete-incidents`: Remove incident reports
+- `comment-on-incidents`: Add comments to incidents
+- `view-incident-comments`: View incident comments
+
+### Ticket System
+- `view-tickets`: View support tickets
+- `create-tickets`: Create new support tickets
+- `edit-tickets`: Update ticket information
+- `delete-tickets`: Remove tickets
+- `comment-on-tickets`: Add comments to tickets
+- `view-ticket-comments`: View ticket comments
+
+### Zone Management
+- `view-zones`: View security zones
+- `create-zones`: Create new security zones
+- `edit-zones`: Modify zone details
+- `delete-zones`: Remove zones
+- `assign-zone-commander`: Assign zone commanders
+
+### User Management
+- `view-users`: View system users
+- `create-users`: Create new user accounts
+- `edit-users`: Modify user information
+- `delete-users`: Remove user accounts
+- `manage-roles`: Assign and manage user roles
+
+### Module Management
+- `view-modules`: View system modules
+- `manage-modules`: Enable/disable system modules
+
+### Communication
+- `view-messages`: View system messages
+- `send-messages`: Send messages to users
+- `view-conversations`: Access message history
+- `emergency-alert`: Send emergency alerts
 
 ## About Laravel
 

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Head } from '@inertiajs/react';
-import ZoneCommanderLayout from '@/Layouts/ZoneCommanderLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import { Input } from '@/Components/ui/input';
@@ -16,7 +16,7 @@ interface Site {
   status: 'active' | 'inactive' | 'maintenance';
   guard_count: number;
   attendance_today: number;
-  last_patrol: string;
+  last_patrol: string | null;
   security_level: 'low' | 'medium' | 'high' | 'critical';
   coordinates: {
     lat: number;
@@ -47,20 +47,20 @@ export default function Sites({ sites = [] }: SitesProps) {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'active': return 'bg-green-100 text-green-800';
-      case 'inactive': return 'bg-gray-100 text-gray-800';
-      case 'maintenance': return 'bg-yellow-100 text-yellow-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'active': return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200';
+      case 'inactive': return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200';
+      case 'maintenance': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200';
+      default: return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200';
     }
   };
 
   const getSecurityColor = (level: string) => {
     switch (level) {
-      case 'low': return 'bg-blue-100 text-blue-800';
-      case 'medium': return 'bg-yellow-100 text-yellow-800';
-      case 'high': return 'bg-orange-100 text-orange-800';
-      case 'critical': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'low': return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200';
+      case 'medium': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200';
+      case 'high': return 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-200';
+      case 'critical': return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200';
+      default: return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200';
     }
   };
 
@@ -70,21 +70,21 @@ export default function Sites({ sites = [] }: SitesProps) {
   const presentGuards = sites.reduce((sum, site) => sum + site.attendance_today, 0);
 
   return (
-    <ZoneCommanderLayout title="Sites">
+    <AuthenticatedLayout header="Sites">
       <Head title="Sites Management" />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+      <div className="w-full min-h-screen p-3 sm:p-4 lg:p-6 space-y-4 sm:space-y-6">
         {/* Overview Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <Card className="hover:shadow-lg transition-shadow duration-300">
             <CardContent className="p-6">
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                  <IconMapper name="MapPin" className="w-6 h-6 text-blue-600" />
+                <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
+                  <IconMapper name="MapPin" className="w-6 h-6 text-blue-600 dark:text-blue-200" />
                 </div>
                 <div>
-                  <p className="text-sm text-gray-600">Total Sites</p>
-                  <p className="text-2xl font-bold text-gray-900">{totalSites}</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-300">Total Sites</p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{totalSites}</p>
                 </div>
               </div>
             </CardContent>
@@ -93,12 +93,12 @@ export default function Sites({ sites = [] }: SitesProps) {
           <Card className="hover:shadow-lg transition-shadow duration-300">
             <CardContent className="p-6">
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                  <IconMapper name="CheckCircle" className="w-6 h-6 text-green-600" />
+                <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
+                  <IconMapper name="CheckCircle" className="w-6 h-6 text-green-600 dark:text-green-200" />
                 </div>
                 <div>
-                  <p className="text-sm text-gray-600">Active Sites</p>
-                  <p className="text-2xl font-bold text-gray-900">{activeSites}</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-300">Active Sites</p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{activeSites}</p>
                 </div>
               </div>
             </CardContent>
@@ -107,12 +107,12 @@ export default function Sites({ sites = [] }: SitesProps) {
           <Card className="hover:shadow-lg transition-shadow duration-300">
             <CardContent className="p-6">
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                  <IconMapper name="Shield" className="w-6 h-6 text-purple-600" />
+                <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center">
+                  <IconMapper name="Shield" className="w-6 h-6 text-purple-600 dark:text-purple-200" />
                 </div>
                 <div>
-                  <p className="text-sm text-gray-600">Total Guards</p>
-                  <p className="text-2xl font-bold text-gray-900">{totalGuards}</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-300">Total Guards</p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{totalGuards}</p>
                 </div>
               </div>
             </CardContent>
@@ -121,12 +121,12 @@ export default function Sites({ sites = [] }: SitesProps) {
           <Card className="hover:shadow-lg transition-shadow duration-300">
             <CardContent className="p-6">
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
-                  <IconMapper name="Users" className="w-6 h-6 text-orange-600" />
+                <div className="w-12 h-12 bg-orange-100 dark:bg-orange-900/30 rounded-lg flex items-center justify-center">
+                  <IconMapper name="Users" className="w-6 h-6 text-orange-600 dark:text-orange-200" />
                 </div>
                 <div>
-                  <p className="text-sm text-gray-600">Present Today</p>
-                  <p className="text-2xl font-bold text-gray-900">{presentGuards}</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-300">Present Today</p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{presentGuards}</p>
                 </div>
               </div>
             </CardContent>
@@ -142,7 +142,7 @@ export default function Sites({ sites = [] }: SitesProps) {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-col lg:flex-row gap-4 mb-6">
+            <div className="flex flex-col gap-4 mb-6">
               <div className="flex-1">
                 <Input
                   placeholder="Search sites by name, client, or address..."
@@ -151,7 +151,7 @@ export default function Sites({ sites = [] }: SitesProps) {
                   className="w-full"
                 />
               </div>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <Button
                   variant={statusFilter === 'all' ? 'default' : 'outline'}
                   onClick={() => setStatusFilter('all')}
@@ -181,7 +181,7 @@ export default function Sites({ sites = [] }: SitesProps) {
                   Maintenance
                 </Button>
               </div>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <Button
                   variant={securityFilter === 'all' ? 'default' : 'outline'}
                   onClick={() => setSecurityFilter('all')}
@@ -211,10 +211,10 @@ export default function Sites({ sites = [] }: SitesProps) {
               {filteredSites.map((site) => (
                 <Card key={site.id} className="hover:shadow-lg transition-shadow duration-300">
                   <CardContent className="p-6">
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
+                    <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
+                      <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-3 mb-2">
-                          <h3 className="text-lg font-semibold text-gray-900">{site.name}</h3>
+                          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{site.name}</h3>
                           <Badge className={getStatusColor(site.status)}>
                             {site.status.toUpperCase()}
                           </Badge>
@@ -223,7 +223,7 @@ export default function Sites({ sites = [] }: SitesProps) {
                           </Badge>
                         </div>
                         
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm text-gray-600 mb-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm text-gray-600 dark:text-gray-300 mb-4">
                           <div className="flex items-center gap-2">
                             <IconMapper name="Building" className="w-4 h-4" />
                             <span>{site.client_name}</span>
@@ -243,19 +243,19 @@ export default function Sites({ sites = [] }: SitesProps) {
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                          <div className="bg-gray-50 rounded-lg p-3">
-                            <p className="text-xs text-gray-500">Last Patrol</p>
-                            <p className="text-sm font-medium">
-                              {format(new Date(site.last_patrol), 'MMM d, HH:mm')}
+                          <div className="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-3">
+                            <p className="text-xs text-gray-500 dark:text-gray-400">Last Patrol</p>
+                            <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                              {site.last_patrol ? format(new Date(site.last_patrol), 'MMM d, HH:mm') : '—'}
                             </p>
                           </div>
-                          <div className="bg-gray-50 rounded-lg p-3">
-                            <p className="text-xs text-gray-500">Contact Person</p>
-                            <p className="text-sm font-medium">{site.contact_person}</p>
+                          <div className="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-3">
+                            <p className="text-xs text-gray-500 dark:text-gray-400">Contact Person</p>
+                            <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{site.contact_person || '—'}</p>
                           </div>
-                          <div className="bg-gray-50 rounded-lg p-3">
-                            <p className="text-xs text-gray-500">Contact Phone</p>
-                            <p className="text-sm font-medium">{site.contact_phone}</p>
+                          <div className="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-3">
+                            <p className="text-xs text-gray-500 dark:text-gray-400">Contact Phone</p>
+                            <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{site.contact_phone || '—'}</p>
                           </div>
                         </div>
 
@@ -268,20 +268,20 @@ export default function Sites({ sites = [] }: SitesProps) {
                         </div>
                       </div>
 
-                      <div className="flex flex-col gap-2 ml-4">
-                        <Button variant="outline" size="sm" className="hover:bg-blue-50">
+                      <div className="flex flex-col gap-2 sm:ml-4 w-full sm:w-auto">
+                        <Button variant="outline" size="sm" className="hover:bg-blue-50 dark:hover:bg-gray-900 w-full sm:w-auto">
                           <IconMapper name="Eye" className="w-4 h-4 mr-2" />
                           View Details
                         </Button>
-                        <Button variant="outline" size="sm" className="hover:bg-green-50">
+                        <Button variant="outline" size="sm" className="hover:bg-green-50 dark:hover:bg-gray-900 w-full sm:w-auto">
                           <IconMapper name="Map" className="w-4 h-4 mr-2" />
                           View Map
                         </Button>
-                        <Button variant="outline" size="sm" className="hover:bg-purple-50">
+                        <Button variant="outline" size="sm" className="hover:bg-purple-50 dark:hover:bg-gray-900 w-full sm:w-auto">
                           <IconMapper name="ScanLine" className="w-4 h-4 mr-2" />
                           Start Patrol
                         </Button>
-                        <Button variant="outline" size="sm" className="hover:bg-orange-50">
+                        <Button variant="outline" size="sm" className="hover:bg-orange-50 dark:hover:bg-gray-900 w-full sm:w-auto">
                           <IconMapper name="FileText" className="w-4 h-4 mr-2" />
                           Reports
                         </Button>
@@ -295,14 +295,14 @@ export default function Sites({ sites = [] }: SitesProps) {
             {filteredSites.length === 0 && (
               <div className="text-center py-12">
                 <IconMapper name="MapPin" className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No sites found</h3>
-                <p className="text-gray-500">Try adjusting your search or filter criteria.</p>
+                <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">No sites found</h3>
+                <p className="text-gray-500 dark:text-gray-400">Try adjusting your search or filter criteria.</p>
               </div>
             )}
           </CardContent>
         </Card>
       </div>
-    </ZoneCommanderLayout>
+    </AuthenticatedLayout>
   );
 }
 

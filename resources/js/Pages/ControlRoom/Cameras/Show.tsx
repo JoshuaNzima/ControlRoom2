@@ -1,7 +1,7 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useRef, useEffect } from 'react';
 import { Head } from '@inertiajs/react';
 import { router } from '@inertiajs/react';
-import AppLayout from '@/Layouts/AppLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import { Badge } from '@/Components/ui/badge';
@@ -13,28 +13,31 @@ import {
 	TableHeader,
 	TableRow,
 } from '@/Components/ui/table';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/Components/ui/tabs';
 import { Alert, AlertDescription, AlertTitle } from '@/Components/ui/alert';
+import { ExternalLink } from 'lucide-react';
+import { useDetachedCamera } from '@/Hooks/useDetachedCamera';
+
+declare const route: any;
 
 type Camera = any;
 
 const CameraShow: React.FC<{ camera: Camera; recentRecordings?: any[]; activeAlerts?: any[] }> = ({ camera, recentRecordings = [], activeAlerts = [] }) => {
-	const [isRecording, setIsRecording] = useState(false);
 	const videoRef = useRef<HTMLVideoElement | null>(null);
+	const { detachCamera, isDetached } = useDetachedCamera();
+	const isPoppedOut = isDetached(camera?.id);
 
 	const statusColors: Record<string, string> = {
-		online: 'bg-green-100 text-green-800',
-		offline: 'bg-red-100 text-red-800',
-		maintenance: 'bg-yellow-100 text-yellow-800',
-		disabled: 'bg-gray-100 text-gray-800',
+		online: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200',
+		offline: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200',
+		maintenance: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200',
+		disabled: 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-100',
 	};
 
 	useEffect(() => {
 		if (camera?.status === 'online' && videoRef.current) {
 			const video = videoRef.current as HTMLVideoElement;
 			// Hls may be undefined in SSR environment; guard
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any
-			const Hls: any = (window as any).Hls;
+			const Hls = (window as any).Hls as any;
 			if (Hls && Hls.isSupported()) {
 				const hls = new Hls();
 				hls.loadSource(camera.stream_url);
@@ -45,12 +48,12 @@ const CameraShow: React.FC<{ camera: Camera; recentRecordings?: any[]; activeAle
 		}
 	}, [camera?.status, camera?.stream_url]);
 
-	const handleRecordingToggle = () => {
-		// pass empty data object then options to satisfy Inertia router typings
-		router.post(route('control-room.cameras.recordings.toggle', camera.id), {}, {
-			onSuccess: () => {
-				setIsRecording(!isRecording);
-			},
+	const handleDetach = () => {
+		detachCamera({
+			id: camera.id,
+			name: camera.name,
+			stream_url: camera.stream_url,
+			status: camera.status ?? undefined,
 		});
 	};
 
@@ -59,19 +62,19 @@ const CameraShow: React.FC<{ camera: Camera; recentRecordings?: any[]; activeAle
 	};
 
 	const handleAcknowledgeAlert = (alertId: any) => {
-		router.post(route('control-room.cameras.alerts.acknowledge', alertId));
+		router.post(route('control-room.cameras.alerts.acknowledge', { camera: camera.id, alert: alertId }));
 	};
 
 	return (
-		<AppLayout>
+		<AuthenticatedLayout header={`Camera: ${camera?.name || ''}`}>
 			<Head title={`Camera: ${camera?.name || ''}`} />
 
 			<div className="py-6">
 				<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 					<div className="flex justify-between items-center mb-6">
 						<div>
-							<h2 className="text-2xl font-semibold text-gray-900">{camera?.name}</h2>
-							<p className="text-gray-500">{camera?.site?.name}</p>
+							<h2 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">{camera?.name}</h2>
+							<p className="text-gray-500 dark:text-gray-400">{camera?.site?.name}</p>
 						</div>
 						<Badge className={statusColors[camera?.status || '']}>{camera?.status}</Badge>
 					</div>
@@ -80,20 +83,25 @@ const CameraShow: React.FC<{ camera: Camera; recentRecordings?: any[]; activeAle
 						<div className="lg:col-span-2">
 							<Card>
 								<CardContent className="p-0">
-									<div className="aspect-video bg-gray-100 rounded-lg overflow-hidden">
+									<div className="aspect-video bg-gray-100 dark:bg-gray-900/40 rounded-lg overflow-hidden">
 										{camera?.status === 'online' ? (
 											<video ref={videoRef} className="w-full h-full" controls playsInline />
 										) : (
-											<div className="w-full h-full flex items-center justify-center text-gray-400">Camera Offline</div>
+											<div className="w-full h-full flex items-center justify-center text-gray-400 dark:text-gray-500">Camera Offline</div>
 										)}
 									</div>
 									{camera?.status === 'online' && (
 										<div className="p-4 flex justify-between items-center">
 											<div className="space-x-2">
-												<Button onClick={handleRecordingToggle} variant={isRecording ? 'destructive' : 'default'}>
-													{isRecording ? 'Stop Recording' : 'Start Recording'}
-												</Button>
 												<Button variant="outline">Snapshot</Button>
+												<Button
+													variant={isPoppedOut ? 'default' : 'outline'}
+													onClick={handleDetach}
+													title={isPoppedOut ? 'Already popped out' : 'Pop out to new window'}
+												>
+													<ExternalLink className="w-4 h-4 mr-1" />
+													{isPoppedOut ? 'Popped Out' : 'Pop Out'}
+												</Button>
 											</div>
 											<div className="flex items-center space-x-2">
 												<Badge variant="outline">{camera?.type?.toUpperCase()}</Badge>
@@ -108,6 +116,32 @@ const CameraShow: React.FC<{ camera: Camera; recentRecordings?: any[]; activeAle
 						</div>
 
 						<div className="lg:col-span-1 space-y-6">
+							{camera?.nvr_device && (
+								<Card>
+									<CardHeader>
+										<CardTitle>NVR Device</CardTitle>
+									</CardHeader>
+									<CardContent className="space-y-3">
+										<div className="flex items-center gap-2">
+											<span className="text-sm text-gray-500 dark:text-gray-400">Device:</span>
+											<span className="font-medium">{camera.nvr_device.name}</span>
+										</div>
+										<div className="flex items-center gap-2">
+											<span className="text-sm text-gray-500 dark:text-gray-400">Channel:</span>
+											<span className="font-mono">{camera.nvr_channel}</span>
+										</div>
+										<Button
+											variant="outline"
+											size="sm"
+											className="w-full"
+											onClick={() => router.visit(route('control-room.cameras.nvrs.show', camera.nvr_device.id))}
+										>
+											View NVR
+										</Button>
+									</CardContent>
+								</Card>
+							)}
+
 							{Array.isArray(activeAlerts) && activeAlerts.length > 0 && (
 								<Card>
 									<CardHeader>
@@ -164,8 +198,9 @@ const CameraShow: React.FC<{ camera: Camera; recentRecordings?: any[]; activeAle
 					</div>
 				</div>
 			</div>
-		</AppLayout>
+		</AuthenticatedLayout>
 	);
 };
 
 export default CameraShow;
+

@@ -8,12 +8,65 @@ use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use App\Models\Guards\Checkpoint;
 use App\Models\Guards\CheckpointScan;
+use App\Jobs\TagScanJob;
 
 class PatrolController extends Controller
 {
 	public function index()
 	{
-		return Inertia::render('ZoneCommander/Patrols');
+		$user = Auth::user();
+		if (!$user->zone_id) {
+			return redirect()->route('dashboard')->with('error', 'No zone assigned to your account. Please contact an administrator.');
+		}
+
+		$scans = CheckpointScan::query()
+			->with([
+				'supervisor:id,name',
+				'checkpoint:id,client_site_id,name',
+				'checkpoint.clientSite:id,name,client_id,zone_id',
+				'checkpoint.clientSite.client:id,name',
+			])
+			->whereHas('checkpoint.clientSite', fn ($q) => $q->where('zone_id', $user->zone_id))
+			->orderByDesc('scanned_at')
+			->limit(50)
+			->get();
+
+		$patrols = $scans->map(function ($scan) {
+			$checkpoint = $scan->checkpoint;
+			$site = $checkpoint?->clientSite;
+			$clientName = (string) (optional($site?->client)->name ?? '');
+			$siteName = (string) (optional($site)->name ?? '');
+			$checkpointName = (string) (optional($checkpoint)->name ?? 'Checkpoint');
+			$lat = $scan->latitude;
+			$lng = $scan->longitude;
+			$location = (bool) $scan->location_verified
+				? 'Verified'
+				: 'Unverified';
+			if ($lat !== null && $lng !== null) {
+				$location .= " ({$lat}, {$lng})";
+			}
+
+			return [
+				'id' => $scan->id,
+				'guard_name' => (string) (optional($scan->supervisor)->name ?? 'Unknown'),
+				'site_name' => trim($clientName ? ($clientName . ' • ' . $siteName) : $siteName),
+				'checkpoint_name' => $checkpointName,
+				'status' => 'completed',
+				'scan_time' => optional($scan->scanned_at)->toIso8601String(),
+				'location' => $location,
+				'notes' => (string) ($scan->notes ?? ''),
+				'photos' => [],
+			];
+		});
+
+		return Inertia::render('ZoneCommander/Patrols', [
+			'patrols' => $patrols,
+		]);
+	}
+
+	public function startPatrol()
+	{
+		return redirect()->route('zone.patrols.index');
 	}
 
 	public function scan(Request $request)
@@ -41,7 +94,7 @@ class PatrolController extends Controller
 			$locationVerified = $checkpoint->verifyLocation($validated['latitude'], $validated['longitude']);
 		}
 
-		CheckpointScan::create([
+		$scan = CheckpointScan::create([
 			'checkpoint_id' => $checkpoint->id,
 			'supervisor_id' => $user->id, // zone commander acting as supervisor for patrols
 			'scanned_at' => now(),
@@ -51,6 +104,9 @@ class PatrolController extends Controller
 			'location_verified' => $locationVerified,
 			'notes' => $validated['notes'] ?? null,
 		]);
+
+		// Tag the scan immediately (synchronous) to ensure it appears in control-room dashboard
+		TagScanJob::dispatchSync($scan->id);
 
 		return back()->with('success', 'Scan recorded');
 	}

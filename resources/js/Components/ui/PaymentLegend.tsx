@@ -20,6 +20,13 @@ export function PaymentLegend() {
         <span>Unpaid</span>
       </div>
       <div className="flex items-center gap-2">
+        <div className="w-7 h-7 rounded-full bg-blue-500 text-white flex items-center justify-center">P</div>
+        <span>Prepaid (future month)</span>
+      </div>
+      <div className="w-full text-xs text-gray-500 mt-2">
+        <strong>Revenue rule:</strong> Prepayments are recorded as "Prepaid" and do not count toward current month revenue until the month is due (they are recognized when the month arrives).
+      </div>
+      <div className="flex items-center gap-2">
         <div className="flex items-center gap-1">
           <div className="px-3 py-1 bg-red-50/80 text-red-900 font-semibold rounded border border-red-200">
             <span>Example Client</span>

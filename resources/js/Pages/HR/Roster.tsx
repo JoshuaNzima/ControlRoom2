@@ -1,0 +1,1091 @@
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { Head, useForm, usePage } from '@inertiajs/react';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
+import Modal from '@/Components/Modal';
+import { Card } from '@/Components/ui/card';
+import { Button } from '@/Components/ui/button';
+import { Badge } from '@/Components/ui/badge';
+import IconMapper from '@/Components/IconMapper';
+
+type Employee = { id: number; name: string; employee_id?: string; type: string; type_label: string; model: string };
+type LeaveType = 'off_day' | 'sick_leave' | 'annual_leave' | 'unpaid_leave' | 'maternity_leave' | 'paternity_leave' | 'bereavement_leave';
+type LeaveStatus = 'pending' | 'approved' | 'rejected';
+type EmployeeLeave = {
+  id?: number;
+  employee_type: string;
+  employee_id: number;
+  start_date: string;
+  end_date?: string | null;
+  type: LeaveType;
+  reason?: string | null;
+  status: LeaveStatus;
+  notes?: string | null;
+};
+type Holiday = { id?: number; name: string; date: string; is_recurring?: boolean; type?: 'company' | 'public' };
+type EventItem = {
+  entity: 'holiday' | 'employee_leave' | 'off_day';
+  entity_id: number;
+  date: string; // YYYY-MM-DD
+  title: string;
+  type: string;
+  color: string;
+  meta?: any;
+};
+type AttendanceWarning = {
+  date: string;
+  offCount: number;
+  totalEmployees: number;
+  ratio: number;
+  hasHoliday: boolean;
+  severity: 'medium' | 'high';
+};
+
+function formatYmd(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${dd}`;
+}
+
+function startOfMonth(d: Date) {
+  const nd = new Date(d);
+  nd.setDate(1);
+  nd.setHours(0, 0, 0, 0);
+  return nd;
+}
+function endOfMonth(d: Date) {
+  const nd = new Date(d);
+  nd.setMonth(nd.getMonth() + 1);
+  nd.setDate(0);
+  nd.setHours(23, 59, 59, 999);
+  return nd;
+}
+function getCalendarRange(d: Date) {
+  const start = startOfMonth(d);
+  const end = endOfMonth(d);
+  const startDay = start.getDay(); // 0=Sun..6=Sat
+  const gridStart = new Date(start);
+  gridStart.setDate(start.getDate() - startDay); // start from Sunday
+  const endDay = end.getDay();
+  const gridEnd = new Date(end);
+  gridEnd.setDate(end.getDate() + (6 - endDay));
+  // Ensure 6 weeks (42 days)
+  const days = Math.round((gridEnd.getTime() - gridStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+  if (days < 42) gridEnd.setDate(gridEnd.getDate() + (42 - days));
+  return { gridStart, gridEnd };
+}
+
+export default function Roster() {
+  const { auth, employees = [], initial_month } = (usePage().props as any);
+  const [currentMonth, setCurrentMonth] = useState<Date>(() => {
+    if (initial_month) {
+      const d = new Date(initial_month);
+      d.setDate(1);
+      return d;
+    }
+    const d = new Date();
+    d.setDate(1);
+    return d;
+  });
+  const [events, setEvents] = useState<EventItem[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [addHolidayOpen, setAddHolidayOpen] = useState(false);
+  const [addLeaveOpen, setAddLeaveOpen] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState<EventItem | null>(null);
+  const [editHolidayOpen, setEditHolidayOpen] = useState(false);
+  const [editLeaveOpen, setEditLeaveOpen] = useState(false);
+
+  const { gridStart, gridEnd } = useMemo(() => getCalendarRange(currentMonth), [currentMonth]);
+
+  const refreshEvents = useCallback(async () => {
+    setLoading(true);
+    try {
+      // Parallel fetch both endpoints for better performance
+      const [holidaysRes, leavesRes] = await Promise.all([
+        fetch(route('hr.leaves.events', { start: formatYmd(gridStart), end: formatYmd(gridEnd) }), {
+          headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+        }),
+        fetch(route('hr.employee-leaves.events', { start: formatYmd(gridStart), end: formatYmd(gridEnd) }), {
+          headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+        }),
+      ]);
+
+      let allEvents: EventItem[] = [];
+
+      if (holidaysRes.ok) {
+        const holidaysJson = await holidaysRes.json();
+        // Filter only holidays from legacy endpoint
+        const holidays = (holidaysJson.events || []).filter((e: EventItem) => e.entity === 'holiday');
+        allEvents = [...allEvents, ...holidays];
+      }
+
+      if (leavesRes.ok) {
+        const leavesJson = await leavesRes.json();
+        const leaves = leavesJson.events || [];
+        allEvents = [...allEvents, ...leaves];
+      }
+
+      setEvents(allEvents);
+    } catch (error) {
+      console.error('Failed to fetch events:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [gridStart, gridEnd]);
+
+  useEffect(() => {
+    refreshEvents();
+  }, [refreshEvents]);
+
+  const days: Date[] = useMemo(() => {
+    const arr: Date[] = [];
+    const cur = new Date(gridStart);
+    while (cur <= gridEnd) {
+      arr.push(new Date(cur));
+      cur.setDate(cur.getDate() + 1);
+    }
+    return arr;
+  }, [gridStart, gridEnd]);
+
+  const monthLabel = currentMonth.toLocaleString(undefined, { month: 'long', year: 'numeric' });
+
+  // Memoize events by date for O(1) lookup instead of O(n) filter per day
+  const eventsByDate = useMemo(() => {
+    const map: Record<string, EventItem[]> = {};
+    for (const e of events) {
+      if (!map[e.date]) map[e.date] = [];
+      map[e.date].push(e);
+    }
+    return map;
+  }, [events]);
+
+  const getDayEvents = useCallback((date: Date): EventItem[] => {
+    const key = formatYmd(date);
+    return eventsByDate[key] || [];
+  }, [eventsByDate]);
+
+  const warningDays = useMemo<AttendanceWarning[]>(() => {
+    if (!Array.isArray(employees) || !employees.length || !events.length) return [];
+    const totalEmployees = employees.length;
+    const byDate: Record<string, { offCount: number; hasHoliday: boolean }> = {};
+
+    for (const e of events) {
+      if (!byDate[e.date]) {
+        byDate[e.date] = { offCount: 0, hasHoliday: false };
+      }
+      if (e.type === 'off_day' || e.type === 'employee_leave') {
+        byDate[e.date].offCount += 1;
+      }
+      if (e.type === 'holiday') {
+        byDate[e.date].hasHoliday = true;
+      }
+    }
+
+    const list: AttendanceWarning[] = [];
+    Object.entries(byDate).forEach(([date, info]) => {
+      if (!info.offCount) return;
+      const ratio = info.offCount / totalEmployees;
+      // Only flag days where a significant share of employees are off
+      const severity: AttendanceWarning['severity'] | null = ratio >= 0.5 ? 'high' : ratio >= 0.25 ? 'medium' : null;
+      if (!severity) return;
+      list.push({
+        date,
+        offCount: info.offCount,
+        totalEmployees,
+        ratio,
+        hasHoliday: info.hasHoliday,
+        severity,
+      });
+    });
+
+    list.sort((a, b) => {
+      if (b.ratio !== a.ratio) return b.ratio - a.ratio;
+      return a.date.localeCompare(b.date);
+    });
+
+    return list.slice(0, 6);
+  }, [events, employees]);
+
+  const openEvent = (e: EventItem) => {
+    setSelectedEvent(e);
+    if (e.type === 'holiday') {
+      setEditHolidayOpen(true);
+    } else if (e.entity === 'employee_leave' || e.type === 'off_day') {
+      setEditLeaveOpen(true);
+    }
+  };
+
+  // Stats calculations
+  const stats = useMemo(() => {
+    const totalEvents = events.length;
+    const holidays = events.filter(e => e.type === 'holiday').length;
+    const leaves = events.filter(e => e.type === 'off_day' || e.type === 'employee_leave').length;
+    const totalEmployees = Array.isArray(employees) ? employees.length : 0;
+    
+    return { totalEvents, holidays, leaves, totalEmployees };
+  }, [events, employees]);
+
+  // Animated Counter
+  const AnimatedCounter: React.FC<{ value: number; duration?: number }> = ({ value, duration = 1000 }) => {
+    const [count, setCount] = useState(0);
+    
+    useEffect(() => {
+      let startTime: number;
+      let animationFrame: number;
+      
+      const animate = (timestamp: number) => {
+        if (!startTime) startTime = timestamp;
+        const progress = Math.min((timestamp - startTime) / duration, 1);
+        setCount(Math.floor(progress * value));
+        
+        if (progress < 1) animationFrame = requestAnimationFrame(animate);
+      };
+      
+      animationFrame = requestAnimationFrame(animate);
+      return () => cancelAnimationFrame(animationFrame);
+    }, [value, duration]);
+    
+    return <span>{count.toLocaleString()}</span>;
+  };
+
+  return (
+    <AuthenticatedLayout header="Leave Management" user={auth?.user as any}>
+      <Head title="Leave Management" />
+      <div className="min-h-screen bg-red-50 dark:bg-gray-900">
+        {/* Hero Header */}
+        <div className="relative overflow-hidden bg-gradient-to-br from-red-800 via-red-700 to-rose-800 text-white">
+          <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg%20width%3D%2260%22%20height%3D%2260%22%20viewBox%3D%220%200%2060%2060%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%3E%3Cg%20fill%3D%22none%22%20fill-rule%3D%22evenodd%22%3E%3Cg%20fill%3D%22%23ffffff%22%20fill-opacity%3D%220.05%22%3E%3Cpath%20d%3D%22M36%2034v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6%2034v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6%204V0H4v4H0v2h4v4h2V6h4V4H6z%22/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] opacity-20" />
+          
+          <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-white/10 rounded-xl backdrop-blur-sm">
+                  <IconMapper name="Calendar" size={28} />
+                </div>
+                <div>
+                  <h1 className="text-2xl md:text-3xl font-bold">Roster & Calendar</h1>
+                  <p className="text-red-100 text-sm mt-1">Manage leave, holidays, and attendance</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setCurrentMonth((d) => new Date(d.getFullYear(), d.getMonth() - 1, 1))}
+                  className="border-white/20 text-white hover:bg-white/10"
+                >
+                  <IconMapper name="ChevronLeft" size={20} />
+                </Button>
+                <span className="text-lg font-semibold min-w-[140px] text-center">{monthLabel}</span>
+                <Button
+                  variant="outline"
+                  onClick={() => setCurrentMonth((d) => new Date(d.getFullYear(), d.getMonth() + 1, 1))}
+                  className="border-white/20 text-white hover:bg-white/10"
+                >
+                  <IconMapper name="ChevronRight" size={20} />
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+          {/* Stats Cards */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <Card className="p-5 border-l-4 border-l-red-500">
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-red-100 dark:bg-red-900/30 rounded-lg">
+                  <IconMapper name="Users" size={20} className="text-red-600 dark:text-red-400" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                    <AnimatedCounter value={stats.totalEmployees} />
+                  </p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Total Employees</p>
+                </div>
+              </div>
+            </Card>
+            <Card className="p-5 border-l-4 border-l-amber-500">
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
+                  <IconMapper name="CalendarX" size={20} className="text-amber-600 dark:text-amber-400" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                    <AnimatedCounter value={stats.leaves} />
+                  </p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Leaves</p>
+                </div>
+              </div>
+            </Card>
+            <Card className="p-5 border-l-4 border-l-red-600">
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-red-100 dark:bg-red-900/30 rounded-lg">
+                  <IconMapper name="Flag" size={20} className="text-red-600 dark:text-red-400" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                    <AnimatedCounter value={stats.holidays} />
+                  </p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Holidays</p>
+                </div>
+              </div>
+            </Card>
+            <Card className="p-5 border-l-4 border-l-blue-500">
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                  <IconMapper name="CalendarDays" size={20} className="text-blue-600 dark:text-blue-400" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                    <AnimatedCounter value={stats.totalEvents} />
+                  </p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Total Events</p>
+                </div>
+              </div>
+            </Card>
+          </div>
+
+          {/* Action Bar */}
+          <Card className="p-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex flex-wrap items-center gap-4 text-sm">
+                <div className="flex items-center gap-2"><span className="inline-block w-3 h-3 rounded-sm bg-red-600" /> Holiday</div>
+                <div className="flex items-center gap-2"><span className="inline-block w-3 h-3 rounded-sm bg-coin-700" /> Off Day</div>
+                <div className="flex items-center gap-2"><span className="inline-block w-3 h-3 rounded-sm bg-amber-500" /> Sick Leave</div>
+                <div className="flex items-center gap-2"><span className="inline-block w-3 h-3 rounded-sm bg-emerald-500" /> Annual Leave</div>
+                {loading && <div className="text-gray-500 dark:text-gray-400"><IconMapper name="Loader2" size={16} className="animate-spin mr-1" /> Loading...</div>}
+              </div>
+              <div className="flex gap-2">
+                <Button onClick={() => setAddLeaveOpen(true)}>
+                  <IconMapper name="Plus" size={16} className="mr-1" />
+                  Add Leave
+                </Button>
+                <Button variant="destructive" onClick={() => setAddHolidayOpen(true)}>
+                  <IconMapper name="Flag" size={16} className="mr-1" />
+                  Add Holiday
+                </Button>
+              </div>
+            </div>
+          </Card>
+
+          {/* Attendance Warnings */}
+          {warningDays.length > 0 && (
+            <Card className="border-amber-300 dark:border-amber-600 bg-amber-50 dark:bg-amber-900/20">
+              <div className="p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <IconMapper name="AlertTriangle" size={20} className="text-amber-600 dark:text-amber-400" />
+                  <h3 className="font-bold text-amber-900 dark:text-amber-100">Attendance Warnings</h3>
+                  <Badge variant="outline" className="border-amber-500 text-amber-700 dark:text-amber-300">
+                    {warningDays.length} days
+                  </Badge>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {warningDays.map((w) => {
+                    const d = new Date(w.date);
+                    const label = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+                    return (
+                      <div key={w.date} className="flex items-center justify-between p-3 bg-white dark:bg-gray-900 rounded-lg">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-gray-900 dark:text-gray-100">{label}</span>
+                            {w.hasHoliday && (
+                              <Badge className="bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300">
+                                Holiday
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="text-xs text-gray-600 dark:text-gray-400">
+                            {w.offCount} off out of {w.totalEmployees} ({Math.round(w.ratio * 100)}%)
+                          </div>
+                        </div>
+                        <Badge className={w.severity === 'high' 
+                          ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300' 
+                          : 'bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300'}>
+                          {w.severity === 'high' ? 'High Risk' : 'Medium'}
+                        </Badge>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </Card>
+          )}
+
+          {/* Calendar Grid */}
+          <Card className="overflow-hidden">
+            <div className="grid grid-cols-7 bg-gray-50 dark:bg-gray-900/50 border-b dark:border-gray-800">
+              {["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map((d) => (
+                <div key={d} className="text-xs sm:text-sm font-semibold text-gray-600 dark:text-gray-400 px-2 py-3 text-center">{d}</div>
+              ))}
+            </div>
+            <div className="grid grid-cols-7">
+              {days.map((d, idx) => {
+                const inMonth = d.getMonth() === currentMonth.getMonth();
+                const evs = getDayEvents(d);
+                const isWeekend = d.getDay() === 0 || d.getDay() === 6;
+                
+                return (
+                  <div
+                    key={d.toISOString()}
+                    className={`min-h-[100px] sm:min-h-[120px] border-b border-r dark:border-gray-800 p-2 ${
+                      inMonth 
+                        ? isWeekend ? 'bg-red-50/50 dark:bg-red-950/10' : 'bg-white dark:bg-gray-900' 
+                        : 'bg-gray-50/50 text-gray-400 dark:bg-gray-950 dark:text-gray-600'
+                    }`}
+                  >
+                    <div className={`text-sm font-medium mb-1 ${
+                      inMonth 
+                        ? isWeekend ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-gray-100' 
+                        : 'text-gray-400 dark:text-gray-600'
+                    }`}>{d.getDate()}</div>
+                    <div className="space-y-1">
+                      {evs.slice(0,3).map((e) => (
+                        <button
+                          key={`${e.entity}-${e.entity_id}-${e.date}`}
+                          type="button"
+                          onClick={() => openEvent(e)}
+                          className={`text-left w-full truncate text-[10px] sm:text-xs px-1.5 py-0.5 rounded text-white hover:opacity-90 transition-opacity ${
+                            e.color === 'red' ? 'bg-red-600' : 'bg-coin-700'
+                          }`}
+                        >
+                          {e.title}
+                        </button>
+                      ))}
+                      {evs.length > 3 && (
+                        <div className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 font-medium">
+                          +{evs.length - 3} more
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </Card>
+        </div>
+
+        <AddHolidayModal
+          open={addHolidayOpen}
+          onClose={() => setAddHolidayOpen(false)}
+          onSaved={() => {
+            setAddHolidayOpen(false);
+            refreshEvents();
+          }}
+        />
+
+        <AddLeaveModal
+          open={addLeaveOpen}
+          onClose={() => setAddLeaveOpen(false)}
+          onSaved={() => {
+            setAddLeaveOpen(false);
+            refreshEvents();
+          }}
+        />
+
+        <EditLeaveModal
+          open={editLeaveOpen}
+          onClose={() => {
+            setEditLeaveOpen(false);
+            setSelectedEvent(null);
+          }}
+          event={selectedEvent}
+          onSaved={() => {
+            setEditLeaveOpen(false);
+            setSelectedEvent(null);
+            refreshEvents();
+          }}
+        />
+      </div>
+    </AuthenticatedLayout>
+  );
+}
+
+function AddHolidayModal({ open, onClose, onSaved }: { open: boolean; onClose: () => void; onSaved: () => void }) {
+  const { data, setData, post, processing, errors, reset } = useForm<Holiday>({
+    name: '',
+    date: '',
+    is_recurring: false,
+    type: 'company',
+  });
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    post(route('hr.leaves.holidays.store'), {
+      onSuccess: () => { reset(); onSaved(); },
+    });
+  };
+
+  const handleClose = () => { if (!processing) onClose(); };
+
+  return (
+    <Modal show={open} onClose={handleClose} maxWidth="md">
+      <div className="px-6 py-4 border-b flex items-center justify-between bg-white dark:bg-gray-900 dark:border-gray-800">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Add Holiday</h2>
+        <button type="button" onClick={handleClose} className="text-gray-400 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-200">✕</button>
+      </div>
+      <div className="px-6 py-4 bg-white dark:bg-gray-900">
+        <form className="grid grid-cols-1 gap-3" onSubmit={submit}>
+          <div>
+            <label className="block text-sm font-medium">Name</label>
+            <input className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100" value={data.name} onChange={(e) => setData('name', e.target.value)} />
+            {errors.name && <p className="text-xs text-red-600 mt-1">{errors.name}</p>}
+          </div>
+          <div>
+            <label className="block text-sm font-medium">Date</label>
+            <input type="date" className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100" value={data.date} onChange={(e) => setData('date', e.target.value)} />
+            {errors.date && <p className="text-xs text-red-600 mt-1">{errors.date}</p>}
+          </div>
+          <div className="flex items-center gap-3">
+            <label className="inline-flex items-center gap-2 text-sm">
+              <input type="checkbox" checked={!!data.is_recurring} onChange={(e) => setData('is_recurring', e.target.checked)} />
+              <span>Recurring annually</span>
+            </label>
+            <label className="text-sm">
+              <span className="mr-2">Type</span>
+              <select className="border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100" value={data.type} onChange={(e) => setData('type', e.target.value as any)}>
+                <option value="company">Company</option>
+                <option value="public">Public</option>
+              </select>
+            </label>
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <button type="button" onClick={handleClose} className="px-4 py-2 text-sm rounded-md bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700" disabled={processing}>Cancel</button>
+            <button type="submit" disabled={processing} className="px-4 py-2 text-sm rounded-md bg-red-600 text-white hover:bg-red-700">{processing ? 'Saving…' : 'Save'}</button>
+          </div>
+        </form>
+      </div>
+    </Modal>
+  );
+}
+
+function EditHolidayModal({
+  open,
+  onClose,
+  onSaved,
+  event,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onSaved: () => void;
+  event: EventItem | null;
+}) {
+  const { data, setData, put, processing, errors, reset, delete: destroy } = useForm<Holiday>({
+    name: '',
+    date: '',
+    is_recurring: false,
+    type: 'company',
+  });
+
+  useEffect(() => {
+    if (!open || !event || event.type !== 'holiday') return;
+    setData({
+      name: event.title || '',
+      date: event.date || '',
+      is_recurring: !!event.meta?.is_recurring,
+      type: (event.meta?.holiday_type as any) || 'company',
+    });
+  }, [open, event, setData]);
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!event || event.type !== 'holiday') return;
+    put(route('hr.leaves.holidays.update', event.entity_id), {
+      preserveScroll: true,
+      onSuccess: () => {
+        reset();
+        onSaved();
+      },
+    });
+  };
+
+  const handleDelete = () => {
+    if (!event || event.type !== 'holiday') return;
+    if (!confirm('Delete this holiday?')) return;
+    destroy(route('hr.leaves.holidays.destroy', event.entity_id), {
+      preserveScroll: true,
+      onSuccess: () => {
+        reset();
+        onSaved();
+      },
+    });
+  };
+
+  const handleClose = () => {
+    if (!processing) onClose();
+  };
+
+  return (
+    <Modal show={open} onClose={handleClose} maxWidth="md">
+      <div className="px-6 py-4 border-b flex items-center justify-between bg-white dark:bg-gray-900 dark:border-gray-800">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Edit Holiday</h2>
+        <button
+          type="button"
+          onClick={handleClose}
+          className="text-gray-400 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-200"
+        >
+          ✕
+        </button>
+      </div>
+      <div className="px-6 py-4 bg-white dark:bg-gray-900">
+        <form className="grid grid-cols-1 gap-3" onSubmit={submit}>
+          <div>
+            <label className="block text-sm font-medium">Name</label>
+            <input
+              className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100"
+              value={data.name}
+              onChange={(e) => setData('name', e.target.value)}
+            />
+            {errors.name && <p className="text-xs text-red-600 mt-1">{errors.name}</p>}
+          </div>
+          <div>
+            <label className="block text-sm font-medium">Date</label>
+            <input
+              type="date"
+              className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100"
+              value={data.date}
+              onChange={(e) => setData('date', e.target.value)}
+            />
+            {errors.date && <p className="text-xs text-red-600 mt-1">{errors.date}</p>}
+          </div>
+          <div className="flex items-center gap-3">
+            <label className="inline-flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={!!data.is_recurring}
+                onChange={(e) => setData('is_recurring', e.target.checked)}
+              />
+              <span>Recurring annually</span>
+            </label>
+            <label className="text-sm">
+              <span className="mr-2">Type</span>
+              <select
+                className="border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100"
+                value={data.type}
+                onChange={(e) => setData('type', e.target.value as any)}
+              >
+                <option value="company">Company</option>
+                <option value="public">Public</option>
+              </select>
+            </label>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-2">
+            <button
+              type="button"
+              onClick={handleClose}
+              className="px-4 py-2 text-sm rounded-md bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700"
+              disabled={processing}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleDelete}
+              className="px-4 py-2 text-sm rounded-md bg-red-700 text-white hover:bg-red-800"
+              disabled={processing}
+            >
+              Delete
+            </button>
+            <button
+              type="submit"
+              disabled={processing}
+              className="px-4 py-2 text-sm rounded-md bg-red-600 text-white hover:bg-red-700"
+            >
+              {processing ? 'Saving…' : 'Save'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </Modal>
+  );
+}
+
+function AddLeaveModal({ open, onClose, onSaved }: { open: boolean; onClose: () => void; onSaved: () => void }) {
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [employeeSearch, setEmployeeSearch] = useState('');
+  const [loadingEmployees, setLoadingEmployees] = useState(false);
+  const [employeeMeta, setEmployeeMeta] = useState({ page: 1, per_page: 50, has_more: false });
+
+  const { data, setData, post, processing, errors, reset } = useForm<EmployeeLeave>({
+    employee_type: 'App\\Models\\Guards\\Guard',
+    employee_id: 0,
+    start_date: '',
+    end_date: '',
+    type: 'off_day',
+    reason: '',
+    status: 'approved',
+    notes: '',
+  });
+
+  // Debounced search effect
+  useEffect(() => {
+    if (!open) return;
+    
+    const timeout = setTimeout(() => {
+      setLoadingEmployees(true);
+      const url = route('hr.employee-leaves.employees', { 
+        search: employeeSearch, 
+        page: 1, 
+        per_page: 50 
+      });
+      fetch(url, { headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
+        .then((r) => r.json())
+        .then((json) => {
+          const list = json.employees || [];
+          setEmployees(list);
+          setEmployeeMeta(json.meta || { page: 1, per_page: 50, has_more: false });
+          if (list.length && !data.employee_id) {
+            setData('employee_id', list[0].id);
+            setData('employee_type', list[0].model);
+          }
+        })
+        .finally(() => setLoadingEmployees(false));
+    }, 300); // 300ms debounce
+
+    return () => clearTimeout(timeout);
+  }, [open, employeeSearch, data.employee_id, setData]);
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    post(route('hr.employee-leaves.store'), {
+      onSuccess: () => { reset(); onSaved(); },
+    });
+  };
+
+  const handleClose = () => { if (!processing) onClose(); };
+
+  return (
+    <Modal show={open} onClose={handleClose} maxWidth="md">
+      <div className="px-6 py-4 border-b flex items-center justify-between bg-white dark:bg-gray-900 dark:border-gray-800">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Add Employee Leave</h2>
+        <button type="button" onClick={handleClose} className="text-gray-400 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-200">✕</button>
+      </div>
+      <div className="px-6 py-4 bg-white dark:bg-gray-900">
+        <form className="grid grid-cols-1 gap-3" onSubmit={submit}>
+          <div>
+            <label className="block text-sm font-medium">Employee</label>
+            <div className="space-y-2">
+              <input
+                type="text"
+                placeholder="Search employees..."
+                value={employeeSearch}
+                onChange={(e) => setEmployeeSearch(e.target.value)}
+                className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100 text-sm"
+              />
+              <select
+                className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100"
+                value={`${data.employee_type}|${data.employee_id}`}
+                onChange={(e) => {
+                  const [type, id] = e.target.value.split('|');
+                  setData('employee_type', type);
+                  setData('employee_id', Number(id));
+                }}
+                disabled={loadingEmployees}
+                size={Math.min(5, employees.length + 1)}
+              >
+                {loadingEmployees && <option>Loading...</option>}
+                {employees.map((emp) => (
+                  <option key={`${emp.model}|${emp.id}`} value={`${emp.model}|${emp.id}`}>
+                    {emp.name} ({emp.type_label}) {emp.employee_id ? `- ${emp.employee_id}` : ''}
+                  </option>
+                ))}
+                {!loadingEmployees && employeeMeta.has_more && (
+                  <option disabled>Type to search more employees...</option>
+                )}
+              </select>
+            </div>
+            {errors.employee_id && <p className="text-xs text-red-600 mt-1">{errors.employee_id}</p>}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium">Leave Type</label>
+            <select
+              className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100"
+              value={data.type}
+              onChange={(e) => setData('type', e.target.value as LeaveType)}
+            >
+              <option value="off_day">Off Day</option>
+              <option value="sick_leave">Sick Leave</option>
+              <option value="annual_leave">Annual Leave</option>
+              <option value="unpaid_leave">Unpaid Leave</option>
+              <option value="maternity_leave">Maternity Leave</option>
+              <option value="paternity_leave">Paternity Leave</option>
+              <option value="bereavement_leave">Bereavement Leave</option>
+            </select>
+            {errors.type && <p className="text-xs text-red-600 mt-1">{errors.type}</p>}
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium">Start Date</label>
+              <input
+                type="date"
+                className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100"
+                value={data.start_date}
+                onChange={(e) => setData('start_date', e.target.value)}
+              />
+              {errors.start_date && <p className="text-xs text-red-600 mt-1">{errors.start_date}</p>}
+            </div>
+            <div>
+              <label className="block text-sm font-medium">End Date</label>
+              <input
+                type="date"
+                className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100"
+                value={data.end_date || ''}
+                onChange={(e) => setData('end_date', e.target.value)}
+              />
+              {errors.end_date && <p className="text-xs text-red-600 mt-1">{errors.end_date}</p>}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium">Reason (optional)</label>
+            <input
+              className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100"
+              value={data.reason || ''}
+              onChange={(e) => setData('reason', e.target.value)}
+            />
+            {errors.reason && <p className="text-xs text-red-600 mt-1">{errors.reason}</p>}
+          </div>
+
+          <div className="flex justify-end gap-2 pt-2">
+            <button type="button" onClick={handleClose} className="px-4 py-2 text-sm rounded-md bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700" disabled={processing}>Cancel</button>
+            <button type="submit" disabled={processing} className="px-4 py-2 text-sm rounded-md bg-coin-700 text-white hover:bg-coin-800">{processing ? 'Saving…' : 'Save'}</button>
+          </div>
+        </form>
+      </div>
+    </Modal>
+  );
+}
+
+function EditLeaveModal({
+  open,
+  onClose,
+  onSaved,
+  event,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onSaved: () => void;
+  event: EventItem | null;
+}) {
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [employeeSearch, setEmployeeSearch] = useState('');
+  const [loadingEmployees, setLoadingEmployees] = useState(false);
+  const [employeeMeta, setEmployeeMeta] = useState({ page: 1, per_page: 50, has_more: false });
+
+  const { data, setData, put, processing, errors, reset, delete: destroy } = useForm<EmployeeLeave>({
+    employee_type: 'App\\Models\\Guards\\Guard',
+    employee_id: 0,
+    start_date: '',
+    end_date: '',
+    type: 'off_day',
+    reason: '',
+    status: 'approved',
+    notes: '',
+  });
+
+  // Debounced search effect
+  useEffect(() => {
+    if (!open) return;
+    
+    const timeout = setTimeout(() => {
+      setLoadingEmployees(true);
+      const url = route('hr.employee-leaves.employees', { 
+        search: employeeSearch, 
+        page: 1, 
+        per_page: 50 
+      });
+      fetch(url, { headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
+        .then((r) => r.json())
+        .then((json) => {
+          const list = json.employees || [];
+          setEmployees(list);
+          setEmployeeMeta(json.meta || { page: 1, per_page: 50, has_more: false });
+        })
+        .finally(() => setLoadingEmployees(false));
+    }, 300); // 300ms debounce
+
+    return () => clearTimeout(timeout);
+  }, [open, employeeSearch]);
+
+  useEffect(() => {
+    if (!open || !event || event.entity !== 'employee_leave') return;
+    setData({
+      employee_type: event.meta?.employee_type || 'App\\Models\\Guards\\Guard',
+      employee_id: Number(event.meta?.employee_id) || 0,
+      start_date: event.meta?.start_date || event.date || '',
+      end_date: event.meta?.end_date || '',
+      type: (event.meta?.leave_type as LeaveType) || 'off_day',
+      reason: event.meta?.reason || '',
+      status: (event.meta?.status as LeaveStatus) || 'approved',
+      notes: '',
+    });
+  }, [open, event, setData]);
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!event || event.entity !== 'employee_leave') return;
+    put(route('hr.employee-leaves.update', event.entity_id), {
+      preserveScroll: true,
+      onSuccess: () => {
+        reset();
+        onSaved();
+      },
+    });
+  };
+
+  const handleDelete = () => {
+    if (!event || event.entity !== 'employee_leave') return;
+    if (!confirm('Delete this leave record?')) return;
+    destroy(route('hr.employee-leaves.destroy', event.entity_id), {
+      preserveScroll: true,
+      onSuccess: () => {
+        reset();
+        onSaved();
+      },
+    });
+  };
+
+  const handleClose = () => {
+    if (!processing) onClose();
+  };
+
+  return (
+    <Modal show={open} onClose={handleClose} maxWidth="md">
+      <div className="px-6 py-4 border-b flex items-center justify-between bg-white dark:bg-gray-900 dark:border-gray-800">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Edit Employee Leave</h2>
+        <button type="button" onClick={handleClose} className="text-gray-400 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-200">✕</button>
+      </div>
+      <div className="px-6 py-4 bg-white dark:bg-gray-900">
+        <form className="grid grid-cols-1 gap-3" onSubmit={submit}>
+          <div>
+            <label className="block text-sm font-medium">Employee</label>
+            <div className="space-y-2">
+              <input
+                type="text"
+                placeholder="Search employees..."
+                value={employeeSearch}
+                onChange={(e) => setEmployeeSearch(e.target.value)}
+                className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100 text-sm"
+              />
+              <select
+                className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100"
+                value={`${data.employee_type}|${data.employee_id}`}
+                onChange={(e) => {
+                  const [type, id] = e.target.value.split('|');
+                  setData('employee_type', type);
+                  setData('employee_id', Number(id));
+                }}
+                disabled={loadingEmployees}
+                size={Math.min(5, employees.length + 1)}
+              >
+                {loadingEmployees && <option>Loading...</option>}
+                {employees.map((emp) => (
+                  <option key={`${emp.model}|${emp.id}`} value={`${emp.model}|${emp.id}`}>
+                    {emp.name} ({emp.type_label}) {emp.employee_id ? `- ${emp.employee_id}` : ''}
+                  </option>
+                ))}
+                {!loadingEmployees && employeeMeta.has_more && (
+                  <option disabled>Type to search more employees...</option>
+                )}
+              </select>
+            </div>
+            {errors.employee_id && <p className="text-xs text-red-600 mt-1">{errors.employee_id}</p>}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium">Leave Type</label>
+            <select
+              className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100"
+              value={data.type}
+              onChange={(e) => setData('type', e.target.value as LeaveType)}
+            >
+              <option value="off_day">Off Day</option>
+              <option value="sick_leave">Sick Leave</option>
+              <option value="annual_leave">Annual Leave</option>
+              <option value="unpaid_leave">Unpaid Leave</option>
+              <option value="maternity_leave">Maternity Leave</option>
+              <option value="paternity_leave">Paternity Leave</option>
+              <option value="bereavement_leave">Bereavement Leave</option>
+            </select>
+            {errors.type && <p className="text-xs text-red-600 mt-1">{errors.type}</p>}
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium">Start Date</label>
+              <input
+                type="date"
+                className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100"
+                value={data.start_date}
+                onChange={(e) => setData('start_date', e.target.value)}
+              />
+              {errors.start_date && <p className="text-xs text-red-600 mt-1">{errors.start_date}</p>}
+            </div>
+            <div>
+              <label className="block text-sm font-medium">End Date</label>
+              <input
+                type="date"
+                className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100"
+                value={data.end_date || ''}
+                onChange={(e) => setData('end_date', e.target.value)}
+              />
+              {errors.end_date && <p className="text-xs text-red-600 mt-1">{errors.end_date}</p>}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium">Status</label>
+            <select
+              className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100"
+              value={data.status}
+              onChange={(e) => setData('status', e.target.value as LeaveStatus)}
+            >
+              <option value="approved">Approved</option>
+              <option value="pending">Pending</option>
+              <option value="rejected">Rejected</option>
+            </select>
+            {errors.status && <p className="text-xs text-red-600 mt-1">{errors.status}</p>}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium">Reason (optional)</label>
+            <input
+              className="w-full border rounded-md p-2 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100"
+              value={data.reason || ''}
+              onChange={(e) => setData('reason', e.target.value)}
+            />
+            {errors.reason && <p className="text-xs text-red-600 mt-1">{errors.reason}</p>}
+          </div>
+
+          <div className="flex justify-end gap-2 pt-2">
+            <button
+              type="button"
+              onClick={handleClose}
+              className="px-4 py-2 text-sm rounded-md bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700"
+              disabled={processing}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleDelete}
+              className="px-4 py-2 text-sm rounded-md bg-red-700 text-white hover:bg-red-800"
+              disabled={processing}
+            >
+              Delete
+            </button>
+            <button
+              type="submit"
+              disabled={processing}
+              className="px-4 py-2 text-sm rounded-md bg-coin-700 text-white hover:bg-coin-800"
+            >
+              {processing ? 'Saving…' : 'Save'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </Modal>
+  );
+}

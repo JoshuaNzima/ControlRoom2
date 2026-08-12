@@ -8,34 +8,85 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Inertia\Inertia;
 use Spatie\Permission\Models\Role;
+use App\Models\Guards\Client;
 use App\Models\Zone;
 use App\Notifications\ZoneCommanderUnassigned;
 use Illuminate\Support\Facades\Notification as NotificationFacade;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Str;
+use App\Mail\WelcomeEmail;
 
 class UserController extends Controller
 {
+    private function redirectAfterWrite(Request $request)
+    {
+        $referer = (string) $request->headers->get('referer', '');
+        $path = parse_url($referer, PHP_URL_PATH) ?: '';
+
+        if (str_starts_with($path, '/superadmin/users')) {
+            return redirect()->route('superadmin.users');
+        }
+
+        return redirect()->route('admin.users.index');
+    }
+
     public function index()
     {
-        $users = User::with('roles')
+        $perPage = request('per_page', 20);
+        $sortField = request('sort', 'name');
+        $sortDirection = request('direction', 'asc');
+
+        $allowedSorts = ['name', 'email', 'created_at', 'status'];
+        if (!in_array($sortField, $allowedSorts)) {
+            $sortField = 'name';
+        }
+
+        $users = User::with('roles', 'zone')
             ->when(request('search'), function($q, $search) {
-                $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%");
+                $q->where(function($query) use ($search) {
+                    $query->where('name', 'like', "%{$search}%")
+                          ->orWhere('email', 'like', "%{$search}%")
+                          ->orWhere('employee_id', 'like', "%{$search}%")
+                          ->orWhere('phone', 'like', "%{$search}%");
+                });
             })
-            ->orderBy('name')
-            ->paginate(20);
+            ->when(request('role'), function($q, $role) {
+                $q->whereHas('roles', function($query) use ($role) {
+                    $query->where('name', $role);
+                });
+            })
+            ->when(request('status'), function($q, $status) {
+                $q->where('status', $status);
+            })
+            ->when(request('zone_id'), function($q, $zoneId) {
+                $q->where('zone_id', $zoneId);
+            })
+            ->orderBy($sortField, $sortDirection)
+            ->paginate($perPage)
+            ->withQueryString();
+
+        $roles = Role::all();
+        $zones = Zone::orderBy('name')->get(['id','name']);
+        $clients = Client::orderBy('name')->get(['id', 'name']);
 
         return Inertia::render('Admin/Users/Index', [
             'users' => $users,
-            'filters' => request()->only('search'),
+            'filters' => request()->only('search', 'per_page', 'role', 'status', 'zone_id', 'sort', 'direction'),
+            'roles' => $roles,
+            'zones' => $zones,
+            'clients' => $clients,
         ]);
     }
 
     public function create()
     {
         $roles = Role::all();
+        $zones = Zone::orderBy('name')->get();
         
         return Inertia::render('Admin/Users/Create', [
             'roles' => $roles,
+            'zones' => $zones,
         ]);
     }
 
@@ -56,24 +107,62 @@ class UserController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users',
-            'password' => 'required|string|min:8|confirmed',
             'phone' => 'nullable|string',
             'employee_id' => 'nullable|string|unique:users',
             'role' => 'required|exists:roles,name',
+            'zone_id' => 'nullable|exists:zones,id',
+            'status' => 'nullable|in:active,inactive',
+            'client_id' => 'nullable|exists:clients,id',
+            'client_role' => 'nullable|in:primary,contact,viewer',
         ]);
+
+        // Auto-generate employee_id if not provided
+        if (empty($validated['employee_id'])) {
+            $validated['employee_id'] = $this->generateUserEmployeeId();
+        }
+
+        // Generate a random temporary password
+        $tempPassword = Str::random(16);
 
         $user = User::create([
             'name' => $validated['name'],
             'email' => $validated['email'],
-            'password' => Hash::make($validated['password']),
+            'password' => Hash::make($tempPassword),
             'phone' => $validated['phone'] ?? null,
             'employee_id' => $validated['employee_id'] ?? null,
+            'status' => $validated['status'] ?? 'active',
+            'zone_id' => $validated['zone_id'] ?? null,
         ]);
 
         $user->assignRole($validated['role']);
 
-        return redirect()->route('admin.users.index')
-            ->with('success', 'User created successfully.');
+        // Link user to client if client_id provided and role is client
+        if (!empty($validated['client_id']) && $validated['role'] === 'client') {
+            $user->clients()->attach($validated['client_id'], [
+                'role' => $validated['client_role'] ?? 'contact',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
+
+        // Send password reset link to user so they can set their own password
+        try {
+            Password::sendResetLink(['email' => $user->email]);
+        } catch (\Throwable $e) {
+            // Log error but don't fail user creation
+            \Illuminate\Support\Facades\Log::warning('Failed to send password reset link to new user: ' . $user->email . ' - ' . $e->getMessage());
+        }
+
+        return $this->redirectAfterWrite($request)
+            ->with('success', 'User created successfully. A password reset email has been sent to set their password.');
+    }
+
+    private function generateUserEmployeeId(): string
+    {
+        do {
+            $candidate = 'EMP-'.now()->format('ym').'-'.sprintf('%04d', random_int(0, 9999));
+        } while (User::where('employee_id', $candidate)->exists());
+        return $candidate;
     }
 
     public function update(Request $request, User $user)
@@ -87,6 +176,8 @@ class UserController extends Controller
             'role' => 'nullable|exists:roles,name',
             'status' => 'nullable|in:active,inactive',
             'zone_id' => 'nullable|exists:zones,id',
+            'client_id' => 'nullable|exists:clients,id',
+            'client_role' => 'nullable|in:primary,contact,viewer',
         ]);
 
         if (isset($validated['name'])) $user->name = $validated['name'];
@@ -115,7 +206,22 @@ class UserController extends Controller
             }
         }
 
-        return redirect()->route('admin.users.index')
+        // Handle client linking update
+        if (array_key_exists('client_id', $validated)) {
+            // Detach existing client relationships
+            $user->clients()->detach();
+            
+            // Attach new client if provided and role is client
+            if (!empty($validated['client_id']) && ($validated['role'] === 'client' || $user->hasRole('client'))) {
+                $user->clients()->attach($validated['client_id'], [
+                    'role' => $validated['client_role'] ?? 'contact',
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
+        }
+
+        return $this->redirectAfterWrite($request)
             ->with('success', 'User updated successfully.');
     }
 
@@ -123,7 +229,7 @@ class UserController extends Controller
     {
         $user->delete();
 
-        return redirect()->route('admin.users.index')
+        return $this->redirectAfterWrite(request())
             ->with('success', 'User deleted successfully.');
     }
 }

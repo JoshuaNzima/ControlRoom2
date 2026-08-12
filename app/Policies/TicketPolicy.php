@@ -24,24 +24,24 @@ class TicketPolicy
 
     public function update(User $user, Ticket $ticket): bool
     {
-        return $user->hasAnyRole(['supervisor', 'manager', 'control_room_operator'])
+        return $user->hasAnyRole(['supervisor', 'control_room_operator'])
             || $ticket->assigned_to === $user->id
             || $ticket->reported_by === $user->id;
     }
 
     public function delete(User $user, Ticket $ticket): bool
     {
-        return $user->hasRole(['supervisor', 'manager']);
+        return $user->hasRole(['supervisor']);
     }
 
     public function manage(User $user, Ticket $ticket): bool
     {
-        return $user->hasAnyRole(['supervisor', 'manager', 'control_room_operator'])
+        return $user->hasAnyRole(['supervisor', 'control_room_operator'])
             || $ticket->assigned_to === $user->id;
     }
 
     public function escalate(User $user, Ticket $ticket): bool
     {
-        return $user->hasAnyRole(['supervisor', 'manager', 'control_room_operator']);
+        return $user->hasAnyRole(['supervisor', 'control_room_operator']);
     }
 }

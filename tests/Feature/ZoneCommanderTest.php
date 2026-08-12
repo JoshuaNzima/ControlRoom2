@@ -34,7 +34,7 @@ class ZoneCommanderTest extends TestCase
         $user->assignRole('zone_commander');
 
         $this->actingAs($user);
-		$response = $this->get('/');
+		$response = $this->get('/dashboard');
 		$response->assertRedirect(route('zone.dashboard'));
 	}
 

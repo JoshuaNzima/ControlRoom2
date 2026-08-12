@@ -1,47 +1,307 @@
 import React from 'react';
 import { Head } from '@inertiajs/react';
-import ControlRoomLayout from '@/Layouts/ControlRoomLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import { Card, CardContent, CardHeader } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import { Badge } from '@/Components/ui/badge';
 import { User } from '@/types';
+import GuardLocationMap from '@/Components/Map/GuardLocationMap';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/Components/ui/dialog';
+import IconMapper from '@/Components/IconMapper';
+
+interface Location {
+  lat: number;
+  lng: number;
+}
+
+interface Event {
+  type: string;
+  severity: 'critical' | 'high' | 'medium' | 'low' | 'info';
+  title: string;
+  description: string;
+  location?: Location;
+  site?: string;
+  timestamp: string;
+  guard?: {
+    id: number;
+    name: string;
+    status: string;
+  };
+}
+
+interface Guard {
+  id: number;
+  name: string;
+  status: string;
+  location: Location;
+  lastCheckIn: string;
+  currentSite?: string;
+  currentShift?: {
+    started_at: string;
+    ends_at: string;
+  };
+  lastActivity: string;
+}
+
+interface SiteStatus {
+  id: number;
+  name: string;
+  status: 'active' | 'inactive';
+  required?: number;
+  onDuty?: number;
+  coverageStatus?: 'full' | 'partial' | 'none' | 'unknown';
+  lastUpdate: string;
+  alerts: number;
+  location: Location;
+}
 
 interface MonitoringProps {
   auth?: { user?: { name?: string } };
+  metrics?: {
+    activeSites: number;
+    guardsOnDuty: number;
+    activeAlerts: number;
+    activeFlags: number;
+    activeIncidents: number;
+    systemStatus: string;
+  };
+  liveStatus?: SiteStatus[];
+  recentActivity?: { id: string | number; type: string; guard: string; site: string; time: string; status: 'success' | 'warning' | 'info' | 'danger' }[];
+  guards?: Guard[];
+  events?: Event[];
+  sla?: {
+    averageResponseMinutes: number | null;
+    medianResponseMinutes: number | null;
+    breachedCount: number;
+    totalResolved: number;
+    onTimePercent: number | null;
+  };
+  activeRange?: string;
+  settings?: { showCountsOverlay: boolean; scaleByRequired: boolean };
 }
 
-const Monitoring = ({ auth }: MonitoringProps) => {
-  // Mock data for monitoring
-  const liveStatus = [
-    { id: 1, name: 'Site A - Main Gate', status: 'active', guards: 2, lastUpdate: '2 min ago', alerts: 0 },
-    { id: 2, name: 'Site B - Warehouse', status: 'active', guards: 1, lastUpdate: '1 min ago', alerts: 1 },
-    { id: 3, name: 'Site C - Office Building', status: 'inactive', guards: 0, lastUpdate: '15 min ago', alerts: 3 },
-    { id: 4, name: 'Site D - Parking Lot', status: 'active', guards: 1, lastUpdate: '30 sec ago', alerts: 0 },
-  ];
+const Monitoring = ({ auth, metrics, liveStatus: initialLiveStatus = [], recentActivity: initialRecent = [], guards: initialGuards = [], events: initialEvents = [], sla: initialSla, activeRange = '1h', settings }: MonitoringProps) => {
+  const [currentMetrics, setCurrentMetrics] = React.useState(metrics || { 
+    activeSites: 0, 
+    guardsOnDuty: 0, 
+    activeAlerts: 0, 
+    activeFlags: 0, 
+    activeIncidents: 0, 
+    systemStatus: 'online' 
+  });
+  const [liveStatus, setLiveStatus] = React.useState(initialLiveStatus);
+  const [recentActivity, setRecentActivity] = React.useState(initialRecent);
+  const [guards, setGuards] = React.useState<Guard[]>(initialGuards);
+  const [events, setEvents] = React.useState<Event[]>(initialEvents);
+  const [sla, setSla] = React.useState(initialSla || null as MonitoringProps['sla'] | null);
+  const [range, setRange] = React.useState<string>(activeRange || '1h');
+  const [refreshMs, setRefreshMs] = React.useState<number>(60000);
+  const [lastUpdated, setLastUpdated] = React.useState<Date | null>(null);
+  const [siteModalOpen, setSiteModalOpen] = React.useState(false);
+  const [siteDetails, setSiteDetails] = React.useState<any | null>(null);
+  const [siteLoading, setSiteLoading] = React.useState(false);
+  const [showCountsOverlay, setShowCountsOverlay] = React.useState<boolean>(settings?.showCountsOverlay ?? true);
+  const [scaleByRequired, setScaleByRequired] = React.useState<boolean>(settings?.scaleByRequired ?? true);
 
-  const recentActivity = [
-    { id: 1, type: 'checkin', guard: 'John Doe', site: 'Site A', time: '2 min ago', status: 'success' },
-    { id: 2, type: 'alert', guard: 'Jane Smith', site: 'Site B', time: '5 min ago', status: 'warning' },
-    { id: 3, type: 'checkout', guard: 'Mike Johnson', site: 'Site C', time: '10 min ago', status: 'info' },
-    { id: 4, type: 'incident', guard: 'Sarah Wilson', site: 'Site D', time: '15 min ago', status: 'danger' },
-  ];
+  const [error, setError] = React.useState<string | null>(null);
+  const [retryCount, setRetryCount] = React.useState(0);
+
+  const abortRef = React.useRef<AbortController | null>(null);
+
+  const fetchSnapshot = React.useCallback(async (withRange: string) => {
+    try {
+      setError(null);
+      abortRef.current?.abort();
+      const controller = new AbortController();
+      abortRef.current = controller;
+
+      const qs = withRange ? `?range=${encodeURIComponent(withRange)}` : '';
+      const res = await fetch(route('control-room.monitoring.data') + qs, {
+        headers: { 'Accept': 'application/json' },
+        signal: controller.signal,
+      });
+
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+      }
+
+      const data = await res.json();
+      setCurrentMetrics(data.metrics || {});
+      setLiveStatus(data.liveStatus || []);
+      setRecentActivity(data.recentActivity || []);
+      setSla(data.sla || null);
+      setGuards(data.guards || []);
+      setEvents(data.events || []);
+      setLastUpdated(new Date());
+      setRetryCount(0);
+    } catch (err: any) {
+      if (err.name === 'AbortError') return;
+      console.error('Monitoring fetch error:', err);
+      setError(err.message || 'Failed to fetch monitoring data');
+      setRetryCount(c => c + 1);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    let isMounted = true;
+
+    // initial refresh in case page props were stale
+    fetchSnapshot(range);
+    const id = refreshMs > 0 ? setInterval(() => fetchSnapshot(range), refreshMs) : null;
+    
+    return () => {
+      isMounted = false;
+      if (id) clearInterval(id);
+      abortRef.current?.abort();
+    };
+  }, [range, refreshMs, fetchSnapshot]);
+
+  async function handleSiteClick(site: any) {
+    try {
+      setSiteLoading(true);
+      setSiteModalOpen(true);
+      setSiteDetails(null);
+      const res = await fetch(route('control-room.monitoring.site', site.id), { headers: { 'Accept': 'application/json' } });
+      if (res.ok) {
+        const data = await res.json();
+        setSiteDetails(data);
+      }
+    } finally {
+      setSiteLoading(false);
+    }
+  }
 
   return (
-    <ControlRoomLayout title="Live Monitoring" user={auth?.user as User | undefined}>
+    <AuthenticatedLayout header="Live Monitoring" user={auth?.user as User | undefined}>
       <Head title="Live Monitoring" />
 
       <div className="space-y-6">
+        {/* Controls: Time range & Refresh */}
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-300 mr-1">Time range:</span>
+            {[
+              { key: '15m', label: 'Last 15m' },
+              { key: '1h', label: 'Last 1h' },
+              { key: '4h', label: 'Last 4h' },
+              { key: '24h', label: 'Last 24h' },
+              { key: 'today', label: 'Today' },
+            ].map(opt => (
+              <button
+                key={opt.key}
+                type="button"
+                onClick={() => setRange(opt.key)}
+                className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors
+                  ${range === opt.key
+                    ? 'bg-coin-600 border-coin-600 text-white'
+                    : 'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300'}`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+
+        {/* Site Drilldown Modal */}
+        <Dialog open={siteModalOpen} onOpenChange={setSiteModalOpen}>
+          <DialogContent className="w-full max-w-lg dark:bg-gray-800 dark:text-gray-100">
+            <DialogHeader>
+              <DialogTitle>{siteDetails?.name || 'Site details'}</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-3">
+              {siteLoading && <div className="text-sm text-gray-500 dark:text-gray-400">Loading...</div>}
+              {siteDetails && (
+                <>
+                  <div className="text-sm text-gray-700 dark:text-gray-300">
+                    <div>Client: {siteDetails.client || '-'}</div>
+                    <div>Address: {siteDetails.address || '-'}</div>
+                    <div>Status: {siteDetails.status}</div>
+                    <div>Coverage: {siteDetails.coverageStatus} • On duty: {siteDetails.onDuty} / Required: {siteDetails.required}</div>
+                    <div>Location: {siteDetails.latitude?.toFixed ? siteDetails.latitude.toFixed(6) : siteDetails.latitude}, {siteDetails.longitude?.toFixed ? siteDetails.longitude.toFixed(6) : siteDetails.longitude}</div>
+                  </div>
+                  <div className="border-t pt-3">
+                    <div className="text-sm font-medium mb-1">Attendance Today</div>
+                    <div className="text-xs text-gray-600 dark:text-gray-400">Present: {siteDetails.attendanceSummary?.present ?? 0} • Late: {siteDetails.attendanceSummary?.late ?? 0} • Absent: {siteDetails.attendanceSummary?.absent ?? 0} • On duty: {siteDetails.attendanceSummary?.on_duty ?? 0}</div>
+                  </div>
+                  <div className="border-t pt-3">
+                    <div className="text-sm font-medium mb-1">Assigned Guards</div>
+                    <div className="max-h-40 overflow-y-auto space-y-1">
+                      {(siteDetails.assignedGuards || []).map((g: any) => (
+                        <div key={g.id} className="text-sm flex items-center justify-between p-2 rounded-md bg-gray-50 dark:bg-gray-700">
+                          <span>{g.name}</span>
+                          <span className="text-xs text-gray-500 dark:text-gray-400">{g.status}</span>
+                        </div>
+                      ))}
+                      {(!siteDetails.assignedGuards || siteDetails.assignedGuards.length === 0) && (
+                        <div className="text-xs text-gray-500 dark:text-gray-400">No assigned guards</div>
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Error Banner */}
+        {error && retryCount > 2 && (
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+            <div className="flex items-center gap-3">
+              <IconMapper name="AlertCircle" size={20} className="text-red-600 dark:text-red-400" />
+              <div className="flex-1">
+                <p className="text-sm font-medium text-red-800 dark:text-red-200">Connection Issue</p>
+                <p className="text-xs text-red-600 dark:text-red-300">{error}</p>
+              </div>
+              <Button size="sm" variant="outline" onClick={() => { setRetryCount(0); fetchSnapshot(range); }}>
+                Retry
+              </Button>
+            </div>
+          </div>
+        )}
+
+          <div className="flex flex-wrap items-center gap-3 justify-between md:justify-end">
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-600 dark:text-gray-400">Refresh:</span>
+              <select
+                value={String(refreshMs)}
+                onChange={(e) => setRefreshMs(Number(e.target.value))}
+                className="text-sm rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100 px-2 py-1"
+              >
+                <option value="0">Manual</option>
+                <option value="15000">15s</option>
+                <option value="30000">30s</option>
+                <option value="60000">60s</option>
+              </select>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="h-8 px-3 dark:border-gray-600 dark:text-gray-200"
+                onClick={() => fetchSnapshot(range)}
+              >
+                Refresh now
+              </Button>
+              {lastUpdated && (
+                <span className="text-xs text-gray-500 dark:text-gray-400">
+                  Updated {lastUpdated.toLocaleTimeString()}
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+
         {/* Status Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
           <Card className="dark:bg-gray-800 dark:border-gray-700">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Active Sites</p>
-                  <p className="text-2xl font-bold text-green-600 dark:text-green-400">3</p>
+                  <p className="text-2xl font-bold text-green-600 dark:text-green-400">{currentMetrics?.activeSites ?? 0}</p>
                 </div>
                 <div className="h-8 w-8 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center">
-                  <span className="text-green-600 dark:text-green-400">✓</span>
+                  <span className="text-green-600 dark:text-green-400">🏢</span>
                 </div>
               </div>
             </CardContent>
@@ -52,10 +312,10 @@ const Monitoring = ({ auth }: MonitoringProps) => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Guards On Duty</p>
-                  <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">4</p>
+                  <p className="text-2xl font-bold text-coin-700 dark:text-coin-200">{currentMetrics?.guardsOnDuty ?? 0}</p>
                 </div>
-                <div className="h-8 w-8 bg-blue-100 dark:bg-blue-900/20 rounded-full flex items-center justify-center">
-                  <span className="text-blue-600 dark:text-blue-400">👮</span>
+                <div className="h-8 w-8 bg-coin-100 dark:bg-coin-900/20 rounded-full flex items-center justify-center">
+                  <span className="text-coin-700 dark:text-coin-200">👮</span>
                 </div>
               </div>
             </CardContent>
@@ -66,7 +326,7 @@ const Monitoring = ({ auth }: MonitoringProps) => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Active Alerts</p>
-                  <p className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">4</p>
+                  <p className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">{currentMetrics?.activeAlerts ?? 0}</p>
                 </div>
                 <div className="h-8 w-8 bg-yellow-100 dark:bg-yellow-900/20 rounded-full flex items-center justify-center">
                   <span className="text-yellow-600 dark:text-yellow-400">⚠</span>
@@ -79,8 +339,38 @@ const Monitoring = ({ auth }: MonitoringProps) => {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Active Flags</p>
+                  <p className="text-2xl font-bold text-red-600 dark:text-red-400">{currentMetrics?.activeFlags ?? 0}</p>
+                </div>
+                <div className="h-8 w-8 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center">
+                  <span className="text-red-600 dark:text-red-400">🚩</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="dark:bg-gray-800 dark:border-gray-700">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Active Incidents</p>
+                  <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">{currentMetrics?.activeIncidents ?? 0}</p>
+                </div>
+                <div className="h-8 w-8 bg-orange-100 dark:bg-orange-900/20 rounded-full flex items-center justify-center">
+                  <span className="text-orange-600 dark:text-orange-400">⚠️</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="dark:bg-gray-800 dark:border-gray-700">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
                   <p className="text-sm font-medium text-gray-600 dark:text-gray-400">System Status</p>
-                  <p className="text-2xl font-bold text-green-600 dark:text-green-400">Online</p>
+                  <p className="text-2xl font-bold text-green-600 dark:text-green-400">
+                    {currentMetrics?.systemStatus ? currentMetrics.systemStatus.charAt(0).toUpperCase() + currentMetrics.systemStatus.slice(1) : 'Online'}
+                  </p>
                 </div>
                 <div className="h-8 w-8 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center">
                   <span className="text-green-600 dark:text-green-400">🟢</span>
@@ -88,81 +378,192 @@ const Monitoring = ({ auth }: MonitoringProps) => {
               </div>
             </CardContent>
           </Card>
+          {/* SLA: Average Response */}
+          <Card className="dark:bg-gray-800 dark:border-gray-700">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Avg Response (min)</p>
+                  <p className="text-2xl font-bold text-coin-700 dark:text-coin-200">
+                    {sla?.averageResponseMinutes != null ? sla.averageResponseMinutes : '--'}
+                  </p>
+                </div>
+                <div className="h-8 w-8 bg-coin-100 dark:bg-coin-900/20 rounded-full flex items-center justify-center">
+                  <span className="text-coin-700 dark:text-coin-200">⏱</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* SLA: On-time % */}
+          <Card className="dark:bg-gray-800 dark:border-gray-700">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">On-time Incidents</p>
+                  <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
+                    {sla?.onTimePercent != null ? `${sla.onTimePercent}%` : '--'}
+                  </p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    Resolved: {sla?.totalResolved ?? 0}
+                  </p>
+                </div>
+                <div className="h-8 w-8 bg-emerald-100 dark:bg-emerald-900/20 rounded-full flex items-center justify-center">
+                  <span className="text-emerald-600 dark:text-emerald-400">✅</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* SLA: Breaches */}
+          <Card className="dark:bg-gray-800 dark:border-gray-700">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">SLA Breaches</p>
+                  <p className="text-2xl font-bold text-rose-600 dark:text-rose-400">{sla?.breachedCount ?? 0}</p>
+                </div>
+                <div className="h-8 w-8 bg-rose-100 dark:bg-rose-900/20 rounded-full flex items-center justify-center">
+                  <span className="text-rose-600 dark:text-rose-400">⚡</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
-        {/* Live Site Status */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card className="dark:bg-gray-800 dark:border-gray-700">
+        {/* Live Map and Events */}
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+          <Card className="dark:bg-gray-800 dark:border-gray-700 xl:col-span-2">
             <CardHeader>
-              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Live Site Status</h3>
+              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Live Site Coverage</h3>
+              <div className="mt-1 text-xs text-gray-600 dark:text-gray-400 flex flex-wrap gap-3">
+                <span className="flex items-center gap-1"><span className="inline-block w-2 h-2 rounded-full bg-green-500" /> Full</span>
+                <span className="flex items-center gap-1"><span className="inline-block w-2 h-2 rounded-full bg-amber-500" /> Partial</span>
+                <span className="flex items-center gap-1"><span className="inline-block w-2 h-2 rounded-full bg-red-500" /> None</span>
+                <span className="flex items-center gap-1"><span className="inline-block w-2 h-2 rounded-full bg-gray-500" /> Unknown</span>
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {liveStatus.map((site) => (
-                  <div key={site.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                    <div className="flex-1">
-                      <div className="font-medium text-gray-900 dark:text-gray-100">{site.name}</div>
-                      <div className="text-sm text-gray-600 dark:text-gray-400">
-                        {site.guards} Guards • Last update: {site.lastUpdate}
+              <div className="h-[500px] relative">
+                <GuardLocationMap
+                  guards={guards}
+                  sites={liveStatus.map(site => ({
+                    ...site,
+                    location: site.location || { lat: 0, lng: 0 } // Add proper location from your data
+                  }))}
+                  onSiteClick={handleSiteClick}
+                  showCountsOverlay={showCountsOverlay}
+                  scaleByRequired={scaleByRequired}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="dark:bg-gray-800 dark:border-gray-700">
+            <CardHeader>
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
+                <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Live Events</h3>
+                <Badge variant="secondary" className="text-xs">
+                  Real-time
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3 max-h-[450px] overflow-y-auto">
+                {events.map((event, index) => {
+                  const severityColor = {
+                    critical: 'destructive',
+                    high: 'destructive',
+                    medium: 'warning',
+                    low: 'secondary',
+                    info: 'default'
+                  }[event.severity] || 'default';
+
+                  return (
+                    <div 
+                      key={`${event.type}-${index}`} 
+                      className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg"
+                    >
+                      <div className="flex-1">
+                        <div className="font-medium text-gray-900 dark:text-gray-100">
+                          {event.title}
+                        </div>
+                        <div className="text-sm text-gray-600 dark:text-gray-400">
+                          {event.description}
+                          {event.site && ` • ${event.site}`}
+                        </div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                          {new Date(event.timestamp).toLocaleString()}
+                        </div>
                       </div>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      {site.alerts > 0 && (
-                        <Badge variant="destructive" className="text-xs">
-                          {site.alerts} Alert{site.alerts > 1 ? 's' : ''}
-                        </Badge>
-                      )}
                       <Badge 
-                        variant={site.status === 'active' ? 'default' : 'secondary'}
-                        className={`text-xs ${
-                          site.status === 'active' 
-                            ? 'bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100' 
-                            : 'bg-gray-100 text-gray-800 dark:bg-gray-600 dark:text-gray-100'
-                        }`}
+                        variant={severityColor as "success" | "warning" | "default" | "outline" | "destructive" | "secondary"}
+                        className="text-xs capitalize self-start sm:self-auto"
                       >
-                        {site.status}
+                        {event.severity}
                       </Badge>
                     </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="dark:bg-gray-800 dark:border-gray-700">
-            <CardHeader>
-              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Recent Activity</h3>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {recentActivity.map((activity) => (
-                  <div key={activity.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                    <div className="flex-1">
-                      <div className="font-medium text-gray-900 dark:text-gray-100">
-                        {activity.guard} - {activity.type}
-                      </div>
-                      <div className="text-sm text-gray-600 dark:text-gray-400">
-                        {activity.site} • {activity.time}
-                      </div>
-                    </div>
-                    <Badge 
-                      variant={activity.status === 'success' ? 'default' : activity.status === 'warning' ? 'secondary' : 'destructive'}
-                      className={`text-xs ${
-                        activity.status === 'success' 
-                          ? 'bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100'
-                          : activity.status === 'warning'
-                          ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-100'
-                          : 'bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100'
-                      }`}
-                    >
-                      {activity.status}
-                    </Badge>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </CardContent>
           </Card>
         </div>
+
+        {/* Site Status */}
+        <Card className="dark:bg-gray-800 dark:border-gray-700">
+          <CardHeader>
+            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Site Status Overview</h3>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {liveStatus.map((site) => (
+                <div 
+                  key={site.id} 
+                  className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg"
+                >
+                  <div className="flex-1">
+                    <div className="font-medium text-gray-900 dark:text-gray-100">{site.name}</div>
+                    <div className="text-sm text-gray-600 dark:text-gray-400">
+                      On duty: {site.onDuty ?? 0} / Required: {site.required ?? 0} • Last update: {site.lastUpdate}
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+                    {site.alerts > 0 && (
+                      <Badge variant="destructive" className="text-xs">
+                        {site.alerts} Alert{site.alerts > 1 ? 's' : ''}
+                      </Badge>
+                    )}
+                    <Badge
+                      variant={site.coverageStatus === 'full' ? 'default' : site.coverageStatus === 'partial' ? 'warning' : site.coverageStatus === 'none' ? 'destructive' : 'secondary'}
+                      className={`text-xs capitalize ${
+                        site.coverageStatus === 'full'
+                          ? 'bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100'
+                          : site.coverageStatus === 'partial'
+                          ? 'bg-amber-100 text-amber-800 dark:bg-amber-800 dark:text-amber-100'
+                          : site.coverageStatus === 'none'
+                          ? 'bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100'
+                          : 'bg-gray-100 text-gray-800 dark:bg-gray-600 dark:text-gray-100'
+                      }`}
+                    >
+                      {site.coverageStatus || 'unknown'}
+                    </Badge>
+                    <Badge 
+                      variant={site.status === 'active' ? 'default' : 'secondary'}
+                      className={`text-xs ${
+                        site.status === 'active' 
+                          ? 'bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100' 
+                          : 'bg-gray-100 text-gray-800 dark:bg-gray-600 dark:text-gray-100'
+                      }`}
+                    >
+                      {site.status}
+                    </Badge>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Quick Actions */}
         <Card className="dark:bg-gray-800 dark:border-gray-700">
@@ -171,19 +572,19 @@ const Monitoring = ({ auth }: MonitoringProps) => {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <Button variant="outline" className="h-12 flex flex-col items-center justify-center space-y-1 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
+              <Button onClick={() => (window.location.href = route('control-room.cameras.index'))} variant="outline" className="h-12 flex flex-col items-center justify-center space-y-1 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
                 <span className="text-lg">📹</span>
                 <span className="text-sm">View Cameras</span>
               </Button>
-              <Button variant="outline" className="h-12 flex flex-col items-center justify-center space-y-1 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
+              <Button onClick={() => (window.location.href = route('control-room.flags.index'))} variant="outline" className="h-12 flex flex-col items-center justify-center space-y-1 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
                 <span className="text-lg">🚨</span>
-                <span className="text-sm">Send Alert</span>
+                <span className="text-sm">View Flags</span>
               </Button>
-              <Button variant="outline" className="h-12 flex flex-col items-center justify-center space-y-1 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
+              <Button onClick={() => (window.location.href = route('control-room.tickets.create'))} variant="outline" className="h-12 flex flex-col items-center justify-center space-y-1 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
                 <span className="text-lg">📞</span>
-                <span className="text-sm">Emergency Call</span>
+                <span className="text-sm">Create Ticket</span>
               </Button>
-              <Button variant="outline" className="h-12 flex flex-col items-center justify-center space-y-1 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
+              <Button onClick={() => (window.location.href = route('control-room.reports'))} variant="outline" className="h-12 flex flex-col items-center justify-center space-y-1 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
                 <span className="text-lg">📊</span>
                 <span className="text-sm">Generate Report</span>
               </Button>
@@ -191,7 +592,7 @@ const Monitoring = ({ auth }: MonitoringProps) => {
           </CardContent>
         </Card>
       </div>
-    </ControlRoomLayout>
+    </AuthenticatedLayout>
   );
 };
 

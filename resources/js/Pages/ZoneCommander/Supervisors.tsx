@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Head } from '@inertiajs/react';
-import ZoneCommanderLayout from '@/Layouts/ZoneCommanderLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import { Input } from '@/Components/ui/input';
@@ -14,7 +14,7 @@ interface Supervisor {
   employee_id: string;
   email: string;
   phone: string;
-  status: 'active' | 'inactive' | 'on_leave';
+  status: 'active' | 'inactive' | 'suspended' | 'dismissed' | 'absconded';
   position: string;
   zone_name: string;
   team_size: number;
@@ -32,7 +32,7 @@ interface SupervisorsProps {
 
 export default function Supervisors({ supervisors = [] }: SupervisorsProps) {
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive' | 'on_leave'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive' | 'suspended' | 'dismissed' | 'absconded'>('all');
 
   const filteredSupervisors = supervisors.filter(supervisor => {
     const matchesSearch = supervisor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -44,17 +44,23 @@ export default function Supervisors({ supervisors = [] }: SupervisorsProps) {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'active': return 'bg-green-100 text-green-800';
-      case 'inactive': return 'bg-gray-100 text-gray-800';
-      case 'on_leave': return 'bg-blue-100 text-blue-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'active':
+        return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100';
+      case 'suspended':
+        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100';
+      case 'absconded':
+        return 'bg-rose-100 text-rose-800 dark:bg-rose-900 dark:text-rose-100';
+      case 'dismissed':
+      case 'inactive':
+      default:
+        return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-100';
     }
   };
 
   const getPerformanceColor = (score: number) => {
-    if (score >= 90) return 'text-green-600';
-    if (score >= 70) return 'text-yellow-600';
-    return 'text-red-600';
+    if (score >= 90) return 'text-green-600 dark:text-green-300';
+    if (score >= 70) return 'text-yellow-600 dark:text-yellow-300';
+    return 'text-red-600 dark:text-red-300';
   };
 
   const totalSupervisors = supervisors.length;
@@ -63,21 +69,21 @@ export default function Supervisors({ supervisors = [] }: SupervisorsProps) {
   const averagePerformance = supervisors.reduce((sum, s) => sum + s.performance_score, 0) / supervisors.length;
 
   return (
-    <ZoneCommanderLayout title="Supervisors">
+    <AuthenticatedLayout header="Supervisors">
       <Head title="Supervisors Management" />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+      <div className="w-full min-h-screen p-3 sm:p-4 lg:p-6 space-y-4 sm:space-y-6">
         {/* Overview Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <Card className="hover:shadow-lg transition-shadow duration-300">
             <CardContent className="p-6">
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                  <IconMapper name="UserCog" className="w-6 h-6 text-blue-600" />
+                <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
+                  <IconMapper name="UserCog" className="w-6 h-6 text-blue-600 dark:text-blue-200" />
                 </div>
                 <div>
-                  <p className="text-sm text-gray-600">Total Supervisors</p>
-                  <p className="text-2xl font-bold text-gray-900">{totalSupervisors}</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-300">Total Supervisors</p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{totalSupervisors}</p>
                 </div>
               </div>
             </CardContent>
@@ -86,12 +92,12 @@ export default function Supervisors({ supervisors = [] }: SupervisorsProps) {
           <Card className="hover:shadow-lg transition-shadow duration-300">
             <CardContent className="p-6">
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                  <IconMapper name="CheckCircle" className="w-6 h-6 text-green-600" />
+                <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
+                  <IconMapper name="CheckCircle" className="w-6 h-6 text-green-600 dark:text-green-200" />
                 </div>
                 <div>
-                  <p className="text-sm text-gray-600">Active Supervisors</p>
-                  <p className="text-2xl font-bold text-gray-900">{activeSupervisors}</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-300">Active Supervisors</p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{activeSupervisors}</p>
                 </div>
               </div>
             </CardContent>
@@ -100,12 +106,12 @@ export default function Supervisors({ supervisors = [] }: SupervisorsProps) {
           <Card className="hover:shadow-lg transition-shadow duration-300">
             <CardContent className="p-6">
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                  <IconMapper name="Users" className="w-6 h-6 text-purple-600" />
+                <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center">
+                  <IconMapper name="Users" className="w-6 h-6 text-purple-600 dark:text-purple-200" />
                 </div>
                 <div>
-                  <p className="text-sm text-gray-600">Total Team Size</p>
-                  <p className="text-2xl font-bold text-gray-900">{totalTeamSize}</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-300">Total Team Size</p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{totalTeamSize}</p>
                 </div>
               </div>
             </CardContent>
@@ -114,12 +120,12 @@ export default function Supervisors({ supervisors = [] }: SupervisorsProps) {
           <Card className="hover:shadow-lg transition-shadow duration-300">
             <CardContent className="p-6">
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
-                  <IconMapper name="TrendingUp" className="w-6 h-6 text-orange-600" />
+                <div className="w-12 h-12 bg-orange-100 dark:bg-orange-900/30 rounded-lg flex items-center justify-center">
+                  <IconMapper name="TrendingUp" className="w-6 h-6 text-orange-600 dark:text-orange-200" />
                 </div>
                 <div>
-                  <p className="text-sm text-gray-600">Avg Performance</p>
-                  <p className="text-2xl font-bold text-gray-900">{Math.round(averagePerformance)}%</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-300">Avg Performance</p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{Math.round(averagePerformance)}%</p>
                 </div>
               </div>
             </CardContent>
@@ -135,7 +141,7 @@ export default function Supervisors({ supervisors = [] }: SupervisorsProps) {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-col lg:flex-row gap-4 mb-6">
+            <div className="flex flex-col gap-4 mb-6">
               <div className="flex-1">
                 <Input
                   placeholder="Search supervisors by name, ID, or email..."
@@ -144,7 +150,7 @@ export default function Supervisors({ supervisors = [] }: SupervisorsProps) {
                   className="w-full"
                 />
               </div>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <Button
                   variant={statusFilter === 'all' ? 'default' : 'outline'}
                   onClick={() => setStatusFilter('all')}
@@ -160,18 +166,32 @@ export default function Supervisors({ supervisors = [] }: SupervisorsProps) {
                   Active
                 </Button>
                 <Button
-                  variant={statusFilter === 'on_leave' ? 'default' : 'outline'}
-                  onClick={() => setStatusFilter('on_leave')}
-                  size="sm"
-                >
-                  On Leave
-                </Button>
-                <Button
                   variant={statusFilter === 'inactive' ? 'default' : 'outline'}
                   onClick={() => setStatusFilter('inactive')}
                   size="sm"
                 >
                   Inactive
+                </Button>
+                <Button
+                  variant={statusFilter === 'suspended' ? 'default' : 'outline'}
+                  onClick={() => setStatusFilter('suspended')}
+                  size="sm"
+                >
+                  Suspended
+                </Button>
+                <Button
+                  variant={statusFilter === 'dismissed' ? 'default' : 'outline'}
+                  onClick={() => setStatusFilter('dismissed')}
+                  size="sm"
+                >
+                  Dismissed
+                </Button>
+                <Button
+                  variant={statusFilter === 'absconded' ? 'default' : 'outline'}
+                  onClick={() => setStatusFilter('absconded')}
+                  size="sm"
+                >
+                  Absconded
                 </Button>
               </div>
             </div>
@@ -181,16 +201,16 @@ export default function Supervisors({ supervisors = [] }: SupervisorsProps) {
               {filteredSupervisors.map((supervisor) => (
                 <Card key={supervisor.id} className="hover:shadow-lg transition-shadow duration-300">
                   <CardContent className="p-6">
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
+                    <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
+                      <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-3 mb-2">
-                          <h3 className="text-lg font-semibold text-gray-900">{supervisor.name}</h3>
+                          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{supervisor.name}</h3>
                           <Badge className={getStatusColor(supervisor.status)}>
                             {supervisor.status.toUpperCase()}
                           </Badge>
                         </div>
                         
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm text-gray-600 mb-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm text-gray-600 dark:text-gray-300 mb-4">
                           <div className="flex items-center gap-2">
                             <IconMapper name="Hash" className="w-4 h-4" />
                             <span>ID: {supervisor.employee_id}</span>
@@ -210,38 +230,38 @@ export default function Supervisors({ supervisors = [] }: SupervisorsProps) {
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
-                          <div className="bg-gray-50 rounded-lg p-3">
-                            <p className="text-xs text-gray-500">Position</p>
-                            <p className="text-sm font-medium">{supervisor.position}</p>
+                          <div className="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-3">
+                            <p className="text-xs text-gray-500 dark:text-gray-400">Position</p>
+                            <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{supervisor.position}</p>
                           </div>
-                          <div className="bg-gray-50 rounded-lg p-3">
-                            <p className="text-xs text-gray-500">Shift</p>
-                            <p className="text-sm font-medium capitalize">{supervisor.shift}</p>
+                          <div className="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-3">
+                            <p className="text-xs text-gray-500 dark:text-gray-400">Shift</p>
+                            <p className="text-sm font-medium text-gray-900 dark:text-gray-100 capitalize">{supervisor.shift}</p>
                           </div>
-                          <div className="bg-gray-50 rounded-lg p-3">
-                            <p className="text-xs text-gray-500">Performance</p>
+                          <div className="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-3">
+                            <p className="text-xs text-gray-500 dark:text-gray-400">Performance</p>
                             <p className={`text-sm font-medium ${getPerformanceColor(supervisor.performance_score)}`}>
                               {supervisor.performance_score}%
                             </p>
                           </div>
-                          <div className="bg-gray-50 rounded-lg p-3">
-                            <p className="text-xs text-gray-500">Last Active</p>
-                            <p className="text-sm font-medium">
+                          <div className="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-3">
+                            <p className="text-xs text-gray-500 dark:text-gray-400">Last Active</p>
+                            <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
                               {format(new Date(supervisor.last_active), 'MMM d, HH:mm')}
                             </p>
                           </div>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                          <div className="bg-gray-50 rounded-lg p-3">
-                            <p className="text-xs text-gray-500">Hire Date</p>
-                            <p className="text-sm font-medium">
+                          <div className="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-3">
+                            <p className="text-xs text-gray-500 dark:text-gray-400">Hire Date</p>
+                            <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
                               {format(new Date(supervisor.hire_date), 'MMM d, yyyy')}
                             </p>
                           </div>
-                          <div className="bg-gray-50 rounded-lg p-3">
-                            <p className="text-xs text-gray-500">Emergency Contact</p>
-                            <p className="text-sm font-medium">{supervisor.emergency_contact}</p>
+                          <div className="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-3">
+                            <p className="text-xs text-gray-500 dark:text-gray-400">Emergency Contact</p>
+                            <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{supervisor.emergency_contact}</p>
                           </div>
                         </div>
 
@@ -254,20 +274,20 @@ export default function Supervisors({ supervisors = [] }: SupervisorsProps) {
                         </div>
                       </div>
 
-                      <div className="flex flex-col gap-2 ml-4">
-                        <Button variant="outline" size="sm" className="hover:bg-blue-50">
+                      <div className="flex flex-col gap-2 sm:ml-4 w-full sm:w-auto">
+                        <Button variant="outline" size="sm" className="hover:bg-blue-50 dark:hover:bg-gray-900 w-full sm:w-auto">
                           <IconMapper name="Eye" className="w-4 h-4 mr-2" />
                           View Profile
                         </Button>
-                        <Button variant="outline" size="sm" className="hover:bg-green-50">
+                        <Button variant="outline" size="sm" className="hover:bg-green-50 dark:hover:bg-gray-900 w-full sm:w-auto">
                           <IconMapper name="Edit" className="w-4 h-4 mr-2" />
                           Edit
                         </Button>
-                        <Button variant="outline" size="sm" className="hover:bg-purple-50">
+                        <Button variant="outline" size="sm" className="hover:bg-purple-50 dark:hover:bg-gray-900 w-full sm:w-auto">
                           <IconMapper name="Users" className="w-4 h-4 mr-2" />
                           Manage Team
                         </Button>
-                        <Button variant="outline" size="sm" className="hover:bg-orange-50">
+                        <Button variant="outline" size="sm" className="hover:bg-orange-50 dark:hover:bg-gray-900 w-full sm:w-auto">
                           <IconMapper name="MessageSquare" className="w-4 h-4 mr-2" />
                           Contact
                         </Button>
@@ -281,14 +301,14 @@ export default function Supervisors({ supervisors = [] }: SupervisorsProps) {
             {filteredSupervisors.length === 0 && (
               <div className="text-center py-12">
                 <IconMapper name="UserCog" className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No supervisors found</h3>
-                <p className="text-gray-500">Try adjusting your search or filter criteria.</p>
+                <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">No supervisors found</h3>
+                <p className="text-gray-500 dark:text-gray-400">Try adjusting your search or filter criteria.</p>
               </div>
             )}
           </CardContent>
         </Card>
       </div>
-    </ZoneCommanderLayout>
+    </AuthenticatedLayout>
   );
 }
 

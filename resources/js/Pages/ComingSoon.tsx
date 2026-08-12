@@ -1,6 +1,6 @@
 import React from 'react';
 import { Head } from '@inertiajs/react';
-import AdminLayout from '@/Layouts/AdminLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 
 interface Props {
   title?: string;
@@ -9,7 +9,7 @@ interface Props {
 
 export default function ComingSoon({ title = 'Coming Soon', description = 'This page is under construction.' }: Props) {
   return (
-    <AdminLayout title={title}>
+    <AuthenticatedLayout header={title}>
       <Head title={title} />
       <div className="py-12">
         <div className="max-w-3xl mx-auto">
@@ -22,6 +22,6 @@ export default function ComingSoon({ title = 'Coming Soon', description = 'This 
           </div>
         </div>
       </div>
-    </AdminLayout>
+    </AuthenticatedLayout>
   );
 }

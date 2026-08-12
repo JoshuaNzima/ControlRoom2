@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Guards\{Attendance, Guard, ClientSite};
+use App\Events\AttendanceUpdated;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -101,6 +102,25 @@ class AttendanceController extends Controller
             $attendance->calculateHours();
         }
 
+        // Dispatch event for real-time notifications
+        $guard = Guard::find($validated['guard_id']);
+        $site = ClientSite::find($validated['client_site_id']);
+        
+        event(new AttendanceUpdated(
+            $attendance->id,
+            "Attendance record created",
+            [
+                'id' => $attendance->id,
+                'guard_name' => $guard?->name ?? 'Unknown',
+                'site_name' => $site?->name ?? 'Unknown',
+                'client_name' => $site?->client?->name ?? 'Unknown',
+                'action' => $checkOutDateTime ? 'check_out' : 'check_in',
+                'timestamp' => ($checkOutDateTime ?? $checkInDateTime)->toIso8601String(),
+                'status' => $validated['status'],
+                'supervisor_id' => Auth::id(),
+            ]
+        ));
+
         return redirect()->route('attendance.index')
             ->with('success', 'Attendance record created successfully.');
     }
@@ -117,7 +137,7 @@ class AttendanceController extends Controller
         $sites = ClientSite::active()->get();
 
         return Inertia::render('Attendance/Edit', [
-            'attendance' => $attendance->load(['guard', 'clientSite']),
+            'attendance' => $attendance->load(['guardRelation', 'clientSite']),
             'guards' => $guards,
             'sites' => $sites,
         ]);
@@ -156,6 +176,25 @@ class AttendanceController extends Controller
         if ($checkOutDateTime) {
             $attendance->calculateHours();
         }
+
+        // Dispatch event for real-time notifications
+        $guard = Guard::find($validated['guard_id']);
+        $site = ClientSite::find($validated['client_site_id']);
+        
+        event(new AttendanceUpdated(
+            $attendance->id,
+            "Attendance record updated",
+            [
+                'id' => $attendance->id,
+                'guard_name' => $guard?->name ?? 'Unknown',
+                'site_name' => $site?->name ?? 'Unknown',
+                'client_name' => $site?->client?->name ?? 'Unknown',
+                'action' => $checkOutDateTime ? 'check_out' : 'check_in',
+                'timestamp' => ($checkOutDateTime ?? $checkInDateTime)->toISOString(),
+                'status' => $validated['status'],
+                'supervisor_id' => Auth::id(),
+            ]
+        ));
 
         return redirect()->route('attendance.index')
             ->with('success', 'Attendance record updated successfully.');

@@ -35,7 +35,7 @@ class ModularPermissionsSeeder extends Seeder
             
             'hr' => [
                 'hr.employees.view',
-                'hr.employees.create',
+                'hr.employees.create', 
                 'hr.employees.edit',
                 'hr.employees.delete',
                 'hr.payroll.view',
@@ -48,6 +48,7 @@ class ModularPermissionsSeeder extends Seeder
                 'hr.training.manage',
                 'hr.reports.view',
                 'hr.reports.generate',
+                'hr.careers.manage',
             ],
             
             'finance' => [
@@ -115,6 +116,24 @@ class ModularPermissionsSeeder extends Seeder
                 'clients.contracts.view',
                 'clients.reports.view',
             ],
+
+            'training' => [
+                'training.dashboard.view',
+                'training.trainees.view',
+                'training.trainees.manage',
+                'training.trainees.decide',
+                'training.regimens.view',
+                'training.regimens.manage',
+            ],
+
+            'tasks' => [
+                'tasks.view',
+                'tasks.create',
+                'tasks.edit',
+                'tasks.delete',
+                'tasks.complete',
+                'tasks.view_all',
+            ],
         ];
 
         // Create all permissions
@@ -179,12 +198,38 @@ class ModularPermissionsSeeder extends Seeder
             'reports.view',
         ]);
 
+        // Trainer - Training module access
+        $trainer = Role::firstOrCreate(['name' => 'trainer']);
+        $trainer->givePermissionTo([
+            'training.dashboard.view',
+            'training.trainees.view',
+            'training.trainees.manage',
+            'training.trainees.decide',
+            'training.regimens.view',
+            'training.regimens.manage',
+            'guards.create',
+            'guards.view',
+        ]);
+
         // Client - Limited access
         $client = Role::firstOrCreate(['name' => 'client']);
         $client->givePermissionTo([
             'guards.view', // Only assigned
             'reports.view', // Only their reports
             'clients.reports.view',
+        ]);
+
+        // Executive Assistant - Can view and manage all tasks
+        $executiveAssistant = Role::firstOrCreate(['name' => 'executive_assistant']);
+        $executiveAssistant->givePermissionTo([
+            'tasks.view',
+            'tasks.create',
+            'tasks.edit',
+            'tasks.delete',
+            'tasks.complete',
+            'tasks.view_all',
+            'reports.view',
+            'reports.generate',
         ]);
     }
 }

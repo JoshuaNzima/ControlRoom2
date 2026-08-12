@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Guards;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Inertia\Inertia;
 
 class OperationsController extends Controller
 {

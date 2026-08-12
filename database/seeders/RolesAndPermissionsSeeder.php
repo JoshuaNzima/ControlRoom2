@@ -75,6 +75,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'control.reports.generate',
             'control.qr_codes.view',
             'control.qr_codes.generate',
+            'zone.view.dashboard',
             
             // Reports module
             'reports.view',
@@ -94,6 +95,21 @@ class RolesAndPermissionsSeeder extends Seeder
             'admin.modules.manage',
             'admin.settings.view',
             'admin.settings.manage',
+            // Finance module
+            'finance.access',
+            'finance.view',
+            'finance.manage',
+            'finance.invoices.view',
+            'finance.invoices.manage',
+            'finance.budgets.view',
+            'finance.budgets.manage',
+
+            // Requisitions module
+            'requisitions.create',
+            'requisitions.view_own',
+            'requisitions.view_all',
+            'requisitions.approve',
+            'requisitions.disburse',
         ];
 
         foreach ($permissions as $permission) {
@@ -130,6 +146,8 @@ class RolesAndPermissionsSeeder extends Seeder
             'reports.activity_logs.view',
             
             'admin.users.view', 'admin.users.create', 'admin.users.edit',
+            // Requisitions
+            'requisitions.create', 'requisitions.view_own',
         ]);
 
         // Supervisor role - limited to attendance and viewing
@@ -141,6 +159,28 @@ class RolesAndPermissionsSeeder extends Seeder
             'incidents.view',
             'reports.view',
             'clients.view',
+            // Requisitions
+            'requisitions.create', 'requisitions.view_own',
+            // Finance access for supervisors
+            'finance.access', 'finance.view',
+            'finance.invoices.view',
+        ]);
+
+        // Sergeant role - supervisory position for guards
+        $sergeantRole = Role::firstOrCreate(['name' => 'sergeant']);
+        $sergeantRole->givePermissionTo([
+            'guards.view',
+            'guards.sergeants.view',
+            'attendance.view',
+            'shifts.view',
+            'incidents.view',
+            'reports.view',
+            'clients.view',
+            // Requisitions
+            'requisitions.create', 'requisitions.view_own',
+            // Finance access for sergeants
+            'finance.access', 'finance.view',
+            'finance.invoices.view',
         ]);
 
         // Zone Commander role - manages a specific zone
@@ -152,8 +192,14 @@ class RolesAndPermissionsSeeder extends Seeder
             'incidents.view',
             'reports.view',
             'clients.view',
+            'zone.view.dashboard',
             'control.zones.view',
             'control.reports.view',
+            // Requisitions
+            'requisitions.create', 'requisitions.view_own',
+            // Finance access for zone commanders
+            'finance.access', 'finance.view',
+            'finance.invoices.view',
         ]);
 
         // Control Room Operator role - dedicated control room access
@@ -180,6 +226,30 @@ class RolesAndPermissionsSeeder extends Seeder
             'control.qr_codes.generate',
             'guards.view', // Need to see guards for assignments
             'clients.view', // Need to see clients for incidents
+            // Requisitions
+            'requisitions.create', 'requisitions.view_own',
+            // Finance access for control room operators
+            'finance.access', 'finance.view',
+            'finance.invoices.view',
+        ]);
+
+        // Operations Officer - oversees control room, guards and zone operations
+        $operationsOfficerRole = Role::firstOrCreate(['name' => 'operations_officer']);
+        $operationsOfficerPermissions = array_unique(array_merge(
+            $managerRole->permissions->pluck('name')->toArray(),
+            $controlRoomRole->permissions->pluck('name')->toArray(),
+            Permission::whereIn('name', [
+                'reports.view',
+                'reports.generate',
+                'reports.export',
+                'reports.analytics',
+            ])->pluck('name')->toArray()
+        ));
+        $operationsOfficerRole->givePermissionTo($operationsOfficerPermissions);
+        // Add finance access to operations officer
+        $operationsOfficerRole->givePermissionTo([
+            'finance.access', 'finance.view',
+            'finance.invoices.view',
         ]);
 
         // Client role - very limited access
@@ -188,6 +258,54 @@ class RolesAndPermissionsSeeder extends Seeder
             'guards.view', // Only assigned guards
             'attendance.view', // Only their sites
             'reports.view', // Only their reports
+            // Requisitions
+            'requisitions.create', 'requisitions.view_own',
+            // Finance access for clients
+            'finance.access', 'finance.view',
+            'finance.invoices.view',
         ]);
+
+        // Finance roles
+        $financeOfficer = Role::firstOrCreate(['name' => 'finance_officer']);
+        $financeOfficer->givePermissionTo([
+            'finance.access', 'finance.view', 'finance.manage',
+            'finance.invoices.view', 'finance.invoices.manage',
+            'finance.budgets.view', 'finance.budgets.manage',
+        ]);
+
+        $accountant = Role::firstOrCreate(['name' => 'accountant']);
+        $accountant->givePermissionTo([
+            'finance.access', 'finance.view',
+            'finance.invoices.view', 'finance.budgets.view',
+        ]);
+
+        // Add finance permissions to admin role
+        $adminRole->givePermissionTo([
+            'finance.access', 'finance.view', 'finance.manage',
+            'finance.invoices.view', 'finance.invoices.manage',
+            'finance.budgets.view', 'finance.budgets.manage',
+        ]);
+        
+        // Business Development Officer - client liaison, K9 program, events
+        $businessDev = Role::firstOrCreate(['name' => 'business_dev']);
+        $businessDev->givePermissionTo([
+            'clients.view', 'clients.create', 'clients.edit', 'clients.sites.manage',
+            'k9.view',
+            'reports.view',
+            // Requisitions
+            'requisitions.create', 'requisitions.view_own',
+        ]);
+
+        $hrPermissions = [
+            'hr.employees.view', 'hr.employees.create', 'hr.employees.edit', 'hr.employees.delete',
+            'hr.leaves.view', 'hr.leaves.approve', 'hr.archived.view', 'hr.resigned.view', 'hr.dismissed.view',
+        ];
+        $hr = Role::firstOrCreate(['name' => 'hr']);
+        $hr->givePermissionTo($hrPermissions);
+        $hr->givePermissionTo(['requisitions.create', 'requisitions.view_own']);
+
+        $humanResources = Role::firstOrCreate(['name' => 'human_resources']);
+        $humanResources->givePermissionTo($hrPermissions);
+        $humanResources->givePermissionTo(['requisitions.create', 'requisitions.view_own']);
     }
 }

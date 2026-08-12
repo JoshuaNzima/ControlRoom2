@@ -35,4 +35,34 @@ return [
         ],
     ],
 
+    'whatsapp' => [
+        'enabled' => (bool) env('WHATSAPP_ENABLED', false),
+        'providers' => array_filter(array_map('trim', explode(',', (string) env('WHATSAPP_PROVIDERS', 'meta')))),
+        'meta' => [
+            'token' => env('WHATSAPP_META_TOKEN'),
+            'phone_number_id' => env('WHATSAPP_META_PHONE_NUMBER_ID'),
+            'api_version' => env('WHATSAPP_META_API_VERSION', 'v20.0'),
+        ],
+        'twilio' => [
+            'sid' => env('TWILIO_SID'),
+            'token' => env('TWILIO_TOKEN'),
+            'from' => env('TWILIO_WHATSAPP_FROM', 'whatsapp:+14155238886'),
+        ],
+    ],
+
+    'sms' => [
+        'enabled' => (bool) env('SMS_ENABLED', false),
+        'providers' => array_filter(array_map('trim', explode(',', (string) env('SMS_PROVIDERS', 'twilio')))),
+        'twilio' => [
+            'sid' => env('TWILIO_SID'),
+            'token' => env('TWILIO_TOKEN'),
+            'from' => env('TWILIO_SMS_FROM'),
+        ],
+    ],
+
+    'openai' => [
+        'api_key' => env('OPENAI_API_KEY'),
+        'model' => env('OPENAI_MODEL', 'gpt-3.5-turbo'),
+    ],
+
 ];

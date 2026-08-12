@@ -13,6 +13,11 @@ return new class extends Migration
     {
         Schema::create('guard_documents', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('guard_id')->constrained('guards')->cascadeOnDelete();
+            $table->string('document_type');
+            $table->string('document_name');
+            $table->string('file_path');
+            $table->boolean('is_verified')->default(false);
             $table->timestamps();
         });
     }

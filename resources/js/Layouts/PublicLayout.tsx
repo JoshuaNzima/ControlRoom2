@@ -1,114 +1,252 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Head, Link } from '@inertiajs/react';
-import IconMapper from '@/Components/IconMapper';
+import { motion, AnimatePresence } from 'framer-motion';
+import AIAssistant from '@/Components/AI/AIAssistant';
 
 interface Props {
   title?: string;
   children: React.ReactNode;
 }
 
-export default function PublicLayout({ title = 'Coin Security', children }: Props) {
-  return (
-    <div className="min-h-screen bg-gray-50 text-gray-900">
-      <Head title={title} />
+const navLinks = [
+  { label: 'Home', href: '/' },
+  { label: 'Services', href: '/services' },
+  { label: 'About', href: '/about' },
+  { label: 'Contact Us', href: '/#intake' },
+];
 
-      <header className="bg-white/95 backdrop-blur-sm shadow-lg sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            <div className="flex items-center gap-3">
-              <img src="/images/Coin-logo.png" alt="Coin Security" className="h-10 w-auto" />
-              <span className="text-lg font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                Coin Security
+export default function PublicLayout({ title = 'Coin Security', children }: Props) {
+  const [scrolled, setScrolled] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 40);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  const safeRoute = (name: string, params?: any, fallback: string = '#') => {
+    try { return route(name, params); } catch { return fallback; }
+  };
+
+  const phoneNumber = '+265 99 961 1711';
+  const phoneHref = 'tel:+265999611711';
+  const whatsappHref = 'https://wa.me/265999611711?text=Hi%20Coin%20Security%2C%20I%27d%20like%20a%20quote.';
+  const addressLine = 'Area 47/4, Viphya street, Lilongwe, Malawi';
+  const operatingRegion = 'Blantyre • Lilongwe • Mzuzu';
+
+  const footerLinks = {
+    Services: [
+      { label: 'Security Guards', href: safeRoute('public.services.show', 'security-guards', '/services/security-guards') },
+      { label: 'Live Monitoring', href: safeRoute('public.services.show', 'cctv-surveillance', '/services/cctv-surveillance') },
+      { label: 'Patrol Services', href: safeRoute('public.services.show', 'mobile-patrol', '/services/mobile-patrol') },
+      { label: 'Emergency Response', href: safeRoute('public.services', undefined, '/services') },
+    ],
+    Company: [
+      { label: 'About Us', href: safeRoute('public.about', undefined, '/about') },
+      { label: 'Careers', href: safeRoute('public.careers', undefined, '/careers') },
+      { label: 'Contact', href: safeRoute('public.contact', undefined, '/contact') },
+      { label: 'Privacy Policy', href: safeRoute('public.privacy', undefined, '/privacy') },
+    ],
+    Support: [
+      { label: 'FAQ', href: '#' },
+      { label: 'Client Login', href: safeRoute('login', undefined, '/login') },
+      { label: 'Emergency: +265 99 961 1711', href: phoneHref },
+    ],
+  };
+
+  return (
+    <div className="min-h-screen overflow-x-hidden bg-white text-coin-text">
+      <Head title={title}>
+        <meta
+          name="description"
+          content="Coin Security provides professional security guards, 24/7 live monitoring, and rapid response across Malawi (Blantyre, Lilongwe, Mzuzu). Call or WhatsApp us for a quote."
+        />
+      </Head>
+
+      {/* ═══ HEADER ═══ */}
+      <header
+        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
+          scrolled
+            ? 'bg-white/90 backdrop-blur-xl border-b border-coin-border shadow-sm'
+            : 'bg-transparent'
+        }`}
+      >
+        <div className="mx-auto max-w-7xl px-6 lg:px-8">
+          <div className="flex h-18 items-center justify-between py-4">
+            {/* Logo */}
+            <Link href="/" className="flex items-center gap-3 group">
+              <img
+                src="/images/Coin-logo.png"
+                alt="Coin Security"
+                className="h-10 w-10 object-contain rounded-full"
+              />
+              <span className="text-lg font-bold tracking-tight text-coin-text">
+                Coin <span className="text-coin-accent">Security</span>
               </span>
-            </div>
-            <nav className="flex items-center gap-6">
-              <Link 
-                href={route('public.home')} 
-                className="text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors duration-200"
+            </Link>
+
+            {/* Desktop Nav */}
+            <nav className="hidden md:flex items-center gap-1">
+              {navLinks.map((link) => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className="relative px-4 py-2 text-sm font-medium text-coin-muted hover:text-coin-text transition-colors duration-300 group"
+                >
+                  {link.label}
+                  <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-0 h-0.5 bg-coin-accent rounded-full transition-all duration-300 group-hover:w-4" />
+                </Link>
+              ))}
+              <Link
+                href={safeRoute('login', undefined, '/login')}
+                className="ml-4 inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-coin-accent hover:bg-coin-accent-light rounded-lg transition-all duration-300 shadow-cta"
               >
-                Home
-              </Link>
-              <Link 
-                href={route('login')} 
-                className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white text-sm font-medium rounded-lg hover:shadow-lg transform hover:scale-105 transition-all duration-200"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
                 </svg>
                 Client Login
               </Link>
-              <a 
-                href="/contact" 
-                className="text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors duration-200"
-              >
-                Contact
-              </a>
             </nav>
+
+            {/* Mobile Hamburger */}
+            <button
+              onClick={() => setMobileOpen(!mobileOpen)}
+              className="md:hidden relative w-8 h-8 flex flex-col items-center justify-center gap-1.5 group"
+              aria-label="Toggle menu"
+            >
+              <span className={`block h-[2.5px] w-6 bg-coin-text rounded-full transition-all duration-300 ${mobileOpen ? 'rotate-45 translate-y-[7px]' : ''}`} />
+              <span className={`block h-[2.5px] w-6 bg-coin-text rounded-full transition-all duration-300 ${mobileOpen ? 'opacity-0 scale-0' : ''}`} />
+              <span className={`block h-[2.5px] w-6 bg-coin-text rounded-full transition-all duration-300 ${mobileOpen ? '-rotate-45 -translate-y-[7px]' : ''}`} />
+            </button>
           </div>
         </div>
+
+        {/* Mobile Menu */}
+        <AnimatePresence>
+          {mobileOpen && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.3, ease: 'easeInOut' }}
+              className="md:hidden overflow-hidden border-t border-coin-border bg-white/95 backdrop-blur-xl"
+            >
+              <nav className="flex flex-col px-6 py-6 gap-2">
+                {navLinks.map((link) => (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    onClick={() => setMobileOpen(false)}
+                    className="px-4 py-3 text-sm font-medium text-coin-muted hover:text-coin-text hover:bg-coin-card rounded-lg transition-all duration-300"
+                  >
+                    {link.label}
+                  </Link>
+                ))}
+                <Link
+                  href={safeRoute('login', undefined, '/login')}
+                  onClick={() => setMobileOpen(false)}
+                  className="mt-2 px-5 py-3 text-sm font-semibold text-white bg-coin-accent hover:bg-coin-accent-light rounded-lg text-center transition-all duration-300"
+                >
+                  Client Login
+                </Link>
+              </nav>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </header>
 
-      <main>
-        {children}
-      </main>
+      {/* ═══ MAIN CONTENT ═══ */}
+      <main className="flex-1">{children}</main>
 
-      <footer className="bg-gradient-to-r from-slate-900 to-gray-900 text-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-            <div className="col-span-1 md:col-span-2">
-              <div className="flex items-center gap-3 mb-4">
-                <img src="/images/Coin-logo.png" alt="Coin Security" className="h-8 w-auto" />
-                <span className="text-xl font-bold">Coin Security</span>
-              </div>
-              <p className="text-gray-300 mb-4 max-w-md">
-                Professional security services with cutting-edge technology. 
-                Protecting businesses with trained guards, live monitoring, and intelligent analytics.
+      {/* ═══ FOOTER ═══ */}
+      <footer className="relative border-t border-coin-border bg-white">
+        <div className="mx-auto max-w-7xl px-6 lg:px-8 py-16 md:py-20">
+          <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-10 lg:gap-8">
+            {/* Brand */}
+            <div className="lg:col-span-2">
+              <Link href="/" className="flex items-center gap-3 mb-4">
+                <img
+                  src="/images/Coin-logo.png"
+                  alt="Coin Security"
+                  className="h-9 w-9 object-contain rounded-full"
+                />
+                <span className="text-base font-bold tracking-tight text-coin-text">
+                  Coin <span className="text-coin-accent">Security</span>
+                </span>
+              </Link>
+              <p className="text-sm text-coin-muted leading-relaxed max-w-sm">
+                Malawi's trusted security partner. Protecting businesses, events, and communities
+                with professional security services since 2012.
               </p>
-              <div className="flex gap-4">
-                <a href="#" className="text-gray-400 hover:text-white transition-colors">
-                  <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M24 4.557c-.883.392-1.832.656-2.828.775 1.017-.609 1.798-1.574 2.165-2.724-.951.564-2.005.974-3.127 1.195-.897-.957-2.178-1.555-3.594-1.555-3.179 0-5.515 2.966-4.797 6.045-4.091-.205-7.719-2.165-10.148-5.144-1.29 2.213-.669 5.108 1.523 6.574-.806-.026-1.566-.247-2.229-.616-.054 2.281 1.581 4.415 3.949 4.89-.693.188-1.452.232-2.224.084.626 1.956 2.444 3.379 4.6 3.419-2.07 1.623-4.678 2.348-7.29 2.04 2.179 1.397 4.768 2.212 7.548 2.212 9.142 0 14.307-7.721 13.995-14.646.962-.695 1.797-1.562 2.457-2.549z"/>
+
+              <div className="mt-6 space-y-3 text-sm text-coin-muted">
+                <div className="flex items-start gap-2">
+                  <svg className="w-4 h-4 mt-0.5 text-coin-accent shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 10c0 6-9 13-9 13S3 16 3 10a9 9 0 1 1 18 0z" />
+                    <circle cx="12" cy="10" r="3" />
                   </svg>
-                </a>
-                <a href="#" className="text-gray-400 hover:text-white transition-colors">
-                  <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M22.46 6c-.77.35-1.6.58-2.46.69.88-.53 1.56-1.37 1.88-2.38-.83.5-1.75.85-2.72 1.05C18.37 4.5 17.26 4 16 4c-2.35 0-4.27 1.92-4.27 4.29 0 .34.04.67.11.98C8.28 9.09 5.11 7.38 3 4.79c-.37.63-.58 1.37-.58 2.15 0 1.49.75 2.81 1.91 3.56-.71 0-1.37-.2-1.95-.5v.03c0 2.08 1.48 3.82 3.44 4.21a4.22 4.22 0 0 1-1.93.07 4.28 4.28 0 0 0 4 2.98 8.521 8.521 0 0 1-5.33 1.84c-.34 0-.68-.02-1.02-.06C3.44 20.29 5.7 21 8.12 21 16 21 20.33 14.46 20.33 8.79c0-.19 0-.37-.01-.56.84-.6 1.56-1.36 2.14-2.23z"/>
+                  <span>
+                    Physical Address: {addressLine}
+                    <br />
+                    Operating Region: {operatingRegion}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <svg className="w-4 h-4 text-coin-accent shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.08 4.18 2 2 0 0 1 4.06 2h3a2 2 0 0 1 2 1.72c.12.86.3 1.7.57 2.5a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.58-1.09a2 2 0 0 1 2.11-.45c.8.27 1.64.45 2.5.57A2 2 0 0 1 22 16.92z" />
                   </svg>
-                </a>
-                <a href="#" className="text-gray-400 hover:text-white transition-colors">
-                  <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
-                  </svg>
-                </a>
+                  <a className="text-coin-text hover:text-coin-accent transition-colors" href={phoneHref}>{phoneNumber}</a>
+                </div>
+                <div>
+                  <a
+                    href={whatsappHref}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition-all text-sm"
+                  >
+                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
+                    </svg>
+                    WhatsApp
+                  </a>
+                </div>
               </div>
             </div>
-            
-            <div>
-              <h3 className="text-lg font-semibold mb-4">Services</h3>
-              <ul className="space-y-2 text-gray-300">
-                <li><a href="#" className="hover:text-white transition-colors">Security Guards</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Live Monitoring</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Patrol Services</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Emergency Response</a></li>
-              </ul>
-            </div>
-            
-            <div>
-              <h3 className="text-lg font-semibold mb-4">Company</h3>
-              <ul className="space-y-2 text-gray-300">
-                <li><a href="#" className="hover:text-white transition-colors">About Us</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Careers</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Contact</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Privacy Policy</a></li>
-              </ul>
-            </div>
+
+            {/* Link columns */}
+            {Object.entries(footerLinks).map(([category, links]) => (
+              <div key={category}>
+                <h4 className="text-sm font-semibold text-coin-text mb-4">{category}</h4>
+                <ul className="space-y-3">
+                  {links.map((link) => (
+                    <li key={link.label}>
+                      <Link
+                        href={link.href}
+                        className="text-sm text-coin-muted hover:text-coin-accent transition-colors duration-300"
+                      >
+                        {link.label}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
           </div>
-          
-          <div className="border-t border-gray-700 mt-8 pt-8 text-center text-gray-400">
-            <p>© {new Date().getFullYear()} Coin Security — All rights reserved. Professional security services you can trust.</p>
+
+          {/* Bottom bar */}
+          <div className="mt-12 pt-8 border-t border-coin-border flex flex-col sm:flex-row items-center justify-between gap-4">
+            <p className="text-xs text-coin-muted">
+              &copy; {new Date().getFullYear()} Coin Security. All rights reserved.
+            </p>
+            <p className="text-xs text-coin-muted">
+              Protecting Malawi, one client at a time.
+            </p>
           </div>
         </div>
       </footer>
+
+      <AIAssistant context="landing" />
     </div>
   );
 }

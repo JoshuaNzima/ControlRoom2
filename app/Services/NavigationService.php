@@ -63,6 +63,7 @@ class NavigationService
         return match ($moduleName) {
             'guards' => 'guards.index',
             'hr' => 'hr.leaves',
+            'training' => 'training.dashboard',
             'clients' => 'clients.index',
             'k9' => 'k9.dashboard',
             'control_room' => 'control-room.dashboard',
@@ -92,8 +93,11 @@ class NavigationService
                 ['name' => 'Dashboard', 'route' => 'hr.dashboard', 'permission' => 'hr.employees.view', 'icon' => 'HiOutlineViewGrid'],
                 ['name' => 'Leave Management', 'route' => 'hr.leaves', 'permission' => 'hr.leaves.view', 'icon' => 'HiOutlineCalendar'],
                 ['name' => 'Archived Guards', 'route' => 'hr.archived', 'permission' => 'hr.employees.view', 'icon' => 'HiOutlineArchive'],
-                ['name' => 'Resigned', 'route' => 'hr.resigned', 'permission' => 'hr.employees.view', 'icon' => 'HiOutlineUserRemove'],
-                ['name' => 'Dismissed', 'route' => 'hr.dismissed', 'permission' => 'hr.employees.view', 'icon' => 'HiOutlineXCircle'],
+            ],
+            'training' => [
+                ['name' => 'Dashboard', 'route' => 'training.dashboard', 'permission' => 'training.dashboard.view', 'icon' => 'HiOutlineViewGrid'],
+                ['name' => 'Trainees', 'route' => 'training.trainees.index', 'permission' => 'training.trainees.view', 'icon' => 'HiOutlineAcademicCap'],
+                ['name' => 'Regimens', 'route' => 'training.regimens.index', 'permission' => 'training.regimens.view', 'icon' => 'HiOutlineClipboardList'],
             ],
             'clients' => [
                 ['name' => 'All Clients', 'route' => 'clients.index', 'permission' => 'clients.view', 'icon' => 'HiOutlineOfficeBuilding'],
@@ -117,9 +121,9 @@ class NavigationService
             'admin' => [
                 ['name' => 'Dashboard', 'route' => 'admin.dashboard', 'permission' => 'admin.system.view', 'icon' => 'HiOutlineViewGrid'],
                 ['name' => 'Users', 'route' => 'admin.users.index', 'permission' => 'admin.users.view', 'icon' => 'HiOutlineUsers'],
-                ['name' => 'Roles', 'route' => 'admin.roles', 'permission' => 'admin.roles.view', 'icon' => 'HiOutlineKey'],
-                ['name' => 'Modules', 'route' => 'admin.modules', 'permission' => 'admin.modules.manage', 'icon' => 'HiOutlinePuzzle'],
-                ['name' => 'Settings', 'route' => 'admin.settings', 'permission' => 'admin.settings.view', 'icon' => 'HiOutlineCog'],
+                ['name' => 'Roles', 'route' => 'superadmin.roles.index', 'permission' => 'admin.roles.view', 'icon' => 'HiOutlineKey'],
+                ['name' => 'Modules', 'route' => 'admin.modules.index', 'permission' => 'admin.modules.manage', 'icon' => 'HiOutlinePuzzle'],
+                ['name' => 'Settings', 'route' => 'admin.settings.index', 'permission' => 'admin.settings.view', 'icon' => 'HiOutlineCog'],
             ],
             default => [],
         };
@@ -149,13 +153,6 @@ class NavigationService
                 'color' => 'blue',
                 'badge' => 'Reliever',
             ],
-            'on_leave' => [
-                'label' => 'On Leave',
-                'count' => 0, // Will be implemented with HR module
-                'description' => 'Temporary absence',
-                'color' => 'yellow',
-                'badge' => 'On Leave',
-            ],
             'resigned' => [
                 'label' => 'Resigned',
                 'count' => 0,
@@ -165,14 +162,14 @@ class NavigationService
             ],
             'dismissed' => [
                 'label' => 'Dismissed',
-                'count' => 0,
+                'count' => \App\Models\Guards\Guard::where('status', 'dismissed')->count(),
                 'description' => 'Past 12 months',
                 'color' => 'orange',
                 'badge' => 'Dismissed',
             ],
             'absconded' => [
                 'label' => 'Absconded',
-                'count' => 0,
+                'count' => \App\Models\Guards\Guard::where('status', 'absconded')->count(),
                 'description' => 'Past 12 months',
                 'color' => 'red',
                 'badge' => 'Absconded',

@@ -1,7 +1,7 @@
 
 import { useState } from 'react';
 import { Head, usePage } from '@inertiajs/react';
-import AdminLayout from '@/Layouts/AdminLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import PrimaryButton from '@/Components/PrimaryButton';
 import axios from 'axios';
 
@@ -63,28 +63,28 @@ export default function ReportsIndex() {
 
   const renderAttendanceReport = () => (
     <div className="overflow-x-auto">
-      <table className="min-w-full divide-y divide-gray-200">
-        <thead className="bg-gray-50">
+      <table className="min-w-[900px] w-full divide-y divide-gray-200 dark:divide-gray-800">
+        <thead className="bg-gray-50 dark:bg-gray-950">
           <tr>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Guard</th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Site</th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Check In</th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Check Out</th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hours</th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Date</th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Guard</th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Site</th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Check In</th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Check Out</th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Hours</th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Status</th>
           </tr>
         </thead>
-        <tbody className="bg-white divide-y divide-gray-200">
+        <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-800">
           {reportData.map((record: any, index: number) => (
             <tr key={index}>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{record.date}</td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{record.guard_name}</td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{record.site_name}</td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{record.check_in}</td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{record.check_out}</td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{record.hours_worked}</td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{record.status}</td>
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">{record.date}</td>
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">{record.guard_name}</td>
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">{record.site_name}</td>
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">{record.check_in}</td>
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">{record.check_out}</td>
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">{record.hours_worked}</td>
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">{record.status}</td>
             </tr>
           ))}
         </tbody>
@@ -94,28 +94,28 @@ export default function ReportsIndex() {
 
   const renderShiftsReport = () => (
     <div className="overflow-x-auto">
-      <table className="min-w-full divide-y divide-gray-200">
-        <thead className="bg-gray-50">
+      <table className="min-w-[900px] w-full divide-y divide-gray-200 dark:divide-gray-800">
+        <thead className="bg-gray-50 dark:bg-gray-950">
           <tr>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Guard</th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Site</th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time</th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Duration</th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Date</th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Guard</th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Site</th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Type</th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Time</th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Duration</th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Status</th>
           </tr>
         </thead>
-        <tbody className="bg-white divide-y divide-gray-200">
+        <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-800">
           {reportData.map((record: any, index: number) => (
             <tr key={index}>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{record.date}</td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{record.guard_name}</td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{record.site_name}</td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{record.shift_type}</td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{record.start_time} - {record.end_time}</td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{record.duration}h</td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{record.status}</td>
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">{record.date}</td>
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">{record.guard_name}</td>
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">{record.site_name}</td>
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">{record.shift_type}</td>
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">{record.start_time} - {record.end_time}</td>
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">{record.duration}h</td>
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">{record.status}</td>
             </tr>
           ))}
         </tbody>
@@ -125,28 +125,28 @@ export default function ReportsIndex() {
 
   const renderGuardPerformanceReport = () => (
     <div className="overflow-x-auto">
-      <table className="min-w-full divide-y divide-gray-200">
-        <thead className="bg-gray-50">
+      <table className="min-w-[1000px] w-full divide-y divide-gray-200 dark:divide-gray-800">
+        <thead className="bg-gray-50 dark:bg-gray-950">
           <tr>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Guard</th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Shifts</th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">On Time</th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Late</th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Absent</th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Attendance Rate</th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Avg Hours</th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Guard</th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Total Shifts</th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">On Time</th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Late</th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Absent</th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Attendance Rate</th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Avg Hours</th>
           </tr>
         </thead>
-        <tbody className="bg-white divide-y divide-gray-200">
+        <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-800">
           {reportData.map((record: any, index: number) => (
             <tr key={index}>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{record.guard_name}</td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{record.total_shifts}</td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{record.on_time_shifts}</td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{record.late_shifts}</td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{record.absent_shifts}</td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{record.attendance_rate}%</td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{record.average_hours}</td>
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">{record.guard_name}</td>
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">{record.total_shifts}</td>
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">{record.on_time_shifts}</td>
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">{record.late_shifts}</td>
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">{record.absent_shifts}</td>
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">{record.attendance_rate}%</td>
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">{record.average_hours}</td>
             </tr>
           ))}
         </tbody>
@@ -156,26 +156,26 @@ export default function ReportsIndex() {
 
   const renderSiteCoverageReport = () => (
     <div className="overflow-x-auto">
-      <table className="min-w-full divide-y divide-gray-200">
-        <thead className="bg-gray-50">
+      <table className="min-w-[1000px] w-full divide-y divide-gray-200 dark:divide-gray-800">
+        <thead className="bg-gray-50 dark:bg-gray-950">
           <tr>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Site</th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Shifts</th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Completed</th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cancelled</th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Coverage Rate</th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Avg Shifts/Day</th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Site</th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Total Shifts</th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Completed</th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Cancelled</th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Coverage Rate</th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Avg Shifts/Day</th>
           </tr>
         </thead>
-        <tbody className="bg-white divide-y divide-gray-200">
+        <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-800">
           {reportData.map((record: any, index: number) => (
             <tr key={index}>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{record.site_name}</td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{record.total_shifts}</td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{record.completed_shifts}</td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{record.cancelled_shifts}</td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{record.coverage_rate}%</td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{record.average_shifts_per_day}</td>
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">{record.site_name}</td>
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">{record.total_shifts}</td>
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">{record.completed_shifts}</td>
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">{record.cancelled_shifts}</td>
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">{record.coverage_rate}%</td>
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">{record.average_shifts_per_day}</td>
             </tr>
           ))}
         </tbody>
@@ -184,21 +184,21 @@ export default function ReportsIndex() {
   );
 
   return (
-    <AdminLayout title="Reports">
+    <AuthenticatedLayout header="Reports">
       <Head title="Reports" />
       <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
           <div className="mb-6">
-            <h1 className="text-3xl font-bold text-gray-900">Reports</h1>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Reports</h1>
           </div>
 
-          <div className="bg-white shadow rounded-lg">
+          <div className="bg-white dark:bg-gray-900/60 border border-gray-200 dark:border-gray-800 shadow-sm shadow-black/5 dark:shadow-none rounded-lg">
             <div className="p-6">
               <div className="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-2 lg:grid-cols-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Report Type</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Report Type</label>
                   <select
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                    className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 shadow-sm focus:border-coin-500 focus:ring-coin-500 sm:text-sm"
                     value={selectedReport}
                     onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSelectedReport(e.target.value)}
                     required
@@ -211,10 +211,10 @@ export default function ReportsIndex() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Start Date</label>
                   <input
                     type="date"
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                    className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 shadow-sm focus:border-coin-500 focus:ring-coin-500 sm:text-sm"
                     value={startDate}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => setStartDate(e.target.value)}
                     required
@@ -222,10 +222,10 @@ export default function ReportsIndex() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">End Date</label>
                   <input
                     type="date"
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                    className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 shadow-sm focus:border-coin-500 focus:ring-coin-500 sm:text-sm"
                     value={endDate}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEndDate(e.target.value)}
                     required
@@ -234,9 +234,9 @@ export default function ReportsIndex() {
 
                 {['attendance', 'shifts', 'guard_performance'].includes(selectedReport) && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Guard</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Guard</label>
                     <select
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                      className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 shadow-sm focus:border-coin-500 focus:ring-coin-500 sm:text-sm"
                       value={guardId}
                       onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setGuardId(e.target.value)}
                     >
@@ -250,9 +250,9 @@ export default function ReportsIndex() {
 
                 {['attendance', 'shifts', 'site_coverage'].includes(selectedReport) && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Site</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Site</label>
                     <select
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                      className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 shadow-sm focus:border-coin-500 focus:ring-coin-500 sm:text-sm"
                       value={siteId}
                       onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSiteId(e.target.value)}
                     >
@@ -273,13 +273,13 @@ export default function ReportsIndex() {
             </div>
 
             {reportData && (
-              <div className="border-t border-gray-200 p-6">
+              <div className="border-t border-gray-200 dark:border-gray-800 p-6">
                 {renderReportContent()}
               </div>
             )}
           </div>
         </div>
       </div>
-    </AdminLayout>
+    </AuthenticatedLayout>
   );
 }

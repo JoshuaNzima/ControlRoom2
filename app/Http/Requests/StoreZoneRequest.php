@@ -18,7 +18,6 @@ class StoreZoneRequest extends FormRequest
             'code' => ['nullable', 'string', 'max:50', 'unique:zones,code'],
             'description' => ['nullable', 'string'],
             'status' => ['required', 'in:active,inactive,understaffed'],
-            'required_guard_count' => ['nullable', 'integer', 'min:0'],
             'target_sites_count' => ['nullable', 'integer', 'min:0'],
             'commander_id' => ['nullable', 'integer', 'exists:users,id'],
             'site_ids' => ['nullable', 'array'],

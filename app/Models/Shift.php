@@ -11,6 +11,9 @@ class Shift extends Model
 {
     use HasFactory;
 
+    protected $table = 'schedule_shifts';
+
+
     protected $fillable = [
         'name',
         'start_time',
@@ -21,10 +24,12 @@ class Shift extends Model
         'required_guards',
         'sites',
         'created_by',
+        'is_global',
     ];
 
     protected $casts = [
         'sites' => 'array',
+        'is_global' => 'boolean',
     ];
 
     public function supervisor(): BelongsTo

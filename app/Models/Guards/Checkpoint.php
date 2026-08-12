@@ -65,10 +65,23 @@ class Checkpoint extends Model
         return $query->where('is_active', true);
     }
 
-    public function verifyLocation($latitude, $longitude): bool
+    /**
+     * Verify if the given location is within the checkpoint's allowed radius.
+     *
+     * @param float $latitude User's latitude
+     * @param float $longitude User's longitude
+     * @param float|null $accuracy GPS accuracy in meters (optional)
+     * @return array{verified: bool, distance: float, effective_radius: int, accuracy_used: float|null}
+     */
+    public function verifyLocation($latitude, $longitude, $accuracy = null): array
     {
         if (!$this->latitude || !$this->longitude) {
-            return true; // No GPS check if checkpoint has no coordinates
+            return [
+                'verified' => true, // No GPS check if checkpoint has no coordinates
+                'distance' => 0,
+                'effective_radius' => 0,
+                'accuracy_used' => null,
+            ];
         }
 
         $distance = $this->calculateDistance(
@@ -78,7 +91,33 @@ class Checkpoint extends Model
             $longitude
         );
 
-        return $distance <= $this->scan_radius_meters;
+        $radiusMeters = (int) ($this->scan_radius_meters ?: 0);
+        if ($radiusMeters <= 0) {
+            $radiusMeters = (int) config('scanner.checkpoint_radius_meters', 100);
+        }
+
+        // Add GPS accuracy buffer if enabled and accuracy provided
+        $effectiveRadius = $radiusMeters;
+        $accuracyUsed = null;
+
+        if ($accuracy !== null && config('scanner.gps_accuracy_buffer_enabled', true)) {
+            $maxAccuracy = (float) config('scanner.gps_accuracy_max_meters', 100);
+            $multiplier = (float) config('scanner.gps_accuracy_min_multiplier', 1.0);
+
+            // Cap accuracy at max allowed
+            $cappedAccuracy = min($accuracy, $maxAccuracy);
+            $accuracyUsed = $cappedAccuracy;
+
+            // Add accuracy buffer to radius
+            $effectiveRadius = $radiusMeters + ($cappedAccuracy * $multiplier);
+        }
+
+        return [
+            'verified' => $distance <= $effectiveRadius,
+            'distance' => $distance,
+            'effective_radius' => (int) round($effectiveRadius),
+            'accuracy_used' => $accuracyUsed,
+        ];
     }
 
     private function calculateDistance($lat1, $lon1, $lat2, $lon2): float

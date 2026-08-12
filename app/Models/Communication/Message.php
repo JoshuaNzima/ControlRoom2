@@ -42,6 +42,25 @@ class Message extends Model
             ->withTimestamps();
     }
 
+    public function reactions()
+    {
+        return $this->hasMany(MessageReaction::class);
+    }
+
+    public function attachments()
+    {
+        return $this->hasMany(MessageAttachment::class);
+    }
+
+    public function getReactionSummaryAttribute()
+    {
+        return $this->reactions()
+            ->select('reaction')
+            ->selectRaw('count(*) as count')
+            ->groupBy('reaction')
+            ->get();
+    }
+
     public function markAsRead(User $user)
     {
         if (!$this->readBy()->where('user_id', $user->id)->exists()) {

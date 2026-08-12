@@ -13,6 +13,8 @@ class GuardPolicy
     public function viewAny(User $user): bool
     {
         // allow any authenticated user to see lists (further filtering happens elsewhere)
+        // finance officers can view guards for payroll and invoicing purposes
+        if ($user->hasRole('finance_officer')) return true;
         return true;
     }
 
@@ -21,9 +23,12 @@ class GuardPolicy
      */
     public function view(User $user, Guard $guard): bool
     {
+        // super_admin and admin can view any guard
+        if ($user->hasAnyRole(['super_admin', 'admin'])) return true;
         // zone commanders and supervisors can view guards in their zone/supervision
         if ($user->hasRole('zone_commander')) return true;
         if ($user->hasRole('supervisor') && $guard->supervisor_id === $user->id) return true;
+        if ($user->hasRole('finance_officer')) return true;
 
         // fall back to allow if user has a broad permission
         return $user->hasPermissionTo('guards.view');
@@ -34,7 +39,8 @@ class GuardPolicy
      */
     public function create(User $user): bool
     {
-        return $user->hasAnyRole(['supervisor', 'manager', 'zone_commander']) || $user->hasPermissionTo('guards.create');
+        return $user->hasAnyRole(['super_admin', 'admin', 'supervisor', 'zone_commander', 'finance_officer'])
+            || $user->hasPermissionTo('guards.create');
     }
 
     /**
@@ -42,8 +48,7 @@ class GuardPolicy
      */
     public function update(User $user, Guard $guard): bool
     {
-        // supervisors may update guards they supervise; managers/zone commanders may update any
-        if ($user->hasRole('manager') || $user->hasRole('zone_commander')) return true;
+        if ($user->hasAnyRole(['admin', 'super_admin', 'zone_commander'])) return true;
         if ($user->hasRole('supervisor') && $guard->supervisor_id === $user->id) return true;
 
         return false;
@@ -54,6 +59,6 @@ class GuardPolicy
      */
     public function delete(User $user, Guard $guard): bool
     {
-        return $user->hasAnyRole(['manager', 'zone_commander']);
+        return $user->hasAnyRole(['super_admin', 'admin', 'zone_commander']);
     }
 }

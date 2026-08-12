@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Guards;
 
 use App\Http\Controllers\Controller;
 use App\Models\Guards\{Guard, GuardAssignment, ClientSite};
+use App\Services\GuardScopingService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -12,10 +13,11 @@ class SupervisorAssignmentController extends Controller
 {
     public function index()
     {
-        $supervisorId = Auth::id();
+        $user = Auth::user();
         
-        // Get guards assigned to this supervisor
-        $guards = Guard::forSupervisor($supervisorId)
+        // Get guards managed by this user (via GuardScopingService)
+        $guards = app(GuardScopingService::class)
+            ->getManagedGuardQuery($user)
             ->with(['activeAssignments.clientSite.client'])
             ->orderBy('name')
             ->get()
@@ -59,7 +61,7 @@ class SupervisorAssignmentController extends Controller
             'client_site_id' => 'required|exists:client_sites,id',
             'start_date' => 'required|date',
             'end_date' => 'nullable|date|after:start_date',
-            'assignment_type' => 'required|in:permanent,temporary,relief',
+            'assignment_type' => 'required|in:permanent,temporary',
             'notes' => 'nullable|string|max:500',
         ]);
 

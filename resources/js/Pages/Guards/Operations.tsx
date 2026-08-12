@@ -1,16 +1,16 @@
 import React from 'react';
 import { Head } from '@inertiajs/react';
-import SupervisorLayout from '@/Layouts/SupervisorLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import ComingSoon from '@/Components/Shared/ComingSoon';
 
 export default function Operations() {
   return (
-    <SupervisorLayout title="Operations">
+    <AuthenticatedLayout header="Operations">
       <Head title="Operations" />
       <ComingSoon 
         title="Daily Operations" 
         description="Track daily guard activities, patrol routes, and operational metrics. Real-time monitoring dashboard."
       />
-    </SupervisorLayout>
+    </AuthenticatedLayout>
   );
 }

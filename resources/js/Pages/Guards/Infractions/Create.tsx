@@ -1,6 +1,6 @@
 import React from 'react';
 import { Head, useForm } from '@inertiajs/react';
-import AdminLayout from '@/Layouts/AdminLayout';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card';
 import { Input } from '@/Components/ui/input';
 import { Button } from '@/Components/ui/button';
@@ -33,7 +33,7 @@ export default function Create({ guards }: CreateProps) {
   };
 
   return (
-    <AdminLayout title="Record Infraction">
+    <AuthenticatedLayout header="Record Infraction">
       <Head title="Record Infraction" />
 
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -133,6 +133,6 @@ export default function Create({ guards }: CreateProps) {
           </CardContent>
         </Card>
       </div>
-    </AdminLayout>
+    </AuthenticatedLayout>
   );
 }

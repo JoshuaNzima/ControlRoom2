@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { Head } from '@inertiajs/react';
-import ZoneCommanderLayout from '@/Layouts/ZoneCommanderLayout';
+import { Head, Link } from '@inertiajs/react';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import { Badge } from '@/Components/ui/badge';
 import IconMapper from '@/Components/IconMapper';
+import ScannerModal from '@/Components/Scanner/ScannerModal';
 import { format } from 'date-fns';
 
 interface Patrol {
@@ -24,14 +25,14 @@ interface PatrolsProps {
 }
 
 export default function Patrols({ patrols = [] }: PatrolsProps) {
-  const [activeScan, setActiveScan] = useState(false);
+  const [scannerOpen, setScannerOpen] = useState(false);
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'completed': return 'bg-green-100 text-green-800';
-      case 'in_progress': return 'bg-blue-100 text-blue-800';
-      case 'missed': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'completed': return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200';
+      case 'in_progress': return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200';
+      case 'missed': return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200';
+      default: return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200';
     }
   };
 
@@ -40,158 +41,146 @@ export default function Patrols({ patrols = [] }: PatrolsProps) {
   const missedPatrols = patrols.filter(p => p.status === 'missed').length;
 
   return (
-    <ZoneCommanderLayout title="Patrols">
+    <AuthenticatedLayout header="Patrols">
       <Head title="Patrol Management" />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-        {/* Overview Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <Card className="hover:shadow-lg transition-shadow duration-300">
-            <CardContent className="p-6">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                  <IconMapper name="ScanLine" className="w-6 h-6 text-blue-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600">Total Patrols</p>
-                  <p className="text-2xl font-bold text-gray-900">{patrols.length}</p>
-                </div>
+      <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-4 sm:py-6 space-y-4 sm:space-y-6">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">Patrol Management</h1>
+            <p className="text-sm text-gray-600 dark:text-gray-300">Track checkpoint scans and patrol activities in your zone.</p>
+          </div>
+          <div className="flex flex-col sm:flex-row gap-2">
+            <Button onClick={() => setScannerOpen(true)} className="w-full sm:w-auto gap-2">
+              <IconMapper name="QrCode" size={16} /> Scan Checkpoint
+            </Button>
+            <Button asChild variant="outline" className="w-full sm:w-auto gap-2">
+              <Link href={route('zone.checkpoints.index')}>
+                <IconMapper name="MapPin" size={16} /> View Checkpoints
+              </Link>
+            </Button>
+          </div>
+        </div>
+
+        {/* Stats */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+          <Card className="p-3 sm:p-4 bg-white/60 dark:bg-gray-900/40">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center shrink-0">
+                <IconMapper name="ScanLine" className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600 dark:text-blue-200" />
               </div>
-            </CardContent>
+              <div className="min-w-0">
+                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">Total Scans</p>
+                <p className="text-lg sm:text-2xl font-bold text-gray-900 dark:text-gray-100">{patrols.length}</p>
+              </div>
+            </div>
           </Card>
 
-          <Card className="hover:shadow-lg transition-shadow duration-300">
-            <CardContent className="p-6">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                  <IconMapper name="CheckCircle" className="w-6 h-6 text-green-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600">Completed</p>
-                  <p className="text-2xl font-bold text-gray-900">{completedPatrols}</p>
-                </div>
+          <Card className="p-3 sm:p-4 bg-white/60 dark:bg-gray-900/40">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center shrink-0">
+                <IconMapper name="CheckCircle" className="w-5 h-5 sm:w-6 sm:h-6 text-green-600 dark:text-green-200" />
               </div>
-            </CardContent>
+              <div className="min-w-0">
+                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">Completed</p>
+                <p className="text-lg sm:text-2xl font-bold text-gray-900 dark:text-gray-100">{completedPatrols}</p>
+              </div>
+            </div>
           </Card>
 
-          <Card className="hover:shadow-lg transition-shadow duration-300">
-            <CardContent className="p-6">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
-                  <IconMapper name="Clock" className="w-6 h-6 text-yellow-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600">In Progress</p>
-                  <p className="text-2xl font-bold text-gray-900">{inProgressPatrols}</p>
-                </div>
+          <Card className="p-3 sm:p-4 bg-white/60 dark:bg-gray-900/40">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg flex items-center justify-center shrink-0">
+                <IconMapper name="Clock" className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-600 dark:text-yellow-200" />
               </div>
-            </CardContent>
+              <div className="min-w-0">
+                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">In Progress</p>
+                <p className="text-lg sm:text-2xl font-bold text-gray-900 dark:text-gray-100">{inProgressPatrols}</p>
+              </div>
+            </div>
           </Card>
 
-          <Card className="hover:shadow-lg transition-shadow duration-300">
-            <CardContent className="p-6">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
-                  <IconMapper name="XCircle" className="w-6 h-6 text-red-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600">Missed</p>
-                  <p className="text-2xl font-bold text-gray-900">{missedPatrols}</p>
-                </div>
+          <Card className="p-3 sm:p-4 bg-white/60 dark:bg-gray-900/40">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-red-100 dark:bg-red-900/30 rounded-lg flex items-center justify-center shrink-0">
+                <IconMapper name="XCircle" className="w-5 h-5 sm:w-6 sm:h-6 text-red-600 dark:text-red-200" />
               </div>
-            </CardContent>
+              <div className="min-w-0">
+                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">Missed</p>
+                <p className="text-lg sm:text-2xl font-bold text-gray-900 dark:text-gray-100">{missedPatrols}</p>
+              </div>
+            </div>
           </Card>
         </div>
 
-        {/* QR Scanner */}
-        <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-blue-900">
-              <IconMapper name="QrCode" className="w-5 h-5" />
-              QR Code Scanner
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-center py-8">
-              <div className="w-64 h-64 bg-gray-200 rounded-lg mx-auto mb-4 flex items-center justify-center">
-                <IconMapper name="QrCode" className="w-32 h-32 text-gray-400" />
-              </div>
-              <Button 
-                onClick={() => setActiveScan(!activeScan)}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3"
-              >
-                {activeScan ? 'Stop Scanning' : 'Start QR Scan'}
-              </Button>
-              <p className="text-sm text-gray-600 mt-2">
-                Point your camera at a checkpoint QR code to scan
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
         {/* Recent Patrols */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <IconMapper name="History" className="w-5 h-5" />
-              Recent Patrols
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
+        <Card className="p-3 sm:p-4 bg-white/60 dark:bg-gray-900/40">
+          <h2 className="text-base sm:text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100 flex items-center gap-2">
+            <IconMapper name="History" size={20} /> Recent Checkpoint Scans
+          </h2>
+
+          {patrols.length === 0 ? (
+            <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+              <IconMapper name="ScanLine" size={48} className="mx-auto mb-3 opacity-50" />
+              <p>No patrol scans recorded yet.</p>
+              <p className="text-sm mt-1">Scan checkpoint QR codes to record patrols.</p>
+            </div>
+          ) : (
+            <div className="space-y-3 max-h-[600px] overflow-y-auto">
               {patrols.map((patrol) => (
-                <Card key={patrol.id} className="hover:shadow-lg transition-shadow duration-300">
-                  <CardContent className="p-4">
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
-                          <h3 className="text-lg font-semibold text-gray-900">{patrol.checkpoint_name}</h3>
-                          <Badge className={getStatusColor(patrol.status)}>
-                            {patrol.status.toUpperCase()}
-                          </Badge>
-                        </div>
-                        
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600">
-                          <div className="flex items-center gap-2">
-                            <IconMapper name="User" className="w-4 h-4" />
-                            <span>{patrol.guard_name}</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <IconMapper name="MapPin" className="w-4 h-4" />
-                            <span>{patrol.site_name}</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <IconMapper name="Clock" className="w-4 h-4" />
-                            <span>{format(new Date(patrol.scan_time), 'MMM d, HH:mm')}</span>
-                          </div>
-                        </div>
-
-                        {patrol.notes && (
-                          <div className="mt-3 p-3 bg-gray-50 rounded-lg">
-                            <p className="text-sm text-gray-700">{patrol.notes}</p>
-                          </div>
-                        )}
+                <div key={patrol.id} className="p-3 sm:p-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-white/60 dark:bg-gray-900/40">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h3 className="font-medium text-gray-900 dark:text-gray-100 truncate">{patrol.checkpoint_name}</h3>
+                        <Badge className={getStatusColor(patrol.status)}>
+                          {patrol.status.toUpperCase()}
+                        </Badge>
                       </div>
 
-                      <div className="flex flex-col gap-2 ml-4">
-                        <Button variant="outline" size="sm" className="hover:bg-blue-50">
-                          <IconMapper name="Eye" className="w-4 h-4 mr-2" />
-                          View Details
-                        </Button>
-                        <Button variant="outline" size="sm" className="hover:bg-green-50">
-                          <IconMapper name="Edit" className="w-4 h-4 mr-2" />
-                          Edit
-                        </Button>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4 text-xs sm:text-sm text-gray-600 dark:text-gray-300 mt-2">
+                        <div className="flex items-center gap-2">
+                          <IconMapper name="User" className="w-4 h-4 shrink-0" />
+                          <span className="truncate">{patrol.guard_name}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <IconMapper name="MapPin" className="w-4 h-4 shrink-0" />
+                          <span className="truncate">{patrol.site_name}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <IconMapper name="Clock" className="w-4 h-4 shrink-0" />
+                          <span>{patrol.scan_time ? format(new Date(patrol.scan_time), 'MMM d, HH:mm') : '-'}</span>
+                        </div>
                       </div>
+
+                      {patrol.notes && (
+                        <div className="mt-2 p-2 bg-gray-50 dark:bg-gray-900/50 rounded text-xs sm:text-sm text-gray-700 dark:text-gray-200">
+                          {patrol.notes}
+                        </div>
+                      )}
+
+                      {patrol.location && (
+                        <div className="mt-1 text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                          <IconMapper name="Navigation" size={12} />
+                          {patrol.location}
+                        </div>
+                      )}
                     </div>
-                  </CardContent>
-                </Card>
+                  </div>
+                </div>
               ))}
             </div>
-          </CardContent>
+          )}
         </Card>
       </div>
-    </ZoneCommanderLayout>
+
+      {/* Scanner Modal */}
+      <ScannerModal
+        open={scannerOpen}
+        onClose={() => setScannerOpen(false)}
+      />
+    </AuthenticatedLayout>
   );
 }
 

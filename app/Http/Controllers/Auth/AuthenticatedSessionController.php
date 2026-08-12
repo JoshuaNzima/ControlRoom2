@@ -33,7 +33,96 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
-        return redirect()->intended(route('dashboard', absolute: false));
+        $user = $request->user();
+        $dashboardRoute = $this->getDashboardRoute($user);
+
+        return redirect()->intended($dashboardRoute);
+    }
+
+    /**
+     * Get the appropriate dashboard route based on user's role
+     */
+    /**
+     * Get the appropriate dashboard route based on user's role
+     * Roles are checked in order of priority (most specific to least specific)
+     */
+    protected function getDashboardRoute($user): string
+    {
+        // Super Admin - Highest level access
+        if ($user->hasRole('super_admin')) {
+            return route('superadmin.dashboard', absolute: false);
+        }
+        
+        // Admin - System administrators
+        if ($user->hasRole('admin')) {
+            return route('admin.dashboard', absolute: false);
+        }
+        
+        // Zone Commander - Manages specific zones
+        if ($user->hasRole('zone_commander')) {
+            return route('zone.dashboard', absolute: false);
+        }
+  
+        // Business Development - Marketing/BDO module
+        if (
+            $user->hasRole('business_dev') ||
+            $user->hasRole('business_development') ||
+            $user->hasRole('bdo')
+        ) {
+            return route('admin.business-dev', absolute: false);
+        }
+
+        // Marketing - Marketing module access
+        if (
+            $user->hasRole('marketing') ||
+            $user->hasRole('marketing_officer') ||
+            $user->hasRole('marketing_manager')
+        ) {
+            return route('admin.marketing', absolute: false);
+        }
+
+        // Supervisor - Oversees operations and personnel
+        if ($user->hasRole('supervisor')) {
+            return route('supervisor.dashboard', absolute: false);
+        }
+
+        // Operations Officer - control room view
+        if ($user->hasRole('operations_officer')) {
+            return route('control-room.dashboard', absolute: false);
+        }
+
+        // Control Room Operator - Manages control room operations
+        if ($user->hasRole('control_room_operator')) {
+            return route('control-room.dashboard', absolute: false);
+        }
+        
+        // Client - External client access
+        if ($user->hasRole('client')) {
+            return route('client.dashboard', absolute: false);
+        }
+        
+        // HR - Human Resources
+        if ($user->hasRole('hr') || $user->hasRole('human_resources')) {
+            return route('hr.dashboard', absolute: false);
+        }
+        
+        // Finance - Financial department
+        if (
+            $user->hasRole('finance') ||
+            $user->hasRole('finance_officer') ||
+            $user->hasRole('accountant') ||
+            $user->hasRole('accounting')
+        ) {
+            return route('finance.dashboard', absolute: false);
+        }
+        
+        // Sergeant - Mid-level supervisor
+        if ($user->hasRole('sergeant')) {
+            return route('supervisor.dashboard', absolute: false);
+        }
+        
+        // Default dashboard for any other roles or unassigned users
+        return route('dashboard', absolute: false);
     }
 
     /**

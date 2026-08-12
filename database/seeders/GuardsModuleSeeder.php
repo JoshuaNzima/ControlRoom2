@@ -42,8 +42,11 @@ class GuardsModuleSeeder extends Seeder
         ];
 
         foreach ($clients as $clientData) {
-            $client = Client::create($clientData);
-            
+            $client = Client::firstOrCreate(
+                ['name' => $clientData['name']],
+                $clientData
+            );
+
             // Create sites for each client
             $this->createSitesForClient($client);
         }
@@ -117,7 +120,10 @@ class GuardsModuleSeeder extends Seeder
         ];
 
         foreach ($guards as $guardData) {
-            Guard::create($guardData);
+            Guard::updateOrCreate(
+                ['employee_id' => $guardData['employee_id']],
+                $guardData
+            );
         }
     }
 
@@ -159,9 +165,12 @@ class GuardsModuleSeeder extends Seeder
         };
 
         foreach ($sites as $siteData) {
-            $client->sites()->create(array_merge($siteData, [
-                'status' => 'active',
-            ]));
+            $client->sites()->firstOrCreate(
+                ['name' => $siteData['name']],
+                array_merge($siteData, [
+                    'status' => 'active',
+                ])
+            );
         }
     }
 }

@@ -5,12 +5,29 @@ namespace App\Http\Controllers;
 use App\Models\Guards\Guard;
 use App\Models\Guards\Shift;
 use App\Models\Guards\ClientSite;
+use App\Models\Guards\GuardAssignment;
+use App\Services\GuardScopingService;
+use App\Services\RotaResolver;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
+use Carbon\Carbon;
 
 class ShiftController extends Controller
 {
+    /**
+     * Get the guards managed by the current user (supervisor/sergeant) via GuardScopingService.
+     * Returns a query builder scoped to managed guards, or all guards for other roles.
+     */
+    private function getManagedGuardsQuery(): \Illuminate\Database\Eloquent\Builder
+    {
+        $user = Auth::user();
+        if ($user && ($user->hasRole('supervisor') || $user->hasRole('sergeant'))) {
+            return app(GuardScopingService::class)->getManagedGuardQuery($user);
+        }
+        return Guard::query();
+    }
+
     public function index()
     {
         $query = Shift::query()
@@ -27,26 +44,32 @@ class ShiftController extends Controller
                 $query->where('status', $status);
             });
 
-        // If user is supervisor, only show their guards' shifts
-        if (Auth::user()->hasRole('supervisor')) {
-            $query->whereHas('guardRelation', function($q) {
-                $q->forSupervisor(Auth::id());
+        // Scope to managed guards via GuardScopingService (handles both supervisor and sergeant)
+        $user = Auth::user();
+        if ($user && ($user->hasRole('supervisor') || $user->hasRole('sergeant'))) {
+            $guardIds = app(GuardScopingService::class)->getManagedGuardIds($user);
+            $query->whereHas('guardRelation', function($q) use ($guardIds) {
+                $q->whereIn('id', $guardIds);
             });
         }
 
         $shifts = $query->latest('date')->paginate(20);
 
+        $guards = $this->getManagedGuardsQuery()->active()->select(['id','name','guard_type'])->get();
+
+        $sites = ClientSite::active()->select(['id','name'])->get();
+
         return Inertia::render('Shifts/Index', [
             'shifts' => $shifts,
             'filters' => request()->only(['search', 'date', 'status']),
+            'guards' => $guards,
+            'sites' => $sites,
         ]);
     }
 
     public function create()
     {
-        $guards = Guard::when(Auth::user()->hasRole('supervisor'), function($query) {
-            $query->forSupervisor(Auth::id());
-        })->active()->get();
+        $guards = $this->getManagedGuardsQuery()->active()->get();
 
         $sites = ClientSite::active()->get();
 
@@ -63,17 +86,59 @@ class ShiftController extends Controller
             'client_site_id' => 'required|exists:client_sites,id',
             'date' => 'required|date',
             'start_time' => 'required|date_format:H:i',
-            'end_time' => 'required|date_format:H:i|after:start_time',
+            'end_time' => 'required|date_format:H:i',
             'shift_type' => 'required|in:day,night',
             'instructions' => 'nullable|string',
             'status' => 'required|in:scheduled,completed,cancelled',
         ]);
 
+        $start = Carbon::parse($validated['date'].' '.$validated['start_time'].':00');
+        $end = Carbon::parse($validated['date'].' '.$validated['end_time'].':00');
+        if ($end->lessThanOrEqualTo($start)) {
+            $end->addDay();
+        }
+
+        $rota = app(RotaResolver::class);
+        $dayStatus = $rota->getDayStatus((int) $validated['guard_id'], $validated['date']);
+
+        $errors = [];
+        if (!empty($dayStatus['is_off'])) {
+            $errors['date'] = 'Guard has an off-day on the selected date.';
+        }
+
+        $overlap = Shift::where('guard_id', $validated['guard_id'])
+            ->where('status', '!=', 'cancelled')
+            ->where(function($q) use ($start, $end) {
+                $q->where('start_time', '<', $end)
+                  ->where('end_time', '>', $start);
+            })
+            ->exists();
+        if ($overlap) {
+            $errors['start_time'] = 'Overlapping shift exists for this guard at the selected time.';
+        }
+
+        $assigned = GuardAssignment::active()->current()
+            ->where('guard_id', $validated['guard_id'])
+            ->where('client_site_id', $validated['client_site_id'])
+            ->whereDate('start_date', '<=', $validated['date'])
+            ->where(function($q) use ($validated) {
+                $q->whereNull('end_date')->orWhereDate('end_date', '>=', $validated['date']);
+            })
+            ->exists();
+        if (!$assigned) {
+            $errors['client_site_id'] = 'Guard is not assigned to the selected site on this date.';
+        }
+
+        if (!empty($errors)) {
+            return back()->withErrors($errors)->withInput();
+        }
+
         $validated['assigned_by'] = Auth::id();
-        
+        $validated['source'] = 'manual_roster_entry';
+
         // Combine date and time
-        $validated['start_time'] = $validated['date'] . ' ' . $validated['start_time'];
-        $validated['end_time'] = $validated['date'] . ' ' . $validated['end_time'];
+        $validated['start_time'] = $start;
+        $validated['end_time'] = $end;
 
         Shift::create($validated);
 
@@ -83,9 +148,7 @@ class ShiftController extends Controller
 
     public function edit(Shift $shift)
     {
-        $guards = Guard::when(Auth::user()->hasRole('supervisor'), function($query) {
-            $query->forSupervisor(Auth::id());
-        })->active()->get();
+        $guards = $this->getManagedGuardsQuery()->active()->get();
 
         $sites = ClientSite::active()->get();
 
@@ -103,15 +166,56 @@ class ShiftController extends Controller
             'client_site_id' => 'required|exists:client_sites,id',
             'date' => 'required|date',
             'start_time' => 'required|date_format:H:i',
-            'end_time' => 'required|date_format:H:i|after:start_time',
+            'end_time' => 'required|date_format:H:i',
             'shift_type' => 'required|in:day,night',
             'instructions' => 'nullable|string',
             'status' => 'required|in:scheduled,completed,cancelled',
         ]);
+        $start = Carbon::parse($validated['date'].' '.$validated['start_time'].':00');
+        $end = Carbon::parse($validated['date'].' '.$validated['end_time'].':00');
+        if ($end->lessThanOrEqualTo($start)) {
+            $end->addDay();
+        }
+
+        $rota = app(RotaResolver::class);
+        $dayStatus = $rota->getDayStatus((int) $validated['guard_id'], $validated['date']);
+
+        $errors = [];
+        if (!empty($dayStatus['is_off'])) {
+            $errors['date'] = 'Guard has an off-day on the selected date.';
+        }
+
+        $overlap = Shift::where('guard_id', $validated['guard_id'])
+            ->where('status', '!=', 'cancelled')
+            ->where('id', '!=', $shift->id)
+            ->where(function($q) use ($start, $end) {
+                $q->where('start_time', '<', $end)
+                  ->where('end_time', '>', $start);
+            })
+            ->exists();
+        if ($overlap) {
+            $errors['start_time'] = 'Overlapping shift exists for this guard at the selected time.';
+        }
+
+        $assigned = GuardAssignment::active()->current()
+            ->where('guard_id', $validated['guard_id'])
+            ->where('client_site_id', $validated['client_site_id'])
+            ->whereDate('start_date', '<=', $validated['date'])
+            ->where(function($q) use ($validated) {
+                $q->whereNull('end_date')->orWhereDate('end_date', '>=', $validated['date']);
+            })
+            ->exists();
+        if (!$assigned) {
+            $errors['client_site_id'] = 'Guard is not assigned to the selected site on this date.';
+        }
+
+        if (!empty($errors)) {
+            return back()->withErrors($errors)->withInput();
+        }
 
         // Combine date and time
-        $validated['start_time'] = $validated['date'] . ' ' . $validated['start_time'];
-        $validated['end_time'] = $validated['date'] . ' ' . $validated['end_time'];
+        $validated['start_time'] = $start;
+        $validated['end_time'] = $end;
 
         $shift->update($validated);
 

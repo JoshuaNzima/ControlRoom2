@@ -9,13 +9,32 @@ use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
 use Spatie\Permission\Traits\HasPermissions;
 use Illuminate\Support\Collection;
+use Spatie\Activitylog\Traits\LogsActivity;
+use Spatie\Activitylog\LogOptions;
+use App\Notifications\ResetPasswordNotification as CustomResetPasswordNotification;
+use App\Models\Communication\AgentStatus;
 
 class User extends Authenticatable
 {
     use HasApiTokens, HasFactory, Notifiable;
+    use LogsActivity;
     use HasRoles, HasPermissions {
         HasRoles::hasRole insteadof HasPermissions;
         HasRoles::hasPermissionTo insteadof HasPermissions;
+    }
+
+    public function getDescriptionForEvent(string $eventName): string
+    {
+        return 'user.' . $eventName;
+    }
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->useLogName('user')
+            ->logOnly(['name', 'email', 'status', 'zone_id'])
+            ->logOnlyDirty()
+            ->dontSubmitEmptyLogs();
     }
 
     /**
@@ -31,6 +50,7 @@ class User extends Authenticatable
         'employee_id',
         'status',
         'zone_id',
+        'avatar_path',
     ];
 
     /**
@@ -71,21 +91,20 @@ class User extends Authenticatable
 
     /**
      * Get guards managed by this user.
+     * Delegates to GuardScopingService for unified role-based logic.
      */
     public function managedGuards()
     {
-        if ($this->hasRole('zone_commander')) {
-            return Guard::whereHas('site.zone', function($query) {
-                $query->where('id', $this->zone_id);
-            });
-        }
-        
-        return Guard::where('supervisor_id', $this->id);
+        return app(\App\Services\GuardScopingService::class)->getManagedGuardQuery($this);
     }
 
     // AgentStatus / presence functionality temporarily disabled
 
-    
+    public function agentStatus()
+    {
+        return $this->hasOne(AgentStatus::class);
+    }
+
 
     /**
      * Get all conversations this user is part of.
@@ -102,6 +121,14 @@ class User extends Authenticatable
     public function messages()
     {
         return $this->hasMany(Message::class, 'sender_id');
+    }
+
+    /**
+     * Get all push subscriptions for this user.
+     */
+    public function pushSubscriptions()
+    {
+        return $this->hasMany(PushSubscription::class);
     }
 
     /**
@@ -125,14 +152,136 @@ class User extends Authenticatable
      */
     public function isSupervisor(): bool
     {
-        return $this->hasRole('supervisor', 'admin');
+        return $this->hasRole('supervisor');
     }
 
     /**
-     * Check if user is a manager.
+     * Check if user is a sergeant (roaming guard supervisor).
      */
-    public function isManager(): bool
+    public function isSergeant(): bool
     {
-        return $this->hasRole('manager', 'admin');
+        return $this->hasRole('sergeant');
+    }
+
+    /**
+     * Check if user is a supervisor or sergeant (both manage guards).
+     */
+    public function isGuardManager(): bool
+    {
+        return $this->hasRole('supervisor') || $this->hasRole('sergeant');
+    }
+
+    /**
+     * Get the clients this user is linked to (for client role users).
+     */
+    public function clients()
+    {
+        return $this->belongsToMany(\App\Models\Guards\Client::class, 'client_user')
+            ->withPivot('role')
+            ->withTimestamps();
+    }
+
+    /**
+     * Get the primary client linked to this user.
+     */
+    public function getClientAttribute(): ?\App\Models\Guards\Client
+    {
+        if ($this->relationLoaded('clients')) {
+            return $this->clients->first();
+        }
+
+        return $this->clients()->first();
+    }
+
+    /**
+     * Get the primary client ID linked to this user.
+     */
+    public function getClientIdAttribute(): ?int
+    {
+        return $this->client?->id;
+    }
+
+    /**
+     * Check if user is a client.
+     */
+    public function isClient(): bool
+    {
+        return $this->hasRole('client');
+    }
+
+    /**
+     * Check if user is an assistant.
+     */
+    public function isAssistant(): bool
+    {
+        return $this->hasRole('assistant');
+    }
+
+    /**
+     * Get assistant assignments where this user is the assistant.
+     */
+    public function assistantAssignments()
+    {
+        return $this->hasMany(\App\Models\FrontOffice\AssistantAssignment::class, 'assistant_id');
+    }
+
+    /**
+     * Get assistant assignments where this user is assigned to an assistant.
+     */
+    public function assignedAssistants()
+    {
+        return $this->hasMany(\App\Models\FrontOffice\AssistantAssignment::class, 'assigned_to_id');
+    }
+
+    /**
+     * Get the primary assistant for this user.
+     */
+    public function primaryAssistant()
+    {
+        return $this->assignedAssistants()
+            ->where('is_primary', true)
+            ->where('status', 'active')
+            ->first();
+    }
+
+    /**
+     * Get all active assistants for this user.
+     */
+    public function activeAssistants()
+    {
+        return $this->assignedAssistants()
+            ->where('status', 'active')
+            ->with('assistant');
+    }
+
+    /**
+     * Send the password reset notification.
+     */
+    public function sendPasswordResetNotification($token): void
+    {
+        $this->notify(new CustomResetPasswordNotification($token));
+    }
+
+    /**
+     * Get the user's avatar URL.
+     */
+    public function getAvatarUrlAttribute(): ?string
+    {
+        if ($this->avatar_path) {
+            return asset('storage/' . $this->avatar_path);
+        }
+        return null;
+    }
+
+    /**
+     * Get user initials for avatar display.
+     */
+    public function getInitialsAttribute(): string
+    {
+        $parts = explode(' ', $this->name);
+        if (count($parts) >= 2) {
+            return strtoupper(substr($parts[0], 0, 1) . substr($parts[1], 0, 1));
+        }
+        return strtoupper(substr($this->name, 0, 2));
     }
 }

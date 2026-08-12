@@ -2,221 +2,66 @@
 
 namespace App\Http\Controllers\Guards;
 
+use App\Exceptions\AttendanceException;
 use App\Http\Controllers\Controller;
 use App\Models\Guards\{Guard, Attendance, ClientSite, Shift};
 use App\Models\Role;
+use App\Services\AttendanceService;
+use App\Services\GuardScopingService;
+use App\Services\SiteScanLockService;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Mail;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class SupervisorController extends Controller
 {
-    public function dashboard(Request $request): Response
+    public function __construct(
+        private readonly GuardScopingService $guardScopingService,
+        private readonly SiteScanLockService $siteScanLockService,
+        private readonly AttendanceService $attendanceService,
+    ) {}
+
+    /**
+     * Get the guard query based on user role (supervisor or sergeant).
+     * Delegates to GuardScopingService for unified logic.
+     */
+    protected function getManagedGuardQuery($user = null): \Illuminate\Database\Eloquent\Builder
     {
-        $supervisorId = Auth::id();
-        $selectedDate = $request->input('date', Carbon::today()->format('Y-m-d'));
-        $date = Carbon::parse($selectedDate);
+        return $this->guardScopingService->getManagedGuardQuery($user);
+    }
 
-        // Guard Statistics
-        $stats = [
-            'active_guards' => [
-                'label' => 'My Guards',
-                'count' => Guard::forSupervisor($supervisorId)->where('status', 'active')->count(),
-                'description' => 'Assigned to me',
-                'color' => 'green',
-                'badge' => 'Active',
-                'icon' => '🛡️',
-            ],
-            'relief_guards' => [
-                'label' => 'Relief Guards',
-                'count' => Guard::where('status', 'active')
-                    ->whereDoesntHave('attendance', function($q) use ($date) {
-                        $q->whereDate('date', $date);
-                    })
-                    ->count(),
-                'description' => 'Available',
-                'color' => 'blue',
-                'badge' => 'Reliever',
-                'icon' => '🔄',
-            ],
-            'on_leave' => [
-                'label' => 'On Leave',
-                'count' => 0,
-                'description' => 'Temporary absence',
-                'color' => 'yellow',
-                'badge' => 'On Leave',
-                'icon' => '✈️',
-            ],
-            'resigned' => [
-                'label' => 'Resigned',
-                'count' => Guard::where('status', 'inactive')
-                    ->where('updated_at', '>=', now()->subYear())
-                    ->count(),
-                'description' => 'Past 12 months',
-                'color' => 'gray',
-                'badge' => 'Resigned',
-                'icon' => '📋',
-            ],
-            'dismissed' => [
-                'label' => 'Dismissed',
-                'count' => Guard::where('status', 'suspended')
-                    ->where('updated_at', '>=', now()->subYear())
-                    ->count(),
-                'description' => 'Past 12 months',
-                'color' => 'orange',
-                'badge' => 'Dismissed',
-                'icon' => '⚠️',
-            ],
-            'absconded' => [
-                'label' => 'Absconded',
-                'count' => 0,
-                'description' => 'Past 12 months',
-                'color' => 'red',
-                'badge' => 'Absconded',
-                'icon' => '❌',
-            ],
-        ];
+    /**
+     * Get guard IDs managed by the current user.
+     * Delegates to GuardScopingService for unified logic.
+     */
+    protected function getManagedGuardIds($user = null): array
+    {
+        return $this->guardScopingService->getManagedGuardIds($user);
+    }
 
-        // Quick navigation features
-        $quickNav = $this->getQuickNavigation();
-
-        // Today's attendance summary
-        $attendanceToday = [
-            'present' => Attendance::whereDate('date', $date)->count(),
-            'on_duty' => Attendance::whereDate('date', $date)
-                ->whereNotNull('check_in_time')
-                ->whereNull('check_out_time')
-                ->count(),
-            'completed' => Attendance::whereDate('date', $date)
-                ->whereNotNull('check_in_time')
-                ->whereNotNull('check_out_time')
-                ->count(),
-            'absent' => Guard::active()->count() - Attendance::whereDate('date', $date)->count(),
-        ];
-
-        // Get supervisor's active guards with attendance
-        $guards = Guard::active()
-            ->forSupervisor($supervisorId)
-            ->with(['todayAttendance.clientSite'])
-            ->orderBy('name')
-            ->get()
-            ->map(function ($guard) use ($date) {
-                $attendance = $guard->todayAttendance->where('date', $date->format('Y-m-d'))->first();
-                return [
-                    'id' => $guard->id,
-                    'employee_id' => $guard->employee_id,
-                    'name' => $guard->name,
-                    'phone' => $guard->phone,
-                    'status' => $guard->status,
-                    'is_on_duty' => $guard->is_on_duty,
-                    'attendance' => $attendance ? [
-                        'id' => $attendance->id,
-                        'check_in_time' => $attendance->check_in_time ? Carbon::parse($attendance->check_in_time)->format('H:i') : null,
-                        'check_out_time' => $attendance->check_out_time ? Carbon::parse($attendance->check_out_time)->format('H:i') : null,
-                        'status' => $attendance->status,
-                        'site' => $attendance->clientSite?->name,
-                        'hours_worked' => $attendance->hours_worked,
-                    ] : null,
-                ];
-            });
-
-        // Get active client sites
-        $sites = ClientSite::active()
-            ->with('client')
-            ->get()
-            ->map(fn($site) => [
-                'id' => $site->id,
-                'name' => $site->name,
-                'client_name' => $site->client->name,
-                'full_name' => $site->client->name . ' - ' . $site->name,
-            ]);
-
-        // Analytics data - 7 day trends
-        $attendanceTrend = $this->getAttendanceTrend($date);
-        $relieverTrend = $this->getRelieverTrend($date);
-        $reportsTrend = $this->getReportsTrend($date);
-        
-        // Shift statistics
-        $shiftStats = [
-            ['type' => 'Day Shift', 'count' => Shift::whereDate('date', $date)->where('shift_type', 'day')->count()],
-            ['type' => 'Night Shift', 'count' => Shift::whereDate('date', $date)->where('shift_type', 'night')->count()],
-            ['type' => 'Morning', 'count' => Shift::whereDate('date', $date)->where('shift_type', 'morning')->count()],
-            ['type' => 'Evening', 'count' => Shift::whereDate('date', $date)->where('shift_type', 'evening')->count()],
-        ];
-
-        // Recent reports (placeholder - will be implemented with incidents module)
-        $recentReports = [];
-
-        // Upcoming shifts
-        $upcomingShifts = Shift::where('date', '>=', $date)
-            ->where('status', 'scheduled')
-            ->with(['guard', 'clientSite'])
-            ->orderBy('date')
-            ->orderBy('start_time')
-            ->limit(10)
-            ->get()
-            ->map(fn($shift) => [
-                'id' => $shift->id,
-                'guard_name' => $shift->guard->name ?? 'Unknown',
-                'site_name' => $shift->clientSite->name ?? 'Unknown',
-                'type' => ucfirst($shift->shift_type),
-                'start_time' => $shift->start_time ? Carbon::parse($shift->start_time)->format('M d, H:i') : 'N/A',
-                'end_time' => $shift->end_time ? Carbon::parse($shift->end_time)->format('H:i') : null,
-            ]);
-
-        // Relievers on duty
-        $relieversOnDuty = Guard::active()
-            ->whereHas('todayAttendance', function($q) use ($date) {
-                $q->whereDate('date', $date)
-                  ->whereNotNull('check_in_time')
-                  ->whereNull('check_out_time');
-            })
-            ->with(['todayAttendance' => function($q) use ($date) {
-                $q->whereDate('date', $date);
-            }, 'todayAttendance.clientSite'])
-            ->get()
-            ->map(function($guard) use ($date) {
-                $attendance = $guard->todayAttendance->where('date', $date->format('Y-m-d'))->first();
-                return [
-                    'id' => $guard->id,
-                    'name' => $guard->name,
-                    'site_name' => $attendance?->clientSite?->name ?? 'Unknown',
-                    'on_duty' => true,
-                ];
-            });
-
-        return Inertia::render('Supervisor/Dashboard', [
-            'stats' => $stats,
-            'quickNav' => $quickNav,
-            'attendanceToday' => $attendanceToday,
-            'guards' => $guards,
-            'sites' => $sites,
-            'currentDate' => $date->format('l, F j, Y'),
-            'currentTime' => now()->format('H:i'),
-            'selectedDate' => $selectedDate,
-            'attendanceTrend' => $attendanceTrend,
-            'shiftStats' => $shiftStats,
-            'relieverTrend' => $relieverTrend,
-            'reportsTrend' => $reportsTrend,
-            'recentReports' => $recentReports,
-            'upcomingShifts' => $upcomingShifts,
-            'relieversOnDuty' => $relieversOnDuty,
-            'activeScan' => session('active_checkpoint_scan'),
-        ]);
+    /**
+     * Get user role type for the view.
+     * Delegates to GuardScopingService for unified logic.
+     */
+    protected function getUserRoleType($user = null): string
+    {
+        return $this->guardScopingService->getRoleType($user);
     }
 
     public function attendance(Request $request): Response
     {
+        $user = Auth::user();
         $date = $request->input('date', Carbon::today()->format('Y-m-d'));
         $status = $request->input('status');
         $search = $request->input('search');
+        $guardIds = $this->getManagedGuardIds($user);
 
         $query = Attendance::whereDate('date', $date)
-            ->whereHas('guardRelation', function($q) {
-                $q->where('supervisor_id', Auth::id());
-            })
+            ->whereIn('guard_id', $guardIds)
             ->with(['guardRelation', 'clientSite.client', 'supervisor']);
 
         if ($status) {
@@ -241,7 +86,7 @@ class SupervisorController extends Controller
                 ],
                 'site' => $record->clientSite ? [
                     'name' => $record->clientSite->name,
-                    'client_name' => $record->clientSite->client->name ?? 'Unknown',
+                    'client_name' => $record->clientSite->client?->name ?? 'Unknown',
                 ] : null,
                 'check_in_time' => $record->check_in_time ? Carbon::parse($record->check_in_time)->format('H:i') : null,
                 'check_out_time' => $record->check_out_time ? Carbon::parse($record->check_out_time)->format('H:i') : null,
@@ -252,7 +97,19 @@ class SupervisorController extends Controller
                 'notes' => trim(($record->check_in_notes ?? '') . ' ' . ($record->check_out_notes ?? '')),
             ]);
 
-        return Inertia::render('Supervisor/Attendance', [
+        // Single aggregated query for attendance stats instead of 4 separate COUNTs
+        $statsQuery = Attendance::selectRaw("
+                COUNT(*) as total,
+                SUM(CASE WHEN status = 'present' THEN 1 ELSE 0 END) as present,
+                SUM(CASE WHEN status = 'late' THEN 1 ELSE 0 END) as late,
+                SUM(CASE WHEN status = 'absent' THEN 1 ELSE 0 END) as absent
+            ")
+            ->whereDate('date', $date)
+            ->whereIn('guard_id', $guardIds)
+            ->first();
+
+        return Inertia::render('Attendance/Index', [
+            'mode' => 'supervisor',
             'attendance' => $attendance,
             'filters' => [
                 'date' => $date,
@@ -260,23 +117,27 @@ class SupervisorController extends Controller
                 'search' => $search,
             ],
             'stats' => [
-                'total' => Attendance::whereDate('date', $date)->count(),
-                'present' => Attendance::whereDate('date', $date)->where('status', 'present')->count(),
-                'late' => Attendance::whereDate('date', $date)->where('status', 'late')->count(),
-                'absent' => Guard::active()->count() - Attendance::whereDate('date', $date)->count(),
+                'total' => (int) ($statsQuery->total ?? 0),
+                'present' => (int) ($statsQuery->present ?? 0),
+                'late' => (int) ($statsQuery->late ?? 0),
+                'absent' => (int) ($statsQuery->absent ?? 0),
             ],
+            'activeScan' => $this->siteScanLockService->getActiveLock(Auth::id()),
+            'roleType' => $this->getUserRoleType($user),
+            'isSergeant' => $user->isSergeant(),
         ]);
     }
 
     public function shifts(Request $request): Response
     {
-        $supervisorId = Auth::id();
+        $user = Auth::user();
+        $guardIds = $this->getManagedGuardIds($user);
         $date = $request->input('date', Carbon::today()->format('Y-m-d'));
 
-    $shifts = Shift::whereHas('guardRelation', function($query) use ($supervisorId) {
-                $query->where('supervisor_id', $supervisorId);
+    $shifts = Shift::whereHas('guardRelation', function($query) use ($guardIds) {
+                $query->whereIn('id', $guardIds);
             })
-            ->with(['guard', 'clientSite'])
+            ->with(['guardRelation', 'clientSite'])
             ->when($date, function($query, $date) {
                 $query->whereDate('date', $date);
             })
@@ -284,7 +145,7 @@ class SupervisorController extends Controller
             ->paginate(20)
             ->through(fn ($shift) => [
                 'id' => $shift->id,
-                'guard' => $shift->guard ?? null,
+                'guard' => $shift->guardRelation ?? null,
                 'client_site' => $shift->clientSite ?? null,
                 'date' => $shift->date ? Carbon::parse($shift->date)->format('Y-m-d') : 'N/A',
                 'start_time' => $shift->start_time ? Carbon::parse($shift->start_time)->format('H:i') : null,
@@ -301,156 +162,92 @@ class SupervisorController extends Controller
         return Inertia::render('Guards/Shifts/Index', [
             'shifts' => $shifts,
             'filters' => $request->only(['date']),
+            'roleType' => $this->getUserRoleType($user),
+            'isSergeant' => $user->isSergeant(),
         ]);
     }
 
     public function checkIn(Request $request)
     {
-        $validated = $request->validate([
-            'guard_id' => 'required|exists:guards,id',
-            'client_site_id' => 'required|exists:client_sites,id',
-            'notes' => 'nullable|string',
-            'time' => 'nullable|date_format:H:i',
-            // In production we want a photo; in tests we allow it to be omitted
-            'photo' => (app()->environment('testing') ? 'nullable' : 'nullable') . '|image|max:5120',
-        ]);
-
-        // Require active checkpoint lock matching the site (skip in testing)
-        if (!app()->environment('testing')) {
-            $scan = session('active_checkpoint_scan');
-            if (!$scan || (int)($scan['site_id'] ?? 0) !== (int)$validated['client_site_id']) {
-                return back()->withErrors(['message' => 'Scan the site checkpoint to take attendance for this site.']);
-            }
+        try {
+            $result = $this->attendanceService->checkIn($request);
+            return back()->with('success', $result['success']);
+        } catch (AttendanceException $e) {
+            return back()->withErrors($e->errors ?: ['message' => $e->getMessage()]);
         }
-
-        // Check if guard already has an attendance record for today
-        $existingAttendance = Attendance::where('guard_id', $validated['guard_id'])
-            ->whereDate('date', Carbon::today())
-            ->first();
-
-        if ($existingAttendance) {
-            return back()->withErrors(['message' => 'Guard has already checked in today']);
-        }
-
-        // Determine check-in time (handle missing 'time' key safely)
-        $timeInput = $request->input('time', null);
-        $checkInTime = $timeInput
-            ? Carbon::parse(Carbon::today()->format('Y-m-d') . ' ' . $timeInput)
-            : now();
-
-        // Create new attendance record
-        $attendance = new Attendance([
-            'guard_id' => $validated['guard_id'],
-            'supervisor_id' => Auth::id(),
-            'client_site_id' => $validated['client_site_id'],
-            'date' => Carbon::today(),
-            'check_in_time' => $checkInTime,
-            'check_in_notes' => $validated['notes'] ?? null,
-            'status' => $checkInTime->hour > 8 ? 'late' : 'present',
-        ]);
-
-        // Store check-in photo
-        if ($request->hasFile('photo')) {
-            $path = $request->file('photo')->store('attendance/'.now()->format('Y-m-d'), 'public');
-            $attendance->check_in_photo = $path;
-        }
-
-        $attendance->save();
-
-        return back()->with('success', 'Guard checked in successfully');
     }
 
     public function checkOut(Request $request)
     {
-        $validated = $request->validate([
-            'guard_id' => 'required|exists:guards,id',
-            'notes' => 'nullable|string',
-            'time' => 'nullable|date_format:H:i',
-            // Make photo optional to align with automated tests
-            'photo' => 'nullable|image|max:5120',
-        ]);
-
-        // Find today's attendance record
-        $attendance = Attendance::where('guard_id', $validated['guard_id'])
-            ->whereDate('date', Carbon::today())
-            ->whereNull('check_out_time')
-            ->first();
-
-        if (!$attendance) {
-            return back()->withErrors(['message' => 'No active check-in found for this guard']);
+        try {
+            $result = $this->attendanceService->checkOut($request);
+            return back()->with('success', $result['success']);
+        } catch (AttendanceException $e) {
+            return back()->withErrors($e->errors ?: ['message' => $e->getMessage()]);
         }
+    }
 
-        // Determine check-out time
-        $checkOutTime = $validated['time'] 
-            ? Carbon::parse(Carbon::today()->format('Y-m-d') . ' ' . $validated['time'])
-            : now();
-
-        // Update attendance record
-        $attendance->check_out_time = $checkOutTime;
-        $attendance->check_out_notes = $validated['notes'];
-        if ($request->hasFile('photo')) {
-            $path = $request->file('photo')->store('attendance/'.now()->format('Y-m-d'), 'public');
-            $attendance->check_out_photo = $path;
+    public function bulkCheckIn(Request $request)
+    {
+        try {
+            $result = $this->attendanceService->bulkCheckIn($request);
+            return back()->with('success', $result['success']);
+        } catch (AttendanceException $e) {
+            return back()->withErrors($e->errors ?: ['message' => $e->getMessage()]);
         }
-        
-        // Calculate hours if method exists
-        if (method_exists($attendance, 'calculateHours')) {
-            $attendance->calculateHours();
-        }
-        
-        $attendance->save();
+    }
 
-        return back()->with('success', 'Guard checked out successfully');
+    public function bulkCheckOut(Request $request)
+    {
+        try {
+            $result = $this->attendanceService->bulkCheckOut($request);
+            return back()->with('success', $result['success']);
+        } catch (AttendanceException $e) {
+            return back()->withErrors($e->errors ?: ['message' => $e->getMessage()]);
+        }
     }
 
     public function manualAttendance(Request $request)
     {
+        try {
+            $result = $this->attendanceService->manualAttendance($request);
+            return back()->with('success', $result['success']);
+        } catch (AttendanceException $e) {
+            return back()->withErrors($e->errors ?: ['message' => $e->getMessage()]);
+        }
+    }
+
+    public function quickIncident(Request $request)
+    {
         $validated = $request->validate([
-            'guard_id' => 'required|exists:guards,id',
-            'client_site_id' => 'required|exists:client_sites,id',
-            'date' => 'required|date',
-            'check_in_time' => 'required|date_format:H:i',
-            'check_out_time' => 'nullable|date_format:H:i|after:check_in_time',
-            'status' => 'required|in:present,late,absent,half_day',
-            'notes' => 'nullable|string',
+            'type' => 'required|string|in:security_breach,theft,vandalism,accident,fire,medical,fight,intruder,equipment_failure,other',
+            'severity' => 'required|in:low,medium,high,critical',
+            'description' => 'required|string|min:10',
+            'guard_id' => 'nullable|exists:guards,id',
+            'site_id' => 'nullable|exists:client_sites,id',
+            'photo' => 'nullable|image|max:5120',
         ]);
 
-        // Parse times
-        $date = Carbon::parse($validated['date']);
-        $checkInTime = Carbon::parse($validated['date'] . ' ' . $validated['check_in_time']);
-        $checkOutTime = $validated['check_out_time'] 
-            ? Carbon::parse($validated['date'] . ' ' . $validated['check_out_time'])
-            : null;
-
-        // Check for existing attendance
-        $existingAttendance = Attendance::where('guard_id', $validated['guard_id'])
-            ->whereDate('date', $date)
-            ->first();
-
-        if ($existingAttendance) {
-            return back()->withErrors(['message' => 'Guard already has an attendance record for this date']);
-        }
-
-        // Create attendance record
-        $attendance = new Attendance([
-            'guard_id' => $validated['guard_id'],
+        $incident = new \App\Models\Guards\Incident([
+            'type' => $validated['type'],
+            'severity' => $validated['severity'],
+            'description' => $validated['description'],
+            'guard_id' => $validated['guard_id'] ?? null,
+            'site_id' => $validated['site_id'] ?? null,
             'supervisor_id' => Auth::id(),
-            'client_site_id' => $validated['client_site_id'],
-            'date' => $date,
-            'check_in_time' => $checkInTime,
-            'check_out_time' => $checkOutTime,
-            'check_in_notes' => $validated['notes'],
-            'status' => $validated['status'],
+            'status' => 'reported',
+            'reported_at' => now(),
         ]);
 
-        if ($checkOutTime && method_exists($attendance, 'calculateHours')) {
-            $attendance->calculateHours();
+        if ($request->hasFile('photo')) {
+            $path = $request->file('photo')->store('incidents/'.now()->format('Y-m-d'), 'public');
+            $incident->photo = $path;
         }
 
-        $attendance->save();
+        $incident->save();
 
-        return back()->with('success', 'Manual attendance recorded successfully');
-    } // <-- This was the missing closing brace
+        return back()->with('success', 'Incident reported successfully. Reference #' . $incident->id);
+    }
 
     /**
      * Get the navigation menu items for the supervisor dashboard
@@ -537,37 +334,139 @@ class SupervisorController extends Controller
     }
 
     /**
-     * Get the attendance trend data for the past 7 days
+     * Build the 6 guard-type stats blocks shared between overview() and analytics().
+     * Uses a single aggregated SELECT with SUM(CASE...) instead of 6 separate COUNTs.
      */
-    private function getAttendanceTrend($endDate): array
+    private function buildGuardStats($user): array
     {
+        $query = $this->getManagedGuardQuery($user);
+        $oneYearAgo = now()->subYear();
+
+        $row = $query->selectRaw("
+                SUM(CASE WHEN status = 'active' AND guard_type = 'permanent' THEN 1 ELSE 0 END) as active_permanent,
+                SUM(CASE WHEN status = 'active' AND guard_type = 'reliever' THEN 1 ELSE 0 END) as active_reliever,
+                SUM(CASE WHEN status = 'active' AND guard_type = 'standby' THEN 1 ELSE 0 END) as active_standby,
+                SUM(CASE WHEN status = 'inactive' AND updated_at >= ? THEN 1 ELSE 0 END) as resigned_count,
+                SUM(CASE WHEN status = 'dismissed' AND updated_at >= ? THEN 1 ELSE 0 END) as dismissed_count,
+                SUM(CASE WHEN status = 'absconded' AND updated_at >= ? THEN 1 ELSE 0 END) as absconded_count
+            ", [$oneYearAgo, $oneYearAgo, $oneYearAgo])
+            ->first();
+
+        return [
+            'active_guards' => [
+                'label' => 'My Guards',
+                'count' => (int) ($row->active_permanent ?? 0),
+                'description' => 'Permanent',
+                'color' => 'green',
+                'badge' => 'Permanent',
+                'icon' => '🛡️',
+            ],
+            'relief_guards' => [
+                'label' => 'Relief Guards',
+                'count' => (int) ($row->active_reliever ?? 0),
+                'description' => 'Available',
+                'color' => 'blue',
+                'badge' => 'Reliever',
+                'icon' => '🔄',
+            ],
+            'standby_guards' => [
+                'label' => 'Standby Guards',
+                'count' => (int) ($row->active_standby ?? 0),
+                'description' => 'On Standby',
+                'color' => 'yellow',
+                'badge' => 'Standby',
+                'icon' => '⏸️',
+            ],
+            'resigned' => [
+                'label' => 'Resigned',
+                'count' => (int) ($row->resigned_count ?? 0),
+                'description' => 'Past 12 months',
+                'color' => 'gray',
+                'badge' => 'Resigned',
+                'icon' => '📋',
+            ],
+            'dismissed' => [
+                'label' => 'Dismissed',
+                'count' => (int) ($row->dismissed_count ?? 0),
+                'description' => 'Past 12 months',
+                'color' => 'orange',
+                'badge' => 'Dismissed',
+                'icon' => '⚠️',
+            ],
+            'absconded' => [
+                'label' => 'Absconded',
+                'count' => (int) ($row->absconded_count ?? 0),
+                'description' => 'Past 12 months',
+                'color' => 'red',
+                'badge' => 'Absconded',
+                'icon' => '❌',
+            ],
+        ];
+    }
+
+    /**
+     * Get the attendance trend data for the past 7 days (filtered by supervisor).
+     * Uses a single batch query instead of 21 individual queries (7 days × 3).
+     */
+    private function getAttendanceTrend($endDate, $supervisorGuardIds): array
+    {
+        $startDate = $endDate->copy()->subDays(6)->format('Y-m-d');
+        $end = $endDate->format('Y-m-d');
+
+        $totalActive = Guard::active()->whereIn('id', $supervisorGuardIds)->count();
+
+        $rows = Attendance::selectRaw("
+                date,
+                COUNT(*) as total,
+                SUM(CASE WHEN check_in_time IS NOT NULL AND check_out_time IS NULL THEN 1 ELSE 0 END) as on_duty
+            ")
+            ->whereBetween('date', [$startDate, $end])
+            ->whereIn('guard_id', $supervisorGuardIds)
+            ->groupBy('date')
+            ->orderBy('date')
+            ->pluck('total', 'date')
+            ->toArray();
+
+        $onDutyRows = Attendance::selectRaw("
+                date,
+                SUM(CASE WHEN check_in_time IS NOT NULL AND check_out_time IS NULL THEN 1 ELSE 0 END) as on_duty
+            ")
+            ->whereBetween('date', [$startDate, $end])
+            ->whereIn('guard_id', $supervisorGuardIds)
+            ->groupBy('date')
+            ->orderBy('date')
+            ->pluck('on_duty', 'date')
+            ->toArray();
+
         $trend = [];
         for ($i = 6; $i >= 0; $i--) {
             $date = $endDate->copy()->subDays($i);
+            $dateStr = $date->format('Y-m-d');
+            $present = (int) ($rows[$dateStr] ?? 0);
             $trend[] = [
                 'date' => $date->format('M d'),
-                'present' => Attendance::whereDate('date', $date)->count(),
-                'on_duty' => Attendance::whereDate('date', $date)
-                    ->whereNotNull('check_in_time')
-                    ->whereNull('check_out_time')
-                    ->count(),
-                'absent' => Guard::active()->count() - Attendance::whereDate('date', $date)->count(),
+                'present' => $present,
+                'on_duty' => (int) ($onDutyRows[$dateStr] ?? 0),
+                'absent' => max(0, $totalActive - $present),
             ];
         }
         return $trend;
     }
 
     /**
-     * Get the reliever availability trend data for the past 7 days
+     * Get the reliever availability trend data for the past 7 days (filtered by managed guards)
      */
-    private function getRelieverTrend($endDate): array
+    private function getRelieverTrend($endDate, $user): array
     {
+        $managedGuardIds = $this->getManagedGuardIds($user);
         $trend = [];
         for ($i = 6; $i >= 0; $i--) {
             $date = $endDate->copy()->subDays($i);
             $trend[] = [
                 'date' => $date->format('M d'),
                 'available' => Guard::active()
+                    ->whereIn('id', $managedGuardIds)
+                    ->where('guard_type', 'reliever')
                     ->whereDoesntHave('attendance', function($q) use ($date) {
                         $q->whereDate('date', $date);
                     })
@@ -595,11 +494,12 @@ class SupervisorController extends Controller
 
     public function guards(Request $request)
     {
+        $user = Auth::user();
         $search = $request->input('search');
         $status = $request->input('status');
-        $supervisorId = Auth::id();
+        $date = Carbon::today();
 
-        $query = Guard::query()->where('supervisor_id', $supervisorId);
+        $query = $this->getManagedGuardQuery($user);
 
         if ($search) {
             $query->where(function ($q) use ($search) {
@@ -612,31 +512,268 @@ class SupervisorController extends Controller
             $query->where('status', $status);
         }
 
-        $guards = $query->with(['todayAttendance'])
+        // Load only today's attendance to avoid N+1 of loading all then filtering in-memory
+        $guards = $query->with(['todayAttendance' => fn($q) => $q->whereDate('date', $date)->with('clientSite')])
             ->orderBy('name')
-            ->paginate(20)
-            ->through(fn($guard) => [
-                'id' => $guard->id,
-                'employee_id' => $guard->employee_id,
-                'name' => $guard->name,
-                'phone' => $guard->phone,
-                'email' => $guard->email,
-                'status' => $guard->status,
-                'status_color' => $guard->status_color ?? 'gray',
-                'hire_date' => $guard->hire_date ? Carbon::parse($guard->hire_date)->format('M d, Y') : 'N/A',
-                'is_on_duty' => $guard->is_on_duty ?? false,
-                'today_attendance' => $guard->todayAttendance->first() ? [
-                    'check_in' => $guard->todayAttendance->first()->check_in_time ? Carbon::parse($guard->todayAttendance->first()->check_in_time)->format('H:i') : null,
-                    'check_out' => $guard->todayAttendance->first()->check_out_time ? Carbon::parse($guard->todayAttendance->first()->check_out_time)->format('H:i') : null,
-                ] : null,
+            ->get()
+            ->map(function($guard) {
+                $attendance = $guard->todayAttendance->first();
+                return [
+                    'id' => $guard->id,
+                    'employee_id' => $guard->employee_id,
+                    'name' => $guard->name,
+                    'phone' => $guard->phone,
+                    'status' => $guard->status,
+                    'guard_type' => $guard->guard_type ?? 'permanent',
+                    'is_on_duty' => $guard->is_on_duty ?? false,
+                    'attendance' => $attendance ? [
+                        'id' => $attendance->id,
+                        'check_in_time' => $attendance->check_in_time ? Carbon::parse($attendance->check_in_time)->format('H:i') : null,
+                        'check_out_time' => $attendance->check_out_time ? Carbon::parse($attendance->check_out_time)->format('H:i') : null,
+                        'status' => $attendance->status,
+                        'site' => $attendance->clientSite?->name,
+                        'hours_worked' => $attendance->hours_worked,
+                    ] : null,
+                ];
+            });
+
+        // Get sites based on user role — unified through GuardScopingService
+        $managedClientIds = $this->guardScopingService->getManagedClientIds($user);
+        $sites = ClientSite::active()
+            ->when(!empty($managedClientIds), fn($q) => $q->whereIn('client_id', $managedClientIds))
+            ->with('client')
+            ->get()
+            ->map(fn($site) => [
+                'id' => $site->id,
+                'name' => $site->name,
+                'client_name' => $site->client?->name ?? 'Unknown',
+                'full_name' => ($site->client?->name ?? 'Unknown') . ' - ' . $site->name,
             ]);
 
-        return Inertia::render('Supervisor/Guards', [
+        return Inertia::render('Guards/Index', [
             'guards' => $guards,
-            'filters' => [
-                'search' => $search,
-                'status' => $status,
-            ],
+            'sites' => $sites,
+            'mode' => 'attendance-full',
+            'activeScan' => $this->siteScanLockService->getActiveLock(Auth::id()),
+            'roleType' => $this->getUserRoleType($user),
+            'isSergeant' => $user->isSergeant(),
+            'requireSiteScan' => \App\Models\Setting::requireSiteScan(),
+        ]);
+    }
+
+    public function overview(Request $request): Response
+    {
+        $user = Auth::user();
+        $supervisorId = $user->id;
+        $date = Carbon::today();
+        $isSergeant = $user->isSergeant();
+
+        // Guard Statistics with type breakdown — using shared method
+        $supervisorGuardIds = $this->getManagedGuardIds($user);
+
+        $stats = $this->buildGuardStats($user);
+
+        // Today's attendance summary — single aggregated query instead of 4 separate COUNTs
+        $attendanceTodayRow = Attendance::selectRaw("
+                SUM(CASE WHEN status IN ('present','late') THEN 1 ELSE 0 END) as present,
+                SUM(CASE WHEN check_in_time IS NOT NULL AND check_out_time IS NULL THEN 1 ELSE 0 END) as on_duty,
+                SUM(CASE WHEN check_in_time IS NOT NULL AND check_out_time IS NOT NULL THEN 1 ELSE 0 END) as completed,
+                SUM(CASE WHEN status = 'absent' THEN 1 ELSE 0 END) as absent
+            ")
+            ->whereDate('date', $date)
+            ->whereIn('guard_id', $supervisorGuardIds)
+            ->first();
+
+        $attendanceToday = [
+            'present' => (int) ($attendanceTodayRow->present ?? 0),
+            'on_duty' => (int) ($attendanceTodayRow->on_duty ?? 0),
+            'completed' => (int) ($attendanceTodayRow->completed ?? 0),
+            'absent' => (int) ($attendanceTodayRow->absent ?? 0),
+        ];
+
+        // Analytics data - 7 day trends (filtered by supervisor)
+        $attendanceTrend = $this->getAttendanceTrend($date, $supervisorGuardIds);
+
+        // Shift statistics (filtered by managed guard IDs)
+        $shiftStats = [
+            ['type' => 'Day Shift', 'count' => Shift::whereDate('date', $date)->whereHas('guardRelation', fn($q) => $q->whereIn('id', $supervisorGuardIds))->where('shift_type', 'day')->count()],
+            ['type' => 'Night Shift', 'count' => Shift::whereDate('date', $date)->whereHas('guardRelation', fn($q) => $q->whereIn('id', $supervisorGuardIds))->where('shift_type', 'night')->count()],
+            ['type' => 'Morning', 'count' => Shift::whereDate('date', $date)->whereHas('guardRelation', fn($q) => $q->whereIn('id', $supervisorGuardIds))->where('shift_type', 'morning')->count()],
+            ['type' => 'Evening', 'count' => Shift::whereDate('date', $date)->whereHas('guardRelation', fn($q) => $q->whereIn('id', $supervisorGuardIds))->where('shift_type', 'evening')->count()],
+        ];
+
+        return Inertia::render('Supervisor/Overview', [
+            'stats' => $stats,
+            'attendanceToday' => $attendanceToday,
+            'attendanceTrend' => $attendanceTrend,
+            'shiftStats' => $shiftStats,
+            'activeGuards' => $this->getManagedGuardQuery($user)->where('status', 'active')->count(),
+            'currentDate' => $date->format('l, F j, Y'),
+            'roleType' => $this->getUserRoleType($user),
+            'isSergeant' => $isSergeant,
+        ]);
+    }
+
+    public function analytics(Request $request): Response
+    {
+        $user = Auth::user();
+        $date = Carbon::today();
+        $supervisorGuardIds = $this->getManagedGuardIds($user);
+
+        // Stats — using shared method (supports both supervisor and sergeant)
+        $stats = $this->buildGuardStats($user);
+
+        // Guard Performance Metrics (30 days) — single aggregated query to eliminate N+1
+        $thirtyDaysAgo = Carbon::today()->subDays(30)->format('Y-m-d');
+        $today = Carbon::today()->format('Y-m-d');
+        $sevenDaysAgo = Carbon::today()->subDays(7)->format('Y-m-d');
+        $fourteenDaysAgo = Carbon::today()->subDays(14)->format('Y-m-d');
+
+        // Use the managed guard query for performance data (supports both supervisor and sergeant)
+        $managedQuery = $this->getManagedGuardQuery($user);
+        $guardIds = (clone $managedQuery)->where('status', 'active')->pluck('id');
+
+        $performanceRows = \Illuminate\Support\Facades\DB::table('guards as g')
+            ->leftJoin('attendance as a', function ($join) use ($thirtyDaysAgo) {
+                $join->on('a.guard_id', '=', 'g.id')
+                     ->where('a.date', '>=', $thirtyDaysAgo);
+            })
+            ->whereIn('g.id', $guardIds)
+            ->where('g.status', 'active')
+            ->groupBy('g.id', 'g.name', 'g.employee_id')
+            ->selectRaw('
+                g.id,
+                g.name,
+                g.employee_id,
+                COUNT(a.id) as total_days,
+                SUM(CASE WHEN a.status IN (?, ?) THEN 1 ELSE 0 END) as present_count,
+                SUM(CASE WHEN a.status = ? THEN 1 ELSE 0 END) as late_count,
+                SUM(CASE WHEN a.status = ? THEN 1 ELSE 0 END) as absent_count,
+                AVG(a.hours_worked) as avg_hours,
+                AVG(CASE WHEN a.date >= ? THEN a.hours_worked ELSE NULL END) as last_7_avg,
+                AVG(CASE WHEN a.date >= ? AND a.date < ? THEN a.hours_worked ELSE NULL END) as prev_7_avg
+            ', ['present', 'late', 'late', 'absent', $sevenDaysAgo, $fourteenDaysAgo, $sevenDaysAgo])
+            ->get();
+
+        $guardPerformanceMetrics = $performanceRows
+            ->map(function ($row) {
+                $totalDays = (int) $row->total_days;
+                $presentCount = (int) $row->present_count;
+                $lateCount = (int) $row->late_count;
+                $absentCount = (int) $row->absent_count;
+                $avgHours = $totalDays > 0 ? round((float) ($row->avg_hours ?? 0), 1) : 0;
+                $attendanceRate = $totalDays > 0 ? round(($presentCount / max($totalDays, 1)) * 100) : 0;
+
+                $last7Avg = (float) ($row->last_7_avg ?? 0);
+                $prev7Avg = (float) ($row->prev_7_avg ?? 0);
+
+                $trend = 'stable';
+                if ($last7Avg > $prev7Avg * 1.1) $trend = 'up';
+                if ($last7Avg < $prev7Avg * 0.9) $trend = 'down';
+
+                return [
+                    'id' => (int) $row->id,
+                    'name' => $row->name,
+                    'employee_id' => $row->employee_id,
+                    'attendance_rate' => $attendanceRate,
+                    'late_count' => $lateCount,
+                    'absent_count' => $absentCount,
+                    'total_days' => $totalDays,
+                    'avg_hours' => $avgHours,
+                    'trend' => $trend,
+                ];
+            })
+            ->sortByDesc('attendance_rate')
+            ->values()
+            ->toArray();
+
+        // Relievers on duty — use managed query for role awareness
+        $relieversOnDuty = (clone $managedQuery)
+            ->where('status', 'active')
+            ->where('guard_type', 'reliever')
+            ->whereHas('todayAttendance', function($q) use ($date) {
+                $q->whereDate('date', $date)
+                  ->whereNotNull('check_in_time')
+                  ->whereNull('check_out_time');
+            })
+            ->with(['todayAttendance' => function($q) use ($date) {
+                $q->whereDate('date', $date);
+            }, 'todayAttendance.clientSite'])
+            ->get()
+            ->map(function($guard) use ($date) {
+                $attendance = $guard->todayAttendance->where('date', $date->format('Y-m-d'))->first();
+                return [
+                    'id' => $guard->id,
+                    'name' => $guard->name,
+                    'site_name' => $attendance?->clientSite?->name ?? 'Unknown',
+                    'on_duty' => true,
+                ];
+            });
+
+        // Trends
+        $attendanceTrend = $this->getAttendanceTrend($date, $supervisorGuardIds);
+        $relieverTrend = $this->getRelieverTrend($date, $user);
+
+        // Site Coverage Status — use managed guard IDs for role awareness
+        $siteAttendance = Attendance::whereDate('date', $date)
+            ->whereNotNull('check_in_time')
+            ->whereNull('check_out_time')
+            ->whereIn('guard_id', $supervisorGuardIds)
+            ->with('guardRelation', 'clientSite.client')
+            ->get()
+            ->groupBy('client_site_id');
+
+        $managedClientIds = $this->guardScopingService->getManagedClientIds($user);
+        $siteCoverageStatus = ClientSite::active()
+            ->where(function ($q) use ($managedClientIds, $siteAttendance) {
+                if (!empty($managedClientIds)) {
+                    $q->whereIn('client_id', $managedClientIds);
+                }
+                // Also include any sites where the user's guards checked in today
+                if ($siteAttendance->isNotEmpty()) {
+                    $q->orWhereIn('id', $siteAttendance->keys());
+                }
+            })
+            ->with(['client'])
+            ->get()
+            ->map(function ($site) use ($siteAttendance) {
+                $attendancesAtSite = $siteAttendance->get($site->id, collect());
+                $requiredGuards = $site->required_guards ?? 1;
+                $checkedInCount = $attendancesAtSite->count();
+                $coveragePercentage = $requiredGuards > 0 ? round(($checkedInCount / $requiredGuards) * 100) : 0;
+                
+                $status = 'uncovered';
+                if ($coveragePercentage >= 100) $status = 'covered';
+                elseif ($coveragePercentage > 0) $status = 'partial';
+                
+                return [
+                    'site_id' => $site->id,
+                    'site_name' => $site->name,
+                    'client_name' => $site->client?->name ?? 'Unknown',
+                    'required_guards' => $requiredGuards,
+                    'checked_in_guards' => $checkedInCount,
+                    'coverage_percentage' => $coveragePercentage,
+                    'status' => $status,
+                    'latitude' => $site->latitude ? (float) $site->latitude : null,
+                    'longitude' => $site->longitude ? (float) $site->longitude : null,
+                    'guards_on_site' => $attendancesAtSite->map(fn($att) => [
+                        'id' => $att->guardRelation?->id,
+                        'name' => $att->guardRelation?->name ?? 'Unknown',
+                        'check_in_time' => $att->check_in_time ? Carbon::parse($att->check_in_time)->format('H:i') : null,
+                    ])->values()->toArray(),
+                ];
+            })
+            ->sortBy('coverage_percentage')
+            ->values()
+            ->toArray();
+
+        return Inertia::render('Supervisor/Analytics', [
+            'stats' => $stats,
+            'guardPerformanceMetrics' => $guardPerformanceMetrics,
+            'relieversOnDuty' => $relieversOnDuty,
+            'attendanceTrend' => $attendanceTrend,
+            'relieverTrend' => $relieverTrend,
+            'siteCoverageStatus' => $siteCoverageStatus,
         ]);
     }
 
@@ -645,4 +782,302 @@ class SupervisorController extends Controller
         // Redirect to scanner path (no named route available)
         return redirect('/supervisor/scanner');
     }
-} 
+
+    /**
+     * Show guard details
+     */
+    public function showGuard(Guard $guard): Response
+    {
+        $user = Auth::user();
+        
+        // Check if the supervisor manages this guard
+        $managedGuardIds = $this->getManagedGuardIds($user);
+        if (!in_array($guard->id, $managedGuardIds)) {
+            abort(403, 'You do not have permission to view this guard.');
+        }
+
+        $guard->load(['currentAssignmentRelation.site.client', 'supervisor', 'grade', 'zone']);
+
+        // Get recent attendance (last 30 days)
+        $recentAttendance = Attendance::where('guard_id', $guard->id)
+            ->whereDate('date', '>=', Carbon::today()->subDays(30))
+            ->orderBy('date', 'desc')
+            ->get()
+            ->map(fn($att) => [
+                'id' => $att->id,
+                'date' => $att->date?->format('Y-m-d'),
+                'check_in_time' => $att->check_in_time ? Carbon::parse($att->check_in_time)->format('H:i') : null,
+                'check_out_time' => $att->check_out_time ? Carbon::parse($att->check_out_time)->format('H:i') : null,
+                'status' => $att->status,
+                'hours_worked' => $att->hours_worked,
+                'site_name' => $att->clientSite?->name,
+            ]);
+
+        return Inertia::render('Supervisor/GuardShow', [
+            'guard' => [
+                'id' => $guard->id,
+                'employee_id' => $guard->employee_id,
+                'name' => $guard->name,
+                'phone' => $guard->phone,
+                'email' => $guard->email,
+                'status' => $guard->status,
+                'guard_type' => $guard->guard_type ?? 'permanent',
+                'hire_date' => $guard->hire_date?->format('Y-m-d'),
+                'supervisor' => $guard->supervisor?->name,
+                'grade' => $guard->grade?->name,
+                'zone' => $guard->zone?->name,
+                'current_assignment' => $guard->currentAssignmentRelation ? [
+                    'site_name' => $guard->currentAssignmentRelation->site?->name,
+                    'client_name' => $guard->currentAssignmentRelation->site?->client?->name,
+                    'start_date' => $guard->currentAssignmentRelation->start_date?->format('Y-m-d'),
+                ] : null,
+            ],
+            'recentAttendance' => $recentAttendance,
+            'roleType' => $this->getUserRoleType($user),
+            'isSergeant' => $user->isSergeant(),
+        ]);
+    }
+
+    /**
+     * Reports page for supervisor
+     */
+    public function reports(Request $request): Response
+    {
+        $user = Auth::user();
+        $supervisorGuardIds = $this->getManagedGuardIds($user);
+
+        // Date range from query params, default to last 30 days
+        $to = $request->input('to', Carbon::today()->format('Y-m-d'));
+        $from = $request->input('from', Carbon::parse($to)->subDays(30)->format('Y-m-d'));
+        $date = Carbon::today();
+
+        // Attendance summary for the range
+        $attendanceSummary = Attendance::whereIn('guard_id', $supervisorGuardIds)
+            ->whereDate('date', '>=', $from)
+            ->whereDate('date', '<=', $to)
+            ->selectRaw('status, COUNT(*) as count')
+            ->groupBy('status')
+            ->pluck('count', 'status')
+            ->toArray();
+
+        // Guards with most absences in the range
+        $absenceLeaders = Guard::whereIn('id', $supervisorGuardIds)
+            ->where('status', 'active')
+            ->with(['attendance' => function($q) use ($from, $to) {
+                $q->whereDate('date', '>=', $from)
+                  ->whereDate('date', '<=', $to)
+                  ->where('status', 'absent');
+            }])
+            ->get()
+            ->map(fn($g) => [
+                'id' => $g->id,
+                'name' => $g->name,
+                'employee_id' => $g->employee_id,
+                'absent_count' => $g->attendance->count(),
+            ])
+            ->sortByDesc('absent_count')
+            ->take(5)
+            ->values()
+            ->toArray();
+
+        // Full attendance records for the period (paginated)
+        $attendanceRecords = Attendance::whereIn('guard_id', $supervisorGuardIds)
+            ->whereDate('date', '>=', $from)
+            ->whereDate('date', '<=', $to)
+            ->with(['guardRelation', 'clientSite.client', 'supervisor'])
+            ->orderBy('date', 'desc')
+            ->orderBy('check_in_time', 'desc')
+            ->paginate(50)
+            ->through(fn($record) => [
+                'id' => $record->id,
+                'date' => $record->date?->format('Y-m-d'),
+                'guard_name' => $record->guardRelation->name ?? 'Unknown',
+                'employee_id' => $record->guardRelation->employee_id ?? 'N/A',
+                'site_name' => $record->clientSite?->name ?? 'N/A',
+                'client_name' => $record->clientSite?->client?->name ?? 'N/A',
+                'check_in' => $record->check_in_time ? Carbon::parse($record->check_in_time)->format('H:i') : null,
+                'check_out' => $record->check_out_time ? Carbon::parse($record->check_out_time)->format('H:i') : null,
+                'hours' => $record->hours_worked,
+                'status' => $record->status,
+                'supervisor' => $record->supervisor->name ?? 'Unknown',
+            ]);
+
+        // Site coverage stats — unified through GuardScopingService
+        $managedClientIds = app(GuardScopingService::class)->getManagedClientIds($user);
+        $sitesCount = ClientSite::active()
+            ->when(!empty($managedClientIds), fn($q) => $q->whereIn('client_id', $managedClientIds))
+            ->count();
+
+        $todayAttendanceCount = Attendance::whereDate('date', $date)
+            ->whereIn('guard_id', $supervisorGuardIds)
+            ->whereNotNull('check_in_time')
+            ->count();
+
+        return Inertia::render('Supervisor/Reports', [
+            'attendanceSummary' => $attendanceSummary,
+            'absenceLeaders' => $absenceLeaders,
+            'attendanceRecords' => $attendanceRecords,
+            'sitesCount' => $sitesCount,
+            'todayAttendanceCount' => $todayAttendanceCount,
+            'totalGuards' => count($supervisorGuardIds),
+            'dateRange' => ['from' => $from, 'to' => $to],
+            'roleType' => $this->getUserRoleType($user),
+            'isSergeant' => $user->isSergeant(),
+        ]);
+    }
+
+    /**
+     * Export attendance report as PDF
+     */
+    public function reportsPdf(Request $request)
+    {
+        $user = Auth::user();
+        $supervisorGuardIds = $this->getManagedGuardIds($user);
+
+        $to = $request->input('to', Carbon::today()->format('Y-m-d'));
+        $from = $request->input('from', Carbon::parse($to)->subDays(30)->format('Y-m-d'));
+
+        $attendanceSummary = Attendance::whereIn('guard_id', $supervisorGuardIds)
+            ->whereDate('date', '>=', $from)
+            ->whereDate('date', '<=', $to)
+            ->selectRaw('status, COUNT(*) as count')
+            ->groupBy('status')
+            ->pluck('count', 'status')
+            ->toArray();
+
+        $attendanceRecords = Attendance::whereIn('guard_id', $supervisorGuardIds)
+            ->whereDate('date', '>=', $from)
+            ->whereDate('date', '<=', $to)
+            ->with(['guardRelation', 'clientSite.client'])
+            ->orderBy('date', 'desc')
+            ->get()
+            ->map(fn($record) => [
+                'date' => $record->date?->format('Y-m-d'),
+                'guard_name' => $record->guardRelation->name ?? 'Unknown',
+                'site_name' => $record->clientSite?->name ?? 'N/A',
+                'check_in' => $record->check_in_time ? Carbon::parse($record->check_in_time)->format('H:i') : null,
+                'check_out' => $record->check_out_time ? Carbon::parse($record->check_out_time)->format('H:i') : null,
+                'hours' => $record->hours_worked,
+                'status' => $record->status,
+            ]);
+
+        $pdf = Pdf::loadView('pdfs.attendance-report', [
+            'from' => $from,
+            'to' => $to,
+            'summary' => $attendanceSummary,
+            'records' => $attendanceRecords,
+            'generatedAt' => now()->format('Y-m-d H:i'),
+            'supervisorName' => $user->name,
+        ]);
+
+        return $pdf->download("attendance-report-{$from}-to-{$to}.pdf");
+    }
+
+    /**
+     * Export attendance report as CSV
+     */
+    public function reportsCsv(Request $request)
+    {
+        $user = Auth::user();
+        $supervisorGuardIds = $this->getManagedGuardIds($user);
+
+        $to = $request->input('to', Carbon::today()->format('Y-m-d'));
+        $from = $request->input('from', Carbon::parse($to)->subDays(30)->format('Y-m-d'));
+
+        $records = Attendance::whereIn('guard_id', $supervisorGuardIds)
+            ->whereDate('date', '>=', $from)
+            ->whereDate('date', '<=', $to)
+            ->with(['guardRelation', 'clientSite.client'])
+            ->orderBy('date', 'desc')
+            ->get()
+            ->map(fn($record) => [
+                $record->date?->format('Y-m-d'),
+                $record->guardRelation->name ?? 'Unknown',
+                $record->guardRelation->employee_id ?? 'N/A',
+                $record->clientSite?->name ?? 'N/A',
+                $record->clientSite?->client?->name ?? 'N/A',
+                $record->check_in_time ? Carbon::parse($record->check_in_time)->format('H:i') : '',
+                $record->check_out_time ? Carbon::parse($record->check_out_time)->format('H:i') : '',
+                $record->hours_worked ?? 0,
+                $record->status,
+            ]);
+
+        $headers = ['Date', 'Guard Name', 'Employee ID', 'Site', 'Client', 'Check In', 'Check Out', 'Hours', 'Status'];
+        array_unshift($records, $headers);
+
+        $callback = function () use ($records) {
+            $file = fopen('php://output', 'w');
+            // BOM for Excel compatibility
+            fwrite($file, "\xEF\xBB\xBF");
+            foreach ($records as $row) {
+                fputcsv($file, $row);
+            }
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => "attachment; filename=attendance-report-{$from}-to-{$to}.csv",
+        ]);
+    }
+
+    /**
+     * Email attendance report
+     */
+    public function reportsEmail(Request $request)
+    {
+        $validated = $request->validate([
+            'email' => 'required|email',
+            'from' => 'required|date',
+            'to' => 'required|date|after_or_equal:from',
+        ]);
+
+        $user = Auth::user();
+        $supervisorGuardIds = $this->getManagedGuardIds($user);
+
+        $attendanceSummary = Attendance::whereIn('guard_id', $supervisorGuardIds)
+            ->whereDate('date', '>=', $validated['from'])
+            ->whereDate('date', '<=', $validated['to'])
+            ->selectRaw('status, COUNT(*) as count')
+            ->groupBy('status')
+            ->pluck('count', 'status')
+            ->toArray();
+
+        $attendanceRecords = Attendance::whereIn('guard_id', $supervisorGuardIds)
+            ->whereDate('date', '>=', $validated['from'])
+            ->whereDate('date', '<=', $validated['to'])
+            ->with(['guardRelation', 'clientSite.client'])
+            ->orderBy('date', 'desc')
+            ->get()
+            ->map(fn($record) => [
+                'date' => $record->date?->format('Y-m-d'),
+                'guard_name' => $record->guardRelation->name ?? 'Unknown',
+                'site_name' => $record->clientSite?->name ?? 'N/A',
+                'check_in' => $record->check_in_time ? Carbon::parse($record->check_in_time)->format('H:i') : null,
+                'check_out' => $record->check_out_time ? Carbon::parse($record->check_out_time)->format('H:i') : null,
+                'hours' => $record->hours_worked,
+                'status' => $record->status,
+            ]);
+
+        $pdf = Pdf::loadView('pdfs.attendance-report', [
+            'from' => $validated['from'],
+            'to' => $validated['to'],
+            'summary' => $attendanceSummary,
+            'records' => $attendanceRecords,
+            'generatedAt' => now()->format('Y-m-d H:i'),
+            'supervisorName' => $user->name,
+        ]);
+
+        Mail::send([], [], function ($message) use ($validated, $user, $pdf) {
+            $message->to($validated['email'])
+                ->subject("Attendance Report ({$validated['from']} to {$validated['to']})")
+                ->from(config('mail.from.address'), config('mail.from.name'))
+                ->replyTo($user->email, $user->name)
+                ->attachData($pdf->output(), "attendance-report-{$validated['from']}-to-{$validated['to']}.pdf", [
+                    'mime' => 'application/pdf',
+                ]);
+        });
+
+        return back()->with('success', 'Report sent to ' . $validated['email']);
+    }
+}

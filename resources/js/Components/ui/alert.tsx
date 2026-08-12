@@ -14,8 +14,8 @@ interface AlertDescriptionProps extends React.HTMLAttributes<HTMLDivElement> {
 }
 
 const alertVariants = {
-  default: 'bg-background text-foreground border-border',
-  destructive: 'border-destructive/50 text-destructive dark:border-destructive [&>svg]:text-destructive',
+  default: 'border-gray-200 bg-white text-gray-900 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-100',
+  destructive: 'border-red-500/40 text-red-800 bg-red-50 dark:border-red-500/50 dark:text-red-200 dark:bg-red-900/20',
   warning: 'border-yellow-500/50 text-yellow-800 bg-yellow-50 dark:border-yellow-500 dark:text-yellow-200 dark:bg-yellow-900/20',
   success: 'border-green-500/50 text-green-800 bg-green-50 dark:border-green-500 dark:text-green-200 dark:bg-green-900/20',
 };
@@ -25,7 +25,7 @@ export const Alert = React.forwardRef<HTMLDivElement, AlertProps>(
     <div
       ref={ref}
       role="alert"
-      className={`relative w-full rounded-lg border p-4 [&>svg~*]:pl-7 [&>svg+div]:translate-y-[-3px] [&>svg]:absolute [&>svg]:left-4 [&>svg]:top-4 [&>svg]:text-foreground ${alertVariants[variant]} ${className}`}
+      className={`relative w-full rounded-xl border p-4 shadow-sm shadow-black/5 dark:shadow-none [&>svg~*]:pl-7 [&>svg+div]:translate-y-[-3px] [&>svg]:absolute [&>svg]:left-4 [&>svg]:top-4 ${alertVariants[variant]} ${className}`}
       {...props}
     >
       {children}

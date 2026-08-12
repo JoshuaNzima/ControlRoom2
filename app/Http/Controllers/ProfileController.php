@@ -3,11 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\ProfileUpdateRequest;
+use App\Http\Requests\ProfileAvatarRequest;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Redirect;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -16,12 +19,9 @@ class ProfileController extends Controller
     /**
      * Display the user's profile form.
      */
-    public function edit(Request $request): Response
+    public function edit(Request $request): RedirectResponse
     {
-        return Inertia::render('Profile/Edit', [
-            'mustVerifyEmail' => $request->user() instanceof MustVerifyEmail,
-            'status' => session('status'),
-        ]);
+        return Redirect::route('profile.dashboard');
     }
 
     /**
@@ -37,19 +37,45 @@ class ProfileController extends Controller
 
         $request->user()->save();
 
-        return Redirect::route('profile.edit');
+        return Redirect::back();
     }
 
+
     /**
-     * Delete the user's account.
+     * Update the user's avatar image.
      */
+    public function updateAvatar(ProfileAvatarRequest $request): RedirectResponse
+    {
+        $user = $request->user();
+        $file = $request->file('avatar');
+        if (!$file) {
+            return Redirect::back();
+        }
+
+        $old = $user->avatar_path;
+        $path = $file->store('avatars', 'public');
+        $user->avatar_path = $path;
+        $user->save();
+
+        if ($old && $old !== $path) {
+            try { Storage::disk('public')->delete($old); } catch (\Throwable $e) {}
+        }
+
+        return Redirect::back();
+    }
+
     public function destroy(Request $request): RedirectResponse
     {
         $request->validate([
-            'password' => ['required', 'current_password'],
+            'password' => ['required', 'string'],
         ]);
 
         $user = $request->user();
+        if (!$user || !Hash::check((string) $request->input('password'), (string) $user->password)) {
+            return Redirect::back()->withErrors([
+                'password' => 'The provided password is incorrect.',
+            ]);
+        }
 
         Auth::logout();
 
